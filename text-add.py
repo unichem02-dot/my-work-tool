@@ -1,19 +1,16 @@
 import streamlit as st
-import base64
 import os
 
-# 1. 페이지 설정 (인터넷 탭 제목)
+# 1. 페이지 설정
 st.set_page_config(page_title="송장텍스트변환 <LYC>", page_icon="📝", layout="wide")
 
-# --- 배경 이미지 설정 함수 ---
-def add_bg_from_local(image_file):
-    with open(image_file, "rb") as f:
-        encoded_string = base64.b64encode(f.read()).decode()
+# --- [수정됨] 배경 이미지 설정 (URL 방식) ---
+def add_bg_from_url(url):
     st.markdown(
         f"""
         <style>
         .stApp {{
-            background-image: url(data:image/png;base64,{encoded_string});
+            background-image: url("{url}");
             background-size: cover;
             background-repeat: no-repeat;
             background-attachment: fixed;
@@ -23,25 +20,28 @@ def add_bg_from_local(image_file):
         unsafe_allow_html=True
     )
 
-# 2. 배경 이미지 적용 (여기를 uni.png로 변경했습니다!)
-image_filename = 'uni.png'
+# 2. 배경 이미지 적용
+# 여기에 아까 복사한 'Raw 이미지 주소'를 넣으세요!
+# (예시 주소를 넣어뒀으니, 본인 GitHub 주소로 꼭 바꿔주세요)
+image_url = "https://raw.githubusercontent.com/lodus11/my-work-tool/main/uni.png" 
 
-try:
-    add_bg_from_local(image_filename)
-except FileNotFoundError:
-    st.warning(f"배경 이미지를 찾을 수 없습니다. ({image_filename}) GitHub에 파일이 올라갔는지 확인해주세요.")
+# [주의] 만약 위 주소가 틀리면 배경이 안 나옵니다.
+# 본인 깃허브 아이디와 저장소 이름이 맞는지 확인하세요.
+# (사장님 깃허브 주소를 몰라서 제가 추측해서 넣었습니다. 확인 필요!)
+
+add_bg_from_url(image_url)
 
 # 3. 화면 큰 제목
 st.title("📝 송장텍스트변환 <LYC> lodus11st@naver.com")
 st.caption("엑셀 한 줄을 복사해 넣으면, 5단 세로 양식으로 변환합니다.")
 
-# 4. 화면 구성 (왼쪽 입력 -> 오른쪽 출력)
+# 4. 화면 구성
 col1, col2 = st.columns(2)
 
 # --- 왼쪽: 입력창 ---
 with col1:
     st.subheader("1. 엑셀 내용 붙여넣기 (Ctrl+V)")
-    # 배경이 있어서 글자가 잘 안 보일 수 있으니 입력창을 약간 불투명하게
+    # 입력창 배경 반투명 처리
     st.markdown(
         """
         <style>
@@ -53,18 +53,17 @@ with col1:
         """,
         unsafe_allow_html=True
     )
-    raw_text = st.text_area("엑셀의 한 행(Row)을 복사해서 붙여넣으세요. (여러 줄 가능)", height=300)
+    raw_text = st.text_area("엑셀의 한 행(Row)을 복사해서 붙여넣으세요.", height=300)
 
-# --- 변환 로직 함수 ---
+# --- 변환 로직 ---
 def format_order(line):
     parts = line.split('\t')
     parts = [p.strip() for p in parts] 
     
     if len(parts) < 5:
-        return f"⚠️ 데이터 부족 (칸 개수 확인 필요): {line}"
+        return f"⚠️ 데이터 부족: {line}"
     
     try:
-        # 데이터 매핑
         zipcode = parts[0]
         addr = parts[1]
         name = parts[2]
@@ -76,7 +75,6 @@ def format_order(line):
         product = parts[7] if len(parts) > 7 else ""
         memo = parts[8] if len(parts) > 8 else "" 
 
-        # 5단 포맷 조립
         formatted = (
             f"{zipcode}\n"
             f"{addr}\n"
@@ -85,16 +83,13 @@ def format_order(line):
             f"{memo}"
         )
         return formatted
-
-    except Exception as e:
-        return f"❌ 처리 중 에러 발생: {line}"
+    except:
+        return f"❌ 에러 발생: {line}"
 
 # --- 오른쪽: 결과창 ---
 with col2:
     st.subheader("2. 변환 결과 (복사용)")
-    
     result_text = ""
-    
     if raw_text:
         lines = raw_text.strip().split('\n')
         for line in lines:
