@@ -5,109 +5,96 @@ import io
 
 # 1. 페이지 설정
 st.set_page_config(page_title="스마트 주문서 변환기", page_icon="⚡", layout="wide")
-st.title("⚡ 스마트 주문서 변환기 (텍스트 → 엑셀)")
+st.title("⚡ 스마트 주문서 변환기 (배송 '선불' 추가버전)")
 
-# 2. 파싱 함수 (주소/우편번호 인식 개선)
+# 2. 파싱 함수
 def parse_smart_order(text):
     results = []
     
-    # 빈 줄 제거하고 리스트로 만들기
-    lines = [line.strip() for line in text.split('\n') if line.strip()]
+    cleaned_text = text.replace('\n', ' ').strip()
     
+    # 데이터 담을 그릇 (순서 중요!)
     data = {
         "우편번호": "",
         "주소": "",
         "수취인": "",
         "전화번호1": "",
         "전화번호2": "",
-        "수량": "1", # 기본값
+        "수량": "1",
+        "배송": "선불",  # 👈 요청하신 부분: 기본값 '선불'
         "상품명": "",
         "배송메세지": ""
     }
     
-    # 전체 텍스트를 한 줄로 합쳐서 분석 (전화번호, 상품명 등 찾기 용도)
-    full_text = " ".join(lines)
-
-    # 1. 전화번호 찾기 (010-0000-0000)
-    phone_matches = re.findall(r'01[016789]-?\d{3,4}-?\d{4}', full_text)
-    if phone_matches:
-        data["전화번호1"] = phone_matches[0]
-        if len(phone_matches) > 1:
-            data["전화번호2"] = phone_matches[1]
-
-    # 2. 상품명 찾기 (사장님 취급 품목)
-    known_products = ["울크론", "PAC", "차염", "가성소다", "구연산", "염산", "황산"]
-    for prod in known_products:
-        if prod in full_text:
-            data["상품명"] = prod
-            break
-            
-    # 3. 수량 찾기 (숫자 + '통', '개', '박스')
-    qty_match = re.search(r'(\d+)\s*(통|개|박스|can|CAN)', full_text)
-    if qty_match:
-        data["수량"] = qty_match.group(1)
-
-    # 4. 주소 및 우편번호 찾기 (여기가 핵심!)
-    address_candidate = ""
-    zip_code_candidate = ""
-    name_candidate = ""
-
-    # 주소로 의심되는 단어들
-    address_keywords = ["시 ", "도 ", "군 ", "구 ", "읍 ", "면 ", "동 ", "로", "길", "아파트", "빌라", "번지", "충주", "제천"]
-    # 제외할 단어들 (은행, 입금 등)
-    blacklist = ["농협", "기업", "입금", "예금", "배송비", "감사합니다", "국민", "신한", "우리", "하나"]
-
-    for line in lines:
-        # 블랙리스트 단어가 있으면 주소가 아님
-        if any(x in line for x in blacklist):
-            continue
-        
-        # '원' 글자가 있어도, 숫자가 바로 앞에 붙어있는 경우(가격)만 제외
-        # 예: "10000원"(제외), "원앙길"(포함)
-        if re.search(r'\d+\s*원', line) and not any(k in line for k in ["길", "로", "동"]):
-            continue
-
-        # 점수 매기기
-        score = 0
-        for kw in address_keywords:
-            if kw in line:
-                score += 1
-        
-        # 우편번호 찾기 (123-456 또는 12345 형태)
-        zip_match = re.search(r'\d{3}-\d{3}|\d{5}', line)
-        if zip_match:
-            score += 2 # 우편번호가 있으면 주소일 확률 매우 높음!
-            
-        # 주소 결정 로직 (길이가 좀 길고, 주소 키워드나 우편번호가 있는 경우)
-        if len(line) > 8 and score >= 1:
-            address_candidate = line
-            if zip_match:
-                zip_code_candidate = zip_match.group()
-            
-            # 주소가 확정되면 반복문 종료 (첫 번째 주소 라인을 사용)
-            break
+    # 1. 전화번호 찾기
+    phone_matches = re.findall(r'01[016789]-?\d{3,4}-?\d{4}', cleaned_text)
     
-    # 5. 이름 찾기 (전화번호가 있는 줄에서 이름만 남기기)
-    for line in lines:
-        if data["전화번호1"] in line:
-            # 전화번호 지우고 남은 글자를 이름으로 추정
-            temp = line.replace(data["전화번호1"], "").replace(data["전화번호2"], "").strip()
-            # 특수문자나 잡다한 글자 제거
-            temp = re.sub(r'[^\w\s가-힣]', '', temp).strip()
-            if 2 <= len(temp) <= 5: # 이름은 보통 2~5글자
-                name_candidate = temp
-                break
+    if not phone_matches:
+        data["주소"] = cleaned_text
+        results.append(data)
+        # 컬럼 순서 강제 정렬해서 반환
+        return pd.DataFrame(results)[["우편번호", "주소", "수취인", "전화번호1", "전화번호2", "수량", "배송", "상품명", "배송메세지"]]
+        
+    main_phone = phone_matches[0]
+    data["전화번호1"] = main_phone
+    if len(phone_matches) > 1:
+        data["전화번호2"] = phone_matches[1]
 
-    data["주소"] = address_candidate
-    data["우편번호"] = zip_code_candidate
-    if name_candidate:
-        data["수취인"] = name_candidate
-    elif not data["수취인"]:
-        # 전화번호 줄에서 이름을 못 찾았으면, '곽태규' 처럼 혼자 있는 줄을 찾을 수도 있음 (추후 개선 가능)
-        pass
+    # 2. 전화번호 기준 앞/뒤 자르기
+    parts = cleaned_text.split(main_phone, 1)
+    before_phone = parts[0].strip()
+    after_phone = parts[1].strip() if len(parts) > 1 else ""
+    
+    # 3. [앞부분] 이름/주소 분리
+    if before_phone:
+        tokens = before_phone.split()
+        if tokens:
+            candidate_name = tokens[-1]
+            is_name = True
+            address_keywords = ["시", "도", "군", "구", "읍", "면", "동", "리", "로", "길", "아파트", "빌라", "해뜨는집", "타워"]
+            
+            if len(candidate_name) > 5 or len(candidate_name) < 2: is_name = False
+            elif any(kw in candidate_name for kw in address_keywords): is_name = False
+            elif any(char.isdigit() for char in candidate_name): is_name = False
+            
+            if is_name:
+                data["수취인"] = candidate_name
+                data["주소"] = " ".join(tokens[:-1])
+            else:
+                data["주소"] = before_phone
+    
+    # 4. [자동감지] 상품명 & 수량 찾기
+    # "숫자+통/개/박스" 바로 앞 단어를 상품명으로 인식
+    product_pattern = re.search(r'(\S+)\s*(\d+)\s*(통|개|박스|can|CAN)', cleaned_text)
+    
+    if product_pattern:
+        candidate_product = product_pattern.group(1)
+        qty = product_pattern.group(2)
+        
+        blacklist_product = ["택배선불", "배송비", "입금", "주문", "선불", "착불"]
+        
+        if not any(word in candidate_product for word in blacklist_product):
+            data["상품명"] = candidate_product
+            data["수량"] = qty
+        else:
+            data["수량"] = qty
+
+    # 5. 배송 '선불' vs '착불' 자동 구분
+    if "착불" in cleaned_text:
+        data["배송"] = "착불"
+        data["배송메세지"] = "착불배송"
+    else:
+        data["배송"] = "선불" # 기본값 유지
+
+    # 우편번호 추출
+    zip_match = re.search(r'\d{3}-\d{3}|\d{5}', data["주소"])
+    if zip_match: data["우편번호"] = zip_match.group()
 
     results.append(data)
-    return pd.DataFrame(results)
+    
+    # 컬럼 순서를 사장님이 원하시는 대로 딱! 고정해서 반환
+    cols = ["우편번호", "주소", "수취인", "전화번호1", "전화번호2", "수량", "배송", "상품명", "배송메세지"]
+    return pd.DataFrame(results)[cols]
 
 # 3. 화면 구성
 col1, col2 = st.columns([1, 1])
@@ -115,7 +102,7 @@ col1, col2 = st.columns([1, 1])
 with col1:
     st.subheader("1. 주문 문자 붙여넣기")
     raw_text = st.text_area("여기에 복사한 텍스트를 넣으세요", height=300,
-                            placeholder="예시:\n유니케미칼입니다\n울크론 1통\n...\n충주시 중앙탑면...")
+                            placeholder="예시:\n강원도 홍천군 ... 해뜨는집\n최용남 010-4752-1001\n종균제 5통")
     
     convert_btn = st.button("변환하기 🚀", type="primary")
 
@@ -124,24 +111,17 @@ with col2:
     if convert_btn and raw_text:
         df_result = parse_smart_order(raw_text)
         
-        # 화면에 표 보여주기
+        st.success("변환 성공! '배송' 칸이 추가되었습니다.")
         st.dataframe(df_result, use_container_width=True)
         
-        # 엑셀 다운로드
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             df_result.to_excel(writer, index=False, sheet_name='주문목록')
             worksheet = writer.sheets['주문목록']
-            worksheet.set_column('B:B', 40) # 주소 컬럼 넓게
-            worksheet.set_column('G:G', 15) # 상품명 넓게
+            worksheet.set_column('A:I', 15)
+            worksheet.set_column('B:B', 40)
             
         output.seek(0)
-        
-        st.download_button(
-            label="💾 엑셀 파일 다운로드",
-            data=output,
-            file_name="스마트주문_변환.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+        st.download_button(label="💾 엑셀 파일 다운로드", data=output, file_name="스마트주문_변환.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     elif not raw_text:
         st.info("왼쪽에 텍스트를 넣고 버튼을 눌러주세요.")
