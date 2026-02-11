@@ -25,8 +25,13 @@ with tab1:
         
         st.button("🔄 입력창 비우기", on_click=clear_jeonjin, key="btn_clear_1")
 
-        # 입력창
-        raw_text_jeonjin = st.text_area("여기에 붙여넣으세요 (Ctrl+Enter로 변환)", height=500, key="jeonjin_input")
+        # [수정됨] 안내 문구 제거 (label_visibility="collapsed")
+        raw_text_jeonjin = st.text_area(
+            label="입력창",  # 코드를 위해 이름은 두되
+            height=500, 
+            key="jeonjin_input",
+            label_visibility="collapsed" # 화면에서는 숨김 처리
+        )
 
     def convert_line_jeonjin(line):
         parts = line.split('\t')
@@ -104,8 +109,13 @@ with tab2:
             
         st.button("🔄 입력창 비우기", on_click=clear_uni, key="btn_clear_2")
 
-        # 입력창
-        raw_text_uni = st.text_area("엑셀 데이터를 붙여넣으세요 (Ctrl+Enter로 변환)", height=500, key="uni_input")
+        # [수정됨] 안내 문구 제거 (label_visibility="collapsed")
+        raw_text_uni = st.text_area(
+            label="입력창", 
+            height=500, 
+            key="uni_input",
+            label_visibility="collapsed" # 화면에서는 숨김 처리
+        )
 
     def format_order_uni(line):
         parts = line.split('\t')
