@@ -1,21 +1,31 @@
 import streamlit as st
 import re # 정규표현식 (숫자만 추출하기 위해)
 
-# 1. 페이지 설정 (제목 변경 완료)
+# 1. 페이지 설정
 st.set_page_config(page_title="송장텍스트변환 <LYC>", page_icon="📦", layout="wide")
 
-# --- [추가됨] 배경 이미지 설정 (URL 방식) ---
+# --- [수정됨] 배경 이미지 설정 (가상 요소 사용 방식) ---
 def add_bg_from_url(url):
     st.markdown(
         f"""
         <style>
-        .stApp {{
+        /* 배경 전용 가상 레이어 생성 */
+        .stApp::before {{
+            content: "";
+            position: fixed; /* 스크롤 고정 */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background-image: url("{url}");
-            background-size: cover;
+            background-size: contain; /* [중요] 이미지가 잘리지 않고 비율 유지 (정사이즈) */
+            background-position: center; /* 중앙 정렬 */
             background-repeat: no-repeat;
-            background-attachment: fixed;
+            opacity: 0.5; /* [중요] 투명도 50% 설정 */
+            z-index: -1; /* 콘텐츠 뒤로 보내기 */
         }}
-        /* 입력창 배경 반투명 처리 (글씨 잘 보이게) */
+        
+        /* 입력창 배경 반투명 처리 (글씨 잘 보이게 유지) */
         .stTextArea textarea {{
             background-color: rgba(255, 255, 255, 0.9);
             color: black;
@@ -29,7 +39,7 @@ def add_bg_from_url(url):
 image_url = "https://raw.githubusercontent.com/unichem02-dot/my-work-tool/main/uni.png"
 add_bg_from_url(image_url)
 
-# 2. 메인 제목 변경 (이메일 추가 완료)
+# 2. 메인 제목
 st.title("📝 송장텍스트변환 <LYC> lodus11st@naver.com")
 
 # 3. 탭 설정
