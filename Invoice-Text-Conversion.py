@@ -1,11 +1,38 @@
 import streamlit as st
 import re # 정규표현식 (숫자만 추출하기 위해)
 
-# 1. 페이지 설정
-st.set_page_config(page_title="송장텍스트변환", page_icon="📦", layout="wide")
-st.title("📦 송장텍스트변환")
+# 1. 페이지 설정 (제목 변경 완료)
+st.set_page_config(page_title="송장텍스트변환 <LYC>", page_icon="📦", layout="wide")
 
-# 2. 탭 설정
+# --- [추가됨] 배경 이미지 설정 (URL 방식) ---
+def add_bg_from_url(url):
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("{url}");
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }}
+        /* 입력창 배경 반투명 처리 (글씨 잘 보이게) */
+        .stTextArea textarea {{
+            background-color: rgba(255, 255, 255, 0.9);
+            color: black;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+# 배경 적용 (사장님 깃허브 이미지)
+image_url = "https://raw.githubusercontent.com/unichem02-dot/my-work-tool/main/uni.png"
+add_bg_from_url(image_url)
+
+# 2. 메인 제목 변경 (이메일 추가 완료)
+st.title("📝 송장텍스트변환 <LYC> lodus11st@naver.com")
+
+# 3. 탭 설정
 tab1, tab2 = st.tabs(["📦 텍스트변환(전진발주)", "📝 텍스트변환(유니케미칼)"])
 
 # ==============================================================================
@@ -17,14 +44,13 @@ with tab1:
     with col1_a:
         st.subheader("1. 엑셀 데이터 붙여넣기")
         
-        # [★추가됨] 지우기 버튼 기능
+        # 지우기 버튼 기능
         def clear_jeonjin():
             st.session_state["jeonjin_input"] = ""
         
-        # 버튼을 누르면 위 함수가 실행되어 입력창이 비워짐
         st.button("🔄 입력창 비우기", on_click=clear_jeonjin, key="btn_clear_1")
 
-        # 입력창 (key="jeonjin_input" 덕분에 버튼으로 제어 가능)
+        # 입력창
         raw_text_jeonjin = st.text_area("여기에 붙여넣으세요 (Ctrl+Enter로 변환)", height=500, key="jeonjin_input")
 
     def convert_line_jeonjin(line):
@@ -97,7 +123,7 @@ with tab2:
     with col1_b:
         st.subheader("1. 엑셀 내용 붙여넣기")
         
-        # [★추가됨] 지우기 버튼 기능
+        # 지우기 버튼 기능
         def clear_uni():
             st.session_state["uni_input"] = ""
             
