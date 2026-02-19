@@ -1,5 +1,6 @@
 import streamlit as st
 import re # 정규표현식 (숫자만 추출하기 위해)
+import datetime # [수정됨] 날짜 추출을 위한 모듈 추가
 
 # 1. 페이지 설정
 st.set_page_config(page_title="송장텍스트변환 <LYC>", page_icon="📦", layout="wide")
@@ -156,12 +157,20 @@ with tab2:
     with col2_b:
         st.subheader("2. 변환 결과")
         result_text_uni = ""
+        
+        # [수정됨] 오늘 날짜를 YYMMDD 형식으로 가져오기 (예: 260220)
+        today_str = datetime.datetime.now().strftime("%y%m%d")
+        
+        # [수정됨] 날짜(6자리) 뒤에 하이픈(-) 24개를 붙여 총 30자리의 구분선 만들기
+        separator = f"{today_str}" + "-" * 24 
+
         if raw_text_uni:
             lines = raw_text_uni.strip().split('\n')
             for line in lines:
                 if line.strip():
                     result_text_uni += format_order_uni(line)
-                    result_text_uni += "\n\n" + "-"*30 + "\n\n"
+                    # [수정됨] 기존 "-"*30 대신 새롭게 만든 구분선 적용
+                    result_text_uni += f"\n\n{separator}\n\n"
             st.text_area("결과물", value=result_text_uni, height=500)
         else:
             st.info("왼쪽에 데이터를 붙여넣으세요.")
