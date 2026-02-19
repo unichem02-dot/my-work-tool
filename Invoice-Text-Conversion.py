@@ -158,8 +158,9 @@ with tab2:
         st.subheader("2. 변환 결과")
         result_text_uni = ""
         
-        # [수정됨] 오늘 날짜를 YYMMDD 형식으로 가져오기 (예: 260220)
-        today_str = datetime.datetime.now().strftime("%y%m%d")
+        # [수정됨] 한국 시간(KST, UTC+9)으로 설정하여 오늘 날짜 가져오기
+        kst = datetime.timezone(datetime.timedelta(hours=9))
+        today_str = datetime.datetime.now(kst).strftime("%y%m%d")
         
         # [수정됨] 날짜(6자리) 뒤에 하이픈(-) 24개를 붙여 총 30자리의 구분선 만들기
         separator = f"{today_str}" + "-" * 24 
