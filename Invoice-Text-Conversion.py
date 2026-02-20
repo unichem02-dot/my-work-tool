@@ -218,6 +218,9 @@ with tab2:
         separator = f"{today_str}" + "-" * 24 
 
         if raw_text_uni:
+            # [추가됨] 최상단에 날짜와 경동마감 문구 세팅
+            result_text_uni = f"<{today_str}>>>>>\n경동마감>>>>>\n\n"
+            
             lines = raw_text_uni.strip().split('\n')
             for line in lines:
                 if line.strip():
