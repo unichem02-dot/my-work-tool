@@ -14,7 +14,7 @@ full_english_date = f"{current_dt.strftime('%A')}, {current_dt.strftime('%B')} {
 st.set_page_config(page_title="송장텍스트변환 <LYC>", page_icon="📦", layout="wide")
 
 # [수정됨] 웹 브라우저가 < > 기호를 코드로 인식하지 않도록 화면 표시용 텍스트 변환
-copy_text = f"<<<<<<{full_english_date}, Kyungdong cutoff is finished for today>>>>>>"
+copy_text = f"<<<<<<{full_english_date}, 경동마감>>>>>>"
 display_text = copy_text.replace("<", "&lt;").replace(">", "&gt;")
 
 html_code = f"""
