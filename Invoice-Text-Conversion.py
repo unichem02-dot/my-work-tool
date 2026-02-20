@@ -2,8 +2,15 @@ import streamlit as st
 import re # 정규표현식 (숫자만 추출하기 위해)
 import datetime # 날짜 추출을 위한 모듈 추가
 
+# [수정됨] 공통으로 사용할 한국 시간(KST) 오늘 날짜 가져오기
+kst = datetime.timezone(datetime.timedelta(hours=9))
+today_str = datetime.datetime.now(kst).strftime("%y%m%d")
+
 # 1. 페이지 설정
 st.set_page_config(page_title="송장텍스트변환 <LYC>", page_icon="📦", layout="wide")
+
+# [수정됨] 결과창이 아닌 페이지 최상단에 일반 텍스트 표시
+st.text(f"<{today_str}>>>>>\n경동마감>>>>>")
 
 # 2. 메인 제목
 st.title("📝 송장텍스트변환 <LYC> lodus11st@naver.com")
@@ -210,17 +217,10 @@ with tab2:
         st.subheader("2. 변환 결과")
         result_text_uni = ""
         
-        # 한국 시간(KST, UTC+9)으로 설정하여 오늘 날짜 가져오기
-        kst = datetime.timezone(datetime.timedelta(hours=9))
-        today_str = datetime.datetime.now(kst).strftime("%y%m%d")
-        
         # 날짜(6자리) 뒤에 하이픈(-) 24개를 붙여 총 30자리의 구분선 만들기
         separator = f"{today_str}" + "-" * 24 
 
         if raw_text_uni:
-            # [추가됨] 최상단에 날짜와 경동마감 문구 세팅
-            result_text_uni = f"<{today_str}>>>>>\n경동마감>>>>>\n\n"
-            
             lines = raw_text_uni.strip().split('\n')
             for line in lines:
                 if line.strip():
