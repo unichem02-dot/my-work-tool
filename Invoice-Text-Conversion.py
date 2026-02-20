@@ -13,11 +13,13 @@ full_english_date = f"{current_dt.strftime('%A')}, {current_dt.strftime('%B')} {
 # 1. 페이지 설정
 st.set_page_config(page_title="송장텍스트변환 <LYC>", page_icon="📦", layout="wide")
 
-# [수정됨] 안내 문구와 회색 박스를 없애고, 텍스트 바로 옆에 직관적인 복사 버튼 배치
+# [수정됨] 웹 브라우저가 < > 기호를 코드로 인식하지 않도록 화면 표시용 텍스트 변환
 copy_text = f"<<<<<<{full_english_date}, Kyungdong cutoff is finished for today>>>>>>"
+display_text = copy_text.replace("<", "&lt;").replace(">", "&gt;")
+
 html_code = f"""
 <div style="display: flex; align-items: center; gap: 10px; font-family: 'Malgun Gothic', sans-serif;">
-    <span style="font-size: 1.2rem; font-weight: 900; color: #2D3748;">{copy_text}</span>
+    <span style="font-size: 1.2rem; font-weight: 900; color: #2D3748;">{display_text}</span>
     <button onclick="copyToClipboard()" style="background-color: #667EEA; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.2s;">
         📋 복사하기
     </button>
