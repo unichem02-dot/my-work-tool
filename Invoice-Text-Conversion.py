@@ -11,8 +11,8 @@ day_str = current_dt.strftime("%a") # 영어 요일 약자 (Mon, Tue, Wed, Thu, 
 # 1. 페이지 설정
 st.set_page_config(page_title="송장텍스트변환 <LYC>", page_icon="📦", layout="wide")
 
-# [수정됨] 요청하신 기호 형식(<<<<<<날짜 요일 경동마감>>>>>>)으로 텍스트 변경
-st.text(f"<<<<<<{today_str} {day_str} 경동마감>>>>>>")
+# [수정됨] 마우스를 올리면 우측에 복사 버튼이 나타나도록 st.code() 사용
+st.code(f"<<<<<<{today_str} {day_str} 경동마감>>>>>>", language=None)
 
 # 2. 메인 제목
 st.title("📝 송장텍스트변환 <LYC> lodus11st@naver.com")
