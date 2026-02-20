@@ -1,6 +1,6 @@
 import streamlit as st
 import re # 정규표현식 (숫자만 추출하기 위해)
-import datetime # [수정됨] 날짜 추출을 위한 모듈 추가
+import datetime # 날짜 추출을 위한 모듈 추가
 
 # 1. 페이지 설정
 st.set_page_config(page_title="송장텍스트변환 <LYC>", page_icon="📦", layout="wide")
@@ -8,41 +8,54 @@ st.set_page_config(page_title="송장텍스트변환 <LYC>", page_icon="📦", l
 # 2. 메인 제목
 st.title("📝 송장텍스트변환 <LYC> lodus11st@naver.com")
 
-# [수정됨] 네이버 스타일(그린 포인트 & 깔끔한 UI) CSS 적용
+# [수정됨] 첨부 이미지 스타일(퍼플블루 톤 & 카드형 UI) CSS 적용
 st.markdown("""
 <style>
-    /* 1. 탭 메뉴 스타일 (크기 26px, 굵기 900 유지 + 네이버 색상) */
+    /* 전체 배경을 연한 회색으로 변경하여 화이트 카드가 돋보이게 함 */
+    .stApp {
+        background-color: #F8F9FA;
+    }
+    
+    /* 1. 탭 메뉴 스타일 (크기 26px, 굵기 900 유지 + 퍼플블루 색상) */
     .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
         font-size: 26px !important;
         font-weight: 900 !important;
+        color: #718096 !important; /* 기본은 차분한 회색 */
     }
     .stTabs [aria-selected="true"] {
-        border-bottom: 4px solid #03C75A !important; /* 네이버 그린 하이라이트 */
+        border-bottom: 4px solid #667EEA !important; /* 퍼플블루 하이라이트 */
     }
     .stTabs [aria-selected="true"] p {
-        color: #03C75A !important; /* 선택된 탭 글자색 */
+        color: #667EEA !important; /* 선택된 탭 글자색 */
     }
     
-    /* 2. 버튼 스타일 (깔끔한 테두리와 호버 효과) */
+    /* 2. 버튼 스타일 (이미지의 꽉 찬 파란색 버튼 느낌) */
     button[kind="secondary"] {
-        border: 1px solid #03C75A !important;
-        color: #03C75A !important;
+        background-color: #667EEA !important;
+        border: none !important;
+        color: white !important;
         border-radius: 6px !important;
         font-weight: bold !important;
-        transition: all 0.2s;
+        padding: 0.5rem 1.5rem !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+        transition: all 0.3s ease;
     }
     button[kind="secondary"]:hover {
-        background-color: #03C75A !important;
-        color: white !important;
+        background-color: #5A67D8 !important; /* 호버 시 더 진한 색상 */
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15) !important;
+        transform: translateY(-2px); /* 살짝 위로 떠오르는 효과 */
     }
     
-    /* 3. 텍스트 입력창 깔끔한 테두리 */
+    /* 3. 텍스트 입력창 (그림자가 있는 화이트 카드 스타일) */
     div[data-baseweb="textarea"] > div {
-        border: 1px solid #d4d8db !important;
-        border-radius: 6px !important;
+        background-color: white !important;
+        border: none !important;
+        border-radius: 12px !important;
+        box-shadow: 0 8px 24px rgba(149, 157, 165, 0.15) !important; /* 부드러운 그림자 */
     }
     div[data-baseweb="textarea"] > div:focus-within {
-        border: 2px solid #03C75A !important; /* 클릭 시 네이버 그린 */
+        border: 2px solid #667EEA !important; /* 클릭 시 포인트 컬러 */
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -65,12 +78,12 @@ with tab1:
         
         st.button("🔄 입력창 비우기", on_click=clear_jeonjin, key="btn_clear_1")
 
-        # [수정됨] 안내 문구 제거 (label_visibility="collapsed")
+        # 안내 문구 제거 (label_visibility="collapsed")
         raw_text_jeonjin = st.text_area(
-            label="입력창",  # 코드를 위해 이름은 두되
+            label="입력창",  
             height=500, 
             key="jeonjin_input",
-            label_visibility="collapsed" # 화면에서는 숨김 처리
+            label_visibility="collapsed" 
         )
 
     def convert_line_jeonjin(line):
@@ -149,12 +162,12 @@ with tab2:
             
         st.button("🔄 입력창 비우기", on_click=clear_uni, key="btn_clear_2")
 
-        # [수정됨] 안내 문구 제거 (label_visibility="collapsed")
+        # 안내 문구 제거 (label_visibility="collapsed")
         raw_text_uni = st.text_area(
             label="입력창", 
             height=500, 
             key="uni_input",
-            label_visibility="collapsed" # 화면에서는 숨김 처리
+            label_visibility="collapsed" 
         )
 
     def format_order_uni(line):
@@ -197,11 +210,11 @@ with tab2:
         st.subheader("2. 변환 결과")
         result_text_uni = ""
         
-        # [수정됨] 한국 시간(KST, UTC+9)으로 설정하여 오늘 날짜 가져오기
+        # 한국 시간(KST, UTC+9)으로 설정하여 오늘 날짜 가져오기
         kst = datetime.timezone(datetime.timedelta(hours=9))
         today_str = datetime.datetime.now(kst).strftime("%y%m%d")
         
-        # [수정됨] 날짜(6자리) 뒤에 하이픈(-) 24개를 붙여 총 30자리의 구분선 만들기
+        # 날짜(6자리) 뒤에 하이픈(-) 24개를 붙여 총 30자리의 구분선 만들기
         separator = f"{today_str}" + "-" * 24 
 
         if raw_text_uni:
@@ -209,7 +222,7 @@ with tab2:
             for line in lines:
                 if line.strip():
                     result_text_uni += format_order_uni(line)
-                    # [수정됨] 기존 "-"*30 대신 새롭게 만든 구분선 적용
+                    # 기존 "-"*30 대신 새롭게 만든 구분선 적용
                     result_text_uni += f"\n\n{separator}\n\n"
             st.text_area("결과물", value=result_text_uni, height=500)
         else:
