@@ -68,9 +68,12 @@ st.markdown("""
         font-weight: 900 !important;
         color: #718096 !important; /* 기본은 차분한 회색 */
     }
-    .stTabs [aria-selected="true"] {
-        border-bottom: 4px solid #667EEA !important; /* 퍼플블루 하이라이트 */
+    
+    /* [수정됨] 기본 Streamlit의 빨간색 애니메이션 밑줄을 파란색으로 덮어씌워 두 줄 방지 */
+    .stTabs [data-baseweb="tab-highlight"] {
+        background-color: #667EEA !important;
     }
+    
     .stTabs [aria-selected="true"] p {
         color: #667EEA !important; /* 선택된 탭 글자색 */
     }
