@@ -11,9 +11,35 @@ day_str = current_dt.strftime("%a") # 영어 요일 약자 (Mon, Tue, Wed, Thu, 
 # 1. 페이지 설정
 st.set_page_config(page_title="송장텍스트변환 <LYC>", page_icon="📦", layout="wide")
 
-# [수정됨] 마우스를 올리면 우측에 복사 버튼이 확실하게 나타나도록 수정 (language="plaintext" 적용)
-st.caption("👇 아래 회색 박스 안으로 마우스를 올리면 우측 상단에 복사(📋) 아이콘이 나타납니다.")
-st.code(f"<<<<<<{today_str} {day_str} 경동마감>>>>>>", language="plaintext")
+# [수정됨] 안내 문구와 회색 박스를 없애고, 텍스트 바로 옆에 직관적인 복사 버튼 배치
+copy_text = f"<<<<<<{today_str} {day_str} 경동마감>>>>>>"
+html_code = f"""
+<div style="display: flex; align-items: center; gap: 10px; font-family: 'Malgun Gothic', sans-serif;">
+    <span style="font-size: 1.2rem; font-weight: 900; color: #2D3748;">{copy_text}</span>
+    <button onclick="copyToClipboard()" style="background-color: #667EEA; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.2s;">
+        📋 복사하기
+    </button>
+</div>
+<script>
+function copyToClipboard() {{
+    var el = document.createElement('textarea');
+    el.value = '{copy_text}';
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    
+    var btn = document.querySelector('button');
+    btn.innerHTML = '✅ 복사완료!';
+    btn.style.backgroundColor = '#03C75A';
+    setTimeout(function() {{
+        btn.innerHTML = '📋 복사하기';
+        btn.style.backgroundColor = '#667EEA';
+    }}, 2000);
+}}
+</script>
+"""
+st.components.v1.html(html_code, height=50)
 
 # 2. 메인 제목
 st.title("📝 송장텍스트변환 <LYC> lodus11st@naver.com")
