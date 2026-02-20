@@ -8,6 +8,17 @@ st.set_page_config(page_title="송장텍스트변환 <LYC>", page_icon="📦", l
 # 2. 메인 제목
 st.title("📝 송장텍스트변환 <LYC> lodus11st@naver.com")
 
+# [추가됨] 탭 글자 크기를 키우기 위한 CSS 스타일 적용
+st.markdown("""
+<style>
+    /* 탭 메뉴 글자 크기 및 굵기 변경 */
+    .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
+        font-size: 26px !important;
+        font-weight: 900 !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # 3. 탭 설정
 tab1, tab2 = st.tabs(["📦 텍스트변환(전진발주)", "📝 텍스트변환(유니케미칼)"])
 
