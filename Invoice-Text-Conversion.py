@@ -5,14 +5,16 @@ import datetime # 날짜 추출을 위한 모듈 추가
 # [수정됨] 공통으로 사용할 한국 시간(KST) 오늘 날짜와 요일 가져오기
 kst = datetime.timezone(datetime.timedelta(hours=9))
 current_dt = datetime.datetime.now(kst)
-today_str = current_dt.strftime("%y%m%d")
-day_str = current_dt.strftime("%a") # 영어 요일 약자 (Mon, Tue, Wed, Thu, Fri, Sat, Sun)
+today_str = current_dt.strftime("%y%m%d") # 기존 유니케미칼 하단 구분선 유지용
+
+# [수정됨] 요일이 포함된 완벽한 정식 영어 날짜 형식 (예: Friday, February 20, 2026)
+full_english_date = f"{current_dt.strftime('%A')}, {current_dt.strftime('%B')} {current_dt.day}, {current_dt.year}"
 
 # 1. 페이지 설정
 st.set_page_config(page_title="송장텍스트변환 <LYC>", page_icon="📦", layout="wide")
 
 # [수정됨] 안내 문구와 회색 박스를 없애고, 텍스트 바로 옆에 직관적인 복사 버튼 배치
-copy_text = f"<<<<<<{today_str} {day_str} 경동마감>>>>>>"
+copy_text = f"<<<<<<{full_english_date}, Kyungdong cutoff is finished for today>>>>>>"
 html_code = f"""
 <div style="display: flex; align-items: center; gap: 10px; font-family: 'Malgun Gothic', sans-serif;">
     <span style="font-size: 1.2rem; font-weight: 900; color: #2D3748;">{copy_text}</span>
@@ -47,6 +49,12 @@ st.title("📝 송장텍스트변환 <LYC> lodus11st@naver.com")
 # [수정됨] 첨부 이미지 스타일(퍼플블루 톤 & 카드형 UI) CSS 적용
 st.markdown("""
 <style>
+    /* 제목의 이메일 주소 링크 밑줄 제거 및 기본 글자색 유지 */
+    h1 a {
+        text-decoration: none !important;
+        color: inherit !important;
+    }
+
     /* 전체 배경을 연한 회색으로 변경하여 화이트 카드가 돋보이게 함 */
     .stApp {
         background-color: #F8F9FA;
