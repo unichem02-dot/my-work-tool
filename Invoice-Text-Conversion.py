@@ -8,13 +8,41 @@ st.set_page_config(page_title="송장텍스트변환 <LYC>", page_icon="📦", l
 # 2. 메인 제목
 st.title("📝 송장텍스트변환 <LYC> lodus11st@naver.com")
 
-# [추가됨] 탭 글자 크기를 키우기 위한 CSS 스타일 적용
+# [수정됨] 네이버 스타일(그린 포인트 & 깔끔한 UI) CSS 적용
 st.markdown("""
 <style>
-    /* 탭 메뉴 글자 크기 및 굵기 변경 */
+    /* 1. 탭 메뉴 스타일 (크기 26px, 굵기 900 유지 + 네이버 색상) */
     .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
         font-size: 26px !important;
         font-weight: 900 !important;
+    }
+    .stTabs [aria-selected="true"] {
+        border-bottom: 4px solid #03C75A !important; /* 네이버 그린 하이라이트 */
+    }
+    .stTabs [aria-selected="true"] p {
+        color: #03C75A !important; /* 선택된 탭 글자색 */
+    }
+    
+    /* 2. 버튼 스타일 (깔끔한 테두리와 호버 효과) */
+    button[kind="secondary"] {
+        border: 1px solid #03C75A !important;
+        color: #03C75A !important;
+        border-radius: 6px !important;
+        font-weight: bold !important;
+        transition: all 0.2s;
+    }
+    button[kind="secondary"]:hover {
+        background-color: #03C75A !important;
+        color: white !important;
+    }
+    
+    /* 3. 텍스트 입력창 깔끔한 테두리 */
+    div[data-baseweb="textarea"] > div {
+        border: 1px solid #d4d8db !important;
+        border-radius: 6px !important;
+    }
+    div[data-baseweb="textarea"] > div:focus-within {
+        border: 2px solid #03C75A !important; /* 클릭 시 네이버 그린 */
     }
 </style>
 """, unsafe_allow_html=True)
