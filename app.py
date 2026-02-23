@@ -87,10 +87,9 @@ def add_dialog(sheet, full_df):
         new_memo1 = st.text_input("메모1")
         new_memo2 = st.text_input("메모2")
             
-        submitted = st.form_submit_button("시트에 저장하기")
+        submitted = st.form_submit_button("시트에 저장하기", use_container_width=True, type="primary")
         
         if submitted:
-            # 직접 입력한 새 분류가 있으면 우선 적용, 없으면 드롭다운 선택값 적용
             final_cat = new_cat.strip() if new_cat.strip() else selected_cat
             if final_cat == "(새로 입력)":
                 final_cat = ""
@@ -106,49 +105,75 @@ def add_dialog(sheet, full_df):
             else:
                 st.error("최소한 '단어'나 '문장' 중 하나는 입력해주세요.")
 
-# 4. 팝업창(모달) 띄우기 함수 - 기존 항목 수정하기
-@st.dialog("✏️ 항목 수정")
+# 4. 팝업창(모달) 띄우기 함수 - 기존 항목 수정 및 삭제하기
+@st.dialog("✏️ 항목 수정 및 삭제")
 def edit_dialog(idx, row_data, sheet):
-    st.markdown(f"**[{row_data['분류']}] {row_data['단어']}** 데이터를 수정합니다.")
+    st.markdown(f"**[{row_data['분류']}] {row_data['단어']}** 데이터를 관리합니다.")
     
     with st.form(f"edit_form_{idx}"):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # 💡 수정 불가가 아닌, 수정 가능하게 풀어두어 오타 정정 지원
+        # 1번째 줄: 분류 / 단어
+        row1_col1, row1_col2 = st.columns(2)
+        with row1_col1:
             edit_cat = st.text_input("분류", value=row_data['분류'])
+        with row1_col2:
             edit_word = st.text_input("단어", value=row_data['단어'])
+            
+        # 2번째 줄: 문장 / 발음
+        row2_col1, row2_col2 = st.columns(2)
+        with row2_col1:
             edit_sent = st.text_input("문장", value=row_data['문장'])
+        with row2_col2:
             edit_pron = st.text_input("발음", value=row_data['발음'])
             
-        with col2:
+        # 3번째 줄: 해석 / 메모1
+        row3_col1, row3_col2 = st.columns(2)
+        with row3_col1:
             edit_mean = st.text_input("해석", value=row_data['해석'])
+        with row3_col2:
             edit_memo1 = st.text_input("메모1", value=row_data['메모1'])
-            edit_memo2 = st.text_input("메모2", value=row_data['메모2'])
-            st.write("") # 버튼 위치 맞춤용 빈 줄
-            update_submitted = st.form_submit_button("수정 내용 저장하기")
+            
+        # 4, 5번째 줄: 메모2
+        edit_memo2 = st.text_input("메모2", value=row_data['메모2'])
         
+        st.divider()
+        
+        # 하단 버튼 배치: 저장 및 삭제
+        btn_col1, btn_col2 = st.columns(2)
+        with btn_col1:
+            update_submitted = st.form_submit_button("💾 수정 내용 저장", use_container_width=True, type="primary")
+        with btn_col2:
+            delete_submitted = st.form_submit_button("🗑️ 항목 삭제", use_container_width=True)
+        
+        # 수정 로직
         if update_submitted:
             if edit_word or edit_sent:
                 try:
-                    # 💡 구글 시트의 정확한 줄(Row) 번호 계산 (표 첫 번째 행 데이터가 구글시트의 2번째 행)
                     sheet_row = idx + 2 
-                    
                     new_values = [edit_cat, edit_word, edit_sent, edit_pron, edit_mean, edit_memo1, edit_memo2]
                     
-                    # gspread 업데이트
                     cell_list = sheet.range(f"A{sheet_row}:G{sheet_row}")
                     for i, cell in enumerate(cell_list):
                         cell.value = new_values[i]
                     sheet.update_cells(cell_list)
                     
-                    st.success("성공적으로 수정되었습니다! 🔄")
-                    time.sleep(1)
+                    st.success("수정되었습니다! 🔄")
+                    time.sleep(0.5)
                     st.rerun()
                 except Exception as e:
-                    st.error(f"데이터 수정 중 오류가 발생했습니다. 상세: {e}")
+                    st.error(f"수정 오류: {e}")
             else:
-                st.error("최소한 '단어'나 '문장' 중 하나는 입력해주세요.")
+                st.error("입력값이 부족합니다.")
+                
+        # 삭제 로직
+        if delete_submitted:
+            try:
+                sheet_row = idx + 2
+                sheet.delete_rows(sheet_row)
+                st.warning("항목이 삭제되었습니다. 🔄")
+                time.sleep(0.5)
+                st.rerun()
+            except Exception as e:
+                st.error(f"삭제 오류: {e}")
 
 # --- [메인 앱 화면] ---
 st.title("📚 TOmBOy94's English words and sentences")
@@ -258,7 +283,7 @@ if data_loaded:
             cols[5].write(row['메모1'])
             cols[6].write(row['메모2'])
             
-            # 인덱스(idx) 값을 전달하도록 수정
+            # 인덱스(idx) 값을 전달하여 수정 및 삭제 핸들링
             if cols[7].button("✏️", key=f"edit_btn_{idx}"):
                 edit_dialog(idx, row, sheet)
     else:
