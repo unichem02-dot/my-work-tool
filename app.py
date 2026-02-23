@@ -31,10 +31,10 @@ def load_dataframe(sheet):
             data = sheet.get_all_values()
             
             if not data: 
-                return pd.DataFrame(columns=['번호', '단어', '문장', '발음', '해석', '메모1', '메모2'])
+                return pd.DataFrame(columns=['분류', '단어', '문장', '발음', '해석', '메모1', '메모2'])
                 
             rows = data[1:]
-            headers = ['번호', '단어', '문장', '발음', '해석', '메모1', '메모2']
+            headers = ['분류', '단어', '문장', '발음', '해석', '메모1', '메모2']
             
             rows = [row + [""] * (7 - len(row)) for row in rows]
             rows = [row[:7] for row in rows]
@@ -58,13 +58,13 @@ def add_dialog(sheet, full_df):
     if full_df.empty:
         next_num = 1
     else:
-        next_num = int(pd.to_numeric(full_df['번호'], errors='coerce').fillna(0).max()) + 1
+        next_num = int(pd.to_numeric(full_df['분류'], errors='coerce').fillna(0).max()) + 1
 
     with st.form("add_sentence_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         
         with col1:
-            st.text_input("번호 (자동 부여)", value=str(next_num), disabled=True)
+            st.text_input("분류 (자동 부여)", value=str(next_num), disabled=True)
             new_word = st.text_input("단어")
             new_sent = st.text_input("문장")
             
@@ -92,13 +92,13 @@ def add_dialog(sheet, full_df):
 # 4. 팝업창(모달) 띄우기 함수 - 기존 항목 수정하기
 @st.dialog("✏️ 항목 수정")
 def edit_dialog(row_data, sheet, full_df):
-    st.markdown(f"**[{row_data['번호']}] {row_data['단어']}** 데이터를 수정합니다.")
+    st.markdown(f"**[{row_data['분류']}] {row_data['단어']}** 데이터를 수정합니다.")
     
-    with st.form(f"edit_form_{row_data['번호']}"):
+    with st.form(f"edit_form_{row_data['분류']}"):
         col1, col2 = st.columns(2)
         
         with col1:
-            st.text_input("번호 (수정 불가)", value=row_data['번호'], disabled=True)
+            st.text_input("분류 (수정 불가)", value=row_data['분류'], disabled=True)
             edit_word = st.text_input("단어", value=row_data['단어'])
             edit_sent = st.text_input("문장", value=row_data['문장'])
             
@@ -114,9 +114,9 @@ def edit_dialog(row_data, sheet, full_df):
         if update_submitted:
             if edit_word or edit_sent:
                 try:
-                    selected_id = row_data['번호']
-                    # 시트에서 해당 번호가 위치한 행 번호 계산
-                    sheet_row = full_df.index[full_df['번호'] == selected_id][0] + 2
+                    selected_id = row_data['분류']
+                    # 시트에서 해당 분류가 위치한 행 번호 계산
+                    sheet_row = full_df.index[full_df['분류'] == selected_id][0] + 2
                     
                     # 덮어씌울 새 데이터 배열
                     new_values = [selected_id, edit_word, edit_sent, edit_pron, edit_mean, edit_memo1, edit_memo2]
@@ -162,18 +162,18 @@ if data_loaded:
     with col_h1:
         st.header("🔍 단어/문장 검색")
         
-    # 번호(분류) 선택 리스트
+    # 분류 선택 리스트
     with col_h2:
         st.write("") # 헤더와 높이 맞춤용
-        # 번호 고유값 추출 (빈 값 제외)
-        unique_nums = df['번호'].unique().tolist()
+        # 분류 고유값 추출 (빈 값 제외)
+        unique_nums = df['분류'].unique().tolist()
         unique_nums = [x for x in unique_nums if x != '']
         try:
             unique_nums.sort(key=float)
         except ValueError:
             unique_nums.sort()
             
-        selected_category = st.selectbox("분류(번호)", ["전체 분류"] + unique_nums, label_visibility="collapsed")
+        selected_category = st.selectbox("분류", ["전체 분류"] + unique_nums, label_visibility="collapsed")
         
     with col_h3:
         st.write("")
@@ -197,9 +197,9 @@ if data_loaded:
     
     display_df = df.copy()
 
-    # 0. 번호(분류) 선택에 따른 필터링 적용
+    # 0. 분류 선택에 따른 필터링 적용
     if selected_category != "전체 분류":
-        display_df = display_df[display_df['번호'] == selected_category]
+        display_df = display_df[display_df['분류'] == selected_category]
 
     # 1. 상단 버튼(단어/문장/전체보기)에 따른 1차 필터링
     if st.session_state.filter_type == '단어':
@@ -228,7 +228,7 @@ if data_loaded:
         # 테이블 헤더 디자인: 메모1, 메모2 컬럼 추가 (비율 조정)
         col_ratio = [1, 2, 4, 2, 3, 3, 3, 1]
         header_cols = st.columns(col_ratio)
-        header_cols[0].markdown("**번호**")
+        header_cols[0].markdown("**분류**")
         header_cols[1].markdown("**단어**")
         header_cols[2].markdown("**문장**")
         header_cols[3].markdown("**발음**")
@@ -241,7 +241,7 @@ if data_loaded:
         # 각 행마다 데이터 및 수정 버튼 생성: 단어와 문장은 굵고 크게 표시
         for idx, row in display_df.iterrows():
             cols = st.columns(col_ratio)
-            cols[0].write(row['번호'])
+            cols[0].write(row['분류'])
             
             # 단어와 문장 내용에 HTML/CSS를 적용하여 굵게, 크기 1.4배 적용
             cols[1].markdown(f"<span style='font-size: 1.4em; font-weight: bold;'>{row['단어']}</span>", unsafe_allow_html=True)
