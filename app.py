@@ -54,18 +54,18 @@ def load_dataframe(sheet):
 @st.dialog("➕ 새 항목 추가")
 def add_dialog(sheet, full_df):
     # 기존 분류 목록 가져오기
-    unique_nums = full_df['분류'].unique().tolist() if not full_df.empty else []
-    unique_nums = [x for x in unique_nums if x != '']
+    unique_cats = full_df['분류'].unique().tolist() if not full_df.empty else []
+    unique_cats = [x for x in unique_cats if x != '']
     try:
-        unique_nums.sort(key=float)
+        unique_cats.sort(key=float)
     except ValueError:
-        unique_nums.sort()
+        unique_cats.sort()
 
     with st.form("add_sentence_form", clear_on_submit=True):
         # 1번째 줄: 분류 선택 / 입력
         col1, col2 = st.columns(2)
         with col1:
-            selected_cat = st.selectbox("분류 선택 (기존)", ["(새로 입력)"] + unique_nums)
+            selected_cat = st.selectbox("분류 선택 (기존)", ["(새로 입력)"] + unique_cats)
         with col2:
             new_cat = st.text_input("새 분류 입력 (우선 적용됩니다)")
             
@@ -83,7 +83,7 @@ def add_dialog(sheet, full_df):
         with col6:
             new_mean = st.text_input("해석")
             
-        # 4, 5번째 줄: 메모1, 메모2 (가로를 넓게 쓰도록 단독 배치)
+        # 4, 5번째 줄: 메모1, 메모2
         new_memo1 = st.text_input("메모1")
         new_memo2 = st.text_input("메모2")
             
@@ -107,35 +107,53 @@ def add_dialog(sheet, full_df):
 
 # 4. 팝업창(모달) 띄우기 함수 - 기존 항목 수정 및 삭제하기
 @st.dialog("✏️ 항목 수정 및 삭제")
-def edit_dialog(idx, row_data, sheet):
+def edit_dialog(idx, row_data, sheet, full_df):
     st.markdown(f"**[{row_data['분류']}] {row_data['단어']}** 데이터를 관리합니다.")
     
+    # 수정 창에서도 기존 분류 목록 활용
+    unique_cats = full_df['분류'].unique().tolist() if not full_df.empty else []
+    unique_cats = [x for x in unique_cats if x != '']
+    try:
+        unique_cats.sort(key=float)
+    except ValueError:
+        unique_cats.sort()
+
     with st.form(f"edit_form_{idx}"):
-        # 1번째 줄: 분류 / 단어 (추가 창과 동일한 배치)
+        # 1번째 줄: 분류 선택 / 입력 (추가 창과 동일한 배치)
         row1_col1, row1_col2 = st.columns(2)
         with row1_col1:
-            edit_cat = st.text_input("분류", value=row_data['분류'])
-        with row1_col2:
-            edit_word = st.text_input("단어", value=row_data['단어'])
+            # 현재 행의 분류가 드롭다운의 기본값이 되도록 설정
+            current_cat = row_data['분류']
+            if current_cat not in unique_cats:
+                unique_cats.append(current_cat)
+                unique_cats.sort()
             
-        # 2번째 줄: 문장 / 발음
+            try:
+                default_idx = unique_cats.index(current_cat) + 1
+            except ValueError:
+                default_idx = 0
+                
+            edit_selected_cat = st.selectbox("분류 선택 (기존)", ["(직접 입력)"] + unique_cats, index=default_idx)
+        with row1_col2:
+            # 새로 입력할 경우 사용
+            edit_new_cat = st.text_input("분류 직접 입력 (변경 시에만 입력)")
+            
+        # 2번째 줄: 단어 / 문장
         row2_col1, row2_col2 = st.columns(2)
         with row2_col1:
-            edit_sent = st.text_input("문장", value=row_data['문장'])
+            edit_word = st.text_input("단어", value=row_data['단어'])
         with row2_col2:
-            edit_pron = st.text_input("발음", value=row_data['발음'])
+            edit_sent = st.text_input("문장", value=row_data['문장'])
             
-        # 3번째 줄: 해석 / 메모1 대신 발음/해석 순서 통일
+        # 3번째 줄: 발음 / 해석
         row3_col1, row3_col2 = st.columns(2)
         with row3_col1:
-            # 추가 창에는 발음이 3줄 왼쪽에 있으므로 순서 맞춤
-            # 단, edit_pron은 위에서 이미 받았으므로 여기서는 해석을 배치
-            edit_mean = st.text_input("해석", value=row_data['해석'])
+            edit_pron = st.text_input("발음", value=row_data['발음'])
         with row3_col2:
-            # 추가 창의 3줄 오른쪽은 해석이지만, 여기서는 수정 레이아웃상 메모1 배치
-            edit_memo1 = st.text_input("메모1", value=row_data['메모1'])
+            edit_mean = st.text_input("해석", value=row_data['해석'])
             
-        # 4번째 줄: 메모2
+        # 4, 5번째 줄: 메모1, 메모2
+        edit_memo1 = st.text_input("메모1", value=row_data['메모1'])
         edit_memo2 = st.text_input("메모2", value=row_data['메모2'])
         
         st.divider()
@@ -149,10 +167,15 @@ def edit_dialog(idx, row_data, sheet):
         
         # 수정 로직
         if update_submitted:
+            # 분류 결정 로직
+            final_edit_cat = edit_new_cat.strip() if edit_new_cat.strip() else edit_selected_cat
+            if final_edit_cat == "(직접 입력)":
+                final_edit_cat = ""
+
             if edit_word or edit_sent:
                 try:
                     sheet_row = idx + 2 
-                    new_values = [edit_cat, edit_word, edit_sent, edit_pron, edit_mean, edit_memo1, edit_memo2]
+                    new_values = [final_edit_cat, edit_word, edit_sent, edit_pron, edit_mean, edit_memo1, edit_memo2]
                     
                     cell_list = sheet.range(f"A{sheet_row}:G{sheet_row}")
                     for i, cell in enumerate(cell_list):
@@ -190,13 +213,13 @@ except Exception as e:
     st.error(f"구글 시트 데이터를 불러오는 중 오류가 발생했습니다.\n\n에러 내용: {e}")
 
 if data_loaded:
-    # --- [새 항목 추가 버튼 (상단 배치)] ---
+    # --- [새 항목 추가 버튼] ---
     if st.button("➕ 새 항목 추가", type="primary", use_container_width=True):
         add_dialog(sheet, df)
         
     st.divider()
 
-    # --- [검색 기능 및 상단 필터 버튼] ---
+    # --- [검색 및 필터 구역] ---
     if 'filter_type' not in st.session_state:
         st.session_state.filter_type = '전체보기'
 
@@ -205,17 +228,16 @@ if data_loaded:
     with col_h1:
         st.header("🔍 단어/문장 검색")
         
-    # 분류 선택 리스트
     with col_h2:
-        st.write("") # 헤더와 높이 맞춤용
-        unique_nums = df['분류'].unique().tolist()
-        unique_nums = [x for x in unique_nums if x != '']
+        st.write("") 
+        unique_cats = df['분류'].unique().tolist()
+        unique_cats = [x for x in unique_cats if x != '']
         try:
-            unique_nums.sort(key=float)
+            unique_cats.sort(key=float)
         except ValueError:
-            unique_nums.sort()
+            unique_cats.sort()
             
-        selected_category = st.selectbox("분류", ["전체 분류"] + unique_nums, label_visibility="collapsed")
+        selected_category = st.selectbox("분류", ["전체 분류"] + unique_cats, label_visibility="collapsed")
         
     with col_h3:
         st.write("")
@@ -239,17 +261,14 @@ if data_loaded:
     
     display_df = df.copy()
 
-    # 0. 분류 선택에 따른 필터링 적용
     if selected_category != "전체 분류":
         display_df = display_df[display_df['분류'] == selected_category]
 
-    # 1. 상단 버튼(단어/문장/전체보기)에 따른 1차 필터링
     if st.session_state.filter_type == '단어':
         display_df = display_df[display_df['단어'] != '']
     elif st.session_state.filter_type == '문장':
         display_df = display_df[display_df['문장'] != '']
 
-    # 2. 검색어 입력 시 2차 필터링 적용
     if search_query:
         mask = pd.Series(False, index=display_df.index)
         search_columns = ['단어', '문장', '해석', '메모1', '메모2'] 
@@ -258,7 +277,6 @@ if data_loaded:
                 mask |= display_df[col].astype(str).str.contains(search_query, case=False, na=False)
         display_df = display_df[mask]
     
-    # 표 그리기
     if not display_df.empty:
         if len(display_df) > 50:
             st.info(f"검색 결과가 너무 많습니다. 최근 추가된 50개만 표시합니다. (전체 {len(display_df)}개)")
@@ -286,8 +304,7 @@ if data_loaded:
             cols[5].write(row['메모1'])
             cols[6].write(row['메모2'])
             
-            # 인덱스(idx) 값을 전달하여 수정 및 삭제 핸들링
             if cols[7].button("✏️", key=f"edit_btn_{idx}"):
-                edit_dialog(idx, row, sheet)
+                edit_dialog(idx, row, sheet, df) # 수정 창에서도 전체 df 전달
     else:
         st.warning(f"[{selected_category} / {st.session_state.filter_type}] 조건에 맞는 데이터가 없습니다.")
