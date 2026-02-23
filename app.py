@@ -21,7 +21,7 @@ def get_sheet():
     client = init_connection()
     return client.open("English_Sentences").sheet1
 
-# 2. 변경된 구조에 맞춘 데이터 불러오기
+# 2. 변경된 구조에 맞춘 데이터 불러오기 (오타 방지 로직 강화)
 def load_dataframe(sheet):
     for _ in range(3):
         try:
@@ -31,14 +31,16 @@ def load_dataframe(sheet):
             if not data: 
                 return pd.DataFrame(columns=['번호', '단어', '문장', '발음', '해석', '메모1', '메모2'])
                 
-            headers = data[0]
+            # 첫 번째 줄(시트의 제목행)은 무시하고 실제 데이터만 가져오기
             rows = data[1:]
             
-            # 헤더가 부족하거나 비어있으면 강제 지정
-            if len(headers) < 7 or headers[0] == "":
-                headers = ['번호', '단어', '문장', '발음', '해석', '메모1', '메모2']
-                # 데이터 길이가 안 맞으면 빈칸으로 채움
-                rows = [row + [""] * (7 - len(row)) for row in rows]
+            # 💡 구글 시트에 '매모2' 등 오타가 있더라도, 파이썬에서는 무조건 올바른 이름으로 고정!
+            headers = ['번호', '단어', '문장', '발음', '해석', '메모1', '메모2']
+            
+            # 데이터 길이가 안 맞으면 빈칸으로 채움
+            rows = [row + [""] * (7 - len(row)) for row in rows]
+            # 혹시 열이 더 많을 경우 7개까지만 자르기
+            rows = [row[:7] for row in rows]
                 
             return pd.DataFrame(rows, columns=headers)
         except Exception as e:
@@ -64,7 +66,7 @@ if data_loaded:
     if search_query:
         # 존재하는 열에서만 안전하게 검색하도록 동적 필터링
         mask = pd.Series(False, index=df.index)
-        search_columns = ['단어', '문장', '해석', '메모1', '메모2', '매모2'] 
+        search_columns = ['단어', '문장', '해석', '메모1', '메모2'] 
         
         for col in search_columns:
             if col in df.columns:
