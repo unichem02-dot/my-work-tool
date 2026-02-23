@@ -168,27 +168,32 @@ if data_loaded:
             st.info(f"검색 결과가 너무 많습니다. 최근 추가된 50개만 표시합니다. (전체 {len(display_df)}개)")
             display_df = display_df.iloc[::-1].head(50) # 역순 정렬 후 50개 컷
             
-        # 테이블 헤더 디자인
-        header_cols = st.columns([1, 2, 3, 2, 2, 1])
+        # 💡 테이블 헤더 디자인: 메모1, 메모2 컬럼 추가 (비율 조정)
+        col_ratio = [1, 2, 4, 2, 3, 3, 3, 1]
+        header_cols = st.columns(col_ratio)
         header_cols[0].markdown("**번호**")
         header_cols[1].markdown("**단어**")
         header_cols[2].markdown("**문장**")
         header_cols[3].markdown("**발음**")
         header_cols[4].markdown("**해석**")
-        header_cols[5].markdown("**수정**")
+        header_cols[5].markdown("**메모1**")
+        header_cols[6].markdown("**메모2**")
+        header_cols[7].markdown("**수정**")
         st.divider()
         
-        # 각 행마다 버튼 생성
+        # 💡 각 행마다 데이터 및 수정 버튼 생성: 메모1, 메모2 내용 출력 추가
         for idx, row in display_df.iterrows():
-            cols = st.columns([1, 2, 3, 2, 2, 1])
+            cols = st.columns(col_ratio)
             cols[0].write(row['번호'])
             cols[1].write(row['단어'])
             cols[2].write(row['문장'])
             cols[3].write(row['발음'])
             cols[4].write(row['해석'])
+            cols[5].write(row['메모1'])
+            cols[6].write(row['메모2'])
             
             # 수정 버튼 클릭 시 팝업(Dialog) 호출
-            if cols[5].button("✏️", key=f"edit_btn_{idx}"):
+            if cols[7].button("✏️", key=f"edit_btn_{idx}"):
                 edit_dialog(row, sheet, df)
     else:
         st.warning("조건에 맞는 데이터가 없습니다.")
