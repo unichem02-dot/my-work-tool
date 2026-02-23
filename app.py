@@ -41,8 +41,6 @@ def load_dataframe(sheet):
                 
             df = pd.DataFrame(rows, columns=headers)
             
-            # 💡 핵심 수정: 구글 시트의 눈에 보이지 않는 띄어쓰기(공백) 완벽 제거
-            # 공백 때문에 필터링이 실패하는 현상을 원천 차단합니다.
             for col in df.columns:
                 df[col] = df[col].astype(str).str.strip()
                 
@@ -55,16 +53,21 @@ def load_dataframe(sheet):
 # 3. 팝업창(모달) 띄우기 함수 - 새 항목 추가하기
 @st.dialog("➕ 새 항목 추가")
 def add_dialog(sheet, full_df):
-    if full_df.empty:
-        next_num = 1
-    else:
-        next_num = int(pd.to_numeric(full_df['분류'], errors='coerce').fillna(0).max()) + 1
+    # 기존 분류 목록 가져오기
+    unique_nums = full_df['분류'].unique().tolist() if not full_df.empty else []
+    unique_nums = [x for x in unique_nums if x != '']
+    try:
+        unique_nums.sort(key=float)
+    except ValueError:
+        unique_nums.sort()
 
     with st.form("add_sentence_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         
         with col1:
-            st.text_input("분류 (자동 부여)", value=str(next_num), disabled=True)
+            # 💡 기존 분류 선택 및 새 분류 입력 기능 추가
+            selected_cat = st.selectbox("분류 선택 (기존)", ["(새로 입력)"] + unique_nums)
+            new_cat = st.text_input("새 분류 입력 (아래에 직접 입력 시 우선 적용됩니다)")
             new_word = st.text_input("단어")
             new_sent = st.text_input("문장")
             
@@ -72,15 +75,19 @@ def add_dialog(sheet, full_df):
             new_pron = st.text_input("발음")
             new_mean = st.text_input("해석")
             new_memo1 = st.text_input("메모1")
+            new_memo2 = st.text_input("메모2")
             
-        new_memo2 = st.text_input("메모2")
-        
         submitted = st.form_submit_button("시트에 저장하기")
         
         if submitted:
+            # 직접 입력한 새 분류가 있으면 우선 적용, 없으면 드롭다운 선택값 적용
+            final_cat = new_cat.strip() if new_cat.strip() else selected_cat
+            if final_cat == "(새로 입력)":
+                final_cat = ""
+                
             if new_word or new_sent:
                 try:
-                    sheet.append_row([str(next_num), new_word, new_sent, new_pron, new_mean, new_memo1, new_memo2])
+                    sheet.append_row([final_cat, new_word, new_sent, new_pron, new_mean, new_memo1, new_memo2])
                     st.success("성공적으로 저장되었습니다! 🔄")
                     time.sleep(1)
                     st.rerun()
@@ -91,35 +98,33 @@ def add_dialog(sheet, full_df):
 
 # 4. 팝업창(모달) 띄우기 함수 - 기존 항목 수정하기
 @st.dialog("✏️ 항목 수정")
-def edit_dialog(row_data, sheet, full_df):
+def edit_dialog(idx, row_data, sheet):
     st.markdown(f"**[{row_data['분류']}] {row_data['단어']}** 데이터를 수정합니다.")
     
-    with st.form(f"edit_form_{row_data['분류']}"):
+    with st.form(f"edit_form_{idx}"):
         col1, col2 = st.columns(2)
         
         with col1:
-            st.text_input("분류 (수정 불가)", value=row_data['분류'], disabled=True)
+            # 💡 수정 불가가 아닌, 수정 가능하게 풀어두어 오타 정정 지원
+            edit_cat = st.text_input("분류", value=row_data['분류'])
             edit_word = st.text_input("단어", value=row_data['단어'])
             edit_sent = st.text_input("문장", value=row_data['문장'])
+            edit_pron = st.text_input("발음", value=row_data['발음'])
             
         with col2:
-            edit_pron = st.text_input("발음", value=row_data['발음'])
             edit_mean = st.text_input("해석", value=row_data['해석'])
             edit_memo1 = st.text_input("메모1", value=row_data['메모1'])
-            
-        edit_memo2 = st.text_input("메모2", value=row_data['메모2'])
-        
-        update_submitted = st.form_submit_button("수정 내용 저장하기")
+            edit_memo2 = st.text_input("메모2", value=row_data['메모2'])
+            st.write("") # 버튼 위치 맞춤용 빈 줄
+            update_submitted = st.form_submit_button("수정 내용 저장하기")
         
         if update_submitted:
             if edit_word or edit_sent:
                 try:
-                    selected_id = row_data['분류']
-                    # 시트에서 해당 분류가 위치한 행 번호 계산
-                    sheet_row = full_df.index[full_df['분류'] == selected_id][0] + 2
+                    # 💡 구글 시트의 정확한 줄(Row) 번호 계산 (표 첫 번째 행 데이터가 구글시트의 2번째 행)
+                    sheet_row = idx + 2 
                     
-                    # 덮어씌울 새 데이터 배열
-                    new_values = [selected_id, edit_word, edit_sent, edit_pron, edit_mean, edit_memo1, edit_memo2]
+                    new_values = [edit_cat, edit_word, edit_sent, edit_pron, edit_mean, edit_memo1, edit_memo2]
                     
                     # gspread 업데이트
                     cell_list = sheet.range(f"A{sheet_row}:G{sheet_row}")
@@ -165,7 +170,6 @@ if data_loaded:
     # 분류 선택 리스트
     with col_h2:
         st.write("") # 헤더와 높이 맞춤용
-        # 분류 고유값 추출 (빈 값 제외)
         unique_nums = df['분류'].unique().tolist()
         unique_nums = [x for x in unique_nums if x != '']
         try:
@@ -203,10 +207,8 @@ if data_loaded:
 
     # 1. 상단 버튼(단어/문장/전체보기)에 따른 1차 필터링
     if st.session_state.filter_type == '단어':
-        # 단어 칸이 비어있지 않은 항목만 남김
         display_df = display_df[display_df['단어'] != '']
     elif st.session_state.filter_type == '문장':
-        # 문장 칸이 비어있지 않은 항목만 남김
         display_df = display_df[display_df['문장'] != '']
 
     # 2. 검색어 입력 시 2차 필터링 적용
@@ -218,14 +220,12 @@ if data_loaded:
                 mask |= display_df[col].astype(str).str.contains(search_query, case=False, na=False)
         display_df = display_df[mask]
     
-    # 표(Dataframe) 대신, 직접 리스트를 그려서 우측에 버튼 배치
+    # 표 그리기
     if not display_df.empty:
-        # 데이터가 너무 많아 렉이 걸리는 것을 방지 (가장 최신 50개만 보여줌)
         if len(display_df) > 50:
             st.info(f"검색 결과가 너무 많습니다. 최근 추가된 50개만 표시합니다. (전체 {len(display_df)}개)")
-            display_df = display_df.iloc[::-1].head(50) # 역순 정렬 후 50개 컷
+            display_df = display_df.iloc[::-1].head(50) 
             
-        # 테이블 헤더 디자인: 메모1, 메모2 컬럼 추가 (비율 조정)
         col_ratio = [1, 2, 4, 2, 3, 3, 3, 1]
         header_cols = st.columns(col_ratio)
         header_cols[0].markdown("**분류**")
@@ -238,22 +238,18 @@ if data_loaded:
         header_cols[7].markdown("**수정**")
         st.divider()
         
-        # 각 행마다 데이터 및 수정 버튼 생성: 단어와 문장은 굵고 크게 표시
         for idx, row in display_df.iterrows():
             cols = st.columns(col_ratio)
             cols[0].write(row['분류'])
-            
-            # 단어와 문장 내용에 HTML/CSS를 적용하여 굵게, 크기 1.4배 적용
             cols[1].markdown(f"<span style='font-size: 1.4em; font-weight: bold;'>{row['단어']}</span>", unsafe_allow_html=True)
             cols[2].markdown(f"<span style='font-size: 1.4em; font-weight: bold;'>{row['문장']}</span>", unsafe_allow_html=True)
-            
             cols[3].write(row['발음'])
             cols[4].write(row['해석'])
             cols[5].write(row['메모1'])
             cols[6].write(row['메모2'])
             
-            # 수정 버튼 클릭 시 팝업(Dialog) 호출
+            # 인덱스(idx) 값을 전달하도록 수정
             if cols[7].button("✏️", key=f"edit_btn_{idx}"):
-                edit_dialog(row, sheet, df)
+                edit_dialog(idx, row, sheet)
     else:
         st.warning(f"[{selected_category} / {st.session_state.filter_type}] 조건에 맞는 데이터가 없습니다.")
