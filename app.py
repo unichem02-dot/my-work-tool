@@ -64,7 +64,7 @@ if data_loaded:
     if search_query:
         # 존재하는 열에서만 안전하게 검색하도록 동적 필터링
         mask = pd.Series(False, index=df.index)
-        search_columns = ['단어', '문장', '해석', '메모1', '메모2', '매모2'] # '매모2' 오타 대비
+        search_columns = ['단어', '문장', '해석', '메모1', '메모2', '매모2'] 
         
         for col in search_columns:
             if col in df.columns:
@@ -79,30 +79,35 @@ if data_loaded:
 
     # --- [추가 기능] ---
     st.header("➕ 새 항목 추가")
+    
+    # 💡 자동 번호 계산 (기존 번호 중 가장 큰 값 + 1)
+    if df.empty:
+        next_num = 1
+    else:
+        # 문자가 섞여 있어도 숫자로 변환 후 최댓값 찾기
+        next_num = int(pd.to_numeric(df['번호'], errors='coerce').fillna(0).max()) + 1
+
     with st.form("add_sentence_form", clear_on_submit=True):
-        # 7개 항목을 깔끔하게 보여주기 위해 2단 레이아웃 사용
         col1, col2 = st.columns(2)
         
         with col1:
-            new_num = st.text_input("1. 번호 (예: 2)")
-            new_word = st.text_input("2. 단어 (예: involve)")
-            new_sent = st.text_input("3. 문장")
+            st.text_input("번호 (자동 부여)", value=str(next_num), disabled=True)
+            new_word = st.text_input("단어")
+            new_sent = st.text_input("문장")
             
         with col2:
-            new_pron = st.text_input("4. 발음")
-            new_mean = st.text_input("5. 해석 (예: 집어넣다.)")
-            new_memo1 = st.text_input("6. 메모1 (예: 돌돌말아서 안에 넣다.)")
+            new_pron = st.text_input("발음")
+            new_mean = st.text_input("해석")
+            new_memo1 = st.text_input("메모1")
             
-        new_memo2 = st.text_input("7. 메모2")
+        new_memo2 = st.text_input("메모2")
         
         submitted = st.form_submit_button("시트에 저장하기")
         
         if submitted:
-            # 단어 또는 문장 둘 중 하나라도 입력되면 저장 진행
             if new_word or new_sent:
                 try:
-                    # 7개 데이터를 순서대로 추가
-                    sheet.append_row([new_num, new_word, new_sent, new_pron, new_mean, new_memo1, new_memo2])
+                    sheet.append_row([str(next_num), new_word, new_sent, new_pron, new_mean, new_memo1, new_memo2])
                     st.success("성공적으로 저장되었습니다! 🔄")
                     time.sleep(1)
                     st.rerun()
@@ -110,3 +115,60 @@ if data_loaded:
                     st.error(f"데이터 추가 중 오류가 발생했습니다. 상세: {e}")
             else:
                 st.error("최소한 '단어'나 '문장' 중 하나는 입력해주세요.")
+
+    st.divider()
+
+    # --- [수정 기능] ---
+    st.header("✏️ 기존 항목 수정")
+    
+    if not df.empty:
+        # 선택상자에 보여줄 목록 만들기 (예: [1] involve - 집어넣다)
+        options = df.apply(lambda x: f"[{x['번호']}] {x['단어']} | {x['해석']}", axis=1).tolist()
+        selected_option = st.selectbox("수정할 항목을 선택하세요", ["선택 안함"] + options)
+
+        if selected_option != "선택 안함":
+            # "[1] involve..." 형식에서 번호 "1"만 추출
+            selected_id = selected_option.split("]")[0][1:]
+            
+            # 추출한 번호에 해당하는 기존 데이터 불러오기
+            target_row = df[df['번호'] == selected_id].iloc[0]
+            
+            with st.form("edit_sentence_form"):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.text_input("번호 (수정 불가)", value=selected_id, disabled=True)
+                    edit_word = st.text_input("단어", value=target_row['단어'])
+                    edit_sent = st.text_input("문장", value=target_row['문장'])
+                    
+                with col2:
+                    edit_pron = st.text_input("발음", value=target_row['발음'])
+                    edit_mean = st.text_input("해석", value=target_row['해석'])
+                    edit_memo1 = st.text_input("메모1", value=target_row['메모1'])
+                    
+                edit_memo2 = st.text_input("메모2", value=target_row['메모2'])
+                
+                update_submitted = st.form_submit_button("수정 내용 저장하기")
+                
+                if update_submitted:
+                    if edit_word or edit_sent:
+                        try:
+                            # 1. 시트에서 해당 번호가 위치한 행 번호 계산 (표의 첫째 줄이 2번 행이므로 +2)
+                            sheet_row = df.index[df['번호'] == selected_id][0] + 2
+                            
+                            # 2. 덮어씌울 새 데이터 배열
+                            new_values = [selected_id, edit_word, edit_sent, edit_pron, edit_mean, edit_memo1, edit_memo2]
+                            
+                            # 3. gspread 안정성을 위해 해당 줄의 셀들을 가져와서 값 교체
+                            cell_list = sheet.range(f"A{sheet_row}:G{sheet_row}")
+                            for i, cell in enumerate(cell_list):
+                                cell.value = new_values[i]
+                            sheet.update_cells(cell_list)
+                            
+                            st.success("성공적으로 수정되었습니다! 🔄")
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"데이터 수정 중 오류가 발생했습니다. 상세: {e}")
+                    else:
+                        st.error("최소한 '단어'나 '문장' 중 하나는 입력해주세요.")
