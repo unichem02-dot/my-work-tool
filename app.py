@@ -2,9 +2,9 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
+import time
 
-# 1. 구글 시트 연동 설정
-# Streamlit Secrets에서 구글 서비스 계정 정보를 가져옵니다.
+# 1. 구글 시트 연동 설정 (인증 정보만 캐싱하여 속도 유지)
 @st.cache_resource
 def init_connection():
     scopes = [
@@ -18,46 +18,48 @@ def init_connection():
     client = gspread.authorize(creds)
     return client
 
-# 시트 연결 객체 가져오기 (연결 속성이므로 캐싱 대상에서 제외)
 def get_sheet():
     client = init_connection()
     return client.open("English_Sentences").sheet1
 
-# 2. 데이터 불러오기 (순수 데이터만 캐싱)
-@st.cache_data(ttl=10) # 10초마다 데이터 갱신
-def load_dataframe():
-    sheet = get_sheet()
-    # get_all_records() 대신 파싱 에러가 없는 get_all_values() 사용
-    data = sheet.get_all_values()
-    
-    # 구글 시트에 아직 아무 데이터도 없을 경우의 오류 방지
-    if not data: 
-        return pd.DataFrame(columns=['English', 'Korean', 'Tags'])
-        
-    # 첫 번째 줄은 헤더, 나머지는 데이터로 분리
-    headers = data[0]
-    rows = data[1:]
-    
-    # 만약 첫째 줄(헤더)이 비어있다면 강제 지정
-    if len(headers) < 3 or headers[0] == "":
-        headers = ['English', 'Korean', 'Tags']
-        rows = data
-        
-    return pd.DataFrame(rows, columns=headers)
+# 2. 데이터 불러오기 (에러의 원인이었던 캐싱 제거 및 재시도 로직 추가)
+def load_dataframe(sheet):
+    # 구글 API가 정상(200)인데도 데이터를 늦게 주어 에러가 나는 현상 방지 (최대 3번 재시도)
+    for _ in range(3):
+        try:
+            data = sheet.get_all_values()
+            
+            # 구글 시트에 아직 아무 데이터도 없을 경우의 오류 방지
+            if not data: 
+                return pd.DataFrame(columns=['English', 'Korean', 'Tags'])
+                
+            # 첫 번째 줄은 헤더, 나머지는 데이터로 분리
+            headers = data[0]
+            rows = data[1:]
+            
+            # 만약 첫째 줄(헤더)이 비어있다면 강제 지정
+            if len(headers) < 3 or headers[0] == "":
+                headers = ['English', 'Korean', 'Tags']
+                rows = data
+                
+            return pd.DataFrame(rows, columns=headers)
+        except Exception as e:
+            # 에러 발생 시 1초 대기 후 다시 시도
+            time.sleep(1)
+            
+    # 3번 모두 실패했을 때만 에러 발생
+    raise Exception("구글 시트 응답 지연 (잠시 후 다시 시도해주세요)")
 
 st.title("📚 나의 영어 문장 관리장")
 
-# 데이터 로딩 시도 및 에러 처리 분리
+# 데이터 로딩 시도
 data_loaded = False
 try:
-    sheet = get_sheet() # 연결 객체는 따로 불러옴
-    df = load_dataframe() # 데이터 프레임만 캐시에서 불러옴
+    sheet = get_sheet() # 연결 객체 불러오기
+    df = load_dataframe(sheet) # 데이터 프레임 불러오기
     data_loaded = True
 except Exception as e:
-    # st.rerun() 시스템 예외는 통과시키고 진짜 에러만 잡도록 수정
-    if "RerunException" in str(type(e)):
-        raise e
-    st.error(f"구글 시트 데이터를 불러오는 중 오류가 발생했습니다.\n\n에러 내용: {e}\n\n💡 팁: 구글 시트 1번째 줄(A1, B1, C1)에 English, Korean, Tags 가 잘 적혀있는지 확인하세요!")
+    st.error(f"구글 시트 데이터를 불러오는 중 오류가 발생했습니다.\n\n에러 내용: {e}")
 
 # 정상적으로 불러와졌을 때만 아래 UI들을 보여줍니다.
 if data_loaded:
@@ -79,7 +81,8 @@ if data_loaded:
 
     # --- [추가 기능] ---
     st.header("➕ 새 문장 추가")
-    with st.form("add_sentence_form"):
+    # clear_on_submit=True 를 추가하여 저장 완료 시 입력칸이 자동으로 비워지게 개선
+    with st.form("add_sentence_form", clear_on_submit=True):
         new_eng = st.text_input("영어 문장")
         new_kor = st.text_input("한국어 뜻")
         new_tags = st.text_input("태그 (예: 비즈니스, 일상, 토익)")
@@ -91,14 +94,10 @@ if data_loaded:
                 try:
                     # 구글 시트의 마지막 줄에 데이터 추가
                     sheet.append_row([new_eng, new_kor, new_tags])
-                    st.success("성공적으로 저장되었습니다! 🔄 잠시 후 새로고침됩니다.")
-                    st.cache_data.clear() # 캐시 초기화하여 새 데이터 반영
+                    st.success("성공적으로 저장되었습니다! 🔄")
+                    time.sleep(1) # 구글 시트에 반영될 수 있도록 1초 대기
                     st.rerun() # 화면 새로고침
                 except Exception as e:
-                    # st.rerun() 시스템 예외는 통과시키기
-                    if "RerunException" in str(type(e)):
-                        raise e
-                    # 실제 추가 중 에러가 발생했을 때만 표시
                     st.error(f"데이터 추가 중 오류가 발생했습니다. 상세: {e}")
             else:
                 st.error("영어 문장과 뜻을 모두 입력해주세요.")
