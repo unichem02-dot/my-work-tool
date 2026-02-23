@@ -18,21 +18,28 @@ def init_connection():
     client = gspread.authorize(creds)
     return client
 
-# 2. 데이터 불러오기
-@st.cache_data(ttl=10) # 10초마다 데이터 갱신
-def load_data():
+# 시트 연결 객체 가져오기 (연결 속성이므로 캐싱 대상에서 제외)
+def get_sheet():
     client = init_connection()
-    # 'English_Sentences'라는 이름의 구글 시트 파일을 엽니다. (이름을 본인 시트에 맞게 변경하세요)
-    sheet = client.open("English_Sentences").sheet1
+    return client.open("English_Sentences").sheet1
+
+# 2. 데이터 불러오기 (순수 데이터만 캐싱)
+@st.cache_data(ttl=10) # 10초마다 데이터 갱신
+def load_dataframe():
+    sheet = get_sheet()
     data = sheet.get_all_records()
-    return pd.DataFrame(data), sheet
+    # 구글 시트에 아직 아무 데이터도 없을 경우의 오류 방지
+    if not data: 
+        return pd.DataFrame(columns=['English', 'Korean', 'Tags'])
+    return pd.DataFrame(data)
 
 st.title("📚 나의 영어 문장 관리장")
 
 # 데이터 로딩 시도 및 에러 처리 분리
 data_loaded = False
 try:
-    df, sheet = load_data()
+    sheet = get_sheet() # 연결 객체는 따로 불러옴
+    df = load_dataframe() # 데이터 프레임만 캐시에서 불러옴
     data_loaded = True
 except Exception as e:
     st.error(f"구글 시트 데이터를 불러오는 중 오류가 발생했습니다.\n\n설정(Secrets)이나 시트 이름을 확인해주세요.\n\n에러 내용: {e}")
