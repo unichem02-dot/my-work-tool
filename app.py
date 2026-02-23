@@ -4,6 +4,9 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import time
 
+# --- [페이지 기본 설정 (가로 넓게 쓰기)] ---
+st.set_page_config(layout="wide", page_title="TOmBOy94's English")
+
 # 1. 구글 시트 연동 설정
 @st.cache_resource
 def init_connection():
@@ -126,7 +129,7 @@ def edit_dialog(row_data, sheet, full_df):
                 st.error("최소한 '단어'나 '문장' 중 하나는 입력해주세요.")
 
 # --- [메인 앱 화면] ---
-st.title("📚 나의 영어 문장 관리장")
+st.title("📚 TOmBOy94's English words and sentences")
 
 data_loaded = False
 try:
