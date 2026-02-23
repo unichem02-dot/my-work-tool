@@ -42,7 +42,44 @@ def load_dataframe(sheet):
             
     raise Exception("구글 시트 응답 지연 (잠시 후 다시 시도해주세요)")
 
-# 3. 팝업창(모달) 띄우기 함수 - 새창으로 수정하기
+# 3. 팝업창(모달) 띄우기 함수 - 새 항목 추가하기
+@st.dialog("➕ 새 항목 추가")
+def add_dialog(sheet, full_df):
+    if full_df.empty:
+        next_num = 1
+    else:
+        next_num = int(pd.to_numeric(full_df['번호'], errors='coerce').fillna(0).max()) + 1
+
+    with st.form("add_sentence_form", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.text_input("번호 (자동 부여)", value=str(next_num), disabled=True)
+            new_word = st.text_input("단어")
+            new_sent = st.text_input("문장")
+            
+        with col2:
+            new_pron = st.text_input("발음")
+            new_mean = st.text_input("해석")
+            new_memo1 = st.text_input("메모1")
+            
+        new_memo2 = st.text_input("메모2")
+        
+        submitted = st.form_submit_button("시트에 저장하기")
+        
+        if submitted:
+            if new_word or new_sent:
+                try:
+                    sheet.append_row([str(next_num), new_word, new_sent, new_pron, new_mean, new_memo1, new_memo2])
+                    st.success("성공적으로 저장되었습니다! 🔄")
+                    time.sleep(1)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"데이터 추가 중 오류가 발생했습니다. 상세: {e}")
+            else:
+                st.error("최소한 '단어'나 '문장' 중 하나는 입력해주세요.")
+
+# 4. 팝업창(모달) 띄우기 함수 - 기존 항목 수정하기
 @st.dialog("✏️ 항목 수정")
 def edit_dialog(row_data, sheet, full_df):
     st.markdown(f"**[{row_data['번호']}] {row_data['단어']}** 데이터를 수정합니다.")
@@ -100,6 +137,12 @@ except Exception as e:
     st.error(f"구글 시트 데이터를 불러오는 중 오류가 발생했습니다.\n\n에러 내용: {e}")
 
 if data_loaded:
+    # --- [새 항목 추가 버튼 (상단 배치)] ---
+    if st.button("➕ 새 항목 추가", type="primary", use_container_width=True):
+        add_dialog(sheet, df)
+        
+    st.divider()
+
     # --- [검색 기능 및 결과 출력 (수정 버튼 포함)] ---
     st.header("🔍 단어/문장 검색")
     search_query = st.text_input("검색어를 입력하세요 (단어, 문장, 해석 등)")
@@ -146,42 +189,3 @@ if data_loaded:
                 edit_dialog(row, sheet, df)
     else:
         st.warning("조건에 맞는 데이터가 없습니다.")
-
-    st.divider()
-
-    # --- [새 항목 추가 기능] ---
-    st.header("➕ 새 항목 추가")
-    
-    if df.empty:
-        next_num = 1
-    else:
-        next_num = int(pd.to_numeric(df['번호'], errors='coerce').fillna(0).max()) + 1
-
-    with st.form("add_sentence_form", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.text_input("번호 (자동 부여)", value=str(next_num), disabled=True)
-            new_word = st.text_input("단어")
-            new_sent = st.text_input("문장")
-            
-        with col2:
-            new_pron = st.text_input("발음")
-            new_mean = st.text_input("해석")
-            new_memo1 = st.text_input("메모1")
-            
-        new_memo2 = st.text_input("메모2")
-        
-        submitted = st.form_submit_button("시트에 저장하기")
-        
-        if submitted:
-            if new_word or new_sent:
-                try:
-                    sheet.append_row([str(next_num), new_word, new_sent, new_pron, new_mean, new_memo1, new_memo2])
-                    st.success("성공적으로 저장되었습니다! 🔄")
-                    time.sleep(1)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"데이터 추가 중 오류가 발생했습니다. 상세: {e}")
-            else:
-                st.error("최소한 '단어'나 '문장' 중 하나는 입력해주세요.")
