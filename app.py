@@ -157,13 +157,13 @@ def edit_dialog(idx, row_data, sheet, full_df):
             except Exception as e: st.error(f"삭제 오류: {e}")
 
 # --- [메인 로직] ---
-st.title("📚 TOmBOy94's English words and sentences")
 
 # 로그인 상태 확인
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
 if not st.session_state.authenticated:
+    st.title("📚 TOmBOy94's English words and sentences")
     # 로그인 화면
     with st.container():
         st.subheader("🔑 Access Restricted")
@@ -177,6 +177,17 @@ if not st.session_state.authenticated:
             else:
                 st.error("비밀번호가 틀렸습니다.")
 else:
+    # 💡 타이틀과 로그아웃 버튼을 한 줄에 배치
+    col_title, col_logout = st.columns([8, 1])
+    with col_title:
+        st.title("📚 TOmBOy94's English words and sentences")
+    with col_logout:
+        st.write("") # 간격 조절
+        st.write("") 
+        if st.button("로그아웃", use_container_width=True):
+            st.session_state.authenticated = False
+            st.rerun()
+
     # 로그인 성공 시 앱 로드
     data_loaded = False
     try:
@@ -249,8 +260,3 @@ else:
                     edit_dialog(idx, row, sheet, df)
         else:
             st.warning("데이터가 없습니다.")
-        
-        # 로그아웃 버튼 (사이드바)
-        if st.sidebar.button("로그아웃"):
-            st.session_state.authenticated = False
-            st.rerun()
