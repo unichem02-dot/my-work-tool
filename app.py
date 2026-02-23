@@ -181,12 +181,15 @@ if data_loaded:
         header_cols[7].markdown("**수정**")
         st.divider()
         
-        # 💡 각 행마다 데이터 및 수정 버튼 생성: 메모1, 메모2 내용 출력 추가
+        # 💡 각 행마다 데이터 및 수정 버튼 생성: 단어와 문장은 굵고 크게 표시
         for idx, row in display_df.iterrows():
             cols = st.columns(col_ratio)
             cols[0].write(row['번호'])
-            cols[1].write(row['단어'])
-            cols[2].write(row['문장'])
+            
+            # 단어와 문장 내용에 HTML/CSS를 적용하여 굵게, 크기 1.15배 적용
+            cols[1].markdown(f"<span style='font-size: 1.15em; font-weight: bold;'>{row['단어']}</span>", unsafe_allow_html=True)
+            cols[2].markdown(f"<span style='font-size: 1.15em; font-weight: bold;'>{row['문장']}</span>", unsafe_allow_html=True)
+            
             cols[3].write(row['발음'])
             cols[4].write(row['해석'])
             cols[5].write(row['메모1'])
