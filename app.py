@@ -27,11 +27,23 @@ def get_sheet():
 @st.cache_data(ttl=10) # 10초마다 데이터 갱신
 def load_dataframe():
     sheet = get_sheet()
-    data = sheet.get_all_records()
+    # get_all_records() 대신 파싱 에러가 없는 get_all_values() 사용
+    data = sheet.get_all_values()
+    
     # 구글 시트에 아직 아무 데이터도 없을 경우의 오류 방지
     if not data: 
         return pd.DataFrame(columns=['English', 'Korean', 'Tags'])
-    return pd.DataFrame(data)
+        
+    # 첫 번째 줄은 헤더, 나머지는 데이터로 분리
+    headers = data[0]
+    rows = data[1:]
+    
+    # 만약 첫째 줄(헤더)이 비어있다면 강제 지정
+    if len(headers) < 3 or headers[0] == "":
+        headers = ['English', 'Korean', 'Tags']
+        rows = data
+        
+    return pd.DataFrame(rows, columns=headers)
 
 st.title("📚 나의 영어 문장 관리장")
 
@@ -42,7 +54,10 @@ try:
     df = load_dataframe() # 데이터 프레임만 캐시에서 불러옴
     data_loaded = True
 except Exception as e:
-    st.error(f"구글 시트 데이터를 불러오는 중 오류가 발생했습니다.\n\n설정(Secrets)이나 시트 이름을 확인해주세요.\n\n에러 내용: {e}")
+    # st.rerun() 시스템 예외는 통과시키고 진짜 에러만 잡도록 수정
+    if "RerunException" in str(type(e)):
+        raise e
+    st.error(f"구글 시트 데이터를 불러오는 중 오류가 발생했습니다.\n\n에러 내용: {e}\n\n💡 팁: 구글 시트 1번째 줄(A1, B1, C1)에 English, Korean, Tags 가 잘 적혀있는지 확인하세요!")
 
 # 정상적으로 불러와졌을 때만 아래 UI들을 보여줍니다.
 if data_loaded:
@@ -80,6 +95,9 @@ if data_loaded:
                     st.cache_data.clear() # 캐시 초기화하여 새 데이터 반영
                     st.rerun() # 화면 새로고침
                 except Exception as e:
+                    # st.rerun() 시스템 예외는 통과시키기
+                    if "RerunException" in str(type(e)):
+                        raise e
                     # 실제 추가 중 에러가 발생했을 때만 표시
                     st.error(f"데이터 추가 중 오류가 발생했습니다. 상세: {e}")
             else:
