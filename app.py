@@ -147,29 +147,41 @@ if data_loaded:
     st.divider()
 
     # --- [검색 기능 및 상단 필터 버튼] ---
-    # 필터 상태를 저장할 변수 초기화
     if 'filter_type' not in st.session_state:
         st.session_state.filter_type = '전체보기'
 
-    col_h1, col_h2, col_h3, col_h4 = st.columns([5, 1, 1, 1])
+    col_h1, col_h2, col_h3, col_h4, col_h5 = st.columns([3, 2, 1, 1, 1])
     
     with col_h1:
         st.header("🔍 단어/문장 검색")
         
-    # 버튼 클릭 시 해당 필터 모드로 변경 후 화면 새로고침
+    # 💡 [신규] 번호(분류) 선택 리스트 추가
     with col_h2:
-        st.write("") # 버튼 높이 맞춤용
+        st.write("") # 헤더와 높이 맞춤용
+        # 번호 고유값 추출 (빈 값 제외)
+        unique_nums = df['번호'].dropna().unique().tolist()
+        unique_nums = [str(x).strip() for x in unique_nums if str(x).strip() != '']
+        # 숫자로 정렬 시도 (실패시 문자로 정렬)
+        try:
+            unique_nums.sort(key=float)
+        except ValueError:
+            unique_nums.sort()
+            
+        selected_category = st.selectbox("분류(번호)", ["전체 분류"] + unique_nums, label_visibility="collapsed")
+        
+    with col_h3:
+        st.write("")
         if st.button("단어", type="primary" if st.session_state.filter_type == '단어' else "secondary", use_container_width=True):
             st.session_state.filter_type = '단어'
             st.rerun()
             
-    with col_h3:
+    with col_h4:
         st.write("")
         if st.button("문장", type="primary" if st.session_state.filter_type == '문장' else "secondary", use_container_width=True):
             st.session_state.filter_type = '문장'
             st.rerun()
             
-    with col_h4:
+    with col_h5:
         st.write("")
         if st.button("전체보기", type="primary" if st.session_state.filter_type == '전체보기' else "secondary", use_container_width=True):
             st.session_state.filter_type = '전체보기'
@@ -178,6 +190,10 @@ if data_loaded:
     search_query = st.text_input("검색어를 입력하세요 (단어, 문장, 해석 등)")
     
     display_df = df.copy()
+
+    # 💡 [신규] 0. 번호(분류) 선택에 따른 필터링 적용
+    if selected_category != "전체 분류":
+        display_df = display_df[display_df['번호'] == selected_category]
 
     # 1. 상단 버튼(단어/문장/전체보기)에 따른 1차 필터링
     if st.session_state.filter_type == '단어':
@@ -203,7 +219,7 @@ if data_loaded:
             st.info(f"검색 결과가 너무 많습니다. 최근 추가된 50개만 표시합니다. (전체 {len(display_df)}개)")
             display_df = display_df.iloc[::-1].head(50) # 역순 정렬 후 50개 컷
             
-        # 💡 테이블 헤더 디자인: 메모1, 메모2 컬럼 추가 (비율 조정)
+        # 테이블 헤더 디자인: 메모1, 메모2 컬럼 추가 (비율 조정)
         col_ratio = [1, 2, 4, 2, 3, 3, 3, 1]
         header_cols = st.columns(col_ratio)
         header_cols[0].markdown("**번호**")
@@ -216,7 +232,7 @@ if data_loaded:
         header_cols[7].markdown("**수정**")
         st.divider()
         
-        # 💡 각 행마다 데이터 및 수정 버튼 생성: 단어와 문장은 굵고 크게 표시
+        # 각 행마다 데이터 및 수정 버튼 생성: 단어와 문장은 굵고 크게 표시
         for idx, row in display_df.iterrows():
             cols = st.columns(col_ratio)
             cols[0].write(row['번호'])
@@ -234,4 +250,4 @@ if data_loaded:
             if cols[7].button("✏️", key=f"edit_btn_{idx}"):
                 edit_dialog(row, sheet, df)
     else:
-        st.warning(f"[{st.session_state.filter_type}] 조건에 맞는 데이터가 없습니다.")
+        st.warning(f"[{selected_category} / {st.session_state.filter_type}] 조건에 맞는 데이터가 없습니다.")
