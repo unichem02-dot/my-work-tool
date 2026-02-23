@@ -39,7 +39,14 @@ def load_dataframe(sheet):
             rows = [row + [""] * (7 - len(row)) for row in rows]
             rows = [row[:7] for row in rows]
                 
-            return pd.DataFrame(rows, columns=headers)
+            df = pd.DataFrame(rows, columns=headers)
+            
+            # 💡 핵심 수정: 구글 시트의 눈에 보이지 않는 띄어쓰기(공백) 완벽 제거
+            # 공백 때문에 필터링이 실패하는 현상을 원천 차단합니다.
+            for col in df.columns:
+                df[col] = df[col].astype(str).str.strip()
+                
+            return df
         except Exception as e:
             time.sleep(1)
             
@@ -155,13 +162,12 @@ if data_loaded:
     with col_h1:
         st.header("🔍 단어/문장 검색")
         
-    # 💡 [신규] 번호(분류) 선택 리스트 추가
+    # 번호(분류) 선택 리스트
     with col_h2:
         st.write("") # 헤더와 높이 맞춤용
         # 번호 고유값 추출 (빈 값 제외)
-        unique_nums = df['번호'].dropna().unique().tolist()
-        unique_nums = [str(x).strip() for x in unique_nums if str(x).strip() != '']
-        # 숫자로 정렬 시도 (실패시 문자로 정렬)
+        unique_nums = df['번호'].unique().tolist()
+        unique_nums = [x for x in unique_nums if x != '']
         try:
             unique_nums.sort(key=float)
         except ValueError:
@@ -191,17 +197,17 @@ if data_loaded:
     
     display_df = df.copy()
 
-    # 💡 [신규] 0. 번호(분류) 선택에 따른 필터링 적용
+    # 0. 번호(분류) 선택에 따른 필터링 적용
     if selected_category != "전체 분류":
         display_df = display_df[display_df['번호'] == selected_category]
 
     # 1. 상단 버튼(단어/문장/전체보기)에 따른 1차 필터링
     if st.session_state.filter_type == '단어':
         # 단어 칸이 비어있지 않은 항목만 남김
-        display_df = display_df[display_df['단어'].fillna('').str.strip() != '']
+        display_df = display_df[display_df['단어'] != '']
     elif st.session_state.filter_type == '문장':
         # 문장 칸이 비어있지 않은 항목만 남김
-        display_df = display_df[display_df['문장'].fillna('').str.strip() != '']
+        display_df = display_df[display_df['문장'] != '']
 
     # 2. 검색어 입력 시 2차 필터링 적용
     if search_query:
