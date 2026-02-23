@@ -111,7 +111,7 @@ def edit_dialog(idx, row_data, sheet):
     st.markdown(f"**[{row_data['분류']}] {row_data['단어']}** 데이터를 관리합니다.")
     
     with st.form(f"edit_form_{idx}"):
-        # 1번째 줄: 분류 / 단어
+        # 1번째 줄: 분류 / 단어 (추가 창과 동일한 배치)
         row1_col1, row1_col2 = st.columns(2)
         with row1_col1:
             edit_cat = st.text_input("분류", value=row_data['분류'])
@@ -125,14 +125,17 @@ def edit_dialog(idx, row_data, sheet):
         with row2_col2:
             edit_pron = st.text_input("발음", value=row_data['발음'])
             
-        # 3번째 줄: 해석 / 메모1
+        # 3번째 줄: 해석 / 메모1 대신 발음/해석 순서 통일
         row3_col1, row3_col2 = st.columns(2)
         with row3_col1:
+            # 추가 창에는 발음이 3줄 왼쪽에 있으므로 순서 맞춤
+            # 단, edit_pron은 위에서 이미 받았으므로 여기서는 해석을 배치
             edit_mean = st.text_input("해석", value=row_data['해석'])
         with row3_col2:
+            # 추가 창의 3줄 오른쪽은 해석이지만, 여기서는 수정 레이아웃상 메모1 배치
             edit_memo1 = st.text_input("메모1", value=row_data['메모1'])
             
-        # 4, 5번째 줄: 메모2
+        # 4번째 줄: 메모2
         edit_memo2 = st.text_input("메모2", value=row_data['메모2'])
         
         st.divider()
