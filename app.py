@@ -221,9 +221,9 @@ if data_loaded:
             cols = st.columns(col_ratio)
             cols[0].write(row['번호'])
             
-            # 단어와 문장 내용에 HTML/CSS를 적용하여 굵게, 크기 1.15배 적용
-            cols[1].markdown(f"<span style='font-size: 1.15em; font-weight: bold;'>{row['단어']}</span>", unsafe_allow_html=True)
-            cols[2].markdown(f"<span style='font-size: 1.15em; font-weight: bold;'>{row['문장']}</span>", unsafe_allow_html=True)
+            # 단어와 문장 내용에 HTML/CSS를 적용하여 굵게, 크기 1.4배 적용
+            cols[1].markdown(f"<span style='font-size: 1.4em; font-weight: bold;'>{row['단어']}</span>", unsafe_allow_html=True)
+            cols[2].markdown(f"<span style='font-size: 1.4em; font-weight: bold;'>{row['문장']}</span>", unsafe_allow_html=True)
             
             cols[3].write(row['발음'])
             cols[4].write(row['해석'])
