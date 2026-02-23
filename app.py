@@ -146,20 +146,55 @@ if data_loaded:
         
     st.divider()
 
-    # --- [검색 기능 및 결과 출력 (수정 버튼 포함)] ---
-    st.header("🔍 단어/문장 검색")
+    # --- [검색 기능 및 상단 필터 버튼] ---
+    # 필터 상태를 저장할 변수 초기화
+    if 'filter_type' not in st.session_state:
+        st.session_state.filter_type = '전체보기'
+
+    col_h1, col_h2, col_h3, col_h4 = st.columns([5, 1, 1, 1])
+    
+    with col_h1:
+        st.header("🔍 단어/문장 검색")
+        
+    # 버튼 클릭 시 해당 필터 모드로 변경 후 화면 새로고침
+    with col_h2:
+        st.write("") # 버튼 높이 맞춤용
+        if st.button("단어", type="primary" if st.session_state.filter_type == '단어' else "secondary", use_container_width=True):
+            st.session_state.filter_type = '단어'
+            st.rerun()
+            
+    with col_h3:
+        st.write("")
+        if st.button("문장", type="primary" if st.session_state.filter_type == '문장' else "secondary", use_container_width=True):
+            st.session_state.filter_type = '문장'
+            st.rerun()
+            
+    with col_h4:
+        st.write("")
+        if st.button("전체보기", type="primary" if st.session_state.filter_type == '전체보기' else "secondary", use_container_width=True):
+            st.session_state.filter_type = '전체보기'
+            st.rerun()
+
     search_query = st.text_input("검색어를 입력하세요 (단어, 문장, 해석 등)")
     
-    # 검색어에 따른 필터링 적용
+    display_df = df.copy()
+
+    # 1. 상단 버튼(단어/문장/전체보기)에 따른 1차 필터링
+    if st.session_state.filter_type == '단어':
+        # 단어 칸이 비어있지 않은 항목만 남김
+        display_df = display_df[display_df['단어'].fillna('').str.strip() != '']
+    elif st.session_state.filter_type == '문장':
+        # 문장 칸이 비어있지 않은 항목만 남김
+        display_df = display_df[display_df['문장'].fillna('').str.strip() != '']
+
+    # 2. 검색어 입력 시 2차 필터링 적용
     if search_query:
-        mask = pd.Series(False, index=df.index)
+        mask = pd.Series(False, index=display_df.index)
         search_columns = ['단어', '문장', '해석', '메모1', '메모2'] 
         for col in search_columns:
-            if col in df.columns:
-                mask |= df[col].astype(str).str.contains(search_query, case=False, na=False)
-        display_df = df[mask]
-    else:
-        display_df = df
+            if col in display_df.columns:
+                mask |= display_df[col].astype(str).str.contains(search_query, case=False, na=False)
+        display_df = display_df[mask]
     
     # 표(Dataframe) 대신, 직접 리스트를 그려서 우측에 버튼 배치
     if not display_df.empty:
@@ -199,4 +234,4 @@ if data_loaded:
             if cols[7].button("✏️", key=f"edit_btn_{idx}"):
                 edit_dialog(row, sheet, df)
     else:
-        st.warning("조건에 맞는 데이터가 없습니다.")
+        st.warning(f"[{st.session_state.filter_type}] 조건에 맞는 데이터가 없습니다.")
