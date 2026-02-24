@@ -24,14 +24,16 @@ st.markdown("""
 
     /* 2. 화면 기본 글씨 강제 흰색 */
     .stMarkdown, .stMarkdown p, .stMarkdown span, 
-    h1, h2, h3, h4, h5, h6, label, .stText {
+    label, .stText {
         color: #FFFFFF !important;
     }
 
-    /* ★ 팝업창 제목 완벽한 흰색 고정 (가장 강력한 선택자 적용) ★ */
-    div[role="dialog"] header *,
-    div[data-testid="stDialog"] header *,
-    div[data-testid="stModal"] header * {
+    /* ★ 팝업창 제목 포함 모든 헤딩 태그를 완벽한 흰색으로 고정 (가장 강력한 선택자 적용) ★ */
+    h1, h2, h3, h4, h5, h6,
+    h1 *, h2 *, h3 *, h4 *, h5 *, h6 *,
+    div[role="dialog"] h2, div[role="dialog"] h2 *,
+    div[role="dialog"] div[data-testid="stMarkdownContainer"] *,
+    [data-testid="stDialog"] h2, [data-testid="stDialog"] h2 * {
         color: #FFFFFF !important;
         -webkit-text-fill-color: #FFFFFF !important;
     }
@@ -66,10 +68,11 @@ st.markdown("""
         border-radius: 15px !important;
     }
 
-    /* 팝업창 닫기 버튼 (X) */
-    button[title="Close"], button[title="Close"] * {
+    /* 팝업창 닫기 버튼 (X) 완벽한 흰색 */
+    button[aria-label="Close"], button[aria-label="Close"] * {
         color: #FFFFFF !important;
         -webkit-text-fill-color: #FFFFFF !important;
+        fill: #FFFFFF !important;
     }
 
     /* 4. --- [버튼 공통: 완벽한 알약(Pill) 모양] --- */
@@ -284,7 +287,12 @@ if "authenticated" not in st.session_state:
 # 타이틀 및 로그아웃 버튼 가로 배치
 col_title, col_auth = st.columns([7, 2])
 with col_title:
-    st.title("TOmBOy94's English words and sentences : lodus11st@naver.com")
+    # ★ 이메일 링크 자동 변환을 막기 위해 HTML로 직접 타이틀을 렌더링합니다 ★
+    st.markdown("""
+        <h1 style='padding-top: 0.5rem; font-size: 2.2rem; font-weight: 700; color: #FFFFFF;'>
+            TOmBOy94's English words and sentences : lodus11st<span>@</span>naver.com
+        </h1>
+    """, unsafe_allow_html=True)
 
 with col_auth:
     if not st.session_state.authenticated:
@@ -297,6 +305,7 @@ with col_auth:
                 else:
                     st.error("비밀번호 오류")
     else:
+        st.write("")
         st.write("")
         if st.button("🔓 로그아웃", use_container_width=True, type="secondary"):
             st.session_state.authenticated = False
