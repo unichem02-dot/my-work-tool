@@ -39,16 +39,14 @@ st.markdown("""
         -webkit-text-fill-color: #FFFFFF !important;
     }
 
-    /* 3. ★ 모바일 입력 오류 해결: 입력창 뚜렷하게 및 상호작용 활성화 ★ */
+    /* 3. ★ 모바일 입력 오류 해결 및 입력창 스타일 ★ */
     .stTextInput input {
         background-color: #FFFFFF !important;
         color: #000000 !important;
-        /* -webkit-text-fill-color는 패스워드 마스킹(점)을 방해할 수 있어 필요한 곳에만 적용 */
         border-radius: 50px !important;
         padding-left: 15px !important;
         font-weight: 700 !important;
         border: 1px solid #FFFFFF !important;
-        /* 모바일 터치 및 입력 활성화 강제 */
         pointer-events: auto !important;
         user-select: text !important;
         -webkit-user-select: text !important;
@@ -58,6 +56,11 @@ st.markdown("""
     input[type="password"] {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
+    }
+
+    /* ★ 비밀번호 표시/숨기기(눈동자 아이콘) 기능 제거 ★ */
+    div[data-testid="stTextInput"] button {
+        display: none !important;
     }
     
     /* 드롭다운(Selectbox) 뚜렷하게 */
@@ -293,7 +296,6 @@ with col_title:
 with col_auth:
     if not st.session_state.authenticated:
         with st.expander("🔐 관리자 로그인"):
-            # 모바일 호환성을 위해 label_visibility를 제거하거나 명확히 함
             password_input = st.text_input("Password", type="password")
             if st.button("로그인", use_container_width=True, type="primary"):
                 if password_input == LOGIN_PASSWORD:
