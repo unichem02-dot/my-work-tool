@@ -8,12 +8,12 @@ import io
 # --- [페이지 기본 설정] ---
 st.set_page_config(layout="wide", page_title="TOmBOy94's English")
 
-# --- [사용자 정의 디자인 (CSS): 첨부이미지 스타일 완벽 적용 및 팝업창 동기화] ---
+# --- [사용자 정의 디자인 (CSS): 첨부이미지 스타일 완벽 적용 및 글씨 색상 오류 해결] ---
 st.markdown("""
     <style>
-    /* 1. 배경: 이미지와 동일한 짙은 다크그린 적용 (메인화면 & 팝업창 모두) */
+    /* 1. 배경: 짙은 다크그린 (메인 & 팝업창) */
     [data-testid="stAppViewContainer"], 
-    div[role="dialog"],
+    div[data-testid="stDialog"] > div,
     div[role="dialog"] > div {
         background-color: #224343 !important; 
     }
@@ -22,26 +22,36 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 2. 화면 백지화 방지: 모든 기본 텍스트를 강제 흰색으로 처리 */
-    .stMarkdown, .stMarkdown p, .stMarkdown span, h1, h2, h3, h4, h5, h6, label, .stText {
+    /* 2. 화면 기본 글씨 강제 흰색 (팝업창 제목 포함) */
+    .stMarkdown, .stMarkdown p, .stMarkdown span, 
+    h1, h2, h3, h4, h5, h6, label, .stText,
+    div[data-testid="stDialog"] h2 {
         color: #FFFFFF !important;
     }
 
-    /* [예외 처리] 드롭다운 메뉴를 열었을 때 글씨는 보이도록 검정색 처리 */
-    [data-baseweb="popover"] span, [data-baseweb="popover"] div {
+    /* 3. ★ 핵심 수정: 입력창 뚜렷하게 (흰 바탕 + 검은 글씨 강제 고정) ★ */
+    .stTextInput input {
+        background-color: #FFFFFF !important;
         color: #000000 !important;
-    }
-
-    /* 3. 입력창 둥글고 세련되게 처리 */
-    .stTextInput > div > div > input, .stSelectbox > div > div > div {
+        -webkit-text-fill-color: #000000 !important; /* 글자색을 무조건 검은색으로 */
         border-radius: 50px !important;
-        background-color: rgba(255, 255, 255, 0.1) !important;
-        border: 1px solid rgba(255, 255, 255, 0.4) !important;
-        color: #FFFFFF !important;
         padding-left: 15px !important;
+        font-weight: 900 !important;
+        border: none !important;
+    }
+    
+    /* 드롭다운(Selectbox) 뚜렷하게 */
+    .stSelectbox div[data-baseweb="select"] > div {
+        background-color: #FFFFFF !important;
+        border-radius: 50px !important;
+        border: none !important;
+    }
+    .stSelectbox div[data-baseweb="select"] * {
+        color: #000000 !important;
+        font-weight: bold !important;
     }
 
-    /* 팝업창 내부 폼(Form) 스타일 */
+    /* 팝업창 내부 폼(Form) 테두리 */
     [data-testid="stForm"] {
         background-color: transparent !important;
         border: 1px solid rgba(255, 255, 255, 0.2) !important;
@@ -53,9 +63,8 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* 4. --- [버튼 공통: 팝업창 버튼까지 포함하여 완벽한 알약(Pill) 모양] --- */
-    button[data-testid="baseButton-primary"], 
-    button[data-testid="baseButton-secondary"] {
+    /* 4. --- [버튼 공통: 완벽한 알약(Pill) 모양] --- */
+    button {
         border-radius: 50px !important;
         padding: 0.5rem 1.5rem !important;
         font-weight: 700 !important;
@@ -63,37 +72,37 @@ st.markdown("""
         border: 2px solid transparent !important;
     }
 
-    /* 5. Primary 버튼 (이미지의 위쪽 버튼: 흰 바탕 + 짙은 녹색 글씨) */
-    button[data-testid="baseButton-primary"] {
+    /* 5. ★ Primary 버튼 완벽 덮어쓰기 (흰 바탕 + 짙은 녹색 글씨) ★ */
+    button[kind="primary"] {
         background-color: #FFFFFF !important;
         border-color: #FFFFFF !important;
     }
-    button[data-testid="baseButton-primary"] p, 
-    button[data-testid="baseButton-primary"] span, 
-    button[data-testid="baseButton-primary"] div {
+    button[kind="primary"] p, 
+    button[kind="primary"] span, 
+    button[kind="primary"] div {
         color: #224343 !important; /* 글씨색 다크그린 */
     }
-    button[data-testid="baseButton-primary"]:hover {
+    button[kind="primary"]:hover {
         transform: scale(1.05);
         background-color: #EAEAEA !important;
     }
 
-    /* 6. Secondary 버튼 (이미지의 아래쪽 버튼: 투명 바탕 + 흰색 테두리 및 글씨) */
-    button[data-testid="baseButton-secondary"] {
+    /* 6. ★ Secondary 버튼 완벽 덮어쓰기 (투명 바탕 + 흰색 테두리 및 글씨) ★ */
+    button[kind="secondary"] {
         background-color: transparent !important;
-        border-color: #FFFFFF !important; /* 흰색 테두리 */
+        border-color: #FFFFFF !important; 
     }
-    button[data-testid="baseButton-secondary"] p, 
-    button[data-testid="baseButton-secondary"] span, 
-    button[data-testid="baseButton-secondary"] div {
-        color: #FFFFFF !important; /* 글씨색 흰색 */
+    button[kind="secondary"] p, 
+    button[kind="secondary"] span, 
+    button[kind="secondary"] div {
+        color: #FFFFFF !important; 
     }
-    button[data-testid="baseButton-secondary"]:hover {
+    button[kind="secondary"]:hover {
         transform: scale(1.05);
         background-color: rgba(255, 255, 255, 0.1) !important;
     }
     
-    /* 엑셀 다운로드 버튼 (Secondary 스타일과 동일하게 유지) */
+    /* 엑셀 다운로드 버튼 (Secondary 스타일 복사) */
     .stDownloadButton > button {
         background-color: transparent !important;
         border-color: #FFFFFF !important;
