@@ -28,13 +28,10 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* ★ 팝업창 제목(새 항목 추가, 항목 수정 및 삭제) 완벽한 흰색 고정 ★ */
-    [data-testid="stDialog"] h2, 
-    [data-testid="stDialog"] h2 *,
-    [data-testid="stModal"] h2, 
-    [data-testid="stModal"] h2 *,
-    div[role="dialog"] header h2, 
-    div[role="dialog"] header h2 * {
+    /* ★ 팝업창 제목 완벽한 흰색 고정 (가장 강력한 선택자 적용) ★ */
+    div[role="dialog"] header *,
+    div[data-testid="stDialog"] header *,
+    div[data-testid="stModal"] header * {
         color: #FFFFFF !important;
         -webkit-text-fill-color: #FFFFFF !important;
     }
@@ -287,7 +284,7 @@ if "authenticated" not in st.session_state:
 # 타이틀 및 로그아웃 버튼 가로 배치
 col_title, col_auth = st.columns([7, 2])
 with col_title:
-    st.title("TOmBOy94's English words and sentences")
+    st.title("TOmBOy94's English words and sentences : lodus11st@naver.com")
 
 with col_auth:
     if not st.session_state.authenticated:
