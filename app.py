@@ -9,7 +9,7 @@ import math
 # --- [페이지 기본 설정] ---
 st.set_page_config(layout="wide", page_title="TOmBOy94's English")
 
-# --- [사용자 정의 디자인 (CSS): 첨부이미지 스타일 완벽 적용 및 글씨 색상 오류 해결] ---
+# --- [사용자 정의 디자인 (CSS): 첨부이미지 스타일 완벽 적용 및 모바일 입력 오류 해결] ---
 st.markdown("""
     <style>
     /* 1. 배경: 짙은 다크그린 (메인 & 팝업창) */
@@ -29,7 +29,7 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* ★ 팝업창 제목 포함 모든 헤딩 태그를 완벽한 흰색으로 고정 (가장 강력한 선택자 적용) ★ */
+    /* ★ 팝업창 제목 포함 모든 헤딩 태그를 완벽한 흰색으로 고정 ★ */
     h1, h2, h3, h4, h5, h6,
     h1 *, h2 *, h3 *, h4 *, h5 *, h6 *,
     div[role="dialog"] h2, div[role="dialog"] h2 *,
@@ -39,15 +39,25 @@ st.markdown("""
         -webkit-text-fill-color: #FFFFFF !important;
     }
 
-    /* 3. ★ 핵심 수정: 입력창 뚜렷하게 (흰 바탕 + 검은 글씨 강제 고정) ★ */
+    /* 3. ★ 모바일 입력 오류 해결: 입력창 뚜렷하게 및 상호작용 활성화 ★ */
     .stTextInput input {
         background-color: #FFFFFF !important;
         color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important; /* 글자색을 무조건 검은색으로 */
+        /* -webkit-text-fill-color는 패스워드 마스킹(점)을 방해할 수 있어 필요한 곳에만 적용 */
         border-radius: 50px !important;
         padding-left: 15px !important;
-        font-weight: 900 !important;
-        border: none !important;
+        font-weight: 700 !important;
+        border: 1px solid #FFFFFF !important;
+        /* 모바일 터치 및 입력 활성화 강제 */
+        pointer-events: auto !important;
+        user-select: text !important;
+        -webkit-user-select: text !important;
+    }
+    
+    /* 패스워드 필드 특화 (검은색 텍스트 보장) */
+    input[type="password"] {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
     }
     
     /* 드롭다운(Selectbox) 뚜렷하게 */
@@ -55,10 +65,10 @@ st.markdown("""
         background-color: #FFFFFF !important;
         border-radius: 50px !important;
         border: none !important;
+        pointer-events: auto !important;
     }
     .stSelectbox div[data-baseweb="select"] * {
         color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
         font-weight: bold !important;
     }
 
@@ -72,7 +82,6 @@ st.markdown("""
     /* 팝업창 닫기 버튼 (X) 완벽한 흰색 */
     button[aria-label="Close"], button[aria-label="Close"] * {
         color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
         fill: #FFFFFF !important;
     }
 
@@ -85,7 +94,7 @@ st.markdown("""
         border: 2px solid transparent !important;
     }
 
-    /* 5. ★ Primary 버튼 완벽 덮어쓰기 (흰 바탕 + 짙은 녹색 글씨) ★ */
+    /* 5. Primary 버튼 완벽 덮어쓰기 (흰 바탕 + 짙은 녹색 글씨) */
     button[kind="primary"] {
         background-color: #FFFFFF !important;
         border-color: #FFFFFF !important;
@@ -93,15 +102,14 @@ st.markdown("""
     button[kind="primary"] p, 
     button[kind="primary"] span, 
     button[kind="primary"] div {
-        color: #224343 !important; /* 글씨색 다크그린 */
-        -webkit-text-fill-color: #224343 !important;
+        color: #224343 !important; 
     }
     button[kind="primary"]:hover {
-        transform: scale(1.05);
-        background-color: #EAEAEA !important;
+        transform: scale(1.03);
+        background-color: #F0F0F0 !important;
     }
 
-    /* 6. ★ Secondary 버튼 완벽 덮어쓰기 (투명 바탕 + 흰색 테두리 및 글씨) ★ */
+    /* 6. Secondary 버튼 완벽 덮어쓰기 (투명 바탕 + 흰색 테두리 및 글씨) */
     button[kind="secondary"] {
         background-color: transparent !important;
         border-color: #FFFFFF !important; 
@@ -110,50 +118,28 @@ st.markdown("""
     button[kind="secondary"] span, 
     button[kind="secondary"] div {
         color: #FFFFFF !important; 
-        -webkit-text-fill-color: #FFFFFF !important;
-    }
-    button[kind="secondary"]:hover {
-        transform: scale(1.05);
-        background-color: rgba(255, 255, 255, 0.1) !important;
     }
     
-    /* 엑셀 다운로드 버튼 (Secondary 스타일 복사) */
+    /* 엑셀 다운로드 버튼 */
     .stDownloadButton > button {
         background-color: transparent !important;
         border-color: #FFFFFF !important;
         border-radius: 50px !important;
-        padding: 0.5rem 1.5rem !important;
-        font-weight: 700 !important;
-        transition: all 0.3s ease !important;
     }
     .stDownloadButton > button p {
         color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
-    }
-    .stDownloadButton > button:hover {
-        transform: scale(1.05);
-        background-color: rgba(255, 255, 255, 0.1) !important;
     }
     
-    /* 구분선 흐리게 */
+    /* 구분선 */
     hr {
         border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
-        margin-top: 10px !important;
-        margin-bottom: 10px !important;
     }
 
     /* ★ 스위치(Toggle) 라벨 글자색 화이트 고정 ★ */
     div[data-testid="stCheckbox"] label p,
     .stToggle label p {
         color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
         font-weight: bold !important;
-        font-size: 1.1rem !important;
-    }
-
-    /* 스위치 정렬 보정 */
-    div[data-testid="stCheckbox"] {
-        padding-top: 5px !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -298,7 +284,6 @@ if "authenticated" not in st.session_state:
 # 타이틀 및 로그아웃 버튼 가로 배치
 col_title, col_auth = st.columns([7, 2])
 with col_title:
-    # ★ 이메일 링크 자동 변환을 막기 위해 HTML로 직접 타이틀을 렌더링합니다 ★
     st.markdown("""
         <h1 style='padding-top: 0.5rem; font-size: 2.2rem; font-weight: 700; color: #FFFFFF;'>
             TOmBOy94's English words and sentences : lodus11st<span>@</span>naver.com
@@ -308,6 +293,7 @@ with col_title:
 with col_auth:
     if not st.session_state.authenticated:
         with st.expander("🔐 관리자 로그인"):
+            # 모바일 호환성을 위해 label_visibility를 제거하거나 명확히 함
             password_input = st.text_input("Password", type="password")
             if st.button("로그인", use_container_width=True, type="primary"):
                 if password_input == LOGIN_PASSWORD:
@@ -333,9 +319,8 @@ except Exception as e:
 if data_loaded:
     st.divider()
 
-    # 상단 컨트롤바 레이아웃: '🔍 검색' 라벨 컬럼을 제거하고 검색창 영역을 확장
+    # 상단 컨트롤바 레이아웃
     if st.session_state.authenticated:
-        # 컬럼 조정: 추가(1.3), 스위치(1.2), 여백(0.3), 분류(1.5), 검색창(3.7), 다운로드(1.5)
         cols = st.columns([1.3, 1.2, 0.3, 1.5, 3.7, 1.5])
         col_add = cols[0]
         col_view_mode = cols[1]
@@ -359,7 +344,6 @@ if data_loaded:
         with col_search_input:
             search_query = st.text_input("검색어", placeholder="검색어를 입력하세요...", label_visibility="collapsed")
     else:
-        # 비로그인 시: 스위치(1.2), 분류(1.5), 검색창(4.0), 다운로드(1.5)
         cols = st.columns([1.2, 1.5, 4.0, 1.5])
         col_view_mode = cols[0]
         col_category = cols[1]
