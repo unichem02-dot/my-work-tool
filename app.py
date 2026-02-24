@@ -102,34 +102,30 @@ st.markdown("""
         border-top: 1px dotted rgba(255, 255, 255, 0.3) !important;
     }
 
-    /* ★ 토글 스위치 화이트 라벨 강력 고정 ★ */
-    .stToggle label p, 
+    /* ★ 토글 스위치(심플모드) 라벨 완벽 흰색 고정 ★ */
     div[data-testid="stToggle"] label p,
-    div[data-testid="stToggle"] label div,
-    div[data-testid="stWidgetLabel"] p,
-    div[data-testid="stToggle"] * {
+    div[data-testid="stToggle"] label span,
+    div[data-testid="stCheckbox"] label p,
+    div[data-testid="stCheckbox"] label span {
         color: #FFFFFF !important;
         -webkit-text-fill-color: #FFFFFF !important;
         font-weight: bold !important;
     }
 
     /* ★ 팝업창(Dialog) 최상단 제목 완벽 흰색 고정 ★ */
-    div[data-testid="stDialog"] header h2,
-    div[data-testid="stDialog"] header h2 *,
-    div[data-testid="stDialog"] header p,
-    div[data-testid="stDialog"] header div,
-    div[role="dialog"] header *,
-    div[role="dialog"] h2,
-    div[role="dialog"] h2 * {
+    div[role="dialog"] h2, 
+    div[role="dialog"] h2 *,
+    div[data-testid="stDialog"] h2,
+    div[data-testid="stDialog"] h2 * {
         color: #FFFFFF !important;
         -webkit-text-fill-color: #FFFFFF !important;
     }
     
     /* ★ 로그인창(Expander) 제목 흰색 고정 ★ */
-    details summary, 
     details summary p, 
-    details summary span, 
-    details summary * {
+    details summary span,
+    div[data-testid="stExpander"] summary p,
+    div[data-testid="stExpander"] summary span {
         color: #FFFFFF !important;
         -webkit-text-fill-color: #FFFFFF !important;
     }
