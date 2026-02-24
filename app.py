@@ -9,7 +9,7 @@ import math
 # --- [페이지 기본 설정] ---
 st.set_page_config(layout="wide", page_title="TOmBOy94's English")
 
-# --- [사용자 정의 디자인 (CSS): 첨부이미지 스타일 완벽 적용 및 모바일 입력 오류 해결] ---
+# --- [사용자 정의 디자인 (CSS) 및 음성 출력 스크립트] ---
 st.markdown("""
     <style>
     /* 1. 배경: 짙은 다크그린 (메인 & 팝업창) */
@@ -144,7 +144,23 @@ st.markdown("""
         color: #FFFFFF !important;
         font-weight: bold !important;
     }
+
+    /* 7. ★ 마우스 호버 음성 출력 JS ★ */
     </style>
+    
+    <script>
+    function speakEnglish(text) {
+        // 이전 재생 중인 음성이 있다면 즉시 중단 (겹침 방지)
+        window.speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US'; // 미국 영어 설정
+        utterance.rate = 1.0;     // 속도 (0.1 ~ 10)
+        utterance.pitch = 1.0;    // 피치 (0 ~ 2)
+        
+        window.speechSynthesis.speak(utterance);
+    }
+    </script>
     """, unsafe_allow_html=True)
 
 # --- [보안 설정: 비밀번호] ---
@@ -433,16 +449,31 @@ if data_loaded:
         for idx, row in page_df.iterrows():
             cols = st.columns(col_ratio)
             
+            # JS 호출을 위해 따옴표 탈처리
+            clean_text = row['단어-문장'].replace("'", "\\'").replace('"', '&quot;')
+            
             if is_simple:
                 cols[0].write(row['분류'])
-                cols[1].markdown(f"<span style='font-size: 2.0em; font-weight: bold;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
+                # ★ 호버 음성 출력 적용 ★
+                cols[1].markdown(f"""
+                    <span style='font-size: 2.0em; font-weight: bold; cursor: pointer;' 
+                          onmouseenter="speakEnglish('{clean_text}')">
+                        {row['단어-문장']}
+                    </span>
+                """, unsafe_allow_html=True)
                 cols[2].markdown(f"<span style='font-size: 1.5em;'>{row['해석']}</span>", unsafe_allow_html=True)
                 if st.session_state.authenticated:
                     if cols[3].button("✏️", key=f"edit_s_{idx}", type="secondary"):
                         edit_dialog(idx, row, sheet, df)
             else:
                 cols[0].write(row['분류'])
-                cols[1].markdown(f"<span style='font-size: 2.0em; font-weight: bold;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
+                # ★ 호버 음성 출력 적용 ★
+                cols[1].markdown(f"""
+                    <span style='font-size: 2.0em; font-weight: bold; cursor: pointer;' 
+                          onmouseenter="speakEnglish('{clean_text}')">
+                        {row['단어-문장']}
+                    </span>
+                """, unsafe_allow_html=True)
                 cols[2].markdown(f"<span style='font-size: 1.5em;'>{row['해석']}</span>", unsafe_allow_html=True)
                 cols[3].write(row['발음'])
                 cols[4].write(row['메모1'])
