@@ -4,6 +4,7 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import time
 import io
+import math
 
 # --- [페이지 기본 설정] ---
 st.set_page_config(layout="wide", page_title="TOmBOy94's English")
@@ -325,7 +326,7 @@ if data_loaded:
     if 'filter_type' not in st.session_state:
         st.session_state.filter_type = '전체보기'
     
-    # 💡 로그인 상태에 따라 컬럼을 동적으로 분할 (로그인 시 '새 항목 추가' 버튼 영역 활성화)
+    # 로그인 상태에 따라 컬럼을 동적으로 분할 (로그인 시 '새 항목 추가' 버튼 영역 활성화)
     if st.session_state.authenticated:
         cols = st.columns([1.5, 1.2, 2.0, 1.2, 0.7, 0.7, 0.7, 1.2])
         col_add = cols[0]
@@ -352,15 +353,15 @@ if data_loaded:
         
     with col_h4:
         if st.button("단어", type="primary" if st.session_state.filter_type == '단어' else "secondary", use_container_width=True):
-            st.session_state.filter_type = '단어'; st.rerun()
+            st.session_state.filter_type = '단어'; st.session_state.current_page = 1; st.rerun()
             
     with col_h5:
         if st.button("문장", type="primary" if st.session_state.filter_type == '문장' else "secondary", use_container_width=True):
-            st.session_state.filter_type = '문장'; st.rerun()
+            st.session_state.filter_type = '문장'; st.session_state.current_page = 1; st.rerun()
             
     with col_h6:
         if st.button("전체보기", type="primary" if st.session_state.filter_type == '전체보기' else "secondary", use_container_width=True):
-            st.session_state.filter_type = '전체보기'; st.rerun()
+            st.session_state.filter_type = '전체보기'; st.session_state.current_page = 1; st.rerun()
 
     # 필터링 로직
     display_df = df.copy()
@@ -372,6 +373,10 @@ if data_loaded:
         mask = display_df.apply(lambda r: r.astype(str).str.contains(search_query, case=False).any(), axis=1)
         display_df = display_df[mask]
 
+    # 최신 등록 항목이 위로 올라오도록 정렬 (인덱스는 유지해야 수정/삭제가 올바른 열을 찾아감)
+    display_df = display_df.iloc[::-1]
+
+    # ★ CSV 내보내기는 페이지를 100개씩 자르기 전에 전체 필터링된 내용을 대상으로 생성합니다. ★
     with col_h7:
         if st.session_state.authenticated:
             csv_data = display_df.to_csv(index=False).encode('utf-8-sig')
@@ -384,10 +389,26 @@ if data_loaded:
             )
 
     if not display_df.empty:
-        if len(display_df) > 50:
-            st.info(f"최근 50개 항목 표시 중 (전체 {len(display_df)}개)")
-            display_df = display_df.iloc[::-1].head(50)
+        # --- [페이지네이션 로직] ---
+        ITEMS_PER_PAGE = 100
+        total_items = len(display_df)
+        total_pages = math.ceil(total_items / ITEMS_PER_PAGE) if total_items > 0 else 1
+
+        if 'current_page' not in st.session_state:
+            st.session_state.current_page = 1
+
+        # 검색/필터 변경으로 페이지가 초과되면 1페이지로 복구
+        if st.session_state.current_page > total_pages or st.session_state.current_page < 1:
+            st.session_state.current_page = 1
+
+        # 현재 페이지에 맞게 100개만 슬라이싱
+        start_idx = (st.session_state.current_page - 1) * ITEMS_PER_PAGE
+        end_idx = start_idx + ITEMS_PER_PAGE
+        page_df = display_df.iloc[start_idx:end_idx]
+
+        st.info(f"총 {total_items}개의 항목 중 {start_idx + 1} ~ {min(end_idx, total_items)}번째 표시 중 (현재 페이지: {st.session_state.current_page} / {total_pages})")
         
+        # 헤더 출력 부분
         if st.session_state.authenticated:
             col_ratio = [1, 2, 4, 2, 3, 3, 3, 1]
             h_labels = ["분류", "단어", "문장", "발음", "해석", "메모1", "메모2", "수정"]
@@ -399,7 +420,8 @@ if data_loaded:
         for i, label in enumerate(h_labels): header_cols[i].markdown(f"**{label}**")
         st.divider()
         
-        for idx, row in display_df.iterrows():
+        # 데이터 출력 (1페이지당 100개)
+        for idx, row in page_df.iterrows():
             cols = st.columns(col_ratio)
             cols[0].write(row['분류'])
             cols[1].markdown(f"<span style='font-size: 1.4em; font-weight: bold;'>{row['단어']}</span>", unsafe_allow_html=True)
@@ -412,5 +434,36 @@ if data_loaded:
             if st.session_state.authenticated:
                 if cols[7].button("✏️", key=f"edit_{idx}", type="secondary"):
                     edit_dialog(idx, row, sheet, df)
+
+        # --- [하단 페이지 번호 이동 컨트롤 UI] ---
+        if total_pages > 1:
+            st.write("") # 상단 여백
+            
+            # 중앙 정렬을 위해 표시할 페이지 번호를 계산 (현재 페이지 기준 앞뒤 2개씩, 총 5개)
+            start_page = max(1, st.session_state.current_page - 2)
+            end_page = min(total_pages, start_page + 4)
+            start_page = max(1, end_page - 4) # 끝 페이지에 도달했을 때 앞쪽 버튼을 채워줌
+            
+            visible_pages = list(range(start_page, end_page + 1))
+            
+            # 레이아웃을 동적으로 만들어 항상 중앙에 위치하도록 함 [여백, 이전, 번호들..., 다음, 여백]
+            cols_layout = [3, 1] + [1] * len(visible_pages) + [1, 3]
+            page_cols = st.columns(cols_layout)
+            
+            with page_cols[1]:
+                if st.button("◀", key="prev_page", disabled=(st.session_state.current_page == 1), use_container_width=True):
+                    st.session_state.current_page -= 1
+                    st.rerun()
+                    
+            for i, p in enumerate(visible_pages):
+                with page_cols[i + 2]:
+                    if st.button(str(p), key=f"page_btn_{p}", type="primary" if p == st.session_state.current_page else "secondary", use_container_width=True):
+                        st.session_state.current_page = p
+                        st.rerun()
+                        
+            with page_cols[len(visible_pages) + 2]:
+                if st.button("▶", key="next_page", disabled=(st.session_state.current_page == total_pages), use_container_width=True):
+                    st.session_state.current_page += 1
+                    st.rerun()
     else:
         st.warning("표시할 데이터가 없습니다.")
