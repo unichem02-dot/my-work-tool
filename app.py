@@ -406,7 +406,13 @@ if data_loaded:
         end_idx = start_idx + ITEMS_PER_PAGE
         page_df = display_df.iloc[start_idx:end_idx]
 
-        st.info(f"총 {total_items}개의 항목 중 {start_idx + 1} ~ {min(end_idx, total_items)}번째 표시 중 (현재 페이지: {st.session_state.current_page} / {total_pages})")
+        # ★ st.info 대신 완벽하게 흰색이 보장되는 HTML(st.markdown) 방식으로 교체 ★
+        st.markdown(f"""
+            <div style='color: #FFFFFF !important; font-weight: bold; margin-bottom: 15px; font-size: 1.1em;'>
+                총 {total_items}개의 항목 중 {start_idx + 1} ~ {min(end_idx, total_items)}번째 표시 중 
+                (현재 페이지: {st.session_state.current_page} / {total_pages})
+            </div>
+        """, unsafe_allow_html=True)
         
         # 헤더 출력 부분
         if st.session_state.authenticated:
