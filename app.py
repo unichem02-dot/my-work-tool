@@ -3,6 +3,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 import time
+import io
 
 # --- [페이지 기본 설정] ---
 st.set_page_config(layout="wide", page_title="TOmBOy94's English")
@@ -60,18 +61,22 @@ def add_dialog(sheet, full_df):
             selected_cat = st.selectbox("분류 선택 (기존)", ["(새로 입력)"] + unique_cats)
         with col2:
             new_cat = st.text_input("새 분류 입력 (우선 적용됩니다)")
+        
         col3, col4 = st.columns(2)
         with col3:
             new_word = st.text_input("단어")
         with col4:
             new_sent = st.text_input("문장")
+            
         col5, col6 = st.columns(2)
         with col5:
             new_pron = st.text_input("발음")
         with col6:
             new_mean = st.text_input("해석")
+            
         new_memo1 = st.text_input("메모1")
         new_memo2 = st.text_input("메모2")
+        
         submitted = st.form_submit_button("시트에 저장하기", use_container_width=True, type="primary")
         if submitted:
             final_cat = new_cat.strip() if new_cat.strip() else selected_cat
@@ -102,14 +107,18 @@ def edit_dialog(idx, row_data, sheet, full_df):
             except: default_idx = 0
             edit_selected_cat = st.selectbox("분류 선택 (기존)", ["(직접 입력)"] + unique_cats, index=default_idx)
         with row1_col2: edit_new_cat = st.text_input("분류 직접 입력 (변경 시에만 입력)")
+        
         row2_col1, row2_col2 = st.columns(2)
         with row2_col1: edit_word = st.text_input("단어", value=row_data['단어'])
         with row2_col2: edit_sent = st.text_input("문장", value=row_data['문장'])
+        
         row3_col1, row3_col2 = st.columns(2)
         with row3_col1: edit_pron = st.text_input("발음", value=row_data['발음'])
         with row3_col2: edit_mean = st.text_input("해석", value=row_data['해석'])
+        
         edit_memo1 = st.text_input("메모1", value=row_data['메모1'])
         edit_memo2 = st.text_input("메모2", value=row_data['메모2'])
+        
         st.divider()
         btn_col1, btn_col2 = st.columns(2)
         with btn_col1: update_submitted = st.form_submit_button("💾 수정 내용 저장", use_container_width=True, type="primary")
@@ -139,18 +148,16 @@ def edit_dialog(idx, row_data, sheet, full_df):
 
 # --- [메인 로직 시작] ---
 
-# 1. 인증 상태 확인
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
-# 2. 상단 타이틀 및 로그인/로그아웃 영역
+# 타이틀 및 로그아웃 버튼 가로 배치
 col_title, col_auth = st.columns([7, 2])
 with col_title:
     st.title("📚 TOmBOy94's English words and sentences")
 
 with col_auth:
     if not st.session_state.authenticated:
-        # 로그인 폼
         with st.expander("🔐 관리자 로그인"):
             password_input = st.text_input("Password", type="password")
             if st.button("로그인", use_container_width=True):
@@ -160,13 +167,11 @@ with col_auth:
                 else:
                     st.error("비밀번호 오류")
     else:
-        # 로그아웃 버튼
         st.write("")
         if st.button("🔓 로그아웃", use_container_width=True):
             st.session_state.authenticated = False
             st.rerun()
 
-# 3. 데이터 로드 (항상 실행)
 data_loaded = False
 try:
     sheet = get_sheet()
@@ -176,18 +181,17 @@ except Exception as e:
     st.error(f"데이터 연결 오류: {e}")
 
 if data_loaded:
-    # 4. 관리자 전용 기능: 새 항목 추가 (로그인 시에만 노출)
     if st.session_state.authenticated:
         if st.button("➕ 새 항목 추가", type="primary", use_container_width=True):
             add_dialog(sheet, df)
     
     st.divider()
 
-    # 5. 검색 및 필터 UI (모두에게 공개)
     if 'filter_type' not in st.session_state:
         st.session_state.filter_type = '전체보기'
     
-    col_h1, col_h2, col_h3, col_h4, col_h5 = st.columns([3, 2, 1, 1, 1])
+    # 💡 엑셀 내보내기 버튼을 위해 컬럼 개수 및 비율 조정 (5개 -> 6개)
+    col_h1, col_h2, col_h3, col_h4, col_h5, col_h6 = st.columns([3, 1.5, 0.8, 0.8, 0.8, 1.1])
     with col_h1: st.header("🔍 단어/문장 검색")
     with col_h2:
         st.write("")
@@ -208,9 +212,15 @@ if data_loaded:
         if st.button("전체보기", type="primary" if st.session_state.filter_type == '전체보기' else "secondary", use_container_width=True):
             st.session_state.filter_type = '전체보기'; st.rerun()
 
+    # 💡 로그인 시에만 나타나는 엑셀 내보내기 버튼 (전체보기 옆)
+    with col_h6:
+        st.write("")
+        if st.session_state.authenticated:
+            # 현재 필터링된 데이터를 엑셀 바이너리로 변환하는 로직 (아래 검색 필터링 이후의 display_df를 사용하기 위해 나중에 정의)
+            pass
+
     search_query = st.text_input("검색어를 입력하세요")
     
-    # 필터링 로직
     display_df = df.copy()
     if selected_category != "전체 분류": display_df = display_df[display_df['분류'] == selected_category]
     if st.session_state.filter_type == '단어': display_df = display_df[display_df['단어'] != '']
@@ -219,18 +229,31 @@ if data_loaded:
         mask = display_df.apply(lambda r: r.astype(str).str.contains(search_query, case=False).any(), axis=1)
         display_df = display_df[mask]
 
-    # 6. 리스트 표시 (모두에게 공개)
+    # 💡 엑셀 내보내기 버튼 구현 (필터링된 display_df 기준)
+    if st.session_state.authenticated:
+        with col_h6:
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                display_df.to_excel(writer, index=False, sheet_name='English_Data')
+            excel_data = output.getvalue()
+            st.download_button(
+                label="📥 엑셀 내보내기",
+                data=excel_data,
+                file_name=f"English_Data_{time.strftime('%Y%m%d_%H%M%S')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
+
     if not display_df.empty:
         if len(display_df) > 50:
             st.info(f"최근 50개 항목 표시 중 (전체 {len(display_df)}개)")
             display_df = display_df.iloc[::-1].head(50)
         
-        # 로그인 상태에 따라 수정 버튼 열 포함 여부 결정
         if st.session_state.authenticated:
             col_ratio = [1, 2, 4, 2, 3, 3, 3, 1]
             h_labels = ["분류", "단어", "문장", "발음", "해석", "메모1", "메모2", "수정"]
         else:
-            col_ratio = [1, 2, 4, 2, 3, 3, 3] # 수정 열 제외
+            col_ratio = [1, 2, 4, 2, 3, 3, 3]
             h_labels = ["분류", "단어", "문장", "발음", "해석", "메모1", "메모2"]
 
         header_cols = st.columns(col_ratio)
@@ -247,7 +270,6 @@ if data_loaded:
             cols[5].write(row['메모1'])
             cols[6].write(row['메모2'])
             
-            # 관리자인 경우에만 수정 버튼 표시
             if st.session_state.authenticated:
                 if cols[7].button("✏️", key=f"edit_{idx}"):
                     edit_dialog(idx, row, sheet, df)
