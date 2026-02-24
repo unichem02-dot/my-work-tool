@@ -297,12 +297,41 @@ try:
         
         st.markdown("<div style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-10px;margin-bottom:5px;'></div>", unsafe_allow_html=True)
 
-    # 하단 페이지네이션
+    # ★ 예쁘게 개선된 하단 페이지네이션 ★
     if pages > 1:
-        p_cols = st.columns([5, 1, 1, 1, 5])
-        if p_cols[1].button("◀") and curr_p > 1: st.session_state.curr_p = curr_p - 1; st.rerun()
-        p_cols[2].write(f"**{curr_p}**")
-        if p_cols[3].button("▶") and curr_p < pages: st.session_state.curr_p = curr_p + 1; st.rerun()
+        st.write("") # 상단 여백
+        st.write("")
+        
+        # 버튼과 텍스트의 비율을 안정적으로 조정 (양 끝 여백 3, 버튼 1.5, 중앙 텍스트 2)
+        p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
+        
+        with p_cols[1]:
+            # 첫 페이지일 경우 버튼 비활성화 (disabled=True)
+            if st.button("◀ 이전", key="btn_prev", disabled=(curr_p == 1), use_container_width=True):
+                st.session_state.curr_p -= 1
+                st.rerun()
+                
+        with p_cols[2]:
+            # 중앙 배지(Badge) 형태의 페이지 표시 (알약 모양 디자인 통일)
+            st.markdown(f"""
+                <div style='display: flex; justify-content: center; align-items: center; height: 100%;'>
+                    <div style='background-color: rgba(255, 255, 255, 0.1); 
+                                padding: 0.5rem 1.5rem; 
+                                border-radius: 50px; 
+                                border: 1px solid rgba(255,255,255,0.3);
+                                font-weight: bold; 
+                                font-size: 1.1rem;'>
+                        <span style='color: #FFD700;'>Page {curr_p}</span> 
+                        <span style='color: #FFFFFF;'> / {pages}</span>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        with p_cols[3]:
+            # 마지막 페이지일 경우 버튼 비활성화
+            if st.button("다음 ▶", key="btn_next", disabled=(curr_p == pages), use_container_width=True):
+                st.session_state.curr_p += 1
+                st.rerun()
 
 except Exception as e:
     st.error(f"오류 발생: {e}")
