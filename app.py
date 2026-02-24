@@ -22,7 +22,7 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 2. 텍스트 무조건 흰색 강제화 (화면 표시용) */
+    /* 2. 텍스트 무조건 흰색 강제화 */
     h1, h2, h3, h4, h5, h6, p, span, label, summary, b, strong {
         color: #FFFFFF !important;
     }
@@ -73,7 +73,7 @@ st.markdown("""
         text-decoration: underline;
     }
 
-    /* 4. 예외 처리: 입력창/버튼은 기존 디자인 유지 */
+    /* 4. 입력창 스타일 */
     .stTextInput input {
         background-color: #FFFFFF !important;
         color: #000000 !important;
@@ -82,115 +82,77 @@ st.markdown("""
         padding-left: 15px !important;
         font-weight: 700 !important;
         border: 1px solid #FFFFFF !important;
-        pointer-events: auto !important;
-        user-select: text !important;
-    }
-    input[type="password"] {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
-    }
-    div[data-testid="stTextInput"] button {
-        display: none !important; 
     }
 
-    div[data-baseweb="select"] > div {
-        background-color: #FFFFFF !important;
+    /* ★ 버튼 디자인 통합 (CSV & 프린트 사이즈 일치) ★ */
+    /* Streamlit 다운로드 버튼 타겟팅 */
+    div.stDownloadButton > button {
+        width: 100% !important;
+        height: 42px !important;
+        background-color: transparent !important;
+        color: #FFFFFF !important;
+        border: 2px solid #FFFFFF !important;
         border-radius: 50px !important;
-        border: none !important;
-        pointer-events: auto !important;
-    }
-    div[data-baseweb="select"] span,
-    div[data-baseweb="select"] li {
-        color: #000000 !important;
-        font-weight: bold !important;
-    }
-
-    [data-testid="stForm"] {
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        border-radius: 15px !important;
-    }
-
-    /* 버튼 스타일 (알약 모양) */
-    button, .stDownloadButton > button {
-        border-radius: 50px !important;
-        padding: 0.5rem 1.5rem !important;
         font-weight: 700 !important;
-        height: 40px !important; /* 높이 고정 */
+        font-size: 0.9rem !important;
+        padding: 0 !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         transition: all 0.3s ease !important;
     }
-    button[kind="primary"] {
-        background-color: #FFFFFF !important;
+    
+    /* 커스텀 프린트 버튼 타겟팅 */
+    .custom-print-btn {
+        width: 100% !important;
+        height: 42px !important;
+        background-color: transparent !important;
+        color: #FFFFFF !important;
+        border: 2px solid #FFFFFF !important;
+        border-radius: 50px !important;
+        font-weight: 700 !important;
+        font-size: 0.9rem !important;
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all 0.3s ease !important;
+        text-decoration: none !important;
+    }
+
+    div.stDownloadButton > button:hover, .custom-print-btn:hover {
+        background-color: rgba(255, 255, 255, 0.1) !important;
         border-color: #FFFFFF !important;
     }
-    button[kind="primary"] p {
-        color: #224343 !important;
-    }
-    button[kind="secondary"], .stDownloadButton > button {
-        background-color: transparent !important;
-        border: 2px solid #FFFFFF !important;
-        color: #FFFFFF !important;
-    }
-    
-    button[aria-label="Close"], button[aria-label="Close"] svg {
-        color: #FFFFFF !important; fill: #FFFFFF !important;
-    }
-    
+
     hr {
         border-top: 1px dotted rgba(255, 255, 255, 0.3) !important;
     }
 
-    /* 헤더 정렬 버튼 전용 스타일 */
-    .sort-header-btn button {
-        background-color: transparent !important;
-        border: none !important;
-        padding: 0 !important;
-        color: #FFFFFF !important;
-        text-align: left !important;
-        font-weight: bold !important;
-        font-size: 1.0rem !important;
-        text-decoration: underline !important;
-    }
-
-    /* ★ 5. 프린트 전용 CSS ★ */
+    /* ★ 프린트 전용 레이아웃 (새 탭에서만 활성) ★ */
     @media print {
-        [data-testid="stHeader"], 
-        [data-testid="stSidebar"], 
-        .stButton, 
-        .stDownloadButton,
-        div[role="radiogroup"], 
-        [data-testid="stExpander"], 
-        [data-testid="stForm"],
-        div[data-testid="stHorizontalBlock"]:has(button),
-        header, footer, hr,
-        .no-print {
+        header, footer, [data-testid="stSidebar"], .stButton, div[role="radiogroup"], 
+        div[data-testid="stHorizontalBlock"]:has(button), 
+        .no-print, [data-testid="stExpander"], hr {
             display: none !important;
         }
-        
-        [data-testid="stAppViewContainer"], [data-testid="stMainViewContainer"] {
+        [data-testid="stAppViewContainer"] {
             background-color: white !important;
+        }
+        h1, h2, h3, p, span, div {
             color: black !important;
         }
-        
-        h1, h2, h3, p, span, div, strong, b {
-            color: black !important;
-            -webkit-text-fill-color: black !important;
-        }
-        
         .print-divider-line {
             border-bottom: 1px solid #ddd !important;
-            margin: 5px 0 !important;
+            margin: 10px 0 !important;
         }
-        
-        @page {
-            size: A4;
-            margin: 15mm;
-        }
+        @page { size: A4; margin: 15mm; }
     }
     </style>
     """, unsafe_allow_html=True)
+
+# --- [인쇄 전용 모드 감지] ---
+is_print_mode = st.query_params.get("print") == "true"
 
 # --- [보안 설정] ---
 LOGIN_PASSWORD = "0315" 
@@ -257,8 +219,9 @@ def edit_dialog(idx, row_data, sheet, full_df):
             sheet.delete_rows(idx + 2); st.rerun()
 
 # --- [메인 실행] ---
+# 로그인 세션 유지 (인쇄 모드에서도 데이터 보이기 위해 필수)
 if "authenticated" not in st.session_state:
-    if st.query_params.get("auth") == "true":
+    if st.query_params.get("auth") == "true" or is_print_mode:
         st.session_state.authenticated = True
     else:
         st.session_state.authenticated = False
@@ -266,153 +229,128 @@ if "authenticated" not in st.session_state:
 if 'sort_order' not in st.session_state:
     st.session_state.sort_order = 'None' 
 
-col_title, col_auth = st.columns([7, 2])
-with col_title:
-    st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem;'>TOmBOy94's English words and sentences : lodus11st@naver.com</h1>", unsafe_allow_html=True)
-with col_auth:
-    if not st.session_state.authenticated:
-        with st.expander("🔐 로그인"):
-            if st.text_input("Password", type="password") == LOGIN_PASSWORD: 
-                st.session_state.authenticated = True
-                st.query_params["auth"] = "true" 
+# 인쇄 모드일 때는 제목만 심플하게 표시
+if is_print_mode:
+    st.markdown("<h1 style='color:black; text-align:center;'>English Sentence List</h1>", unsafe_allow_html=True)
+else:
+    col_title, col_auth = st.columns([7, 2])
+    with col_title:
+        st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem;'>TOmBOy94's English words and sentences : lodus11st@naver.com</h1>", unsafe_allow_html=True)
+    with col_auth:
+        if not st.session_state.authenticated:
+            with st.expander("🔐 로그인"):
+                if st.text_input("Password", type="password") == LOGIN_PASSWORD: 
+                    st.session_state.authenticated = True
+                    st.query_params["auth"] = "true" 
+                    st.rerun()
+        else:
+            if st.button("🔓 로그아웃", use_container_width=True, type="secondary"): 
+                st.session_state.authenticated = False
+                if "auth" in st.query_params: del st.query_params["auth"] 
                 st.rerun()
-    else:
-        if st.button("🔓 로그아웃", use_container_width=True, type="secondary"): 
-            st.session_state.authenticated = False
-            if "auth" in st.query_params:
-                del st.query_params["auth"] 
-            st.rerun()
 
 try:
     sheet = get_sheet(); df = load_dataframe(sheet)
     
-    unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
-    cat_options = ["전체 분류"] + unique_cats
-    
-    selected_radio = st.radio("분류 필터", cat_options, horizontal=True, label_visibility="collapsed")
-    sel_cat = selected_radio
-    
-    st.divider()
-    
-    # 컨트롤바 레이아웃 (추가, 심플모드, 검색, 다운로드/프린트)
-    if st.session_state.authenticated:
-        cb = st.columns([1.3, 1.0, 0.2, 3.5, 1.2, 1.2]) 
-        if cb[0].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
-        is_simple = cb[1].toggle("심플모드")
-        search = cb[3].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
-    else:
-        cb = st.columns([1.2, 0.3, 4.0, 1.2, 1.2]) 
-        is_simple = cb[0].toggle("심플모드")
-        search = cb[2].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
+    # 인쇄 모드가 아닐 때만 카테고리 선택기 표시
+    sel_cat = "전체 분류"
+    if not is_print_mode:
+        unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
+        selected_radio = st.radio("분류 필터", ["전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed")
+        sel_cat = selected_radio
+        st.divider()
 
-    # 필터링 진행
+    # 필터링 및 정렬 진행
     d_df = df.copy()
     if sel_cat != "전체 분류": d_df = d_df[d_df['분류'] == sel_cat]
+    
+    # 검색창 (인쇄 모드에서는 무시)
+    search = ""
+    if not is_print_mode:
+        if st.session_state.authenticated:
+            cb = st.columns([1.3, 1.0, 0.2, 3.5, 1.2, 1.2]) 
+            if cb[0].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
+            is_simple = cb[1].toggle("심플모드")
+            search = cb[3].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
+        else:
+            cb = st.columns([1.2, 0.3, 4.0, 1.2, 1.2]) 
+            is_simple = cb[0].toggle("심플모드")
+            search = cb[2].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
+    else:
+        is_simple = False # 인쇄 시에는 상세 정보 다 나오게
+
     if search: d_df = d_df[d_df.apply(lambda r: r.astype(str).str.contains(search, case=False).any(), axis=1)]
 
-    # 정렬 로직 적용
-    if st.session_state.sort_order == 'asc':
-        d_df = d_df.sort_values(by='단어-문장', ascending=True)
-    elif st.session_state.sort_order == 'desc':
-        d_df = d_df.sort_values(by='단어-문장', ascending=False)
-    else:
-        d_df = d_df.iloc[::-1]
+    # 정렬
+    if st.session_state.sort_order == 'asc': d_df = d_df.sort_values(by='단어-문장', ascending=True)
+    elif st.session_state.sort_order == 'desc': d_df = d_df.sort_values(by='단어-문장', ascending=False)
+    else: d_df = d_df.iloc[::-1]
 
-    # ★ CSV 및 프린트 버튼 ★
-    if st.session_state.authenticated:
-        # CSV 다운로드
-        cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"English_Data_{time.strftime('%Y%m%d_%H%M%S')}.csv", use_container_width=True)
-        # 프린트 버튼 (about:blank 방지를 위해 <button> 태그 사용 및 CSS 정밀 매칭)
+    # ★ 버튼 영역 (CSV & 프린트) ★
+    if st.session_state.authenticated and not is_print_mode:
+        cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
         with cb[5]:
-            st.markdown("""
-                <button type="button" onclick="window.print();" style="
-                    width: 100%;
-                    height: 40px;
-                    background-color: transparent;
-                    border: 2px solid #FFFFFF;
-                    color: #FFFFFF;
-                    cursor: pointer;
-                    border-radius: 50px;
-                    font-weight: 700;
-                    font-size: 0.85rem;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: all 0.3s ease;
-                " onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+            # 새 탭에서 열어 인쇄 제한을 우회하는 강력한 JS 코드
+            st.markdown(f"""
+                <button onclick="const url = new URL(window.location.href); url.searchParams.set('print', 'true'); window.open(url.href, '_blank');" class="custom-print-btn">
                     🖨️ 프린트
                 </button>
             """, unsafe_allow_html=True)
 
-    total = len(d_df)
-    pages = math.ceil(total/100) if total > 0 else 1
-    
-    if 'curr_p' not in st.session_state:
-        st.session_state.curr_p = 1
-    if st.session_state.curr_p > pages:
-        st.session_state.curr_p = 1
-    curr_p = st.session_state.curr_p
-    
-    st.markdown(f"<p style='color:#FFF;font-weight:bold;margin-top:15px;'>총 {total}개 (페이지: {curr_p}/{pages})</p>", unsafe_allow_html=True)
-    
-    # 리스트 출력
-    ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
-    labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
-    
-    h_cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
-    
-    for i, l in enumerate(labels if st.session_state.authenticated else labels[:-1]):
-        if l == "단어-문장":
-            sort_icon = ""
-            if st.session_state.sort_order == 'asc': sort_icon = " ↑"
-            elif st.session_state.sort_order == 'desc': sort_icon = " ↓"
-            if h_cols[i].button(f"**{l}{sort_icon}**", key="sort_btn"):
-                if st.session_state.sort_order == 'None': st.session_state.sort_order = 'asc'
-                elif st.session_state.sort_order == 'asc': st.session_state.sort_order = 'desc'
-                else: st.session_state.sort_order = 'None'
-                st.rerun()
-        else:
-            h_cols[i].write(f"**{l}**")
-            
-    st.divider()
-
-    for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
-        cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
-        cols[0].write(row['분류'])
-        cols[1].markdown(f"<span style='font-size:2.0em;font-weight:bold;display:block;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
-        cols[2].markdown(f"<span style='font-size:1.5em;display:block;'>{row['해석']}</span>", unsafe_allow_html=True)
+    # 본문 출력
+    if is_print_mode:
+        # 인쇄 모드 자동 호출 스크립트
+        st.markdown("<script>window.onload = function() { setTimeout(function() { window.print(); }, 1000); }</script>", unsafe_allow_html=True)
+        for _, row in d_df.iterrows():
+            st.markdown(f"**[{row['분류']}] {row['단어-문장']}**")
+            st.write(f"해석: {row['해석']} / 발음: {row['발음']}")
+            if row['메모1']: st.write(f"메모1: {row['메모1']}")
+            st.markdown("<div class='print-divider-line'></div>", unsafe_allow_html=True)
+    else:
+        # 일반 모드 리스트
+        total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
+        if 'curr_p' not in st.session_state: st.session_state.curr_p = 1
+        if st.session_state.curr_p > pages: st.session_state.curr_p = 1
+        curr_p = st.session_state.curr_p
         
-        if not is_simple:
-            cols[3].write(row['발음'])
-            cols[4].write(row['메모1'])
-            cols[5].write(row['메모2'])
-            if st.session_state.authenticated:
-                if cols[6].button("✏️", key=f"e_{idx}"): edit_dialog(idx, row, sheet, df)
-        elif st.session_state.authenticated:
-            if cols[3].button("✏️", key=f"es_{idx}"): edit_dialog(idx, row, sheet, df)
+        st.markdown(f"<p style='color:#FFF;font-weight:bold;margin-top:15px;'>총 {total}개 (페이지: {curr_p}/{pages})</p>", unsafe_allow_html=True)
         
-        st.markdown("<div class='print-divider-line' style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-10px;margin-bottom:5px;'></div>", unsafe_allow_html=True)
+        ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
+        labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
+        
+        h_cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
+        for i, l in enumerate(labels if st.session_state.authenticated else labels[:-1]):
+            if l == "단어-문장":
+                sort_icon = " ↑" if st.session_state.sort_order == 'asc' else (" ↓" if st.session_state.sort_order == 'desc' else "")
+                if h_cols[i].button(f"**{l}{sort_icon}**", key="sort_btn"):
+                    if st.session_state.sort_order == 'None': st.session_state.sort_order = 'asc'
+                    elif st.session_state.sort_order == 'asc': st.session_state.sort_order = 'desc'
+                    else: st.session_state.sort_order = 'None'
+                    st.rerun()
+            else: h_cols[i].write(f"**{l}**")
+        st.divider()
 
-    if pages > 1:
-        st.write("") 
-        p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
-        with p_cols[1]:
-            if st.button("◀ 이전", key="btn_prev", disabled=(curr_p == 1), use_container_width=True):
-                st.session_state.curr_p -= 1
-                st.rerun()
-        with p_cols[2]:
-            st.markdown(f"""
-                <div style='display: flex; justify-content: center; align-items: center; height: 100%;'>
-                    <div style='background-color: rgba(255, 255, 255, 0.1); padding: 0.5rem 1.5rem; border-radius: 50px; border: 1px solid rgba(255,255,255,0.3); font-weight: bold; font-size: 1.1rem;'>
-                        <span style='color: #FFD700;'>Page {curr_p}</span> 
-                        <span style='color: #FFFFFF;'> / {pages}</span>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-        with p_cols[3]:
-            if st.button("다음 ▶", key="btn_next", disabled=(curr_p == pages), use_container_width=True):
-                st.session_state.curr_p += 1
-                st.rerun()
+        for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
+            cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
+            cols[0].write(row['분류'])
+            cols[1].markdown(f"<span style='font-size:2.0em;font-weight:bold;display:block;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
+            cols[2].markdown(f"<span style='font-size:1.5em;display:block;'>{row['해석']}</span>", unsafe_allow_html=True)
+            if not is_simple:
+                cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
+                if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}"): edit_dialog(idx, row, sheet, df)
+            elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}"): edit_dialog(idx, row, sheet, df)
+            st.markdown("<div style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-10px;margin-bottom:5px;'></div>", unsafe_allow_html=True)
+
+        if pages > 1:
+            st.write(""); p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
+            with p_cols[1]:
+                if st.button("◀ 이전", key="btn_prev", disabled=(curr_p == 1), use_container_width=True):
+                    st.session_state.curr_p -= 1; st.rerun()
+            with p_cols[2]:
+                st.markdown(f"<div style='display: flex; justify-content: center; align-items: center; height: 100%;'><div style='background-color: rgba(255, 255, 255, 0.1); padding: 0.5rem 1.5rem; border-radius: 50px; border: 1px solid rgba(255,255,255,0.3); font-weight: bold; font-size: 1.1rem;'><span style='color: #FFD700;'>Page {curr_p}</span> <span style='color: #FFFFFF;'> / {pages}</span></div></div>", unsafe_allow_html=True)
+            with p_cols[3]:
+                if st.button("다음 ▶", key="btn_next", disabled=(curr_p == pages), use_container_width=True):
+                    st.session_state.curr_p += 1; st.rerun()
 
 except Exception as e:
     st.error(f"오류 발생: {e}")
