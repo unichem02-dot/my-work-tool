@@ -142,10 +142,18 @@ st.markdown("""
         margin-bottom: 10px !important;
     }
 
-    /* 토글 스위치 라벨 색상 강제 지정 */
+    /* ★ 스위치(Toggle) 라벨 글자색 화이트 고정 ★ */
+    div[data-testid="stCheckbox"] label p,
     .stToggle label p {
         color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
         font-weight: bold !important;
+        font-size: 1.1rem !important;
+    }
+
+    /* 스위치 정렬 보정 */
+    div[data-testid="stCheckbox"] {
+        padding-top: 5px !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -324,9 +332,8 @@ except Exception as e:
 if data_loaded:
     st.divider()
 
-    # 상단 컨트롤바 레이아웃 (추가 버튼, 모드 스위치, 검색 영역)
+    # 상단 컨트롤바 레이아웃
     if st.session_state.authenticated:
-        # 컬럼 조정: 추가버튼(1.3), 모드스위치(1.2), 스페이서(0.3), 검색라벨(0.7), 검색창(2.5), 분류(1.2), 다운로드(1.3)
         cols = st.columns([1.3, 1.2, 0.3, 0.7, 2.5, 1.2, 1.3])
         col_add = cols[0]
         col_view_mode = cols[1]
@@ -337,9 +344,8 @@ if data_loaded:
                 add_dialog(sheet, df)
         
         with col_view_mode:
-            is_simple = st.toggle("심플모드", value=False, help="분류, 단어, 해석만 표시합니다.")
+            is_simple = st.toggle("심플모드", value=False)
     else:
-        # 비로그인 시: 모드스위치(1.2), 검색라벨(0.8), 검색창(3.2), 분류(1.5), 다운로드(1.5)
         cols = st.columns([1.2, 0.8, 3.2, 1.5, 1.5])
         col_view_mode = cols[0]
         col_h1, col_h2, col_h3, col_dl = cols[1:]
@@ -406,7 +412,6 @@ if data_loaded:
         
         # --- [헤더 및 컬럼 비율 결정] ---
         if is_simple:
-            # 심플모드: 분류(1.5), 단어-문장(6), 해석(4.5), 수정버튼(1.0)
             if st.session_state.authenticated:
                 col_ratio = [1.5, 6, 4.5, 1]
                 h_labels = ["분류", "단어-문장", "해석", "수정"]
@@ -414,7 +419,6 @@ if data_loaded:
                 col_ratio = [1.5, 6, 4.5]
                 h_labels = ["분류", "단어-문장", "해석"]
         else:
-            # 전체모드: 기존 6열 비율 유지
             if st.session_state.authenticated:
                 col_ratio = [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
                 h_labels = ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
@@ -431,7 +435,6 @@ if data_loaded:
             cols = st.columns(col_ratio)
             
             if is_simple:
-                # 심플모드 출력
                 cols[0].write(row['분류'])
                 cols[1].markdown(f"<span style='font-size: 2.0em; font-weight: bold;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
                 cols[2].markdown(f"<span style='font-size: 1.5em;'>{row['해석']}</span>", unsafe_allow_html=True)
@@ -439,7 +442,6 @@ if data_loaded:
                     if cols[3].button("✏️", key=f"edit_s_{idx}", type="secondary"):
                         edit_dialog(idx, row, sheet, df)
             else:
-                # 전체모드 출력
                 cols[0].write(row['분류'])
                 cols[1].markdown(f"<span style='font-size: 2.0em; font-weight: bold;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
                 cols[2].markdown(f"<span style='font-size: 1.5em;'>{row['해석']}</span>", unsafe_allow_html=True)
