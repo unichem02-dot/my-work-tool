@@ -29,11 +29,12 @@ st.markdown("""
     }
 
     /* ★ 팝업창 제목(새 항목 추가, 항목 수정 및 삭제) 완벽한 흰색 고정 ★ */
-    div[role="dialog"] header h2,
-    div[role="dialog"] header h2 span,
-    div[role="dialog"] h2,
-    div[role="dialog"] h2 span,
-    div[data-testid="stDialog"] h2 {
+    [data-testid="stDialog"] h2, 
+    [data-testid="stDialog"] h2 *,
+    [data-testid="stModal"] h2, 
+    [data-testid="stModal"] h2 *,
+    div[role="dialog"] header h2, 
+    div[role="dialog"] header h2 * {
         color: #FFFFFF !important;
         -webkit-text-fill-color: #FFFFFF !important;
     }
@@ -69,8 +70,9 @@ st.markdown("""
     }
 
     /* 팝업창 닫기 버튼 (X) */
-    button[title="Close"] {
+    button[title="Close"], button[title="Close"] * {
         color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
     }
 
     /* 4. --- [버튼 공통: 완벽한 알약(Pill) 모양] --- */
@@ -179,7 +181,7 @@ def load_dataframe(sheet):
     raise Exception("구글 시트 응답 지연 (잠시 후 다시 시도해주세요)")
 
 # 3. 팝업창 - 새 항목 추가
-@st.dialog("➕ 새 항목 추가")
+@st.dialog("새 항목 추가")
 def add_dialog(sheet, full_df):
     unique_cats = full_df['분류'].unique().tolist() if not full_df.empty else []
     unique_cats = [x for x in unique_cats if x != '']
@@ -222,7 +224,7 @@ def add_dialog(sheet, full_df):
             else: st.error("내용을 입력해주세요.")
 
 # 4. 팝업창 - 수정 및 삭제
-@st.dialog("✏️ 항목 수정 및 삭제")
+@st.dialog("항목 수정 및 삭제")
 def edit_dialog(idx, row_data, sheet, full_df):
     st.markdown(f"**[{row_data['분류']}] {row_data['단어']}** 데이터를 관리합니다.")
     unique_cats = [x for x in full_df['분류'].unique().tolist() if x != '']
@@ -285,7 +287,7 @@ if "authenticated" not in st.session_state:
 # 타이틀 및 로그아웃 버튼 가로 배치
 col_title, col_auth = st.columns([7, 2])
 with col_title:
-    st.title("📚 TOmBOy94's English words and sentences")
+    st.title("TOmBOy94's English words and sentences")
 
 with col_auth:
     if not st.session_state.authenticated:
