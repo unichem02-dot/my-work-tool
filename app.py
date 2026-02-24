@@ -141,6 +141,12 @@ st.markdown("""
         margin-top: 10px !important;
         margin-bottom: 10px !important;
     }
+
+    /* 토글 스위치 라벨 색상 강제 지정 */
+    .stToggle label p {
+        color: #FFFFFF !important;
+        font-weight: bold !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -164,7 +170,7 @@ def get_sheet():
     client = init_connection()
     return client.open("English_Sentences").sheet1
 
-# 2. 데이터 불러오기 (6열 구조로 변경)
+# 2. 데이터 불러오기 (6열 구조)
 def load_dataframe(sheet):
     for _ in range(3):
         try:
@@ -173,7 +179,6 @@ def load_dataframe(sheet):
                 return pd.DataFrame(columns=['분류', '단어-문장', '해석', '발음', '메모1', '메모2'])
             rows = data[1:]
             headers = ['분류', '단어-문장', '해석', '발음', '메모1', '메모2']
-            # 6열로 패딩 및 자르기
             rows = [row + [""] * (6 - len(row)) for row in rows]
             rows = [row[:6] for row in rows]
             df = pd.DataFrame(rows, columns=headers)
@@ -184,7 +189,7 @@ def load_dataframe(sheet):
             time.sleep(1)
     raise Exception("구글 시트 응답 지연 (잠시 후 다시 시도해주세요)")
 
-# 3. 팝업창 - 새 항목 추가 (단어/문장 통합)
+# 3. 팝업창 - 새 항목 추가
 @st.dialog("새 항목 추가")
 def add_dialog(sheet, full_df):
     unique_cats = full_df['분류'].unique().tolist() if not full_df.empty else []
@@ -199,7 +204,6 @@ def add_dialog(sheet, full_df):
         with col2:
             new_cat = st.text_input("새 분류 입력 (우선 적용됩니다)")
         
-        # 통합된 단어-문장 필드 (한 줄 전체 차지)
         new_word_sent = st.text_input("단어-문장")
             
         col3, col4 = st.columns(2)
@@ -224,7 +228,7 @@ def add_dialog(sheet, full_df):
                 except Exception as e: st.error(f"추가 오류: {e}")
             else: st.error("내용을 입력해주세요.")
 
-# 4. 팝업창 - 수정 및 삭제 (단어/문장 통합)
+# 4. 팝업창 - 수정 및 삭제
 @st.dialog("항목 수정 및 삭제")
 def edit_dialog(idx, row_data, sheet, full_df):
     st.markdown(f"**[{row_data['분류']}] {row_data['단어-문장']}** 데이터를 관리합니다.")
@@ -242,7 +246,6 @@ def edit_dialog(idx, row_data, sheet, full_df):
             edit_selected_cat = st.selectbox("분류 선택 (기존)", ["(직접 입력)"] + unique_cats, index=default_idx)
         with row1_col2: edit_new_cat = st.text_input("분류 직접 입력 (변경 시에만 입력)")
         
-        # 통합된 단어-문장 필드
         edit_word_sent = st.text_input("단어-문장", value=row_data['단어-문장'])
         
         row3_col1, row3_col2 = st.columns(2)
@@ -264,7 +267,6 @@ def edit_dialog(idx, row_data, sheet, full_df):
                 try:
                     sheet_row = idx + 2 
                     new_values = [final_edit_cat, edit_word_sent, edit_mean, edit_pron, edit_memo1, edit_memo2]
-                    # F열까지 6개 열 업데이트
                     cell_list = sheet.range(f"A{sheet_row}:F{sheet_row}")
                     for i, cell in enumerate(cell_list): cell.value = new_values[i]
                     sheet.update_cells(cell_list)
@@ -288,7 +290,6 @@ if "authenticated" not in st.session_state:
 # 타이틀 및 로그아웃 버튼 가로 배치
 col_title, col_auth = st.columns([7, 2])
 with col_title:
-    # ★ 이메일 링크 자동 변환을 막기 위해 HTML로 직접 타이틀을 렌더링합니다 ★
     st.markdown("""
         <h1 style='padding-top: 0.5rem; font-size: 2.2rem; font-weight: 700; color: #FFFFFF;'>
             TOmBOy94's English words and sentences : lodus11st<span>@</span>naver.com
@@ -323,19 +324,28 @@ except Exception as e:
 if data_loaded:
     st.divider()
 
-    # 💡 컬럼 비율 재조정: '추가' 버튼과 '검색' 라벨 사이에 빈 공간(spacer) 추가, '검색' 라벨 폭을 줄여 입력창에 밀착
+    # 상단 컨트롤바 레이아웃 (추가 버튼, 모드 스위치, 검색 영역)
     if st.session_state.authenticated:
-        cols = st.columns([1.5, 0.5, 0.8, 3.2, 1.5, 1.5])
+        # 컬럼 조정: 추가버튼(1.3), 모드스위치(1.2), 스페이서(0.3), 검색라벨(0.7), 검색창(2.5), 분류(1.2), 다운로드(1.3)
+        cols = st.columns([1.3, 1.2, 0.3, 0.7, 2.5, 1.2, 1.3])
         col_add = cols[0]
-        # cols[1] 은 간격용 빈 컬럼 (spacer)
-        col_h1, col_h2, col_h3, col_dl = cols[2:]
+        col_view_mode = cols[1]
+        col_h1, col_h2, col_h3, col_dl = cols[3:]
         
         with col_add:
             if st.button("➕ 새 항목 추가", type="primary", use_container_width=True):
                 add_dialog(sheet, df)
+        
+        with col_view_mode:
+            is_simple = st.toggle("심플모드", value=False, help="분류, 단어, 해석만 표시합니다.")
     else:
-        cols = st.columns([0.8, 3.2, 1.5, 1.5])
-        col_h1, col_h2, col_h3, col_dl = cols
+        # 비로그인 시: 모드스위치(1.2), 검색라벨(0.8), 검색창(3.2), 분류(1.5), 다운로드(1.5)
+        cols = st.columns([1.2, 0.8, 3.2, 1.5, 1.5])
+        col_view_mode = cols[0]
+        col_h1, col_h2, col_h3, col_dl = cols[1:]
+        
+        with col_view_mode:
+            is_simple = st.toggle("심플모드", value=False)
     
     with col_h1: 
         st.subheader("🔍 검색")
@@ -358,10 +368,8 @@ if data_loaded:
         mask = display_df.apply(lambda r: r.astype(str).str.contains(search_query, case=False).any(), axis=1)
         display_df = display_df[mask]
 
-    # 최신 등록 항목이 위로 올라오도록 정렬 (인덱스는 유지해야 수정/삭제가 올바른 열을 찾아감)
     display_df = display_df.iloc[::-1]
 
-    # ★ CSV 내보내기는 전체 필터링된 내용을 대상으로 생성합니다. ★
     with col_dl:
         if st.session_state.authenticated:
             csv_data = display_df.to_csv(index=False).encode('utf-8-sig')
@@ -374,7 +382,7 @@ if data_loaded:
             )
 
     if not display_df.empty:
-        # --- [페이지네이션 로직] ---
+        # --- [페이지네이션] ---
         ITEMS_PER_PAGE = 100
         total_items = len(display_df)
         total_pages = math.ceil(total_items / ITEMS_PER_PAGE) if total_items > 0 else 1
@@ -382,16 +390,13 @@ if data_loaded:
         if 'current_page' not in st.session_state:
             st.session_state.current_page = 1
 
-        # 검색/필터 변경으로 페이지가 초과되면 1페이지로 복구
         if st.session_state.current_page > total_pages or st.session_state.current_page < 1:
             st.session_state.current_page = 1
 
-        # 현재 페이지에 맞게 100개만 슬라이싱
         start_idx = (st.session_state.current_page - 1) * ITEMS_PER_PAGE
         end_idx = start_idx + ITEMS_PER_PAGE
         page_df = display_df.iloc[start_idx:end_idx]
 
-        # ★ st.info 대신 완벽하게 흰색이 보장되는 HTML(st.markdown) 방식으로 교체 ★
         st.markdown(f"""
             <div style='color: #FFFFFF !important; font-weight: bold; margin-bottom: 15px; font-size: 1.1em;'>
                 총 {total_items}개의 항목 중 {start_idx + 1} ~ {min(end_idx, total_items)}번째 표시 중 
@@ -399,49 +404,62 @@ if data_loaded:
             </div>
         """, unsafe_allow_html=True)
         
-        # 헤더 출력 부분 (6열에 맞춘 비율)
-        if st.session_state.authenticated:
-            col_ratio = [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
-            h_labels = ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
+        # --- [헤더 및 컬럼 비율 결정] ---
+        if is_simple:
+            # 심플모드: 분류(1.5), 단어-문장(6), 해석(4.5), 수정버튼(1.0)
+            if st.session_state.authenticated:
+                col_ratio = [1.5, 6, 4.5, 1]
+                h_labels = ["분류", "단어-문장", "해석", "수정"]
+            else:
+                col_ratio = [1.5, 6, 4.5]
+                h_labels = ["분류", "단어-문장", "해석"]
         else:
-            col_ratio = [1.2, 4, 2.5, 2, 2.5, 2.5]
-            h_labels = ["분류", "단어-문장", "해석", "발음", "메모1", "메모2"]
+            # 전체모드: 기존 6열 비율 유지
+            if st.session_state.authenticated:
+                col_ratio = [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
+                h_labels = ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
+            else:
+                col_ratio = [1.2, 4, 2.5, 2, 2.5, 2.5]
+                h_labels = ["분류", "단어-문장", "해석", "발음", "메모1", "메모2"]
 
         header_cols = st.columns(col_ratio)
         for i, label in enumerate(h_labels): header_cols[i].markdown(f"**{label}**")
         st.divider()
         
-        # 데이터 출력 (1페이지당 100개)
+        # --- [데이터 출력] ---
         for idx, row in page_df.iterrows():
             cols = st.columns(col_ratio)
-            cols[0].write(row['분류'])
-            # 글자 크기를 2.0em으로 상향 조정
-            cols[1].markdown(f"<span style='font-size: 2.0em; font-weight: bold;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
-            # 해석 텍스트를 HTML 태그를 사용해 1.5em으로 상향 조정
-            cols[2].markdown(f"<span style='font-size: 1.5em;'>{row['해석']}</span>", unsafe_allow_html=True)
-            cols[3].write(row['발음'])
-            cols[4].write(row['메모1'])
-            cols[5].write(row['메모2'])
             
-            if st.session_state.authenticated:
-                if cols[6].button("✏️", key=f"edit_{idx}", type="secondary"):
-                    edit_dialog(idx, row, sheet, df)
+            if is_simple:
+                # 심플모드 출력
+                cols[0].write(row['분류'])
+                cols[1].markdown(f"<span style='font-size: 2.0em; font-weight: bold;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
+                cols[2].markdown(f"<span style='font-size: 1.5em;'>{row['해석']}</span>", unsafe_allow_html=True)
+                if st.session_state.authenticated:
+                    if cols[3].button("✏️", key=f"edit_s_{idx}", type="secondary"):
+                        edit_dialog(idx, row, sheet, df)
+            else:
+                # 전체모드 출력
+                cols[0].write(row['분류'])
+                cols[1].markdown(f"<span style='font-size: 2.0em; font-weight: bold;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
+                cols[2].markdown(f"<span style='font-size: 1.5em;'>{row['해석']}</span>", unsafe_allow_html=True)
+                cols[3].write(row['발음'])
+                cols[4].write(row['메모1'])
+                cols[5].write(row['메모2'])
+                if st.session_state.authenticated:
+                    if cols[6].button("✏️", key=f"edit_f_{idx}", type="secondary"):
+                        edit_dialog(idx, row, sheet, df)
 
-            # 💡 컨텐츠 라인마다 간격을 반으로 확 줄인 점선 추가 (기본 여백 상쇄용 음수 마진 적용)
             st.markdown("<div style='border-bottom: 1px dotted rgba(255, 255, 255, 0.3); margin-top: -10px; margin-bottom: 5px;'></div>", unsafe_allow_html=True)
 
-        # --- [하단 페이지 번호 이동 컨트롤 UI] ---
+        # --- [페이지 번호 컨트롤] ---
         if total_pages > 1:
-            st.write("") # 상단 여백
-            
-            # 중앙 정렬을 위해 표시할 페이지 번호를 계산 (현재 페이지 기준 앞뒤 2개씩, 총 5개)
+            st.write("")
             start_page = max(1, st.session_state.current_page - 2)
             end_page = min(total_pages, start_page + 4)
-            start_page = max(1, end_page - 4) # 끝 페이지에 도달했을 때 앞쪽 버튼을 채워줌
-            
+            start_page = max(1, end_page - 4)
             visible_pages = list(range(start_page, end_page + 1))
             
-            # 레이아웃을 동적으로 만들어 항상 중앙에 위치하도록 함 [여백, 이전, 번호들..., 다음, 여백]
             cols_layout = [3, 1] + [1] * len(visible_pages) + [1, 3]
             page_cols = st.columns(cols_layout)
             
