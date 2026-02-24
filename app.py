@@ -298,6 +298,7 @@ if "authenticated" not in st.session_state:
 # 타이틀 및 로그아웃 버튼 가로 배치
 col_title, col_auth = st.columns([7, 2])
 with col_title:
+    # ★ 이메일 링크 자동 변환을 막기 위해 HTML로 직접 타이틀을 렌더링합니다 ★
     st.markdown("""
         <h1 style='padding-top: 0.5rem; font-size: 2.2rem; font-weight: 700; color: #FFFFFF;'>
             TOmBOy94's English words and sentences : lodus11st<span>@</span>naver.com
@@ -332,16 +333,15 @@ except Exception as e:
 if data_loaded:
     st.divider()
 
-    # 상단 컨트롤바 레이아웃: 분류 선택과 검색어 입력창 위치를 서로 바꿈
+    # 상단 컨트롤바 레이아웃: '🔍 검색' 라벨 컬럼을 제거하고 검색창 영역을 확장
     if st.session_state.authenticated:
-        # 컬럼 조정: 추가(1.3), 스위치(1.2), 여백(0.3), 분류(1.5), 검색라벨(0.7), 검색창(3.0), 다운로드(1.5)
-        cols = st.columns([1.3, 1.2, 0.3, 1.5, 0.7, 3.0, 1.5])
+        # 컬럼 조정: 추가(1.3), 스위치(1.2), 여백(0.3), 분류(1.5), 검색창(3.7), 다운로드(1.5)
+        cols = st.columns([1.3, 1.2, 0.3, 1.5, 3.7, 1.5])
         col_add = cols[0]
         col_view_mode = cols[1]
         col_category = cols[3]
-        col_search_label = cols[4]
-        col_search_input = cols[5]
-        col_dl = cols[6]
+        col_search_input = cols[4]
+        col_dl = cols[5]
         
         with col_add:
             if st.button("➕ 새 항목 추가", type="primary", use_container_width=True):
@@ -356,19 +356,15 @@ if data_loaded:
             except: unique_cats.sort()
             selected_category = st.selectbox("분류", ["전체 분류"] + unique_cats, label_visibility="collapsed")
 
-        with col_search_label:
-            st.subheader("🔍 검색")
-
         with col_search_input:
             search_query = st.text_input("검색어", placeholder="검색어를 입력하세요...", label_visibility="collapsed")
     else:
-        # 비로그인 시: 스위치(1.2), 분류(1.5), 검색라벨(0.8), 검색창(3.2), 다운로드(1.5)
-        cols = st.columns([1.2, 1.5, 0.8, 3.2, 1.5])
+        # 비로그인 시: 스위치(1.2), 분류(1.5), 검색창(4.0), 다운로드(1.5)
+        cols = st.columns([1.2, 1.5, 4.0, 1.5])
         col_view_mode = cols[0]
         col_category = cols[1]
-        col_search_label = cols[2]
-        col_search_input = cols[3]
-        col_dl = cols[4]
+        col_search_input = cols[2]
+        col_dl = cols[3]
         
         with col_view_mode:
             is_simple = st.toggle("심플모드", value=False)
@@ -378,9 +374,6 @@ if data_loaded:
             try: unique_cats.sort(key=float)
             except: unique_cats.sort()
             selected_category = st.selectbox("분류", ["전체 분류"] + unique_cats, label_visibility="collapsed")
-
-        with col_search_label:
-            st.subheader("🔍 검색")
 
         with col_search_input:
             search_query = st.text_input("검색어", placeholder="검색어를 입력하세요...", label_visibility="collapsed")
