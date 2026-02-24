@@ -9,7 +9,8 @@ import math
 # --- [페이지 기본 설정] ---
 st.set_page_config(layout="wide", page_title="TOmBOy94's English")
 
-# --- [사용자 정의 디자인 (CSS) 및 음성 출력 스크립트] ---
+# --- [사용자 정의 디자인 (CSS)] ---
+# (참고: 실행되지 않는 <script> 태그는 모두 제거하고 CSS만 남겼습니다)
 st.markdown("""
     <style>
     /* 1. 배경 설정 */
@@ -22,7 +23,7 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 2. ★ 핵심 문제 해결: 텍스트 무조건 흰색 강제화 ★ */
+    /* 2. ★ 텍스트 무조건 흰색 강제화 ★ */
     h1, h2, h3, h4, h5, h6, p, span, label, summary, b, strong {
         color: #FFFFFF !important;
     }
@@ -140,43 +141,6 @@ st.markdown("""
         border-top: 1px dotted rgba(255, 255, 255, 0.3) !important;
     }
     </style>
-    
-    <script>
-    let speechReady = false;
-    
-    // ★ 브라우저 가비지 컬렉션(GC) 버그 방지용 배열 (긴 문장 끊김 방지)
-    window.utterances = []; 
-
-    document.addEventListener('click', function() {
-        if (!speechReady) {
-            window.speechSynthesis.cancel();
-            speechReady = true;
-            console.log("음성 엔진 활성화됨");
-        }
-    }, { once: true });
-
-    function speakText(text, lang) {
-        if (!text || text.trim() === "") return;
-        
-        // 즉시 이전 음성 중지
-        window.speechSynthesis.cancel();
-        
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = lang; 
-        utterance.rate = 1.0; 
-        utterance.pitch = 1.0;
-        
-        // ★ 객체를 전역 배열에 담아 소리가 도중에 멈추는 브라우저 버그 완벽 차단
-        window.utterances.push(utterance);
-        if(window.utterances.length > 5) {
-            window.utterances.shift(); // 메모리 관리
-        }
-        
-        setTimeout(() => {
-            window.speechSynthesis.speak(utterance);
-        }, 50);
-    }
-    </script>
     """, unsafe_allow_html=True)
 
 # --- [보안 설정] ---
@@ -203,14 +167,14 @@ def load_dataframe(sheet):
         except: time.sleep(1)
     raise Exception("데이터 로드 실패")
 
-# ★ TTS(음성 출력)용 텍스트 안전 처리 함수 (에러 방지용)
+# ★ TTS(음성 출력)용 텍스트 안전 처리 함수
 def sanitize_tts(text):
     if not text or pd.isna(text): return ""
     t = str(text)
-    t = t.replace('\\', '\\\\')                 # 백슬래시 이스케이프
-    t = t.replace('\n', ' ').replace('\r', ' ') # 줄바꿈을 공백으로 변환 (문장 이음)
-    t = t.replace("'", "\\'")                   # JS 문자열용 작은따옴표 처리
-    t = t.replace('"', '&quot;')                # HTML 속성용 큰따옴표 처리
+    t = t.replace('\\', '\\\\')                 
+    t = t.replace('\n', ' ').replace('\r', ' ') 
+    t = t.replace("'", "\\'")                   
+    t = t.replace('"', '&quot;')                
     return t.strip()
 
 @st.dialog("새 항목 추가")
@@ -304,7 +268,8 @@ try:
     curr_p = st.session_state.get('curr_p', 1)
     if curr_p > pages: curr_p = 1
     
-    st.markdown(f"<p style='color:#FFF;font-weight:bold;margin-top:15px;'>총 {total}개 (페이지: {curr_p}/{pages})</p>", unsafe_allow_html=True)
+    # ★ 사용자 안내 문구 추가 (브라우저 정책 우회용)
+    st.markdown(f"<p style='color:#FFF;font-weight:bold;margin-top:15px;'>총 {total}개 (페이지: {curr_p}/{pages}) &nbsp;&nbsp;|&nbsp;&nbsp; 🔊 첫 음성은 화면 빈 곳을 한 번 클릭한 후 마우스를 올려야 들립니다.</p>", unsafe_allow_html=True)
     
     # 리스트 출력
     ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
@@ -317,16 +282,19 @@ try:
     for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
         cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
         
-        # ★ TTS 전용 텍스트 안전 변환 적용 ★
         txt_en = sanitize_tts(row['단어-문장'])
         txt_ko = sanitize_tts(row['해석'])
+        
+        # ★ 스크립트 태그 없이 HTML 속성에 직접 자바스크립트를 삽입 (Streamlit 차단 우회) ★
+        js_en = f"window.speechSynthesis.cancel(); window.utts = window.utts || []; var u = new SpeechSynthesisUtterance('{txt_en}'); u.lang='en-US'; u.rate=1.0; window.utts.push(u); if(window.utts.length > 5) window.utts.shift(); window.speechSynthesis.speak(u);"
+        js_ko = f"window.speechSynthesis.cancel(); window.utts = window.utts || []; var u = new SpeechSynthesisUtterance('{txt_ko}'); u.lang='ko-KR'; u.rate=1.0; window.utts.push(u); if(window.utts.length > 5) window.utts.shift(); window.speechSynthesis.speak(u);"
         
         cols[0].write(row['분류'])
         
         # 영어 발음 (단어-문장)
         cols[1].markdown(f"""
             <span style='font-size:2.0em;font-weight:bold;cursor:pointer;display:block;' 
-                  onmouseenter=\"speakText('{txt_en}', 'en-US')\">
+                  onmouseenter="{js_en}">
                 {row['단어-문장']}
             </span>
         """, unsafe_allow_html=True)
@@ -334,7 +302,7 @@ try:
         # 한국어 발음 (해석)
         cols[2].markdown(f"""
             <span style='font-size:1.5em;cursor:pointer;display:block;' 
-                  onmouseenter=\"speakText('{txt_ko}', 'ko-KR')\">
+                  onmouseenter="{js_ko}">
                 {row['해석']}
             </span>
         """, unsafe_allow_html=True)
