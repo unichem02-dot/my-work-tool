@@ -31,10 +31,7 @@ st.markdown("""
 
     /* ★ 팝업창 제목 포함 모든 헤딩 태그를 완벽한 흰색으로 고정 ★ */
     h1, h2, h3, h4, h5, h6,
-    h1 *, h2 *, h3 *, h4 *, h5 *, h6 *,
-    div[role="dialog"] h2, div[role="dialog"] h2 *,
-    div[role="dialog"] div[data-testid="stMarkdownContainer"] *,
-    [data-testid="stDialog"] h2, [data-testid="stDialog"] h2 * {
+    h1 *, h2 *, h3 *, h4 *, h5 *, h6 * {
         color: #FFFFFF !important;
         -webkit-text-fill-color: #FFFFFF !important;
     }
@@ -49,466 +46,233 @@ st.markdown("""
         border: 1px solid #FFFFFF !important;
         pointer-events: auto !important;
         user-select: text !important;
-        -webkit-user-select: text !important;
     }
     
-    /* 패스워드 필드 특화 (검은색 텍스트 보장) */
+    /* 패스워드 필드 특화 */
     input[type="password"] {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
 
-    /* ★ 비밀번호 표시/숨기기(눈동자 아이콘) 기능 제거 ★ */
+    /* ★ 비밀번호 눈동자 아이콘 제거 ★ */
     div[data-testid="stTextInput"] button {
         display: none !important;
     }
     
-    /* 드롭다운(Selectbox) 뚜렷하게 */
+    /* 드롭다운(Selectbox) 스타일 */
     .stSelectbox div[data-baseweb="select"] > div {
         background-color: #FFFFFF !important;
         border-radius: 50px !important;
         border: none !important;
-        pointer-events: auto !important;
     }
     .stSelectbox div[data-baseweb="select"] * {
         color: #000000 !important;
         font-weight: bold !important;
     }
 
-    /* 팝업창 내부 폼(Form) 테두리 */
+    /* 팝업창 폼 테두리 */
     [data-testid="stForm"] {
-        background-color: transparent !important;
         border: 1px solid rgba(255, 255, 255, 0.2) !important;
         border-radius: 15px !important;
     }
 
-    /* 팝업창 닫기 버튼 (X) 완벽한 흰색 */
-    button[aria-label="Close"], button[aria-label="Close"] * {
-        color: #FFFFFF !important;
-        fill: #FFFFFF !important;
-    }
-
-    /* 4. --- [버튼 공통: 완벽한 알약(Pill) 모양] --- */
+    /* 4. 버튼 공통 스타일 (Pill) */
     button {
         border-radius: 50px !important;
         padding: 0.5rem 1.5rem !important;
         font-weight: 700 !important;
         transition: all 0.3s ease !important;
-        border: 2px solid transparent !important;
     }
 
-    /* 5. Primary 버튼 완벽 덮어쓰기 (흰 바탕 + 짙은 녹색 글씨) */
+    /* Primary 버튼 */
     button[kind="primary"] {
         background-color: #FFFFFF !important;
-        border-color: #FFFFFF !important;
-    }
-    button[kind="primary"] p, 
-    button[kind="primary"] span, 
-    button[kind="primary"] div {
-        color: #224343 !important; 
-    }
-    button[kind="primary"]:hover {
-        transform: scale(1.03);
-        background-color: #F0F0F0 !important;
-    }
-
-    /* 6. Secondary 버튼 완벽 덮어쓰기 (투명 바탕 + 흰색 테두리 및 글씨) */
-    button[kind="secondary"] {
-        background-color: transparent !important;
-        border-color: #FFFFFF !important; 
-    }
-    button[kind="secondary"] p, 
-    button[kind="secondary"] span, 
-    button[kind="secondary"] div {
-        color: #FFFFFF !important; 
+        color: #224343 !important;
     }
     
-    /* 엑셀 다운로드 버튼 */
-    .stDownloadButton > button {
+    /* Secondary 버튼 */
+    button[kind="secondary"] {
         background-color: transparent !important;
-        border-color: #FFFFFF !important;
-        border-radius: 50px !important;
-    }
-    .stDownloadButton > button p {
+        border: 2px solid #FFFFFF !important;
         color: #FFFFFF !important;
     }
     
     /* 구분선 */
     hr {
-        border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-top: 1px dotted rgba(255, 255, 255, 0.3) !important;
     }
 
-    /* ★ 스위치(Toggle) 라벨 글자색 화이트 고정 ★ */
-    div[data-testid="stCheckbox"] label p,
+    /* ★ 토글 스위치 화이트 라벨 ★ */
     .stToggle label p {
         color: #FFFFFF !important;
         font-weight: bold !important;
     }
-
-    /* 7. ★ 마우스 호버 음성 출력 JS ★ */
     </style>
     
     <script>
-    function speakEnglish(text) {
-        // 이전 재생 중인 음성이 있다면 즉시 중단 (겹침 방지)
+    function speakText(text, lang) {
+        // 재생 중인 모든 음성 중단
         window.speechSynthesis.cancel();
         
+        if (!text) return;
+
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-US'; // 미국 영어 설정
-        utterance.rate = 1.0;     // 속도 (0.1 ~ 10)
-        utterance.pitch = 1.0;    // 피치 (0 ~ 2)
-        
+        utterance.lang = lang; 
+        utterance.rate = 1.0; 
         window.speechSynthesis.speak(utterance);
     }
     </script>
     """, unsafe_allow_html=True)
 
-# --- [보안 설정: 비밀번호] ---
+# --- [보안 설정] ---
 LOGIN_PASSWORD = "0315" 
 
-# 1. 구글 시트 연동 설정
 @st.cache_resource
 def init_connection():
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive"
-    ]
-    creds = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"], scopes=scopes
-    )
-    client = gspread.authorize(creds)
-    return client
+    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
+    return gspread.authorize(creds)
 
 def get_sheet():
-    client = init_connection()
-    return client.open("English_Sentences").sheet1
+    return init_connection().open("English_Sentences").sheet1
 
-# 2. 데이터 불러오기 (6열 구조)
 def load_dataframe(sheet):
     for _ in range(3):
         try:
             data = sheet.get_all_values()
-            if not data: 
-                return pd.DataFrame(columns=['분류', '단어-문장', '해석', '발음', '메모1', '메모2'])
-            rows = data[1:]
-            headers = ['분류', '단어-문장', '해석', '발음', '메모1', '메모2']
-            rows = [row + [""] * (6 - len(row)) for row in rows]
-            rows = [row[:6] for row in rows]
-            df = pd.DataFrame(rows, columns=headers)
-            for col in df.columns:
-                df[col] = df[col].astype(str).str.strip()
+            if not data: return pd.DataFrame(columns=['분류', '단어-문장', '해석', '발음', '메모1', '메모2'])
+            rows = [row + [""] * (6 - len(row)) for row in data[1:]]
+            df = pd.DataFrame(rows, columns=['분류', '단어-문장', '해석', '발음', '메모1', '메모2'])
+            for col in df.columns: df[col] = df[col].astype(str).str.strip()
             return df
-        except Exception as e:
-            time.sleep(1)
-    raise Exception("구글 시트 응답 지연 (잠시 후 다시 시도해주세요)")
+        except: time.sleep(1)
+    raise Exception("데이터 로드 실패")
 
-# 3. 팝업창 - 새 항목 추가
 @st.dialog("새 항목 추가")
 def add_dialog(sheet, full_df):
-    unique_cats = full_df['분류'].unique().tolist() if not full_df.empty else []
-    unique_cats = [x for x in unique_cats if x != '']
-    try: unique_cats.sort(key=float)
-    except: unique_cats.sort()
+    unique_cats = sorted([x for x in full_df['분류'].unique().tolist() if x != ''])
+    with st.form("add_form", clear_on_submit=True):
+        c1, c2 = st.columns(2)
+        selected_cat = c1.selectbox("기존 분류", ["(새로 입력)"] + unique_cats)
+        new_cat = c2.text_input("새 분류 입력")
+        word_sent = st.text_input("단어-문장")
+        c3, c4 = st.columns(2)
+        mean = c3.text_input("해석")
+        pron = c4.text_input("발음")
+        m1 = st.text_input("메모1")
+        m2 = st.text_input("메모2")
+        if st.form_submit_button("저장하기", use_container_width=True, type="primary"):
+            final_cat = new_cat.strip() if new_cat.strip() else (selected_cat if selected_cat != "(새로 입력)" else "")
+            if word_sent:
+                sheet.append_row([final_cat, word_sent, mean, pron, m1, m2])
+                st.success("저장 완료!"); time.sleep(1); st.rerun()
 
-    with st.form("add_sentence_form", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            selected_cat = st.selectbox("분류 선택 (기존)", ["(새로 입력)"] + unique_cats)
-        with col2:
-            new_cat = st.text_input("새 분류 입력 (우선 적용됩니다)")
-        
-        new_word_sent = st.text_input("단어-문장")
-            
-        col3, col4 = st.columns(2)
-        with col3:
-            new_mean = st.text_input("해석")
-        with col4:
-            new_pron = st.text_input("발음")
-            
-        new_memo1 = st.text_input("메모1")
-        new_memo2 = st.text_input("메모2")
-        
-        submitted = st.form_submit_button("시트에 저장하기", use_container_width=True, type="primary")
-        if submitted:
-            final_cat = new_cat.strip() if new_cat.strip() else selected_cat
-            if final_cat == "(새로 입력)": final_cat = ""
-            if new_word_sent:
-                try:
-                    sheet.append_row([final_cat, new_word_sent, new_mean, new_pron, new_memo1, new_memo2])
-                    st.success("저장되었습니다! 🔄")
-                    time.sleep(1)
-                    st.rerun()
-                except Exception as e: st.error(f"추가 오류: {e}")
-            else: st.error("내용을 입력해주세요.")
-
-# 4. 팝업창 - 수정 및 삭제
 @st.dialog("항목 수정 및 삭제")
 def edit_dialog(idx, row_data, sheet, full_df):
-    st.markdown(f"**[{row_data['분류']}] {row_data['단어-문장']}** 데이터를 관리합니다.")
-    unique_cats = [x for x in full_df['분류'].unique().tolist() if x != '']
-    try: unique_cats.sort(key=float)
-    except: unique_cats.sort()
+    unique_cats = sorted([x for x in full_df['분류'].unique().tolist() if x != ''])
+    with st.form(f"edit_{idx}"):
+        c1, c2 = st.columns(2)
+        edit_cat = c1.selectbox("분류", unique_cats, index=unique_cats.index(row_data['분류']) if row_data['분류'] in unique_cats else 0)
+        new_cat = c2.text_input("분류 직접 수정")
+        word_sent = st.text_input("단어-문장", value=row_data['단어-문장'])
+        c3, c4 = st.columns(2)
+        mean = c3.text_input("해석", value=row_data['해석'])
+        pron = c4.text_input("발음", value=row_data['발음'])
+        m1 = st.text_input("메모1", value=row_data['메모1'])
+        m2 = st.text_input("메모2", value=row_data['메모2'])
+        b1, b2 = st.columns(2)
+        if b1.form_submit_button("💾 저장", use_container_width=True, type="primary"):
+            final_cat = new_cat.strip() if new_cat.strip() else edit_cat
+            sheet.update(f"A{idx+2}:F{idx+2}", [[final_cat, word_sent, mean, pron, m1, m2]])
+            st.rerun()
+        if b2.form_submit_button("🗑️ 삭제", use_container_width=True):
+            sheet.delete_rows(idx + 2); st.rerun()
 
-    with st.form(f"edit_form_{idx}"):
-        row1_col1, row1_col2 = st.columns(2)
-        with row1_col1:
-            current_cat = row_data['분류']
-            if current_cat not in unique_cats: unique_cats.append(current_cat); unique_cats.sort()
-            try: default_idx = unique_cats.index(current_cat) + 1
-            except: default_idx = 0
-            edit_selected_cat = st.selectbox("분류 선택 (기존)", ["(직접 입력)"] + unique_cats, index=default_idx)
-        with row1_col2: edit_new_cat = st.text_input("분류 직접 입력 (변경 시에만 입력)")
-        
-        edit_word_sent = st.text_input("단어-문장", value=row_data['단어-문장'])
-        
-        row3_col1, row3_col2 = st.columns(2)
-        with row3_col1: edit_mean = st.text_input("해석", value=row_data['해석'])
-        with row3_col2: edit_pron = st.text_input("발음", value=row_data['발음'])
-        
-        edit_memo1 = st.text_input("메모1", value=row_data['메모1'])
-        edit_memo2 = st.text_input("메모2", value=row_data['메모2'])
-        
-        st.divider()
-        btn_col1, btn_col2 = st.columns(2)
-        with btn_col1: update_submitted = st.form_submit_button("💾 수정 내용 저장", use_container_width=True, type="primary")
-        with btn_col2: delete_submitted = st.form_submit_button("🗑️ 항목 삭제", use_container_width=True, type="secondary")
-        
-        if update_submitted:
-            final_edit_cat = edit_new_cat.strip() if edit_new_cat.strip() else edit_selected_cat
-            if final_edit_cat == "(직접 입력)": final_edit_cat = ""
-            if edit_word_sent:
-                try:
-                    sheet_row = idx + 2 
-                    new_values = [final_edit_cat, edit_word_sent, edit_mean, edit_pron, edit_memo1, edit_memo2]
-                    cell_list = sheet.range(f"A{sheet_row}:F{sheet_row}")
-                    for i, cell in enumerate(cell_list): cell.value = new_values[i]
-                    sheet.update_cells(cell_list)
-                    st.success("수정되었습니다! 🔄")
-                    time.sleep(0.5)
-                    st.rerun()
-                except Exception as e: st.error(f"수정 오류: {e}")
-        if delete_submitted:
-            try:
-                sheet.delete_rows(idx + 2)
-                st.warning("삭제되었습니다. 🔄")
-                time.sleep(0.5)
-                st.rerun()
-            except Exception as e: st.error(f"삭제 오류: {e}")
+# --- [메인 실행] ---
+if "authenticated" not in st.session_state: st.session_state.authenticated = False
 
-# --- [메인 로직 시작] ---
-
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-
-# 타이틀 및 로그아웃 버튼 가로 배치
 col_title, col_auth = st.columns([7, 2])
 with col_title:
-    st.markdown("""
-        <h1 style='padding-top: 0.5rem; font-size: 2.2rem; font-weight: 700; color: #FFFFFF;'>
-            TOmBOy94's English words and sentences : lodus11st<span>@</span>naver.com
-        </h1>
-    """, unsafe_allow_html=True)
-
+    st.markdown("<h1 style='color:#FFF;'>TOmBOy94's English words and sentences : lodus11st@naver.com</h1>", unsafe_allow_html=True)
 with col_auth:
     if not st.session_state.authenticated:
-        with st.expander("🔐 관리자 로그인"):
-            password_input = st.text_input("Password", type="password")
-            if st.button("로그인", use_container_width=True, type="primary"):
-                if password_input == LOGIN_PASSWORD:
-                    st.session_state.authenticated = True
-                    st.rerun()
-                else:
-                    st.error("비밀번호 오류")
+        with st.expander("🔐 로그인"):
+            if st.text_input("Password", type="password") == LOGIN_PASSWORD: 
+                st.session_state.authenticated = True; st.rerun()
     else:
-        st.write("")
-        st.write("")
-        if st.button("🔓 로그아웃", use_container_width=True, type="secondary"):
-            st.session_state.authenticated = False
-            st.rerun()
+        if st.button("🔓 로그아웃", use_container_width=True, type="secondary"): 
+            st.session_state.authenticated = False; st.rerun()
 
-data_loaded = False
 try:
-    sheet = get_sheet()
-    df = load_dataframe(sheet)
-    data_loaded = True
-except Exception as e:
-    st.error(f"데이터 연결 오류: {e}")
+    sheet = get_sheet(); df = load_dataframe(sheet)
+    st.divider()
+    
+    # 컨트롤바
+    if st.session_state.authenticated:
+        cb = st.columns([1.5, 1.2, 0.3, 1.5, 3.7, 1.5])
+        if cb[0].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
+        is_simple = cb[1].toggle("심플모드")
+        sel_cat = cb[3].selectbox("분류", ["전체 분류"] + sorted(df['분류'].unique().tolist()), label_visibility="collapsed")
+        search = cb[4].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
+        cb[5].download_button("📥 CSV", df.to_csv(index=False).encode('utf-8-sig'), "data.csv", use_container_width=True)
+    else:
+        cb = st.columns([1.2, 1.5, 4.0, 1.5])
+        is_simple = cb[0].toggle("심플모드")
+        sel_cat = cb[1].selectbox("분류", ["전체 분류"] + sorted(df['분류'].unique().tolist()), label_visibility="collapsed")
+        search = cb[2].text_input("검색", label_visibility="collapsed")
 
-if data_loaded:
+    # 필터링
+    d_df = df.copy()
+    if sel_cat != "전체 분류": d_df = d_df[d_df['분류'] == sel_cat]
+    if search: d_df = d_df[d_df.apply(lambda r: r.astype(str).str.contains(search, case=False).any(), axis=1)]
+    d_df = d_df.iloc[::-1]
+
+    # 페이지네이션
+    total = len(d_df)
+    pages = math.ceil(total/100) if total > 0 else 1
+    curr_p = st.session_state.get('curr_p', 1)
+    if curr_p > pages: curr_p = 1
+    
+    st.markdown(f"<p style='color:#FFF;font-weight:bold;'>총 {total}개 (페이지: {curr_p}/{pages})</p>", unsafe_allow_html=True)
+    
+    # 리스트 출력
+    ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
+    labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
+    
+    h_cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
+    for i, l in enumerate(labels if st.session_state.authenticated else labels[:-1]): h_cols[i].write(f"**{l}**")
     st.divider()
 
-    # 상단 컨트롤바 레이아웃
-    if st.session_state.authenticated:
-        cols = st.columns([1.3, 1.2, 0.3, 1.5, 3.7, 1.5])
-        col_add = cols[0]
-        col_view_mode = cols[1]
-        col_category = cols[3]
-        col_search_input = cols[4]
-        col_dl = cols[5]
+    for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
+        cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
         
-        with col_add:
-            if st.button("➕ 새 항목 추가", type="primary", use_container_width=True):
-                add_dialog(sheet, df)
+        # 텍스트 이스케이프 (JS 오류 방지)
+        txt_en = row['단어-문장'].replace("'", "\\'").replace('"', '&quot;')
+        txt_ko = row['해석'].replace("'", "\\'").replace('"', '&quot;')
         
-        with col_view_mode:
-            is_simple = st.toggle("심플모드", value=False)
-            
-        with col_category:
-            unique_cats = [x for x in df['분류'].unique().tolist() if x != '']
-            try: unique_cats.sort(key=float)
-            except: unique_cats.sort()
-            selected_category = st.selectbox("분류", ["전체 분류"] + unique_cats, label_visibility="collapsed")
-
-        with col_search_input:
-            search_query = st.text_input("검색어", placeholder="검색어를 입력하세요...", label_visibility="collapsed")
-    else:
-        cols = st.columns([1.2, 1.5, 4.0, 1.5])
-        col_view_mode = cols[0]
-        col_category = cols[1]
-        col_search_input = cols[2]
-        col_dl = cols[3]
+        cols[0].write(row['분류'])
+        # 영어 발음 (단어-문장)
+        cols[1].markdown(f"<span style='font-size:2.0em;font-weight:bold;cursor:pointer;' onmouseenter=\"speakText('{txt_en}', 'en-US')\">{row['단어-문장']}</span>", unsafe_allow_html=True)
+        # 한국어 발음 (해석)
+        cols[2].markdown(f"<span style='font-size:1.5em;cursor:pointer;' onmouseenter=\"speakText('{txt_ko}', 'ko-KR')\">{row['해석']}</span>", unsafe_allow_html=True)
         
-        with col_view_mode:
-            is_simple = st.toggle("심플모드", value=False)
-            
-        with col_category:
-            unique_cats = [x for x in df['분류'].unique().tolist() if x != '']
-            try: unique_cats.sort(key=float)
-            except: unique_cats.sort()
-            selected_category = st.selectbox("분류", ["전체 분류"] + unique_cats, label_visibility="collapsed")
-
-        with col_search_input:
-            search_query = st.text_input("검색어", placeholder="검색어를 입력하세요...", label_visibility="collapsed")
-        
-    # 필터링 로직
-    display_df = df.copy()
-    if selected_category != "전체 분류": 
-        display_df = display_df[display_df['분류'] == selected_category]
-    
-    if search_query:
-        mask = display_df.apply(lambda r: r.astype(str).str.contains(search_query, case=False).any(), axis=1)
-        display_df = display_df[mask]
-
-    display_df = display_df.iloc[::-1]
-
-    with col_dl:
-        if st.session_state.authenticated:
-            csv_data = display_df.to_csv(index=False).encode('utf-8-sig')
-            st.download_button(
-                label="📥 CSV 다운로드",
-                data=csv_data,
-                file_name=f"English_Data_{time.strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
-
-    if not display_df.empty:
-        # --- [페이지네이션] ---
-        ITEMS_PER_PAGE = 100
-        total_items = len(display_df)
-        total_pages = math.ceil(total_items / ITEMS_PER_PAGE) if total_items > 0 else 1
-
-        if 'current_page' not in st.session_state:
-            st.session_state.current_page = 1
-
-        if st.session_state.current_page > total_pages or st.session_state.current_page < 1:
-            st.session_state.current_page = 1
-
-        start_idx = (st.session_state.current_page - 1) * ITEMS_PER_PAGE
-        end_idx = start_idx + ITEMS_PER_PAGE
-        page_df = display_df.iloc[start_idx:end_idx]
-
-        st.markdown(f"""
-            <div style='color: #FFFFFF !important; font-weight: bold; margin-bottom: 15px; font-size: 1.1em;'>
-                총 {total_items}개의 항목 중 {start_idx + 1} ~ {min(end_idx, total_items)}번째 표시 중 
-                (현재 페이지: {st.session_state.current_page} / {total_pages})
-            </div>
-        """, unsafe_allow_html=True)
-        
-        # --- [헤더 및 컬럼 비율 결정] ---
-        if is_simple:
+        if not is_simple:
+            cols[3].write(row['발음'])
+            cols[4].write(row['메모1'])
+            cols[5].write(row['메모2'])
             if st.session_state.authenticated:
-                col_ratio = [1.5, 6, 4.5, 1]
-                h_labels = ["분류", "단어-문장", "해석", "수정"]
-            else:
-                col_ratio = [1.5, 6, 4.5]
-                h_labels = ["분류", "단어-문장", "해석"]
-        else:
-            if st.session_state.authenticated:
-                col_ratio = [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
-                h_labels = ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
-            else:
-                col_ratio = [1.2, 4, 2.5, 2, 2.5, 2.5]
-                h_labels = ["분류", "단어-문장", "해석", "발음", "메모1", "메모2"]
-
-        header_cols = st.columns(col_ratio)
-        for i, label in enumerate(h_labels): header_cols[i].markdown(f"**{label}**")
-        st.divider()
+                if cols[6].button("✏️", key=f"e_{idx}"): edit_dialog(idx, row, sheet, df)
+        elif st.session_state.authenticated:
+            if cols[3].button("✏️", key=f"es_{idx}"): edit_dialog(idx, row, sheet, df)
         
-        # --- [데이터 출력] ---
-        for idx, row in page_df.iterrows():
-            cols = st.columns(col_ratio)
-            
-            # JS 호출을 위해 따옴표 탈처리
-            clean_text = row['단어-문장'].replace("'", "\\'").replace('"', '&quot;')
-            
-            if is_simple:
-                cols[0].write(row['분류'])
-                # ★ 호버 음성 출력 적용 ★
-                cols[1].markdown(f"""
-                    <span style='font-size: 2.0em; font-weight: bold; cursor: pointer;' 
-                          onmouseenter="speakEnglish('{clean_text}')">
-                        {row['단어-문장']}
-                    </span>
-                """, unsafe_allow_html=True)
-                cols[2].markdown(f"<span style='font-size: 1.5em;'>{row['해석']}</span>", unsafe_allow_html=True)
-                if st.session_state.authenticated:
-                    if cols[3].button("✏️", key=f"edit_s_{idx}", type="secondary"):
-                        edit_dialog(idx, row, sheet, df)
-            else:
-                cols[0].write(row['분류'])
-                # ★ 호버 음성 출력 적용 ★
-                cols[1].markdown(f"""
-                    <span style='font-size: 2.0em; font-weight: bold; cursor: pointer;' 
-                          onmouseenter="speakEnglish('{clean_text}')">
-                        {row['단어-문장']}
-                    </span>
-                """, unsafe_allow_html=True)
-                cols[2].markdown(f"<span style='font-size: 1.5em;'>{row['해석']}</span>", unsafe_allow_html=True)
-                cols[3].write(row['발음'])
-                cols[4].write(row['메모1'])
-                cols[5].write(row['메모2'])
-                if st.session_state.authenticated:
-                    if cols[6].button("✏️", key=f"edit_f_{idx}", type="secondary"):
-                        edit_dialog(idx, row, sheet, df)
+        st.markdown("<div style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-10px;margin-bottom:5px;'></div>", unsafe_allow_html=True)
 
-            st.markdown("<div style='border-bottom: 1px dotted rgba(255, 255, 255, 0.3); margin-top: -10px; margin-bottom: 5px;'></div>", unsafe_allow_html=True)
+    # 하단 페이지네이션
+    if pages > 1:
+        p_cols = st.columns([5, 1, 1, 1, 5])
+        if p_cols[1].button("◀") and curr_p > 1: st.session_state.curr_p = curr_p - 1; st.rerun()
+        p_cols[2].write(f"**{curr_p}**")
+        if p_cols[3].button("▶") and curr_p < pages: st.session_state.curr_p = curr_p + 1; st.rerun()
 
-        # --- [페이지 번호 컨트롤] ---
-        if total_pages > 1:
-            st.write("")
-            start_page = max(1, st.session_state.current_page - 2)
-            end_page = min(total_pages, start_page + 4)
-            start_page = max(1, end_page - 4)
-            visible_pages = list(range(start_page, end_page + 1))
-            
-            cols_layout = [3, 1] + [1] * len(visible_pages) + [1, 3]
-            page_cols = st.columns(cols_layout)
-            
-            with page_cols[1]:
-                if st.button("◀", key="prev_page", disabled=(st.session_state.current_page == 1), use_container_width=True):
-                    st.session_state.current_page -= 1
-                    st.rerun()
-                    
-            for i, p in enumerate(visible_pages):
-                with page_cols[i + 2]:
-                    if st.button(str(p), key=f"page_btn_{p}", type="primary" if p == st.session_state.current_page else "secondary", use_container_width=True):
-                        st.session_state.current_page = p
-                        st.rerun()
-                        
-            with page_cols[len(visible_pages) + 2]:
-                if st.button("▶", key="next_page", disabled=(st.session_state.current_page == total_pages), use_container_width=True):
-                    st.session_state.current_page += 1
-                    st.rerun()
-    else:
-        st.warning("표시할 데이터가 없습니다.")
+except Exception as e:
+    st.error(f"오류 발생: {e}")
