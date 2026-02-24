@@ -190,54 +190,60 @@ if data_loaded:
     if 'filter_type' not in st.session_state:
         st.session_state.filter_type = '전체보기'
     
-    # 💡 엑셀 내보내기 버튼을 위해 컬럼 개수 및 비율 조정 (5개 -> 6개)
-    col_h1, col_h2, col_h3, col_h4, col_h5, col_h6 = st.columns([3, 1.5, 0.8, 0.8, 0.8, 1.1])
-    with col_h1: st.header("🔍 단어/문장 검색")
+    # 💡 검색창을 상단으로 이동하기 위해 컬럼 구조 재설계 (7개 컬럼)
+    col_h1, col_h2, col_h3, col_h4, col_h5, col_h6, col_h7 = st.columns([1.5, 2.0, 1.2, 0.7, 0.7, 0.7, 1.0])
+    
+    with col_h1: 
+        st.header("🔍 검색")
+        
     with col_h2:
+        st.write("") # 간격 조절용
+        # 검색어 입력창을 제목 바로 옆으로 이동
+        search_query = st.text_input("검색어", placeholder="검색어를 입력하세요...", label_visibility="collapsed")
+        
+    with col_h3:
         st.write("")
         unique_cats = [x for x in df['분류'].unique().tolist() if x != '']
         try: unique_cats.sort(key=float)
         except: unique_cats.sort()
         selected_category = st.selectbox("분류", ["전체 분류"] + unique_cats, label_visibility="collapsed")
-    with col_h3:
+        
+    with col_h4:
         st.write("")
         if st.button("단어", type="primary" if st.session_state.filter_type == '단어' else "secondary", use_container_width=True):
             st.session_state.filter_type = '단어'; st.rerun()
-    with col_h4:
+            
+    with col_h5:
         st.write("")
         if st.button("문장", type="primary" if st.session_state.filter_type == '문장' else "secondary", use_container_width=True):
             st.session_state.filter_type = '문장'; st.rerun()
-    with col_h5:
+            
+    with col_h6:
         st.write("")
         if st.button("전체보기", type="primary" if st.session_state.filter_type == '전체보기' else "secondary", use_container_width=True):
             st.session_state.filter_type = '전체보기'; st.rerun()
 
-    # 💡 로그인 시에만 나타나는 엑셀 내보내기 버튼 (전체보기 옆)
-    with col_h6:
-        st.write("")
-        if st.session_state.authenticated:
-            # 현재 필터링된 데이터를 엑셀 바이너리로 변환하는 로직 (아래 검색 필터링 이후의 display_df를 사용하기 위해 나중에 정의)
-            pass
-
-    search_query = st.text_input("검색어를 입력하세요")
-    
+    # 필터링 로직
     display_df = df.copy()
     if selected_category != "전체 분류": display_df = display_df[display_df['분류'] == selected_category]
     if st.session_state.filter_type == '단어': display_df = display_df[display_df['단어'] != '']
     elif st.session_state.filter_type == '문장': display_df = display_df[display_df['문장'] != '']
+    
+    # search_query가 위에서 정의되었으므로 바로 사용 가능
     if search_query:
         mask = display_df.apply(lambda r: r.astype(str).str.contains(search_query, case=False).any(), axis=1)
         display_df = display_df[mask]
 
-    # 💡 엑셀 내보내기 버튼 구현 (필터링된 display_df 기준)
-    if st.session_state.authenticated:
-        with col_h6:
+    # 엑셀 내보내기 버튼 (맨 우측 col_h7)
+    with col_h7:
+        st.write("")
+        if st.session_state.authenticated:
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                 display_df.to_excel(writer, index=False, sheet_name='English_Data')
             excel_data = output.getvalue()
             st.download_button(
-                label="📥 엑셀 내보내기",
+                label="📥 엑셀",
                 data=excel_data,
                 file_name=f"English_Data_{time.strftime('%Y%m%d_%H%M%S')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
