@@ -10,7 +10,6 @@ import math
 st.set_page_config(layout="wide", page_title="TOmBOy94's English")
 
 # --- [사용자 정의 디자인 (CSS)] ---
-# (참고: 실행되지 않는 <script> 태그는 모두 제거하고 CSS만 남겼습니다)
 st.markdown("""
     <style>
     /* 1. 배경 설정 */
@@ -167,16 +166,6 @@ def load_dataframe(sheet):
         except: time.sleep(1)
     raise Exception("데이터 로드 실패")
 
-# ★ TTS(음성 출력)용 텍스트 안전 처리 함수
-def sanitize_tts(text):
-    if not text or pd.isna(text): return ""
-    t = str(text)
-    t = t.replace('\\', '\\\\')                 
-    t = t.replace('\n', ' ').replace('\r', ' ') 
-    t = t.replace("'", "\\'")                   
-    t = t.replace('"', '&quot;')                
-    return t.strip()
-
 @st.dialog("새 항목 추가")
 def add_dialog(sheet, full_df):
     unique_cats = sorted([x for x in full_df['분류'].unique().tolist() if x != ''])
@@ -268,8 +257,7 @@ try:
     curr_p = st.session_state.get('curr_p', 1)
     if curr_p > pages: curr_p = 1
     
-    # ★ 사용자 안내 문구 추가 (브라우저 정책 우회용)
-    st.markdown(f"<p style='color:#FFF;font-weight:bold;margin-top:15px;'>총 {total}개 (페이지: {curr_p}/{pages}) &nbsp;&nbsp;|&nbsp;&nbsp; 🔊 첫 음성은 화면 빈 곳을 한 번 클릭한 후 마우스를 올려야 들립니다.</p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='color:#FFF;font-weight:bold;margin-top:15px;'>총 {total}개 (페이지: {curr_p}/{pages})</p>", unsafe_allow_html=True)
     
     # 리스트 출력
     ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
@@ -282,27 +270,18 @@ try:
     for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
         cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
         
-        txt_en = sanitize_tts(row['단어-문장'])
-        txt_ko = sanitize_tts(row['해석'])
-        
-        # ★ 스크립트 태그 없이 HTML 속성에 직접 자바스크립트를 삽입 (Streamlit 차단 우회) ★
-        js_en = f"window.speechSynthesis.cancel(); window.utts = window.utts || []; var u = new SpeechSynthesisUtterance('{txt_en}'); u.lang='en-US'; u.rate=1.0; window.utts.push(u); if(window.utts.length > 5) window.utts.shift(); window.speechSynthesis.speak(u);"
-        js_ko = f"window.speechSynthesis.cancel(); window.utts = window.utts || []; var u = new SpeechSynthesisUtterance('{txt_ko}'); u.lang='ko-KR'; u.rate=1.0; window.utts.push(u); if(window.utts.length > 5) window.utts.shift(); window.speechSynthesis.speak(u);"
-        
         cols[0].write(row['분류'])
         
-        # 영어 발음 (단어-문장)
+        # 영어 (단어-문장)
         cols[1].markdown(f"""
-            <span style='font-size:2.0em;font-weight:bold;cursor:pointer;display:block;' 
-                  onmouseenter="{js_en}">
+            <span style='font-size:2.0em;font-weight:bold;display:block;'>
                 {row['단어-문장']}
             </span>
         """, unsafe_allow_html=True)
         
-        # 한국어 발음 (해석)
+        # 한국어 (해석)
         cols[2].markdown(f"""
-            <span style='font-size:1.5em;cursor:pointer;display:block;' 
-                  onmouseenter="{js_ko}">
+            <span style='font-size:1.5em;display:block;'>
                 {row['해석']}
             </span>
         """, unsafe_allow_html=True)
