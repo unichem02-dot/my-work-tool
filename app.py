@@ -54,9 +54,9 @@ st.markdown("""
     /* 3. ★ 컨텐츠 행(Row) 호버 효과 추가 ★ */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 8px 12px !important;
+        padding: 4px 12px !important; /* 상하 패딩 축소 */
         border-radius: 12px;
-        margin-bottom: 2px;
+        margin-bottom: 0px;
     }
     div[data-testid="stHorizontalBlock"]:has(.row-marker):hover {
         background-color: #1a2f2f !important;
@@ -122,16 +122,16 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* ★ 7. 헤더 라벨 전용 스타일 (글씨 크기 1.6rem으로 확대) ★ */
+    /* ★ 7. 헤더 라벨 전용 스타일 (간격 축소 조정) ★ */
     .header-label {
         font-size: 1.6rem !important;
         font-weight: 800 !important;
         color: #FFFFFF !important;
         display: block;
-        margin-bottom: 5px;
+        margin-bottom: 0px !important; /* 하단 마진 제거 */
     }
 
-    /* 정렬 헤더 버튼 크기 1.6rem으로 확대 */
+    /* 정렬 헤더 버튼 크기 및 간격 조정 */
     .sort-header-btn button {
         background-color: transparent !important;
         border: none !important;
@@ -142,7 +142,10 @@ st.markdown("""
         text-decoration: underline !important;
     }
 
+    /* ★ 구분선 간격 압축 ★ */
     hr {
+        margin-top: 0px !important;
+        margin-bottom: 10px !important;
         border-top: 1px dotted rgba(255, 255, 255, 0.3) !important;
     }
     </style>
@@ -300,6 +303,8 @@ try:
         else:
             # 나머지 헤더들의 글씨 크기를 키움 (1.6rem)
             h_cols[i].markdown(f"<span class='header-label'>{l}</span>", unsafe_allow_html=True)
+    
+    # ★ 구분선 추가 (간격이 좁게 설정됨) ★
     st.divider()
 
     # 리스트 본문
