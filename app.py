@@ -161,7 +161,8 @@ st.markdown("""
         [data-testid="stExpander"], 
         [data-testid="stForm"],
         div[data-testid="stHorizontalBlock"]:has(button),
-        header, footer, hr {
+        header, footer, hr,
+        .no-print {
             display: none !important;
         }
         
@@ -317,25 +318,28 @@ try:
     # ★ CSV 및 프린트 버튼 ★
     if st.session_state.authenticated:
         cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"English_Data_{time.strftime('%Y%m%d_%H%M%S')}.csv", use_container_width=True)
-        # 프린트 버튼 개선 (더 강력한 클릭 이벤트 핸들링)
+        # 프린트 버튼 (인라인 자바스크립트 최적화)
         with cb[5]:
-            st.markdown("""
-                <button type="button" onclick="setTimeout(function(){window.print();}, 100);" style="
-                    width: 100%;
-                    height: 38px;
-                    background-color: transparent;
-                    border: 2px solid #FFFFFF;
-                    color: #FFFFFF;
-                    cursor: pointer;
-                    border-radius: 50px;
-                    font-weight: 700;
-                    z-index: 9999;
-                    position: relative;
-                    pointer-events: auto !important;
-                    transition: all 0.3s ease;
-                " onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
-                    🖨️ 프린트
-                </button>
+            st.markdown(f"""
+                <a href="javascript:window.print()" style="text-decoration: none;">
+                    <div style="
+                        width: 100%;
+                        height: 38px;
+                        background-color: transparent;
+                        border: 2px solid #FFFFFF;
+                        color: #FFFFFF;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        cursor: pointer;
+                        border-radius: 50px;
+                        font-weight: 700;
+                        font-size: 0.85rem;
+                        transition: all 0.3s ease;
+                    " onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+                        🖨️ 프린트
+                    </div>
+                </a>
             """, unsafe_allow_html=True)
 
     total = len(d_df)
