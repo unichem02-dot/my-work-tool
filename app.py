@@ -110,17 +110,33 @@ st.markdown("""
     </style>
     
     <script>
+    // 브라우저 소리 잠금 해제 상태 확인
+    let speechReady = false;
+
+    // 페이지 어디든 클릭하면 음성 엔진 활성화 (브라우저 정책 대응)
+    document.addEventListener('click', function() {
+        if (!speechReady) {
+            window.speechSynthesis.cancel();
+            speechReady = true;
+            console.log("음성 엔진 활성화됨");
+        }
+    }, { once: true });
+
     function speakText(text, lang) {
-        // 재생 중인 모든 음성 중단 (즉시 반응 및 겹침 방지)
-        window.speechSynthesis.cancel();
-        
         if (!text || text.trim() === "") return;
 
+        // 즉시 반응을 위해 진행 중인 음성 취소
+        window.speechSynthesis.cancel();
+        
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = lang; 
         utterance.rate = 1.0; 
         utterance.pitch = 1.0;
-        window.speechSynthesis.speak(utterance);
+        
+        // 지연 시간 최소화를 위해 즉시 실행
+        setTimeout(() => {
+            window.speechSynthesis.speak(utterance);
+        }, 50);
     }
     </script>
     """, unsafe_allow_html=True)
@@ -248,12 +264,12 @@ try:
         cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
         
         # 텍스트 이스케이프 및 줄바꿈 처리 (JS 오류 방지 및 전체 문장 낭독 보장)
-        txt_en = row['단어-문장'].replace("'", "\\'").replace('"', '&quot;').replace("\n", " ")
-        txt_ko = row['해석'].replace("'", "\\'").replace('"', '&quot;').replace("\n", " ")
+        txt_en = row['단어-문장'].replace("'", "\\'").replace('"', '&quot;').replace("\n", " ").strip()
+        txt_ko = row['해석'].replace("'", "\\'").replace('"', '&quot;').replace("\n", " ").strip()
         
         cols[0].write(row['분류'])
         
-        # 영어 발음 (단어-문장) - 전체 텍스트 전달
+        # 영어 발음 (단어-문장)
         cols[1].markdown(f"""
             <span style='font-size:2.0em;font-weight:bold;cursor:pointer;display:block;' 
                   onmouseenter=\"speakText('{txt_en}', 'en-US')\">
@@ -261,7 +277,7 @@ try:
             </span>
         """, unsafe_allow_html=True)
         
-        # 한국어 발음 (해석) - 전체 텍스트 전달
+        # 한국어 발음 (해석)
         cols[2].markdown(f"""
             <span style='font-size:1.5em;cursor:pointer;display:block;' 
                   onmouseenter=\"speakText('{txt_ko}', 'ko-KR')\">
