@@ -22,7 +22,7 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 2. ★ 텍스트 무조건 흰색 강제화 ★ */
+    /* 2. 텍스트 무조건 흰색 강제화 (화면 표시용) */
     h1, h2, h3, h4, h5, h6, p, span, label, summary, b, strong {
         color: #FFFFFF !important;
     }
@@ -44,7 +44,7 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* 3. ★ 상단 분류 리스트(Radio) 텍스트 버튼화 ★ */
+    /* 3. 상단 분류 리스트(Radio) 텍스트 버튼화 */
     div[role="radiogroup"] {
         flex-direction: row !important;
         flex-wrap: wrap !important;
@@ -151,6 +151,45 @@ st.markdown("""
         font-size: 1.0rem !important;
         text-decoration: underline !important;
     }
+
+    /* ★ 5. 프린트 전용 CSS ★ */
+    @media print {
+        /* UI 요소 숨기기 */
+        [data-testid="stHeader"], 
+        [data-testid="stSidebar"], 
+        .stButton, 
+        div[role="radiogroup"], 
+        [data-testid="stExpander"], 
+        [data-testid="stForm"],
+        div[data-testid="stHorizontalBlock"]:has(button),
+        header, footer, hr {
+            display: none !important;
+        }
+        
+        /* 배경 및 글자색 반전 (잉크 절약) */
+        [data-testid="stAppViewContainer"], [data-testid="stMainViewContainer"] {
+            background-color: white !important;
+            color: black !important;
+        }
+        
+        /* 모든 텍스트 검은색 강제 */
+        h1, h2, h3, p, span, div, strong, b {
+            color: black !important;
+            -webkit-text-fill-color: black !important;
+        }
+        
+        /* 프린트 시 여백 및 글자 크기 최적화 */
+        .print-divider-line {
+            border-bottom: 1px solid #ddd !important;
+            margin: 5px 0 !important;
+        }
+        
+        /* A4 사이즈 최적화 */
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -218,16 +257,15 @@ def edit_dialog(idx, row_data, sheet, full_df):
         if b2.form_submit_button("🗑️ 삭제", use_container_width=True):
             sheet.delete_rows(idx + 2); st.rerun()
 
-# --- [메인 실행 (로그인 세션 유지 처리 추가)] ---
+# --- [메인 실행] ---
 if "authenticated" not in st.session_state:
     if st.query_params.get("auth") == "true":
         st.session_state.authenticated = True
     else:
         st.session_state.authenticated = False
 
-# ★ 정렬 상태 초기화 ★
 if 'sort_order' not in st.session_state:
-    st.session_state.sort_order = 'None' # None(최신순), asc(오름차순), desc(내림차순)
+    st.session_state.sort_order = 'None' 
 
 col_title, col_auth = st.columns([7, 2])
 with col_title:
@@ -257,13 +295,14 @@ try:
     
     st.divider()
     
+    # 컨트롤바 레이아웃 (추가, 심플모드, 검색, 다운로드/프린트)
     if st.session_state.authenticated:
-        cb = st.columns([1.5, 1.2, 0.3, 4.0, 1.5])
+        cb = st.columns([1.3, 1.0, 0.2, 3.5, 1.2, 1.2]) # 버튼 공간 확보를 위해 비율 조정
         if cb[0].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
         is_simple = cb[1].toggle("심플모드")
         search = cb[3].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
     else:
-        cb = st.columns([1.2, 0.3, 5.0, 1.5])
+        cb = st.columns([1.2, 0.3, 4.0, 1.2, 1.2]) # 비로그인 시에도 동일한 위치 유지
         is_simple = cb[0].toggle("심플모드")
         search = cb[2].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
 
@@ -272,45 +311,58 @@ try:
     if sel_cat != "전체 분류": d_df = d_df[d_df['분류'] == sel_cat]
     if search: d_df = d_df[d_df.apply(lambda r: r.astype(str).str.contains(search, case=False).any(), axis=1)]
 
-    # ★ 정렬 로직 적용 ★
+    # 정렬 로직 적용
     if st.session_state.sort_order == 'asc':
         d_df = d_df.sort_values(by='단어-문장', ascending=True)
     elif st.session_state.sort_order == 'desc':
         d_df = d_df.sort_values(by='단어-문장', ascending=False)
     else:
-        d_df = d_df.iloc[::-1] # 기본값: 최신 등록순
+        d_df = d_df.iloc[::-1]
 
+    # ★ CSV 및 프린트 버튼 렌더링 ★
     if st.session_state.authenticated:
+        # CSV 다운로드
         cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"English_Data_{time.strftime('%Y%m%d_%H%M%S')}.csv", use_container_width=True)
+        # 프린트 버튼 (HTML/JS 사용)
+        with cb[5]:
+            st.markdown("""
+                <button onclick="window.print()" style="
+                    width: 100%;
+                    height: 38px;
+                    background-color: transparent;
+                    border: 2px solid #FFFFFF;
+                    color: #FFFFFF;
+                    cursor: pointer;
+                    border-radius: 50px;
+                    font-weight: 700;
+                    transition: all 0.3s ease;
+                " onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+                    🖨️ 프린트
+                </button>
+            """, unsafe_allow_html=True)
 
     total = len(d_df)
     pages = math.ceil(total/100) if total > 0 else 1
     
     if 'curr_p' not in st.session_state:
         st.session_state.curr_p = 1
-
     if st.session_state.curr_p > pages:
         st.session_state.curr_p = 1
-        
     curr_p = st.session_state.curr_p
     
     st.markdown(f"<p style='color:#FFF;font-weight:bold;margin-top:15px;'>총 {total}개 (페이지: {curr_p}/{pages})</p>", unsafe_allow_html=True)
     
-    # 리스트 출력 비율 및 라벨
+    # 리스트 출력
     ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
     labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
     
     h_cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
     
-    # --- [헤더 출력 및 정렬 버튼 처리] ---
     for i, l in enumerate(labels if st.session_state.authenticated else labels[:-1]):
         if l == "단어-문장":
-            # 정렬 아이콘 결정
             sort_icon = ""
             if st.session_state.sort_order == 'asc': sort_icon = " ↑"
             elif st.session_state.sort_order == 'desc': sort_icon = " ↓"
-            
-            # 단어-문장 헤더를 클릭 가능한 버튼으로 만듦
             if h_cols[i].button(f"**{l}{sort_icon}**", key="sort_btn"):
                 if st.session_state.sort_order == 'None': st.session_state.sort_order = 'asc'
                 elif st.session_state.sort_order == 'asc': st.session_state.sort_order = 'desc'
@@ -321,10 +373,8 @@ try:
             
     st.divider()
 
-    # 데이터 행 출력
     for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
         cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
-        
         cols[0].write(row['분류'])
         cols[1].markdown(f"<span style='font-size:2.0em;font-weight:bold;display:block;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
         cols[2].markdown(f"<span style='font-size:1.5em;display:block;'>{row['해석']}</span>", unsafe_allow_html=True)
@@ -338,11 +388,11 @@ try:
         elif st.session_state.authenticated:
             if cols[3].button("✏️", key=f"es_{idx}"): edit_dialog(idx, row, sheet, df)
         
-        st.markdown("<div style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-10px;margin-bottom:5px;'></div>", unsafe_allow_html=True)
+        # 프린트 시 구분선 역할을 할 div 추가
+        st.markdown("<div class='print-divider-line' style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-10px;margin-bottom:5px;'></div>", unsafe_allow_html=True)
 
     if pages > 1:
         st.write("") 
-        st.write("")
         p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
         with p_cols[1]:
             if st.button("◀ 이전", key="btn_prev", disabled=(curr_p == 1), use_container_width=True):
@@ -351,12 +401,7 @@ try:
         with p_cols[2]:
             st.markdown(f"""
                 <div style='display: flex; justify-content: center; align-items: center; height: 100%;'>
-                    <div style='background-color: rgba(255, 255, 255, 0.1); 
-                                padding: 0.5rem 1.5rem; 
-                                border-radius: 50px; 
-                                border: 1px solid rgba(255,255,255,0.3);
-                                font-weight: bold; 
-                                font-size: 1.1rem;'>
+                    <div style='background-color: rgba(255, 255, 255, 0.1); padding: 0.5rem 1.5rem; border-radius: 50px; border: 1px solid rgba(255,255,255,0.3); font-weight: bold; font-size: 1.1rem;'>
                         <span style='color: #FFD700;'>Page {curr_p}</span> 
                         <span style='color: #FFFFFF;'> / {pages}</span>
                     </div>
