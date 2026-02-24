@@ -23,22 +23,45 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 2. 화면 기본 글씨 강제 흰색 (충돌 속성 제거) */
+    /* 2. 화면 기본 글씨 강제 흰색 */
     .stMarkdown, .stMarkdown p, .stMarkdown span, 
     label, .stText {
         color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
     }
 
-    /* ★ 팝업창 제목 포함 모든 헤딩 태그를 완벽한 흰색으로 고정 ★ */
-    h1, h2, h3, h4, h5, h6,
-    h1 *, h2 *, h3 *, h4 *, h5 *, h6 * {
+    /* ★ 문제의 텍스트들(팝업창, 심플모드, 로그인창) 완벽 흰색 고정 (초강력 타겟팅) ★ */
+    /* 팝업창 제목 (새 항목 추가, 항목 수정 및 삭제) */
+    div[role="dialog"] header h2,
+    div[role="dialog"] header h2 *,
+    div[data-testid="stDialog"] header h2,
+    div[data-testid="stDialog"] header h2 * {
         color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+    }
+
+    /* 토글 스위치 (심플모드) */
+    div[data-testid="stToggle"] label p,
+    div[data-testid="stToggle"] label span {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+        font-weight: bold !important;
+    }
+
+    /* 로그인 Expander */
+    details summary p,
+    details summary span,
+    div[data-testid="stExpander"] summary p,
+    div[data-testid="stExpander"] summary span {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
     }
 
     /* 3. ★ 모바일 입력 오류 해결 및 입력창 스타일 ★ */
     .stTextInput input {
         background-color: #FFFFFF !important;
         color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important; /* 입력창은 반드시 검은색 유지 */
         border-radius: 50px !important;
         padding-left: 15px !important;
         font-weight: 700 !important;
@@ -66,6 +89,7 @@ st.markdown("""
     }
     .stSelectbox div[data-baseweb="select"] * {
         color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
         font-weight: bold !important;
     }
 
@@ -86,51 +110,30 @@ st.markdown("""
     /* Primary 버튼 */
     button[kind="primary"] {
         background-color: #FFFFFF !important;
+        border-color: #FFFFFF !important;
+    }
+    button[kind="primary"] p,
+    button[kind="primary"] span,
+    button[kind="primary"] div {
         color: #224343 !important;
+        -webkit-text-fill-color: #224343 !important;
     }
     
     /* Secondary 버튼 */
     button[kind="secondary"] {
         background-color: transparent !important;
         border: 2px solid #FFFFFF !important;
+    }
+    button[kind="secondary"] p,
+    button[kind="secondary"] span,
+    button[kind="secondary"] div {
         color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
     }
     
     /* 구분선 */
     hr {
         border-top: 1px dotted rgba(255, 255, 255, 0.3) !important;
-    }
-
-    /* ★ 토글 스위치(심플모드) 라벨 완벽 흰색 고정 ★ */
-    label[data-testid="stWidgetLabel"] p,
-    label[data-testid="stWidgetLabel"] span,
-    div[data-testid="stToggle"] label p,
-    div[data-testid="stToggle"] label span,
-    div[data-testid="stCheckbox"] label p,
-    div[data-testid="stCheckbox"] label span {
-        color: #FFFFFF !important;
-        font-weight: bold !important;
-    }
-
-    /* ★ 팝업창(Dialog) 최상단 제목 완벽 흰색 고정 ★ */
-    #새-항목-추가,
-    #항목-수정-및-삭제,
-    section[role="dialog"] h2,
-    section[role="dialog"] h2 *,
-    div[role="dialog"] h2, 
-    div[role="dialog"] h2 *,
-    div[data-testid="stDialog"] h2,
-    div[data-testid="stDialog"] h2 * {
-        color: #FFFFFF !important;
-    }
-    
-    /* ★ 로그인창(Expander) 제목 흰색 고정 ★ */
-    details summary,
-    details summary p, 
-    details summary span,
-    div[data-testid="stExpander"] summary p,
-    div[data-testid="stExpander"] summary span {
-        color: #FFFFFF !important;
     }
     </style>
     
