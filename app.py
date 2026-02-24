@@ -3,83 +3,29 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 import time
-import io
 
 # --- [페이지 기본 설정] ---
 st.set_page_config(layout="wide", page_title="TOmBOy94's English")
 
 # --- [사용자 정의 디자인 (CSS)] ---
+# 배경색 강제 지정은 화면이 백지화되는 버그를 유발하므로 제거하고, 안전한 둥근 디자인(Pill)만 적용합니다.
 st.markdown("""
     <style>
-    /* 전체 배경색 설정 */
-    .stApp {
-        background-color: #0B3D3D;
-        color: #FFFFFF;
-    }
-    
-    /* 헤더 스타일 */
-    h1, h2, h3 {
-        color: #FFFFFF !important;
-    }
-    
     /* 버튼 공통 스타일 (Pill shape) */
     div.stButton > button {
         border-radius: 50px !important;
-        padding: 0.5rem 2rem !important;
+        padding: 0.5rem 1.5rem !important;
         font-weight: bold !important;
         transition: all 0.3s ease;
     }
     
-    /* Primary 버튼 (흰색 배경, 어두운 글자) - data-testid 활용 */
-    div.stButton > button[data-testid="baseButton-primary"] {
-        background-color: #FFFFFF !important;
-        color: #0B3D3D !important;
-        border: none !important;
-    }
-    div.stButton > button[data-testid="baseButton-primary"]:hover {
-        background-color: #F0F0F0 !important;
+    div.stButton > button:hover {
         transform: scale(1.05);
     }
     
-    /* Secondary 버튼 (테두리만 있는 스타일) - data-testid 활용 */
-    div.stButton > button[data-testid="baseButton-secondary"] {
-        background-color: transparent !important;
-        color: #FFFFFF !important;
-        border: 1px solid #FFFFFF !important;
-    }
-    div.stButton > button[data-testid="baseButton-secondary"]:hover {
-        background-color: rgba(255, 255, 255, 0.1) !important;
-        transform: scale(1.05);
-    }
-    
-    /* 입력창 및 셀렉트박스 스타일 */
+    /* 입력창 및 셀렉트박스 둥글게 스타일링 */
     .stTextInput > div > div > input, .stSelectbox > div > div > div {
         border-radius: 15px !important;
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    }
-    
-    /* 카드 형태 리스트 아이템 스타일 */
-    .data-row {
-        background-color: rgba(255, 255, 255, 0.05);
-        border-radius: 15px;
-        padding: 15px;
-        margin-bottom: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    
-    /* 엑셀 다운로드 버튼 스타일링 */
-    .stDownloadButton > button {
-        background-color: #FFFFFF !important;
-        color: #0B3D3D !important;
-        border-radius: 50px !important;
-        border: none !important;
-    }
-
-    /* 구분선 색상 */
-    hr {
-        border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -136,7 +82,7 @@ def add_dialog(sheet, full_df):
         with col1:
             selected_cat = st.selectbox("분류 선택 (기존)", ["(새로 입력)"] + unique_cats)
         with col2:
-            new_cat = st.text_input("새 분류 입력")
+            new_cat = st.text_input("새 분류 입력 (우선 적용됩니다)")
         
         col3, col4 = st.columns(2)
         with col3:
@@ -182,7 +128,7 @@ def edit_dialog(idx, row_data, sheet, full_df):
             try: default_idx = unique_cats.index(current_cat) + 1
             except: default_idx = 0
             edit_selected_cat = st.selectbox("분류 선택 (기존)", ["(직접 입력)"] + unique_cats, index=default_idx)
-        with row1_col2: edit_new_cat = st.text_input("분류 직접 입력")
+        with row1_col2: edit_new_cat = st.text_input("분류 직접 입력 (변경 시에만 입력)")
         
         row2_col1, row2_col2 = st.columns(2)
         with row2_col1: edit_word = st.text_input("단어", value=row_data['단어'])
@@ -225,4 +171,125 @@ def edit_dialog(idx, row_data, sheet, full_df):
 # --- [메인 로직 시작] ---
 
 if "authenticated" not in st.session_state:
-    st.session_state
+    st.session_state.authenticated = False
+
+# 타이틀 및 로그아웃 버튼 가로 배치
+col_title, col_auth = st.columns([7, 2])
+with col_title:
+    st.title("📚 TOmBOy94's English words and sentences")
+
+with col_auth:
+    if not st.session_state.authenticated:
+        with st.expander("🔐 관리자 로그인"):
+            password_input = st.text_input("Password", type="password")
+            if st.button("로그인", use_container_width=True, type="primary"):
+                if password_input == LOGIN_PASSWORD:
+                    st.session_state.authenticated = True
+                    st.rerun()
+                else:
+                    st.error("비밀번호 오류")
+    else:
+        st.write("")
+        if st.button("🔓 로그아웃", use_container_width=True, type="secondary"):
+            st.session_state.authenticated = False
+            st.rerun()
+
+data_loaded = False
+try:
+    sheet = get_sheet()
+    df = load_dataframe(sheet)
+    data_loaded = True
+except Exception as e:
+    st.error(f"데이터 연결 오류: {e}")
+
+if data_loaded:
+    if st.session_state.authenticated:
+        if st.button("➕ 새 항목 추가", type="primary", use_container_width=True):
+            add_dialog(sheet, df)
+    
+    st.divider()
+
+    if 'filter_type' not in st.session_state:
+        st.session_state.filter_type = '전체보기'
+    
+    col_h1, col_h2, col_h3, col_h4, col_h5, col_h6, col_h7 = st.columns([1.5, 2.0, 1.2, 0.7, 0.7, 0.7, 1.2])
+    
+    with col_h1: 
+        st.subheader("🔍 검색")
+        
+    with col_h2:
+        search_query = st.text_input("검색어", placeholder="검색어를 입력하세요...", label_visibility="collapsed")
+        
+    with col_h3:
+        unique_cats = [x for x in df['분류'].unique().tolist() if x != '']
+        try: unique_cats.sort(key=float)
+        except: unique_cats.sort()
+        selected_category = st.selectbox("분류", ["전체 분류"] + unique_cats, label_visibility="collapsed")
+        
+    with col_h4:
+        if st.button("단어", type="primary" if st.session_state.filter_type == '단어' else "secondary", use_container_width=True):
+            st.session_state.filter_type = '단어'; st.rerun()
+            
+    with col_h5:
+        if st.button("문장", type="primary" if st.session_state.filter_type == '문장' else "secondary", use_container_width=True):
+            st.session_state.filter_type = '문장'; st.rerun()
+            
+    with col_h6:
+        if st.button("전체보기", type="primary" if st.session_state.filter_type == '전체보기' else "secondary", use_container_width=True):
+            st.session_state.filter_type = '전체보기'; st.rerun()
+
+    # 필터링 로직
+    display_df = df.copy()
+    if selected_category != "전체 분류": display_df = display_df[display_df['분류'] == selected_category]
+    if st.session_state.filter_type == '단어': display_df = display_df[display_df['단어'] != '']
+    elif st.session_state.filter_type == '문장': display_df = display_df[display_df['문장'] != '']
+    
+    if search_query:
+        mask = display_df.apply(lambda r: r.astype(str).str.contains(search_query, case=False).any(), axis=1)
+        display_df = display_df[mask]
+
+    # 오류 가능성이 높은 Excel 패키지 대신 안전하고 확실한 CSV 방식으로 내보내기 교체
+    with col_h7:
+        if st.session_state.authenticated:
+            # 한글이 깨지지 않도록 utf-8-sig 포맷 사용
+            csv_data = display_df.to_csv(index=False).encode('utf-8-sig')
+            st.download_button(
+                label="📥 CSV 다운로드",
+                data=csv_data,
+                file_name=f"English_Data_{time.strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+
+    if not display_df.empty:
+        if len(display_df) > 50:
+            st.info(f"최근 50개 항목 표시 중 (전체 {len(display_df)}개)")
+            display_df = display_df.iloc[::-1].head(50)
+        
+        if st.session_state.authenticated:
+            col_ratio = [1, 2, 4, 2, 3, 3, 3, 1]
+            h_labels = ["분류", "단어", "문장", "발음", "해석", "메모1", "메모2", "수정"]
+        else:
+            col_ratio = [1, 2, 4, 2, 3, 3, 3]
+            h_labels = ["분류", "단어", "문장", "발음", "해석", "메모1", "메모2"]
+
+        header_cols = st.columns(col_ratio)
+        for i, label in enumerate(h_labels): header_cols[i].markdown(f"**{label}**")
+        st.divider()
+        
+        for idx, row in display_df.iterrows():
+            cols = st.columns(col_ratio)
+            cols[0].write(row['분류'])
+            # 폰트를 키우면서 글자가 숨겨지지 않도록 하드코딩된 색상 속성 제거
+            cols[1].markdown(f"<span style='font-size: 1.4em; font-weight: bold;'>{row['단어']}</span>", unsafe_allow_html=True)
+            cols[2].markdown(f"<span style='font-size: 1.4em; font-weight: bold;'>{row['문장']}</span>", unsafe_allow_html=True)
+            cols[3].write(row['발음'])
+            cols[4].write(row['해석'])
+            cols[5].write(row['메모1'])
+            cols[6].write(row['메모2'])
+            
+            if st.session_state.authenticated:
+                if cols[7].button("✏️", key=f"edit_{idx}", type="secondary"):
+                    edit_dialog(idx, row, sheet, df)
+    else:
+        st.warning("표시할 데이터가 없습니다.")
