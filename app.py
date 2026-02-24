@@ -206,8 +206,13 @@ def edit_dialog(idx, row_data, sheet, full_df):
         if b2.form_submit_button("🗑️ 삭제", use_container_width=True):
             sheet.delete_rows(idx + 2); st.rerun()
 
-# --- [메인 실행] ---
-if "authenticated" not in st.session_state: st.session_state.authenticated = False
+# --- [메인 실행 (로그인 세션 유지 처리 추가)] ---
+if "authenticated" not in st.session_state:
+    # 새로고침 시 URL 파라미터를 읽어 로그인 상태 복구
+    if st.query_params.get("auth") == "true":
+        st.session_state.authenticated = True
+    else:
+        st.session_state.authenticated = False
 
 col_title, col_auth = st.columns([7, 2])
 with col_title:
@@ -216,10 +221,15 @@ with col_auth:
     if not st.session_state.authenticated:
         with st.expander("🔐 로그인"):
             if st.text_input("Password", type="password") == LOGIN_PASSWORD: 
-                st.session_state.authenticated = True; st.rerun()
+                st.session_state.authenticated = True
+                st.query_params["auth"] = "true" # URL에 파라미터 추가하여 상태 유지
+                st.rerun()
     else:
         if st.button("🔓 로그아웃", use_container_width=True, type="secondary"): 
-            st.session_state.authenticated = False; st.rerun()
+            st.session_state.authenticated = False
+            if "auth" in st.query_params:
+                del st.query_params["auth"] # 로그아웃 시 파라미터 삭제
+            st.rerun()
 
 try:
     sheet = get_sheet(); df = load_dataframe(sheet)
