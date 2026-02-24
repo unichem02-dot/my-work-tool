@@ -5,14 +5,6 @@ import pandas as pd
 import time
 import io
 import math
-import os
-
-# PDF 라이브러리 에러 방지 처리
-try:
-    from fpdf import FPDF
-    PDF_AVAILABLE = True
-except ImportError:
-    PDF_AVAILABLE = False
 
 # --- [페이지 기본 설정] ---
 st.set_page_config(layout="wide", page_title="TOmBOy94's English")
@@ -30,44 +22,42 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 2. ★ 텍스트 무조건 흰색 강제화 (스크린샷 피드백 반영) ★ */
-    /* 모든 기본 요소 */
+    /* 2. 텍스트 무조건 흰색 강제화 */
     h1, h2, h3, h4, h5, h6, p, span, label, summary, b, strong {
         color: #FFFFFF !important;
     }
     
-    /* 팝업창(Dialog) 제목 강제 타겟팅 */
-    div[data-testid="stDialog"] h2,
-    div[role="dialog"] h2,
-    div[data-testid="stDialog"] span,
-    section[role="dialog"] h2 {
-        color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
-    }
-    
-    /* 토글 스위치(심플모드) 라벨 */
-    div[data-testid="stToggle"] label p,
-    div[data-testid="stWidgetLabel"] p {
-        color: #FFFFFF !important;
+    div[data-testid="stToggle"] p, 
+    div[data-testid="stToggle"] span {
+        color: #FFFFFF !important; 
         font-weight: bold !important;
     }
-
-    /* 로그인(Expander) 제목 */
-    div[data-testid="stExpander"] summary p,
-    div[data-testid="stExpander"] span,
-    details summary p {
+    
+    div[role="dialog"] h2, 
+    div[data-testid="stDialog"] h2 {
+        color: #FFFFFF !important;
+    }
+    
+    details summary p, 
+    details summary span,
+    div[data-testid="stExpander"] p {
         color: #FFFFFF !important;
     }
 
-    /* 3. 상단 분류 리스트(Radio) 스타일 */
+    /* 3. 상단 분류 리스트(Radio) 텍스트 버튼화 */
     div[role="radiogroup"] {
         flex-direction: row !important;
         flex-wrap: wrap !important;
         gap: 10px 25px !important;
         padding-top: 10px !important;
+        padding-bottom: 5px !important;
     }
     div[role="radiogroup"] div[role="radio"] {
         display: none !important;
+    }
+    div[role="radiogroup"] label {
+        cursor: pointer !important;
+        margin: 0 !important;
     }
     div[role="radiogroup"] label p {
         color: #A3B8B8 !important;
@@ -83,7 +73,7 @@ st.markdown("""
         text-decoration: underline;
     }
 
-    /* 4. 입력창 스타일 (내용물은 검은색 유지) */
+    /* 4. 입력창 스타일 */
     .stTextInput input {
         background-color: #FFFFFF !important;
         color: #000000 !important;
@@ -94,36 +84,24 @@ st.markdown("""
         border: 1px solid #FFFFFF !important;
     }
 
-    /* ★ 5. 버튼 디자인 완벽 통일 (CSV & PDF 사이즈 일치) ★ */
-    div.stDownloadButton > button {
+    /* 버튼 공통 스타일 */
+    button, div.stDownloadButton > button {
         border-radius: 50px !important;
-        padding: 0px 20px !important;
+        padding: 0.5rem 1.5rem !important;
         font-weight: 700 !important;
-        height: 42px !important;
-        width: 100% !important;
-        background-color: transparent !important;
-        border: 2px solid #FFFFFF !important;
-        color: #FFFFFF !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
         transition: all 0.3s ease !important;
-        font-size: 0.9rem !important;
-    }
-    div.stDownloadButton > button:hover {
-        background-color: rgba(255, 255, 255, 0.1) !important;
-        border-color: #FFFFFF !important;
-    }
-
-    /* 일반 버튼 스타일 */
-    button {
-        border-radius: 50px !important;
-        height: 42px !important;
-        font-weight: 700 !important;
     }
     button[kind="primary"] {
         background-color: #FFFFFF !important;
+        border-color: #FFFFFF !important;
+    }
+    button[kind="primary"] p {
         color: #224343 !important;
+    }
+    button[kind="secondary"], div.stDownloadButton > button {
+        background-color: transparent !important;
+        border: 2px solid #FFFFFF !important;
+        color: #FFFFFF !important;
     }
 
     hr {
@@ -132,32 +110,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- [PDF 생성 함수] ---
-def generate_pretty_pdf(dataframe):
-    if not PDF_AVAILABLE:
-        return None
-    try:
-        pdf = FPDF()
-        pdf.add_page()
-        # 폰트 파일이 없을 경우를 대비해 기본 폰트 사용 (한글 미지원 환경 대비)
-        pdf.set_font("Helvetica", size=12)
-        pdf.cell(0, 10, "TOmBOy94's English Sentence List", ln=True, align='C')
-        pdf.ln(10)
-
-        for i, row in dataframe.iterrows():
-            pdf.set_font("Helvetica", 'B', size=11)
-            # 한글 깨짐 방지를 위해 영어 위주로 구성하거나 폰트 설정 필요
-            text = f"{i+1}. [{row['분류']}] {row['단어-문장']}"
-            pdf.multi_cell(0, 8, text.encode('latin-1', 'replace').decode('latin-1'))
-            pdf.set_font("Helvetica", size=10)
-            sub_text = f"   Mean: {row['해석']}"
-            pdf.multi_cell(0, 8, sub_text.encode('latin-1', 'replace').decode('latin-1'))
-            pdf.ln(2)
-        return pdf.output(dest='S')
-    except:
-        return None
-
-# --- [보안 및 시트 설정] ---
+# --- [보안 설정] ---
 LOGIN_PASSWORD = "0315" 
 
 @st.cache_resource
@@ -221,9 +174,12 @@ def edit_dialog(idx, row_data, sheet, full_df):
         if b2.form_submit_button("🗑️ 삭제", use_container_width=True):
             sheet.delete_rows(idx + 2); st.rerun()
 
-# --- [메인 로직] ---
+# --- [메인 실행] ---
 if "authenticated" not in st.session_state:
-    st.session_state.authenticated = st.query_params.get("auth") == "true"
+    if st.query_params.get("auth") == "true":
+        st.session_state.authenticated = True
+    else:
+        st.session_state.authenticated = False
 
 if 'sort_order' not in st.session_state:
     st.session_state.sort_order = 'None' 
@@ -247,13 +203,16 @@ with col_auth:
 try:
     sheet = get_sheet(); df = load_dataframe(sheet)
     
+    # 상단 카테고리 필터
     unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
     selected_radio = st.radio("분류 필터", ["전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed")
     sel_cat = selected_radio
+    
     st.divider()
     
+    # 컨트롤바
     if st.session_state.authenticated:
-        cb = st.columns([1.5, 1.2, 0.2, 3.5, 1.3, 1.3])
+        cb = st.columns([1.5, 1.2, 0.3, 4.0, 1.5])
         if cb[0].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
         is_simple = cb[1].toggle("심플모드")
         search = cb[3].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
@@ -262,26 +221,21 @@ try:
         is_simple = cb[0].toggle("심플모드")
         search = cb[2].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
 
+    # 필터링
     d_df = df.copy()
     if sel_cat != "전체 분류": d_df = d_df[d_df['분류'] == sel_cat]
     if search: d_df = d_df[d_df.apply(lambda r: r.astype(str).str.contains(search, case=False).any(), axis=1)]
 
+    # 정렬
     if st.session_state.sort_order == 'asc': d_df = d_df.sort_values(by='단어-문장', ascending=True)
     elif st.session_state.sort_order == 'desc': d_df = d_df.sort_values(by='단어-문장', ascending=False)
     else: d_df = d_df.iloc[::-1]
 
-    # 파일 다운로드 (CSV & PDF)
+    # CSV 다운로드 (필터링된 결과 기준)
     if st.session_state.authenticated:
         cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
-        
-        pdf_bytes = generate_pretty_pdf(d_df)
-        if pdf_bytes:
-            cb[5].download_button("📄 PDF", pdf_bytes, f"Note_{time.strftime('%Y%m%d')}.pdf", "application/pdf", use_container_width=True)
-        else:
-            # 라이브러리 없을 시 대체 텍스트 다운로드
-            txt_fallback = d_df.to_string(index=False).encode('utf-8-sig')
-            cb[5].download_button("📄 TXT", txt_fallback, f"Note_{time.strftime('%Y%m%d')}.txt", use_container_width=True)
 
+    # 페이지네이션 변수
     total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
     if 'curr_p' not in st.session_state: st.session_state.curr_p = 1
     if st.session_state.curr_p > pages: st.session_state.curr_p = 1
@@ -289,6 +243,7 @@ try:
     
     st.markdown(f"<p style='color:#FFF;font-weight:bold;margin-top:15px;'>총 {total}개 (페이지: {curr_p}/{pages})</p>", unsafe_allow_html=True)
     
+    # 리스트 헤더
     ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
     labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
     
@@ -304,6 +259,7 @@ try:
         else: h_cols[i].write(f"**{l}**")
     st.divider()
 
+    # 리스트 본문
     for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
         cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
         cols[0].write(row['분류'])
@@ -315,6 +271,7 @@ try:
         elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}"): edit_dialog(idx, row, sheet, df)
         st.markdown("<div style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-10px;margin-bottom:5px;'></div>", unsafe_allow_html=True)
 
+    # 하단 페이지네이션
     if pages > 1:
         st.write(""); p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
         with p_cols[1]:
