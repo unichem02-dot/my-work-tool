@@ -415,8 +415,10 @@ if data_loaded:
         for idx, row in page_df.iterrows():
             cols = st.columns(col_ratio)
             cols[0].write(row['분류'])
-            cols[1].markdown(f"<span style='font-size: 1.4em; font-weight: bold;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
-            cols[2].write(row['해석'])
+            # 글자 크기를 2.0em으로 상향 조정
+            cols[1].markdown(f"<span style='font-size: 2.0em; font-weight: bold;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
+            # 해석 텍스트를 HTML 태그를 사용해 1.5em으로 상향 조정
+            cols[2].markdown(f"<span style='font-size: 1.5em;'>{row['해석']}</span>", unsafe_allow_html=True)
             cols[3].write(row['발음'])
             cols[4].write(row['메모1'])
             cols[5].write(row['메모2'])
