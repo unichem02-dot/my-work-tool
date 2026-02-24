@@ -154,7 +154,6 @@ st.markdown("""
 
     /* ★ 5. 프린트 전용 CSS ★ */
     @media print {
-        /* UI 요소 숨기기 */
         [data-testid="stHeader"], 
         [data-testid="stSidebar"], 
         .stButton, 
@@ -166,25 +165,21 @@ st.markdown("""
             display: none !important;
         }
         
-        /* 배경 및 글자색 반전 (잉크 절약) */
         [data-testid="stAppViewContainer"], [data-testid="stMainViewContainer"] {
             background-color: white !important;
             color: black !important;
         }
         
-        /* 모든 텍스트 검은색 강제 */
         h1, h2, h3, p, span, div, strong, b {
             color: black !important;
             -webkit-text-fill-color: black !important;
         }
         
-        /* 프린트 시 여백 및 글자 크기 최적화 */
         .print-divider-line {
             border-bottom: 1px solid #ddd !important;
             margin: 5px 0 !important;
         }
         
-        /* A4 사이즈 최적화 */
         @page {
             size: A4;
             margin: 15mm;
@@ -295,14 +290,14 @@ try:
     
     st.divider()
     
-    # 컨트롤바 레이아웃 (추가, 심플모드, 검색, 다운로드/프린트)
+    # 컨트롤바 레이아웃
     if st.session_state.authenticated:
-        cb = st.columns([1.3, 1.0, 0.2, 3.5, 1.2, 1.2]) # 버튼 공간 확보를 위해 비율 조정
+        cb = st.columns([1.3, 1.0, 0.2, 3.5, 1.2, 1.2]) 
         if cb[0].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
         is_simple = cb[1].toggle("심플모드")
         search = cb[3].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
     else:
-        cb = st.columns([1.2, 0.3, 4.0, 1.2, 1.2]) # 비로그인 시에도 동일한 위치 유지
+        cb = st.columns([1.2, 0.3, 4.0, 1.2, 1.2]) 
         is_simple = cb[0].toggle("심플모드")
         search = cb[2].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
 
@@ -319,14 +314,13 @@ try:
     else:
         d_df = d_df.iloc[::-1]
 
-    # ★ CSV 및 프린트 버튼 렌더링 ★
+    # ★ CSV 및 프린트 버튼 ★
     if st.session_state.authenticated:
-        # CSV 다운로드
         cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"English_Data_{time.strftime('%Y%m%d_%H%M%S')}.csv", use_container_width=True)
-        # 프린트 버튼 (HTML/JS 사용)
+        # 프린트 버튼 개선 (더 강력한 클릭 이벤트 핸들링)
         with cb[5]:
             st.markdown("""
-                <button onclick="window.print()" style="
+                <button type="button" onclick="setTimeout(function(){window.print();}, 100);" style="
                     width: 100%;
                     height: 38px;
                     background-color: transparent;
@@ -335,6 +329,9 @@ try:
                     cursor: pointer;
                     border-radius: 50px;
                     font-weight: 700;
+                    z-index: 9999;
+                    position: relative;
+                    pointer-events: auto !important;
                     transition: all 0.3s ease;
                 " onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
                     🖨️ 프린트
@@ -388,7 +385,6 @@ try:
         elif st.session_state.authenticated:
             if cols[3].button("✏️", key=f"es_{idx}"): edit_dialog(idx, row, sheet, df)
         
-        # 프린트 시 구분선 역할을 할 div 추가
         st.markdown("<div class='print-divider-line' style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-10px;margin-bottom:5px;'></div>", unsafe_allow_html=True)
 
     if pages > 1:
