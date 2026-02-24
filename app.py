@@ -111,14 +111,15 @@ st.markdown("""
     
     <script>
     function speakText(text, lang) {
-        // 재생 중인 모든 음성 중단
+        // 재생 중인 모든 음성 중단 (즉시 반응 및 겹침 방지)
         window.speechSynthesis.cancel();
         
-        if (!text) return;
+        if (!text || text.trim() === "") return;
 
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = lang; 
         utterance.rate = 1.0; 
+        utterance.pitch = 1.0;
         window.speechSynthesis.speak(utterance);
     }
     </script>
@@ -246,15 +247,27 @@ try:
     for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
         cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
         
-        # 텍스트 이스케이프 (JS 오류 방지)
-        txt_en = row['단어-문장'].replace("'", "\\'").replace('"', '&quot;')
-        txt_ko = row['해석'].replace("'", "\\'").replace('"', '&quot;')
+        # 텍스트 이스케이프 및 줄바꿈 처리 (JS 오류 방지 및 전체 문장 낭독 보장)
+        txt_en = row['단어-문장'].replace("'", "\\'").replace('"', '&quot;').replace("\n", " ")
+        txt_ko = row['해석'].replace("'", "\\'").replace('"', '&quot;').replace("\n", " ")
         
         cols[0].write(row['분류'])
-        # 영어 발음 (단어-문장)
-        cols[1].markdown(f"<span style='font-size:2.0em;font-weight:bold;cursor:pointer;' onmouseenter=\"speakText('{txt_en}', 'en-US')\">{row['단어-문장']}</span>", unsafe_allow_html=True)
-        # 한국어 발음 (해석)
-        cols[2].markdown(f"<span style='font-size:1.5em;cursor:pointer;' onmouseenter=\"speakText('{txt_ko}', 'ko-KR')\">{row['해석']}</span>", unsafe_allow_html=True)
+        
+        # 영어 발음 (단어-문장) - 전체 텍스트 전달
+        cols[1].markdown(f"""
+            <span style='font-size:2.0em;font-weight:bold;cursor:pointer;display:block;' 
+                  onmouseenter=\"speakText('{txt_en}', 'en-US')\">
+                {row['단어-문장']}
+            </span>
+        """, unsafe_allow_html=True)
+        
+        # 한국어 발음 (해석) - 전체 텍스트 전달
+        cols[2].markdown(f"""
+            <span style='font-size:1.5em;cursor:pointer;display:block;' 
+                  onmouseenter=\"speakText('{txt_ko}', 'ko-KR')\">
+                {row['해석']}
+            </span>
+        """, unsafe_allow_html=True)
         
         if not is_simple:
             cols[3].write(row['발음'])
