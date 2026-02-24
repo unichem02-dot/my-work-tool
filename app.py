@@ -8,13 +8,16 @@ import io
 # --- [페이지 기본 설정] ---
 st.set_page_config(layout="wide", page_title="TOmBOy94's English")
 
-# --- [사용자 정의 디자인 (CSS): 첨부이미지 스타일 완벽 적용] ---
+# --- [사용자 정의 디자인 (CSS): 첨부이미지 스타일 완벽 적용 및 팝업창 동기화] ---
 st.markdown("""
     <style>
-    /* 1. 배경: 이미지와 동일한 짙은 다크그린 적용 */
-    [data-testid="stAppViewContainer"] {
+    /* 1. 배경: 이미지와 동일한 짙은 다크그린 적용 (메인화면 & 팝업창 모두) */
+    [data-testid="stAppViewContainer"], 
+    div[role="dialog"],
+    div[role="dialog"] > div {
         background-color: #224343 !important; 
     }
+    
     [data-testid="stHeader"] {
         background-color: transparent !important;
     }
@@ -38,8 +41,21 @@ st.markdown("""
         padding-left: 15px !important;
     }
 
-    /* 4. --- [버튼 공통: 완벽한 알약(Pill) 모양] --- */
-    button {
+    /* 팝업창 내부 폼(Form) 스타일 */
+    [data-testid="stForm"] {
+        background-color: transparent !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 15px !important;
+    }
+
+    /* 팝업창 닫기 버튼 (X) */
+    button[title="Close"] {
+        color: #FFFFFF !important;
+    }
+
+    /* 4. --- [버튼 공통: 팝업창 버튼까지 포함하여 완벽한 알약(Pill) 모양] --- */
+    button[data-testid="baseButton-primary"], 
+    button[data-testid="baseButton-secondary"] {
         border-radius: 50px !important;
         padding: 0.5rem 1.5rem !important;
         font-weight: 700 !important;
@@ -77,10 +93,14 @@ st.markdown("""
         background-color: rgba(255, 255, 255, 0.1) !important;
     }
     
-    /* 엑셀 다운로드 버튼 (Secondary 스타일과 동일하게) */
+    /* 엑셀 다운로드 버튼 (Secondary 스타일과 동일하게 유지) */
     .stDownloadButton > button {
         background-color: transparent !important;
         border-color: #FFFFFF !important;
+        border-radius: 50px !important;
+        padding: 0.5rem 1.5rem !important;
+        font-weight: 700 !important;
+        transition: all 0.3s ease !important;
     }
     .stDownloadButton > button p {
         color: #FFFFFF !important;
@@ -211,7 +231,7 @@ def edit_dialog(idx, row_data, sheet, full_df):
         st.divider()
         btn_col1, btn_col2 = st.columns(2)
         with btn_col1: update_submitted = st.form_submit_button("💾 수정 내용 저장", use_container_width=True, type="primary")
-        with btn_col2: delete_submitted = st.form_submit_button("🗑️ 항목 삭제", use_container_width=True)
+        with btn_col2: delete_submitted = st.form_submit_button("🗑️ 항목 삭제", use_container_width=True, type="secondary")
         
         if update_submitted:
             final_edit_cat = edit_new_cat.strip() if edit_new_cat.strip() else edit_selected_cat
@@ -345,7 +365,6 @@ if data_loaded:
         for idx, row in display_df.iterrows():
             cols = st.columns(col_ratio)
             cols[0].write(row['분류'])
-            # 폰트 색상을 기본값(흰색)을 따르게 변경 (강제 컬러 제거)
             cols[1].markdown(f"<span style='font-size: 1.4em; font-weight: bold;'>{row['단어']}</span>", unsafe_allow_html=True)
             cols[2].markdown(f"<span style='font-size: 1.4em; font-weight: bold;'>{row['문장']}</span>", unsafe_allow_html=True)
             cols[3].write(row['발음'])
