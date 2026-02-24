@@ -170,9 +170,9 @@ def load_dataframe(sheet):
         try:
             data = sheet.get_all_values()
             if not data: 
-                return pd.DataFrame(columns=['분류', '단어-문장', '발음', '해석', '메모1', '메모2'])
+                return pd.DataFrame(columns=['분류', '단어-문장', '해석', '발음', '메모1', '메모2'])
             rows = data[1:]
-            headers = ['분류', '단어-문장', '발음', '해석', '메모1', '메모2']
+            headers = ['분류', '단어-문장', '해석', '발음', '메모1', '메모2']
             # 6열로 패딩 및 자르기
             rows = [row + [""] * (6 - len(row)) for row in rows]
             rows = [row[:6] for row in rows]
@@ -204,9 +204,9 @@ def add_dialog(sheet, full_df):
             
         col3, col4 = st.columns(2)
         with col3:
-            new_pron = st.text_input("발음")
-        with col4:
             new_mean = st.text_input("해석")
+        with col4:
+            new_pron = st.text_input("발음")
             
         new_memo1 = st.text_input("메모1")
         new_memo2 = st.text_input("메모2")
@@ -217,7 +217,7 @@ def add_dialog(sheet, full_df):
             if final_cat == "(새로 입력)": final_cat = ""
             if new_word_sent:
                 try:
-                    sheet.append_row([final_cat, new_word_sent, new_pron, new_mean, new_memo1, new_memo2])
+                    sheet.append_row([final_cat, new_word_sent, new_mean, new_pron, new_memo1, new_memo2])
                     st.success("저장되었습니다! 🔄")
                     time.sleep(1)
                     st.rerun()
@@ -246,8 +246,8 @@ def edit_dialog(idx, row_data, sheet, full_df):
         edit_word_sent = st.text_input("단어-문장", value=row_data['단어-문장'])
         
         row3_col1, row3_col2 = st.columns(2)
-        with row3_col1: edit_pron = st.text_input("발음", value=row_data['발음'])
-        with row3_col2: edit_mean = st.text_input("해석", value=row_data['해석'])
+        with row3_col1: edit_mean = st.text_input("해석", value=row_data['해석'])
+        with row3_col2: edit_pron = st.text_input("발음", value=row_data['발음'])
         
         edit_memo1 = st.text_input("메모1", value=row_data['메모1'])
         edit_memo2 = st.text_input("메모2", value=row_data['메모2'])
@@ -263,7 +263,7 @@ def edit_dialog(idx, row_data, sheet, full_df):
             if edit_word_sent:
                 try:
                     sheet_row = idx + 2 
-                    new_values = [final_edit_cat, edit_word_sent, edit_pron, edit_mean, edit_memo1, edit_memo2]
+                    new_values = [final_edit_cat, edit_word_sent, edit_mean, edit_pron, edit_memo1, edit_memo2]
                     # F열까지 6개 열 업데이트
                     cell_list = sheet.range(f"A{sheet_row}:F{sheet_row}")
                     for i, cell in enumerate(cell_list): cell.value = new_values[i]
@@ -323,17 +323,18 @@ except Exception as e:
 if data_loaded:
     st.divider()
 
-    # 로그인 상태에 따라 컬럼을 동적으로 분할 (필터 버튼들을 제거하고 심플하게 유지)
+    # 💡 컬럼 비율 재조정: '추가' 버튼과 '검색' 라벨 사이에 빈 공간(spacer) 추가, '검색' 라벨 폭을 줄여 입력창에 밀착
     if st.session_state.authenticated:
-        cols = st.columns([1.5, 1.2, 3.0, 1.5, 1.5])
+        cols = st.columns([1.5, 0.5, 0.8, 3.2, 1.5, 1.5])
         col_add = cols[0]
-        col_h1, col_h2, col_h3, col_dl = cols[1:]
+        # cols[1] 은 간격용 빈 컬럼 (spacer)
+        col_h1, col_h2, col_h3, col_dl = cols[2:]
         
         with col_add:
             if st.button("➕ 새 항목 추가", type="primary", use_container_width=True):
                 add_dialog(sheet, df)
     else:
-        cols = st.columns([1.2, 3.0, 1.5, 1.5])
+        cols = st.columns([0.8, 3.2, 1.5, 1.5])
         col_h1, col_h2, col_h3, col_dl = cols
     
     with col_h1: 
@@ -400,11 +401,11 @@ if data_loaded:
         
         # 헤더 출력 부분 (6열에 맞춘 비율)
         if st.session_state.authenticated:
-            col_ratio = [1.2, 4, 2, 2.5, 2.5, 2.5, 1]
-            h_labels = ["분류", "단어-문장", "발음", "해석", "메모1", "메모2", "수정"]
+            col_ratio = [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
+            h_labels = ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
         else:
-            col_ratio = [1.2, 4, 2, 2.5, 2.5, 2.5]
-            h_labels = ["분류", "단어-문장", "발음", "해석", "메모1", "메모2"]
+            col_ratio = [1.2, 4, 2.5, 2, 2.5, 2.5]
+            h_labels = ["분류", "단어-문장", "해석", "발음", "메모1", "메모2"]
 
         header_cols = st.columns(col_ratio)
         for i, label in enumerate(h_labels): header_cols[i].markdown(f"**{label}**")
@@ -415,8 +416,8 @@ if data_loaded:
             cols = st.columns(col_ratio)
             cols[0].write(row['분류'])
             cols[1].markdown(f"<span style='font-size: 1.4em; font-weight: bold;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
-            cols[2].write(row['발음'])
-            cols[3].write(row['해석'])
+            cols[2].write(row['해석'])
+            cols[3].write(row['발음'])
             cols[4].write(row['메모1'])
             cols[5].write(row['메모2'])
             
