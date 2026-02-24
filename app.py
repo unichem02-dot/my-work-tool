@@ -58,7 +58,6 @@ st.markdown("""
         border-radius: 12px;
         margin-bottom: 2px;
     }
-    /* 마우스를 대면 더 어두운 색(#1a2f2f)으로 변경 */
     div[data-testid="stHorizontalBlock"]:has(.row-marker):hover {
         background-color: #1a2f2f !important;
     }
@@ -121,6 +120,26 @@ st.markdown("""
         background-color: transparent !important;
         border: 2px solid #FFFFFF !important;
         color: #FFFFFF !important;
+    }
+
+    /* ★ 7. 헤더 라벨 전용 스타일 (글씨 크기 1.6rem으로 확대) ★ */
+    .header-label {
+        font-size: 1.6rem !important;
+        font-weight: 800 !important;
+        color: #FFFFFF !important;
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    /* 정렬 헤더 버튼 크기 1.6rem으로 확대 */
+    .sort-header-btn button {
+        background-color: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        color: #FFFFFF !important;
+        font-weight: 800 !important;
+        font-size: 1.6rem !important;
+        text-decoration: underline !important;
     }
 
     hr {
@@ -262,7 +281,7 @@ try:
     
     st.markdown(f"<p style='color:#FFF;font-weight:bold;margin-top:15px;'>총 {total}개 (페이지: {curr_p}/{pages})</p>", unsafe_allow_html=True)
     
-    # 리스트 헤더
+    # 리스트 헤더 출력
     ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
     labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
     
@@ -270,12 +289,17 @@ try:
     for i, l in enumerate(labels if st.session_state.authenticated else labels[:-1]):
         if l == "단어-문장":
             sort_icon = " ↑" if st.session_state.sort_order == 'asc' else (" ↓" if st.session_state.sort_order == 'desc' else "")
+            # 단어-문장 헤더도 크기를 맞추기 위해 커스텀 스타일 적용된 버튼 사용
+            st.markdown(f"<div class='sort-header-btn'>", unsafe_allow_html=True)
             if h_cols[i].button(f"**{l}{sort_icon}**", key="sort_btn"):
                 if st.session_state.sort_order == 'None': st.session_state.sort_order = 'asc'
                 elif st.session_state.sort_order == 'asc': st.session_state.sort_order = 'desc'
                 else: st.session_state.sort_order = 'None'
                 st.rerun()
-        else: h_cols[i].write(f"**{l}**")
+            st.markdown(f"</div>", unsafe_allow_html=True)
+        else:
+            # 나머지 헤더들의 글씨 크기를 키움 (1.6rem)
+            h_cols[i].markdown(f"<span class='header-label'>{l}</span>", unsafe_allow_html=True)
     st.divider()
 
     # 리스트 본문
