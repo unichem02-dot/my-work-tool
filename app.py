@@ -106,6 +106,7 @@ st.markdown("""
     .stToggle label p, 
     div[data-testid="stToggle"] label p,
     div[data-testid="stToggle"] label div,
+    div[data-testid="stWidgetLabel"] p,
     div[data-testid="stToggle"] * {
         color: #FFFFFF !important;
         -webkit-text-fill-color: #FFFFFF !important;
@@ -117,7 +118,18 @@ st.markdown("""
     div[data-testid="stDialog"] header h2 *,
     div[data-testid="stDialog"] header p,
     div[data-testid="stDialog"] header div,
-    div[role="dialog"] header * {
+    div[role="dialog"] header *,
+    div[role="dialog"] h2,
+    div[role="dialog"] h2 * {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+    }
+    
+    /* ★ 로그인창(Expander) 제목 흰색 고정 ★ */
+    details summary, 
+    details summary p, 
+    details summary span, 
+    details summary * {
         color: #FFFFFF !important;
         -webkit-text-fill-color: #FFFFFF !important;
     }
