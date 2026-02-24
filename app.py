@@ -3,29 +3,96 @@ import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
 import time
+import io
 
 # --- [페이지 기본 설정] ---
 st.set_page_config(layout="wide", page_title="TOmBOy94's English")
 
-# --- [사용자 정의 디자인 (CSS)] ---
-# 배경색 강제 지정은 화면이 백지화되는 버그를 유발하므로 제거하고, 안전한 둥근 디자인(Pill)만 적용합니다.
+# --- [사용자 정의 디자인 (CSS): 첨부이미지 스타일 완벽 적용] ---
 st.markdown("""
     <style>
-    /* 버튼 공통 스타일 (Pill shape) */
-    div.stButton > button {
+    /* 1. 배경: 이미지와 동일한 짙은 다크그린 적용 */
+    [data-testid="stAppViewContainer"] {
+        background-color: #224343 !important; 
+    }
+    [data-testid="stHeader"] {
+        background-color: transparent !important;
+    }
+
+    /* 2. 화면 백지화 방지: 모든 기본 텍스트를 강제 흰색으로 처리 */
+    .stMarkdown, .stMarkdown p, .stMarkdown span, h1, h2, h3, h4, h5, h6, label, .stText {
+        color: #FFFFFF !important;
+    }
+
+    /* [예외 처리] 드롭다운 메뉴를 열었을 때 글씨는 보이도록 검정색 처리 */
+    [data-baseweb="popover"] span, [data-baseweb="popover"] div {
+        color: #000000 !important;
+    }
+
+    /* 3. 입력창 둥글고 세련되게 처리 */
+    .stTextInput > div > div > input, .stSelectbox > div > div > div {
+        border-radius: 50px !important;
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        border: 1px solid rgba(255, 255, 255, 0.4) !important;
+        color: #FFFFFF !important;
+        padding-left: 15px !important;
+    }
+
+    /* 4. --- [버튼 공통: 완벽한 알약(Pill) 모양] --- */
+    button {
         border-radius: 50px !important;
         padding: 0.5rem 1.5rem !important;
-        font-weight: bold !important;
-        transition: all 0.3s ease;
+        font-weight: 700 !important;
+        transition: all 0.3s ease !important;
+        border: 2px solid transparent !important;
     }
-    
-    div.stButton > button:hover {
+
+    /* 5. Primary 버튼 (이미지의 위쪽 버튼: 흰 바탕 + 짙은 녹색 글씨) */
+    button[data-testid="baseButton-primary"] {
+        background-color: #FFFFFF !important;
+        border-color: #FFFFFF !important;
+    }
+    button[data-testid="baseButton-primary"] p, 
+    button[data-testid="baseButton-primary"] span, 
+    button[data-testid="baseButton-primary"] div {
+        color: #224343 !important; /* 글씨색 다크그린 */
+    }
+    button[data-testid="baseButton-primary"]:hover {
         transform: scale(1.05);
+        background-color: #EAEAEA !important;
+    }
+
+    /* 6. Secondary 버튼 (이미지의 아래쪽 버튼: 투명 바탕 + 흰색 테두리 및 글씨) */
+    button[data-testid="baseButton-secondary"] {
+        background-color: transparent !important;
+        border-color: #FFFFFF !important; /* 흰색 테두리 */
+    }
+    button[data-testid="baseButton-secondary"] p, 
+    button[data-testid="baseButton-secondary"] span, 
+    button[data-testid="baseButton-secondary"] div {
+        color: #FFFFFF !important; /* 글씨색 흰색 */
+    }
+    button[data-testid="baseButton-secondary"]:hover {
+        transform: scale(1.05);
+        background-color: rgba(255, 255, 255, 0.1) !important;
     }
     
-    /* 입력창 및 셀렉트박스 둥글게 스타일링 */
-    .stTextInput > div > div > input, .stSelectbox > div > div > div {
-        border-radius: 15px !important;
+    /* 엑셀 다운로드 버튼 (Secondary 스타일과 동일하게) */
+    .stDownloadButton > button {
+        background-color: transparent !important;
+        border-color: #FFFFFF !important;
+    }
+    .stDownloadButton > button p {
+        color: #FFFFFF !important;
+    }
+    .stDownloadButton > button:hover {
+        transform: scale(1.05);
+        background-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    /* 구분선 흐리게 */
+    hr {
+        border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -248,10 +315,8 @@ if data_loaded:
         mask = display_df.apply(lambda r: r.astype(str).str.contains(search_query, case=False).any(), axis=1)
         display_df = display_df[mask]
 
-    # 오류 가능성이 높은 Excel 패키지 대신 안전하고 확실한 CSV 방식으로 내보내기 교체
     with col_h7:
         if st.session_state.authenticated:
-            # 한글이 깨지지 않도록 utf-8-sig 포맷 사용
             csv_data = display_df.to_csv(index=False).encode('utf-8-sig')
             st.download_button(
                 label="📥 CSV 다운로드",
@@ -280,7 +345,7 @@ if data_loaded:
         for idx, row in display_df.iterrows():
             cols = st.columns(col_ratio)
             cols[0].write(row['분류'])
-            # 폰트를 키우면서 글자가 숨겨지지 않도록 하드코딩된 색상 속성 제거
+            # 폰트 색상을 기본값(흰색)을 따르게 변경 (강제 컬러 제거)
             cols[1].markdown(f"<span style='font-size: 1.4em; font-weight: bold;'>{row['단어']}</span>", unsafe_allow_html=True)
             cols[2].markdown(f"<span style='font-size: 1.4em; font-weight: bold;'>{row['문장']}</span>", unsafe_allow_html=True)
             cols[3].write(row['발음'])
