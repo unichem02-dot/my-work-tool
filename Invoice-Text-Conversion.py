@@ -48,8 +48,8 @@ function copyToClipboard() {{
 """
 st.components.v1.html(html_code, height=50)
 
-# 2. 메인 제목
-st.title("📝 송장텍스트변환 <LYC> lodus11st@naver.com")
+# [수정됨] 2. 메인 제목 (이모티콘 제거)
+st.title("송장텍스트변환 <LYC> lodus11st@naver.com")
 
 # [수정됨] 업로드하신 이미지의 다크 틸(Dark Teal) & 캡슐 테두리 스타일 적용
 st.markdown("""
@@ -138,13 +138,19 @@ with tab1:
     col1_a, col2_a = st.columns(2)
 
     with col1_a:
-        st.subheader("1. 엑셀 데이터 붙여넣기")
+        # [수정됨] 제목과 버튼을 나란히 배치하기 위해 컬럼 분할
+        header_col1, header_col2 = st.columns([0.7, 0.3])
+        with header_col1:
+            st.subheader("1. 엑셀 데이터 붙여넣기")
         
         # 지우기 버튼 기능
         def clear_jeonjin():
             st.session_state["jeonjin_input"] = ""
-        
-        st.button("🔄 입력창 비우기", on_click=clear_jeonjin, key="btn_clear_1")
+            
+        with header_col2:
+            # 스타일 맞춤을 위해 약간의 여백 추가
+            st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+            st.button("🔄 입력창 비우기", on_click=clear_jeonjin, key="btn_clear_1")
 
         # 안내 문구 제거 (label_visibility="collapsed")
         raw_text_jeonjin = st.text_area(
@@ -222,13 +228,19 @@ with tab2:
     col1_b, col2_b = st.columns(2)
 
     with col1_b:
-        st.subheader("1. 엑셀 내용 붙여넣기")
+        # [수정됨] 제목과 버튼을 나란히 배치하기 위해 컬럼 분할
+        header_col3, header_col4 = st.columns([0.7, 0.3])
+        with header_col3:
+            st.subheader("1. 엑셀 내용 붙여넣기")
         
         # 지우기 버튼 기능
         def clear_uni():
             st.session_state["uni_input"] = ""
             
-        st.button("🔄 입력창 비우기", on_click=clear_uni, key="btn_clear_2")
+        with header_col4:
+            # 스타일 맞춤을 위해 약간의 여백 추가
+            st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+            st.button("🔄 입력창 비우기", on_click=clear_uni, key="btn_clear_2")
 
         # 안내 문구 제거 (label_visibility="collapsed")
         raw_text_uni = st.text_area(
