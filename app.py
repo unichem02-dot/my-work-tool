@@ -139,6 +139,18 @@ st.markdown("""
     hr {
         border-top: 1px dotted rgba(255, 255, 255, 0.3) !important;
     }
+
+    /* 헤더 정렬 버튼 전용 스타일 */
+    .sort-header-btn button {
+        background-color: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        color: #FFFFFF !important;
+        text-align: left !important;
+        font-weight: bold !important;
+        font-size: 1.0rem !important;
+        text-decoration: underline !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -208,11 +220,14 @@ def edit_dialog(idx, row_data, sheet, full_df):
 
 # --- [메인 실행 (로그인 세션 유지 처리 추가)] ---
 if "authenticated" not in st.session_state:
-    # 새로고침 시 URL 파라미터를 읽어 로그인 상태 복구
     if st.query_params.get("auth") == "true":
         st.session_state.authenticated = True
     else:
         st.session_state.authenticated = False
+
+# ★ 정렬 상태 초기화 ★
+if 'sort_order' not in st.session_state:
+    st.session_state.sort_order = 'None' # None(최신순), asc(오름차순), desc(내림차순)
 
 col_title, col_auth = st.columns([7, 2])
 with col_title:
@@ -222,19 +237,18 @@ with col_auth:
         with st.expander("🔐 로그인"):
             if st.text_input("Password", type="password") == LOGIN_PASSWORD: 
                 st.session_state.authenticated = True
-                st.query_params["auth"] = "true" # URL에 파라미터 추가하여 상태 유지
+                st.query_params["auth"] = "true" 
                 st.rerun()
     else:
         if st.button("🔓 로그아웃", use_container_width=True, type="secondary"): 
             st.session_state.authenticated = False
             if "auth" in st.query_params:
-                del st.query_params["auth"] # 로그아웃 시 파라미터 삭제
+                del st.query_params["auth"] 
             st.rerun()
 
 try:
     sheet = get_sheet(); df = load_dataframe(sheet)
     
-    # --- [상단 카테고리 리스트] ---
     unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
     cat_options = ["전체 분류"] + unique_cats
     
@@ -243,7 +257,6 @@ try:
     
     st.divider()
     
-    # 컨트롤바 생성 (다운로드 버튼은 필터링 후에 렌더링하도록 뺌)
     if st.session_state.authenticated:
         cb = st.columns([1.5, 1.2, 0.3, 4.0, 1.5])
         if cb[0].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
@@ -258,20 +271,24 @@ try:
     d_df = df.copy()
     if sel_cat != "전체 분류": d_df = d_df[d_df['분류'] == sel_cat]
     if search: d_df = d_df[d_df.apply(lambda r: r.astype(str).str.contains(search, case=False).any(), axis=1)]
-    d_df = d_df.iloc[::-1]
 
-    # ★ 수정: 필터링이 모두 끝난 데이터(d_df)를 기준으로 CSV 다운로드 버튼을 생성
+    # ★ 정렬 로직 적용 ★
+    if st.session_state.sort_order == 'asc':
+        d_df = d_df.sort_values(by='단어-문장', ascending=True)
+    elif st.session_state.sort_order == 'desc':
+        d_df = d_df.sort_values(by='단어-문장', ascending=False)
+    else:
+        d_df = d_df.iloc[::-1] # 기본값: 최신 등록순
+
     if st.session_state.authenticated:
         cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"English_Data_{time.strftime('%Y%m%d_%H%M%S')}.csv", use_container_width=True)
 
-    # --- [페이지네이션 및 오류 해결 로직] ---
     total = len(d_df)
     pages = math.ceil(total/100) if total > 0 else 1
     
     if 'curr_p' not in st.session_state:
         st.session_state.curr_p = 1
 
-    # 검색/필터링으로 전체 페이지 수가 줄어들어 현재 페이지가 초과되면 1페이지로 롤백
     if st.session_state.curr_p > pages:
         st.session_state.curr_p = 1
         
@@ -279,32 +296,38 @@ try:
     
     st.markdown(f"<p style='color:#FFF;font-weight:bold;margin-top:15px;'>총 {total}개 (페이지: {curr_p}/{pages})</p>", unsafe_allow_html=True)
     
-    # 리스트 출력
+    # 리스트 출력 비율 및 라벨
     ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
     labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
     
     h_cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
-    for i, l in enumerate(labels if st.session_state.authenticated else labels[:-1]): h_cols[i].write(f"**{l}**")
+    
+    # --- [헤더 출력 및 정렬 버튼 처리] ---
+    for i, l in enumerate(labels if st.session_state.authenticated else labels[:-1]):
+        if l == "단어-문장":
+            # 정렬 아이콘 결정
+            sort_icon = ""
+            if st.session_state.sort_order == 'asc': sort_icon = " ↑"
+            elif st.session_state.sort_order == 'desc': sort_icon = " ↓"
+            
+            # 단어-문장 헤더를 클릭 가능한 버튼으로 만듦
+            if h_cols[i].button(f"**{l}{sort_icon}**", key="sort_btn"):
+                if st.session_state.sort_order == 'None': st.session_state.sort_order = 'asc'
+                elif st.session_state.sort_order == 'asc': st.session_state.sort_order = 'desc'
+                else: st.session_state.sort_order = 'None'
+                st.rerun()
+        else:
+            h_cols[i].write(f"**{l}**")
+            
     st.divider()
 
+    # 데이터 행 출력
     for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
         cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
         
         cols[0].write(row['분류'])
-        
-        # 영어 (단어-문장)
-        cols[1].markdown(f"""
-            <span style='font-size:2.0em;font-weight:bold;display:block;'>
-                {row['단어-문장']}
-            </span>
-        """, unsafe_allow_html=True)
-        
-        # 한국어 (해석)
-        cols[2].markdown(f"""
-            <span style='font-size:1.5em;display:block;'>
-                {row['해석']}
-            </span>
-        """, unsafe_allow_html=True)
+        cols[1].markdown(f"<span style='font-size:2.0em;font-weight:bold;display:block;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
+        cols[2].markdown(f"<span style='font-size:1.5em;display:block;'>{row['해석']}</span>", unsafe_allow_html=True)
         
         if not is_simple:
             cols[3].write(row['발음'])
@@ -317,22 +340,15 @@ try:
         
         st.markdown("<div style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-10px;margin-bottom:5px;'></div>", unsafe_allow_html=True)
 
-    # ★ 예쁘게 개선된 하단 페이지네이션 ★
     if pages > 1:
-        st.write("") # 상단 여백
+        st.write("") 
         st.write("")
-        
-        # 버튼과 텍스트의 비율을 안정적으로 조정 (양 끝 여백 3.5, 버튼 1.5, 중앙 텍스트 2)
         p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
-        
         with p_cols[1]:
-            # 첫 페이지일 경우 버튼 비활성화 (disabled=True)
             if st.button("◀ 이전", key="btn_prev", disabled=(curr_p == 1), use_container_width=True):
                 st.session_state.curr_p -= 1
                 st.rerun()
-                
         with p_cols[2]:
-            # 중앙 배지(Badge) 형태의 페이지 표시 (알약 모양 디자인 통일)
             st.markdown(f"""
                 <div style='display: flex; justify-content: center; align-items: center; height: 100%;'>
                     <div style='background-color: rgba(255, 255, 255, 0.1); 
@@ -346,9 +362,7 @@ try:
                     </div>
                 </div>
             """, unsafe_allow_html=True)
-            
         with p_cols[3]:
-            # 마지막 페이지일 경우 버튼 비활성화
             if st.button("다음 ▶", key="btn_next", disabled=(curr_p == pages), use_container_width=True):
                 st.session_state.curr_p += 1
                 st.rerun()
