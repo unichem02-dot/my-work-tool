@@ -12,56 +12,46 @@ st.set_page_config(layout="wide", page_title="TOmBOy94's English")
 # --- [사용자 정의 디자인 (CSS) 및 음성 출력 스크립트] ---
 st.markdown("""
     <style>
-    /* 1. 배경: 짙은 다크그린 (메인 & 팝업창) */
+    /* 1. 배경 설정 */
     [data-testid="stAppViewContainer"], 
     div[data-testid="stDialog"] > div,
     div[role="dialog"] > div {
         background-color: #224343 !important; 
     }
-    
     [data-testid="stHeader"] {
         background-color: transparent !important;
     }
 
-    /* 2. 화면 기본 글씨 강제 흰색 */
-    .stMarkdown, .stMarkdown p, .stMarkdown span, 
-    label, .stText {
+    /* 2. ★ [완전 교체] 핵심 문제 해결: 텍스트 무조건 흰색 강제화 ★ */
+    /* Streamlit의 기본 텍스트 태그들을 모조리 흰색으로 덮어씌움 */
+    h1, h2, h3, h4, h5, h6, p, span, label, summary, b, strong {
         color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
     }
-
-    /* ★ 문제의 텍스트들(팝업창, 심플모드, 로그인창) 완벽 흰색 고정 (초강력 타겟팅) ★ */
-    /* 팝업창 제목 (새 항목 추가, 항목 수정 및 삭제) */
-    div[role="dialog"] header h2,
-    div[role="dialog"] header h2 *,
-    div[data-testid="stDialog"] header h2,
-    div[data-testid="stDialog"] header h2 * {
-        color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
-    }
-
-    /* 토글 스위치 (심플모드) */
-    div[data-testid="stToggle"] label p,
-    div[data-testid="stToggle"] label span {
-        color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
+    
+    /* 문제가 된 3곳(토글, 팝업창, 로그인창) 초정밀 타겟팅 강제 타격 */
+    div[data-testid="stToggle"] p, 
+    div[data-testid="stToggle"] span {
+        color: #FFFFFF !important; 
         font-weight: bold !important;
     }
-
-    /* 로그인 Expander */
-    details summary p,
-    details summary span,
-    div[data-testid="stExpander"] summary p,
-    div[data-testid="stExpander"] summary span {
+    
+    div[role="dialog"] h2, 
+    div[data-testid="stDialog"] h2 {
         color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
+    }
+    
+    details summary p, 
+    details summary span,
+    div[data-testid="stExpander"] p {
+        color: #FFFFFF !important;
     }
 
-    /* 3. ★ 모바일 입력 오류 해결 및 입력창 스타일 ★ */
+    /* 3. ★ 예외 처리: 입력창/버튼은 기존 디자인 유지 ★ */
+    /* 텍스트 입력창 (흰색 배경 / 검은색 텍스트) */
     .stTextInput input {
         background-color: #FFFFFF !important;
         color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important; /* 입력창은 반드시 검은색 유지 */
+        -webkit-text-fill-color: #000000 !important; /* 여기만 입력 보정용 속성 적용 */
         border-radius: 50px !important;
         padding-left: 15px !important;
         font-weight: 700 !important;
@@ -69,27 +59,24 @@ st.markdown("""
         pointer-events: auto !important;
         user-select: text !important;
     }
-    
-    /* 패스워드 필드 특화 */
     input[type="password"] {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
     }
-
-    /* ★ 비밀번호 눈동자 아이콘 제거 ★ */
     div[data-testid="stTextInput"] button {
-        display: none !important;
+        display: none !important; /* 눈동자 숨김 */
     }
-    
-    /* 드롭다운(Selectbox) 스타일 */
-    .stSelectbox div[data-baseweb="select"] > div {
+
+    /* 드롭다운 (흰색 배경 / 검은색 텍스트) */
+    div[data-baseweb="select"] > div {
         background-color: #FFFFFF !important;
         border-radius: 50px !important;
         border: none !important;
+        pointer-events: auto !important;
     }
-    .stSelectbox div[data-baseweb="select"] * {
+    div[data-baseweb="select"] span,
+    div[data-baseweb="select"] li {
         color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
         font-weight: bold !important;
     }
 
@@ -99,39 +86,34 @@ st.markdown("""
         border-radius: 15px !important;
     }
 
-    /* 4. 버튼 공통 스타일 (Pill) */
+    /* 4. 버튼 스타일 (알약 모양) */
     button {
         border-radius: 50px !important;
         padding: 0.5rem 1.5rem !important;
         font-weight: 700 !important;
         transition: all 0.3s ease !important;
     }
-
-    /* Primary 버튼 */
     button[kind="primary"] {
         background-color: #FFFFFF !important;
         border-color: #FFFFFF !important;
     }
-    button[kind="primary"] p,
-    button[kind="primary"] span,
-    button[kind="primary"] div {
+    button[kind="primary"] p {
         color: #224343 !important;
-        -webkit-text-fill-color: #224343 !important;
     }
-    
-    /* Secondary 버튼 */
     button[kind="secondary"] {
         background-color: transparent !important;
         border: 2px solid #FFFFFF !important;
     }
-    button[kind="secondary"] p,
-    button[kind="secondary"] span,
-    button[kind="secondary"] div {
+    button[kind="secondary"] p {
         color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
     }
     
-    /* 구분선 */
+    /* 팝업창 닫기(X) 버튼 아이콘 */
+    button[aria-label="Close"], button[aria-label="Close"] svg {
+        color: #FFFFFF !important; fill: #FFFFFF !important;
+    }
+    
+    /* 리스트 점선 */
     hr {
         border-top: 1px dotted rgba(255, 255, 255, 0.3) !important;
     }
