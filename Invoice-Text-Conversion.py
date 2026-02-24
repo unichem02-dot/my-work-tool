@@ -217,7 +217,9 @@ with tab1:
                 if line.strip():
                     converted = convert_line_jeonjin(line)
                     if converted: result_text_jeonjin += converted + "\n\n"
-            st.text_area("결과물 (복사해서 쓰세요)", value=result_text_jeonjin, height=500)
+            
+            # [수정됨] 결과물 텍스트 라벨 숨김 처리 (label_visibility="collapsed")
+            st.text_area(label="결과물", value=result_text_jeonjin, height=500, label_visibility="collapsed")
         else:
             st.info("왼쪽에 데이터를 붙여넣으세요.")
 
@@ -300,6 +302,8 @@ with tab2:
                     result_text_uni += format_order_uni(line)
                     # 기존 "-"*30 대신 새롭게 만든 구분선 적용
                     result_text_uni += f"\n\n{separator}\n\n"
-            st.text_area("결과물", value=result_text_uni, height=500)
+            
+            # [수정됨] 결과물 텍스트 라벨 숨김 처리 (label_visibility="collapsed")
+            st.text_area(label="결과물", value=result_text_uni, height=500, label_visibility="collapsed")
         else:
             st.info("왼쪽에 데이터를 붙여넣으세요.")
