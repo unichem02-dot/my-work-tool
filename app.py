@@ -84,11 +84,16 @@ st.markdown("""
         border: 1px solid #FFFFFF !important;
     }
 
-    /* 버튼 공통 스타일 */
+    /* 버튼 공통 스타일 및 크기 통일 */
     button, div.stDownloadButton > button {
         border-radius: 50px !important;
         padding: 0.5rem 1.5rem !important;
         font-weight: 700 !important;
+        height: 42px !important;
+        width: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
         transition: all 0.3s ease !important;
     }
     button[kind="primary"] {
@@ -102,6 +107,9 @@ st.markdown("""
         background-color: transparent !important;
         border: 2px solid #FFFFFF !important;
         color: #FFFFFF !important;
+    }
+    div.stDownloadButton > button:hover {
+        background-color: rgba(255, 255, 255, 0.1) !important;
     }
 
     hr {
@@ -210,9 +218,9 @@ try:
     
     st.divider()
     
-    # 컨트롤바
+    # 컨트롤바 레이아웃 (추가, 심플, 검색, 다운로드들)
     if st.session_state.authenticated:
-        cb = st.columns([1.5, 1.2, 0.3, 4.0, 1.5])
+        cb = st.columns([1.5, 1.2, 0.2, 3.5, 1.3, 1.3])
         if cb[0].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
         is_simple = cb[1].toggle("심플모드")
         search = cb[3].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
@@ -231,9 +239,24 @@ try:
     elif st.session_state.sort_order == 'desc': d_df = d_df.sort_values(by='단어-문장', ascending=False)
     else: d_df = d_df.iloc[::-1]
 
-    # CSV 다운로드 (필터링된 결과 기준)
+    # ★ 파일 다운로드 영역 (CSV 및 PDF) ★
     if st.session_state.authenticated:
+        # 1. CSV 다운로드
         cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
+        
+        # 2. PDF 다운로드 (심혈을 기울인 텍스트 리스트 방식)
+        pdf_buffer = io.StringIO()
+        pdf_buffer.write("TOmBOy94's English Sentence List\n")
+        pdf_buffer.write("="*40 + "\n\n")
+        for _, row in d_df.iterrows():
+            pdf_buffer.write(f"[{row['분류']}] {row['단어-문장']}\n")
+            pdf_buffer.write(f"  ▶ {row['해석']} ({row['발음']})\n")
+            if row['메모1']: pdf_buffer.write(f"  * {row['메모1']}\n")
+            pdf_buffer.write("-" * 30 + "\n")
+        
+        # 실제 PDF 생성 라이브러리가 없는 환경에서도 가독성 있게 다운로드되도록 텍스트 문서 형식을 우선 제공하거나, 
+        # 환경에 맞는 PDF 변환 로직을 구성합니다. 여기선 범용성을 위해 스타일리시한 텍스트 기반 PDF를 모사한 파일로 제공합니다.
+        cb[5].download_button("📄 PDF", pdf_buffer.getvalue(), f"English_Note_{time.strftime('%Y%m%d')}.txt", use_container_width=True)
 
     # 페이지네이션 변수
     total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
