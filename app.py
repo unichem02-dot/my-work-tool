@@ -5,6 +5,8 @@ import pandas as pd
 import time
 import io
 import math
+import os
+from fpdf import FPDF
 
 # --- [페이지 기본 설정] ---
 st.set_page_config(layout="wide", page_title="TOmBOy94's English")
@@ -84,32 +86,26 @@ st.markdown("""
         border: 1px solid #FFFFFF !important;
     }
 
-    /* 버튼 공통 스타일 및 크기 통일 */
-    button, div.stDownloadButton > button {
+    /* ★ 버튼 디자인 완벽 통일 ★ */
+    /* 모든 다운로드 버튼의 크기와 높이를 픽셀 단위로 고정 */
+    div.stDownloadButton > button {
         border-radius: 50px !important;
-        padding: 0.5rem 1.5rem !important;
+        padding: 0px 20px !important;
         font-weight: 700 !important;
         height: 42px !important;
         width: 100% !important;
+        background-color: transparent !important;
+        border: 2px solid #FFFFFF !important;
+        color: #FFFFFF !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         transition: all 0.3s ease !important;
-    }
-    button[kind="primary"] {
-        background-color: #FFFFFF !important;
-        border-color: #FFFFFF !important;
-    }
-    button[kind="primary"] p {
-        color: #224343 !important;
-    }
-    button[kind="secondary"], div.stDownloadButton > button {
-        background-color: transparent !important;
-        border: 2px solid #FFFFFF !important;
-        color: #FFFFFF !important;
+        font-size: 0.9rem !important;
     }
     div.stDownloadButton > button:hover {
         background-color: rgba(255, 255, 255, 0.1) !important;
+        border-color: #FFFFFF !important;
     }
 
     hr {
@@ -141,6 +137,54 @@ def load_dataframe(sheet):
             return df
         except: time.sleep(1)
     raise Exception("데이터 로드 실패")
+
+# ★ 심혈을 기울인 PDF 생성 함수 ★
+def generate_pretty_pdf(dataframe):
+    try:
+        pdf = FPDF()
+        pdf.add_page()
+        
+        # 폰트 설정 (나눔고딕 파일이 실행 경로에 있다고 가정)
+        # 폰트 파일이 없으면 기본 Helvetica로 대체 (한글 깨짐 주의)
+        font_path = "NanumGothic.ttf"
+        if os.path.exists(font_path):
+            pdf.add_font("Nanum", "", font_path, uni=True)
+            pdf.set_font("Nanum", size=10)
+            main_font = "Nanum"
+        else:
+            pdf.set_font("Helvetica", size=10)
+            main_font = "Helvetica"
+
+        # 타이틀 디자인
+        pdf.set_font(main_font, size=16)
+        pdf.cell(0, 10, "TOmBOy94's English Sentence List", ln=True, align='C')
+        pdf.set_font(main_font, size=8)
+        pdf.cell(0, 10, f"Generated on: {time.strftime('%Y-%m-%d %H:%M:%S')}", ln=True, align='R')
+        pdf.ln(5)
+
+        # 본문 리스트 출력
+        for i, row in dataframe.iterrows():
+            pdf.set_fill_color(240, 240, 240) # 배경색 (연회색)
+            pdf.set_font(main_font, 'B', size=11)
+            pdf.cell(0, 8, f"{i+1}. [{row['분류']}] {row['단어-문장']}", ln=True, fill=True)
+            
+            pdf.set_font(main_font, size=10)
+            pdf.cell(0, 7, f"   해석: {row['해석']}  |  발음: {row['발음']}", ln=True)
+            
+            if row['메모1'] or row['메모2']:
+                memo = f"   메모: {row['메모1']} {row['메모2']}".strip()
+                pdf.set_font(main_font, size=9)
+                pdf.set_text_color(100, 100, 100)
+                pdf.multi_cell(0, 6, memo)
+                pdf.set_text_color(0, 0, 0)
+            
+            pdf.ln(3)
+            pdf.line(10, pdf.get_y(), 200, pdf.get_y()) # 구분선
+            pdf.ln(2)
+
+        return pdf.output(dest='S') # 바이트 데이터 반환
+    except Exception as e:
+        return None
 
 @st.dialog("새 항목 추가")
 def add_dialog(sheet, full_df):
@@ -211,14 +255,12 @@ with col_auth:
 try:
     sheet = get_sheet(); df = load_dataframe(sheet)
     
-    # 상단 카테고리 필터
     unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
     selected_radio = st.radio("분류 필터", ["전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed")
     sel_cat = selected_radio
     
     st.divider()
     
-    # 컨트롤바 레이아웃 (추가, 심플, 검색, 다운로드들)
     if st.session_state.authenticated:
         cb = st.columns([1.5, 1.2, 0.2, 3.5, 1.3, 1.3])
         if cb[0].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
@@ -229,36 +271,28 @@ try:
         is_simple = cb[0].toggle("심플모드")
         search = cb[2].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
 
-    # 필터링
     d_df = df.copy()
     if sel_cat != "전체 분류": d_df = d_df[d_df['분류'] == sel_cat]
     if search: d_df = d_df[d_df.apply(lambda r: r.astype(str).str.contains(search, case=False).any(), axis=1)]
 
-    # 정렬
     if st.session_state.sort_order == 'asc': d_df = d_df.sort_values(by='단어-문장', ascending=True)
     elif st.session_state.sort_order == 'desc': d_df = d_df.sort_values(by='단어-문장', ascending=False)
     else: d_df = d_df.iloc[::-1]
 
-    # ★ 파일 다운로드 영역 (CSV 및 PDF) ★
+    # ★ 파일 다운로드 영역 (CSV 및 진짜 PDF) ★
     if st.session_state.authenticated:
         # 1. CSV 다운로드
         cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
         
-        # 2. PDF 다운로드 (심혈을 기울인 텍스트 리스트 방식)
-        pdf_buffer = io.StringIO()
-        pdf_buffer.write("TOmBOy94's English Sentence List\n")
-        pdf_buffer.write("="*40 + "\n\n")
-        for _, row in d_df.iterrows():
-            pdf_buffer.write(f"[{row['분류']}] {row['단어-문장']}\n")
-            pdf_buffer.write(f"  ▶ {row['해석']} ({row['발음']})\n")
-            if row['메모1']: pdf_buffer.write(f"  * {row['메모1']}\n")
-            pdf_buffer.write("-" * 30 + "\n")
-        
-        # 실제 PDF 생성 라이브러리가 없는 환경에서도 가독성 있게 다운로드되도록 텍스트 문서 형식을 우선 제공하거나, 
-        # 환경에 맞는 PDF 변환 로직을 구성합니다. 여기선 범용성을 위해 스타일리시한 텍스트 기반 PDF를 모사한 파일로 제공합니다.
-        cb[5].download_button("📄 PDF", pdf_buffer.getvalue(), f"English_Note_{time.strftime('%Y%m%d')}.txt", use_container_width=True)
+        # 2. PDF 다운로드 (진짜 PDF 바이트 생성)
+        pdf_bytes = generate_pretty_pdf(d_df)
+        if pdf_bytes:
+            cb[5].download_button("📄 PDF", pdf_bytes, f"English_Note_{time.strftime('%Y%m%d')}.pdf", "application/pdf", use_container_width=True)
+        else:
+            # 폰트 오류 등 발생 시 백업용 텍스트 파일 제공
+            txt_data = d_df.to_csv(index=False).encode('utf-8-sig')
+            cb[5].download_button("📄 PDF(T)", txt_data, f"Data_Backup_{time.strftime('%Y%m%d')}.txt", use_container_width=True)
 
-    # 페이지네이션 변수
     total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
     if 'curr_p' not in st.session_state: st.session_state.curr_p = 1
     if st.session_state.curr_p > pages: st.session_state.curr_p = 1
@@ -266,7 +300,6 @@ try:
     
     st.markdown(f"<p style='color:#FFF;font-weight:bold;margin-top:15px;'>총 {total}개 (페이지: {curr_p}/{pages})</p>", unsafe_allow_html=True)
     
-    # 리스트 헤더
     ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
     labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
     
@@ -282,7 +315,6 @@ try:
         else: h_cols[i].write(f"**{l}**")
     st.divider()
 
-    # 리스트 본문
     for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
         cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
         cols[0].write(row['분류'])
@@ -294,7 +326,6 @@ try:
         elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}"): edit_dialog(idx, row, sheet, df)
         st.markdown("<div style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-10px;margin-bottom:5px;'></div>", unsafe_allow_html=True)
 
-    # 하단 페이지네이션
     if pages > 1:
         st.write(""); p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
         with p_cols[1]:
