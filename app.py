@@ -48,27 +48,26 @@ st.markdown("""
     div[role="radiogroup"] {
         flex-direction: row !important;
         flex-wrap: wrap !important;
-        gap: 10px 25px !important; /* 위아래 간격 10px, 좌우 간격 25px */
+        gap: 10px 25px !important;
         padding-top: 10px !important;
         padding-bottom: 5px !important;
     }
     div[role="radiogroup"] div[role="radio"] {
-        display: none !important; /* 기본 라디오 동그라미 완벽 숨김 */
+        display: none !important;
     }
     div[role="radiogroup"] label {
         cursor: pointer !important;
         margin: 0 !important;
     }
     div[role="radiogroup"] label p {
-        color: #A3B8B8 !important; /* 선택되지 않은 기본 텍스트 (밝은 회청색) */
+        color: #A3B8B8 !important;
         font-size: 1.15rem !important;
         font-weight: 800 !important;
         transition: color 0.2s ease;
     }
     div[role="radiogroup"] label:hover p {
-        color: #FFFFFF !important; /* 마우스를 올렸을 때 순백색 */
+        color: #FFFFFF !important;
     }
-    /* 선택된 항목 강조 (최신 CSS :has 선택자 활용 -> 금색 & 밑줄) */
     div[role="radiogroup"] label:has(div[aria-checked="true"]) p {
         color: #FFD700 !important; 
         text-decoration: underline;
@@ -144,6 +143,9 @@ st.markdown("""
     
     <script>
     let speechReady = false;
+    
+    // ★ 브라우저 가비지 컬렉션(GC) 버그 방지용 배열 (긴 문장 끊김 방지)
+    window.utterances = []; 
 
     document.addEventListener('click', function() {
         if (!speechReady) {
@@ -155,12 +157,20 @@ st.markdown("""
 
     function speakText(text, lang) {
         if (!text || text.trim() === "") return;
+        
+        // 즉시 이전 음성 중지
         window.speechSynthesis.cancel();
         
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = lang; 
         utterance.rate = 1.0; 
         utterance.pitch = 1.0;
+        
+        // ★ 객체를 전역 배열에 담아 소리가 도중에 멈추는 브라우저 버그 완벽 차단
+        window.utterances.push(utterance);
+        if(window.utterances.length > 5) {
+            window.utterances.shift(); // 메모리 관리
+        }
         
         setTimeout(() => {
             window.speechSynthesis.speak(utterance);
@@ -192,6 +202,16 @@ def load_dataframe(sheet):
             return df
         except: time.sleep(1)
     raise Exception("데이터 로드 실패")
+
+# ★ TTS(음성 출력)용 텍스트 안전 처리 함수 (에러 방지용)
+def sanitize_tts(text):
+    if not text or pd.isna(text): return ""
+    t = str(text)
+    t = t.replace('\\', '\\\\')                 # 백슬래시 이스케이프
+    t = t.replace('\n', ' ').replace('\r', ' ') # 줄바꿈을 공백으로 변환 (문장 이음)
+    t = t.replace("'", "\\'")                   # JS 문자열용 작은따옴표 처리
+    t = t.replace('"', '&quot;')                # HTML 속성용 큰따옴표 처리
+    return t.strip()
 
 @st.dialog("새 항목 추가")
 def add_dialog(sheet, full_df):
@@ -251,7 +271,7 @@ with col_auth:
 try:
     sheet = get_sheet(); df = load_dataframe(sheet)
     
-    # --- [상단 카테고리 리스트 가로 나열 (기존 드롭다운 대체)] ---
+    # --- [상단 카테고리 리스트] ---
     unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
     cat_options = ["전체 분류"] + unique_cats
     
@@ -260,7 +280,7 @@ try:
     
     st.divider()
     
-    # 컨트롤바 (드롭다운을 빼고 검색창을 시원하게 늘림)
+    # 컨트롤바
     if st.session_state.authenticated:
         cb = st.columns([1.5, 1.2, 0.3, 4.0, 1.5])
         if cb[0].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
@@ -271,7 +291,6 @@ try:
         cb = st.columns([1.2, 0.3, 5.0, 1.5])
         is_simple = cb[0].toggle("심플모드")
         search = cb[2].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
-        # 비로그인시 공간 밸런스를 위해 남겨둠
 
     # 필터링
     d_df = df.copy()
@@ -298,9 +317,9 @@ try:
     for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
         cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
         
-        # 텍스트 이스케이프 및 줄바꿈 처리 (JS 오류 방지 및 전체 문장 낭독 보장)
-        txt_en = row['단어-문장'].replace("'", "\\'").replace('"', '&quot;').replace("\n", " ").strip()
-        txt_ko = row['해석'].replace("'", "\\'").replace('"', '&quot;').replace("\n", " ").strip()
+        # ★ TTS 전용 텍스트 안전 변환 적용 ★
+        txt_en = sanitize_tts(row['단어-문장'])
+        txt_ko = sanitize_tts(row['해석'])
         
         cols[0].write(row['분류'])
         
