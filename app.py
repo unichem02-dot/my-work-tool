@@ -22,11 +22,20 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 2. 화면 기본 글씨 강제 흰색 (팝업창 제목 포함) */
+    /* 2. 화면 기본 글씨 강제 흰색 */
     .stMarkdown, .stMarkdown p, .stMarkdown span, 
-    h1, h2, h3, h4, h5, h6, label, .stText,
+    h1, h2, h3, h4, h5, h6, label, .stText {
+        color: #FFFFFF !important;
+    }
+
+    /* ★ 팝업창 제목(새 항목 추가, 항목 수정 및 삭제) 완벽한 흰색 고정 ★ */
+    div[role="dialog"] header h2,
+    div[role="dialog"] header h2 span,
+    div[role="dialog"] h2,
+    div[role="dialog"] h2 span,
     div[data-testid="stDialog"] h2 {
         color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
     }
 
     /* 3. ★ 핵심 수정: 입력창 뚜렷하게 (흰 바탕 + 검은 글씨 강제 고정) ★ */
@@ -48,6 +57,7 @@ st.markdown("""
     }
     .stSelectbox div[data-baseweb="select"] * {
         color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
         font-weight: bold !important;
     }
 
@@ -81,6 +91,7 @@ st.markdown("""
     button[kind="primary"] span, 
     button[kind="primary"] div {
         color: #224343 !important; /* 글씨색 다크그린 */
+        -webkit-text-fill-color: #224343 !important;
     }
     button[kind="primary"]:hover {
         transform: scale(1.05);
@@ -96,6 +107,7 @@ st.markdown("""
     button[kind="secondary"] span, 
     button[kind="secondary"] div {
         color: #FFFFFF !important; 
+        -webkit-text-fill-color: #FFFFFF !important;
     }
     button[kind="secondary"]:hover {
         transform: scale(1.05);
@@ -113,6 +125,7 @@ st.markdown("""
     }
     .stDownloadButton > button p {
         color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
     }
     .stDownloadButton > button:hover {
         transform: scale(1.05);
