@@ -243,33 +243,35 @@ try:
     
     st.divider()
     
-    # 컨트롤바
+    # 컨트롤바 생성 (다운로드 버튼은 필터링 후에 렌더링하도록 뺌)
     if st.session_state.authenticated:
         cb = st.columns([1.5, 1.2, 0.3, 4.0, 1.5])
         if cb[0].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
         is_simple = cb[1].toggle("심플모드")
         search = cb[3].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
-        cb[4].download_button("📥 CSV", df.to_csv(index=False).encode('utf-8-sig'), "data.csv", use_container_width=True)
     else:
         cb = st.columns([1.2, 0.3, 5.0, 1.5])
         is_simple = cb[0].toggle("심플모드")
         search = cb[2].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
 
-    # 필터링
+    # 필터링 진행
     d_df = df.copy()
     if sel_cat != "전체 분류": d_df = d_df[d_df['분류'] == sel_cat]
     if search: d_df = d_df[d_df.apply(lambda r: r.astype(str).str.contains(search, case=False).any(), axis=1)]
     d_df = d_df.iloc[::-1]
 
+    # ★ 수정: 필터링이 모두 끝난 데이터(d_df)를 기준으로 CSV 다운로드 버튼을 생성
+    if st.session_state.authenticated:
+        cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"English_Data_{time.strftime('%Y%m%d_%H%M%S')}.csv", use_container_width=True)
+
     # --- [페이지네이션 및 오류 해결 로직] ---
     total = len(d_df)
     pages = math.ceil(total/100) if total > 0 else 1
     
-    # ★ 상태 변수 초기화 (오류 해결 핵심) ★
     if 'curr_p' not in st.session_state:
         st.session_state.curr_p = 1
 
-    # 만약 검색/필터링으로 전체 페이지 수가 줄어들어 현재 페이지가 초과되면 1페이지로 롤백
+    # 검색/필터링으로 전체 페이지 수가 줄어들어 현재 페이지가 초과되면 1페이지로 롤백
     if st.session_state.curr_p > pages:
         st.session_state.curr_p = 1
         
