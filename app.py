@@ -251,11 +251,19 @@ try:
     if search: d_df = d_df[d_df.apply(lambda r: r.astype(str).str.contains(search, case=False).any(), axis=1)]
     d_df = d_df.iloc[::-1]
 
-    # 페이지네이션
+    # --- [페이지네이션 및 오류 해결 로직] ---
     total = len(d_df)
     pages = math.ceil(total/100) if total > 0 else 1
-    curr_p = st.session_state.get('curr_p', 1)
-    if curr_p > pages: curr_p = 1
+    
+    # ★ 상태 변수 초기화 (오류 해결 핵심) ★
+    if 'curr_p' not in st.session_state:
+        st.session_state.curr_p = 1
+
+    # 만약 검색/필터링으로 전체 페이지 수가 줄어들어 현재 페이지가 초과되면 1페이지로 롤백
+    if st.session_state.curr_p > pages:
+        st.session_state.curr_p = 1
+        
+    curr_p = st.session_state.curr_p
     
     st.markdown(f"<p style='color:#FFF;font-weight:bold;margin-top:15px;'>총 {total}개 (페이지: {curr_p}/{pages})</p>", unsafe_allow_html=True)
     
@@ -302,7 +310,7 @@ try:
         st.write("") # 상단 여백
         st.write("")
         
-        # 버튼과 텍스트의 비율을 안정적으로 조정 (양 끝 여백 3, 버튼 1.5, 중앙 텍스트 2)
+        # 버튼과 텍스트의 비율을 안정적으로 조정 (양 끝 여백 3.5, 버튼 1.5, 중앙 텍스트 2)
         p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
         
         with p_cols[1]:
