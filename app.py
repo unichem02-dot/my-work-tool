@@ -22,13 +22,11 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 2. ★ [완전 교체] 핵심 문제 해결: 텍스트 무조건 흰색 강제화 ★ */
-    /* Streamlit의 기본 텍스트 태그들을 모조리 흰색으로 덮어씌움 */
+    /* 2. ★ 핵심 문제 해결: 텍스트 무조건 흰색 강제화 ★ */
     h1, h2, h3, h4, h5, h6, p, span, label, summary, b, strong {
         color: #FFFFFF !important;
     }
     
-    /* 문제가 된 3곳(토글, 팝업창, 로그인창) 초정밀 타겟팅 강제 타격 */
     div[data-testid="stToggle"] p, 
     div[data-testid="stToggle"] span {
         color: #FFFFFF !important; 
@@ -46,12 +44,41 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* 3. ★ 예외 처리: 입력창/버튼은 기존 디자인 유지 ★ */
-    /* 텍스트 입력창 (흰색 배경 / 검은색 텍스트) */
+    /* 3. ★ 상단 분류 리스트(Radio) 텍스트 버튼화 ★ */
+    div[role="radiogroup"] {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        gap: 10px 25px !important; /* 위아래 간격 10px, 좌우 간격 25px */
+        padding-top: 10px !important;
+        padding-bottom: 5px !important;
+    }
+    div[role="radiogroup"] div[role="radio"] {
+        display: none !important; /* 기본 라디오 동그라미 완벽 숨김 */
+    }
+    div[role="radiogroup"] label {
+        cursor: pointer !important;
+        margin: 0 !important;
+    }
+    div[role="radiogroup"] label p {
+        color: #A3B8B8 !important; /* 선택되지 않은 기본 텍스트 (밝은 회청색) */
+        font-size: 1.15rem !important;
+        font-weight: 800 !important;
+        transition: color 0.2s ease;
+    }
+    div[role="radiogroup"] label:hover p {
+        color: #FFFFFF !important; /* 마우스를 올렸을 때 순백색 */
+    }
+    /* 선택된 항목 강조 (최신 CSS :has 선택자 활용 -> 금색 & 밑줄) */
+    div[role="radiogroup"] label:has(div[aria-checked="true"]) p {
+        color: #FFD700 !important; 
+        text-decoration: underline;
+    }
+
+    /* 4. 예외 처리: 입력창/버튼은 기존 디자인 유지 */
     .stTextInput input {
         background-color: #FFFFFF !important;
         color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important; /* 여기만 입력 보정용 속성 적용 */
+        -webkit-text-fill-color: #000000 !important;
         border-radius: 50px !important;
         padding-left: 15px !important;
         font-weight: 700 !important;
@@ -64,10 +91,9 @@ st.markdown("""
         -webkit-text-fill-color: #000000 !important;
     }
     div[data-testid="stTextInput"] button {
-        display: none !important; /* 눈동자 숨김 */
+        display: none !important; 
     }
 
-    /* 드롭다운 (흰색 배경 / 검은색 텍스트) */
     div[data-baseweb="select"] > div {
         background-color: #FFFFFF !important;
         border-radius: 50px !important;
@@ -80,13 +106,12 @@ st.markdown("""
         font-weight: bold !important;
     }
 
-    /* 팝업창 폼 테두리 */
     [data-testid="stForm"] {
         border: 1px solid rgba(255, 255, 255, 0.2) !important;
         border-radius: 15px !important;
     }
 
-    /* 4. 버튼 스타일 (알약 모양) */
+    /* 버튼 스타일 (알약 모양) */
     button {
         border-radius: 50px !important;
         padding: 0.5rem 1.5rem !important;
@@ -108,22 +133,18 @@ st.markdown("""
         color: #FFFFFF !important;
     }
     
-    /* 팝업창 닫기(X) 버튼 아이콘 */
     button[aria-label="Close"], button[aria-label="Close"] svg {
         color: #FFFFFF !important; fill: #FFFFFF !important;
     }
     
-    /* 리스트 점선 */
     hr {
         border-top: 1px dotted rgba(255, 255, 255, 0.3) !important;
     }
     </style>
     
     <script>
-    // 브라우저 소리 잠금 해제 상태 확인
     let speechReady = false;
 
-    // 페이지 어디든 클릭하면 음성 엔진 활성화 (브라우저 정책 대응)
     document.addEventListener('click', function() {
         if (!speechReady) {
             window.speechSynthesis.cancel();
@@ -134,8 +155,6 @@ st.markdown("""
 
     function speakText(text, lang) {
         if (!text || text.trim() === "") return;
-
-        // 즉시 반응을 위해 진행 중인 음성 취소
         window.speechSynthesis.cancel();
         
         const utterance = new SpeechSynthesisUtterance(text);
@@ -143,7 +162,6 @@ st.markdown("""
         utterance.rate = 1.0; 
         utterance.pitch = 1.0;
         
-        // 지연 시간 최소화를 위해 즉시 실행
         setTimeout(() => {
             window.speechSynthesis.speak(utterance);
         }, 50);
@@ -220,7 +238,7 @@ if "authenticated" not in st.session_state: st.session_state.authenticated = Fal
 
 col_title, col_auth = st.columns([7, 2])
 with col_title:
-    st.markdown("<h1 style='color:#FFF;'>TOmBOy94's English words and sentences : lodus11st@naver.com</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem;'>TOmBOy94's English words and sentences : lodus11st@naver.com</h1>", unsafe_allow_html=True)
 with col_auth:
     if not st.session_state.authenticated:
         with st.expander("🔐 로그인"):
@@ -232,21 +250,28 @@ with col_auth:
 
 try:
     sheet = get_sheet(); df = load_dataframe(sheet)
+    
+    # --- [상단 카테고리 리스트 가로 나열 (기존 드롭다운 대체)] ---
+    unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
+    cat_options = ["● 전체 분류"] + [f"● {c}" for c in unique_cats]
+    
+    selected_radio = st.radio("분류 필터", cat_options, horizontal=True, label_visibility="collapsed")
+    sel_cat = selected_radio.replace("● ", "")
+    
     st.divider()
     
-    # 컨트롤바
+    # 컨트롤바 (드롭다운을 빼고 검색창을 시원하게 늘림)
     if st.session_state.authenticated:
-        cb = st.columns([1.5, 1.2, 0.3, 1.5, 3.7, 1.5])
+        cb = st.columns([1.5, 1.2, 0.3, 4.0, 1.5])
         if cb[0].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
         is_simple = cb[1].toggle("심플모드")
-        sel_cat = cb[3].selectbox("분류", ["전체 분류"] + sorted(df['분류'].unique().tolist()), label_visibility="collapsed")
-        search = cb[4].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
-        cb[5].download_button("📥 CSV", df.to_csv(index=False).encode('utf-8-sig'), "data.csv", use_container_width=True)
+        search = cb[3].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
+        cb[4].download_button("📥 CSV", df.to_csv(index=False).encode('utf-8-sig'), "data.csv", use_container_width=True)
     else:
-        cb = st.columns([1.2, 1.5, 4.0, 1.5])
+        cb = st.columns([1.2, 0.3, 5.0, 1.5])
         is_simple = cb[0].toggle("심플모드")
-        sel_cat = cb[1].selectbox("분류", ["전체 분류"] + sorted(df['분류'].unique().tolist()), label_visibility="collapsed")
-        search = cb[2].text_input("검색", label_visibility="collapsed")
+        search = cb[2].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
+        # 비로그인시 공간 밸런스를 위해 남겨둠
 
     # 필터링
     d_df = df.copy()
@@ -260,7 +285,7 @@ try:
     curr_p = st.session_state.get('curr_p', 1)
     if curr_p > pages: curr_p = 1
     
-    st.markdown(f"<p style='color:#FFF;font-weight:bold;'>총 {total}개 (페이지: {curr_p}/{pages})</p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='color:#FFF;font-weight:bold;margin-top:15px;'>총 {total}개 (페이지: {curr_p}/{pages})</p>", unsafe_allow_html=True)
     
     # 리스트 출력
     ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
