@@ -17,10 +17,11 @@ st.set_page_config(page_title="송장텍스트변환 <LYC>", page_icon="📦", l
 copy_text = f"<<<<<<{full_english_date}, 경동마감>>>>>>"
 display_text = copy_text.replace("<", "&lt;").replace(">", "&gt;")
 
+# [수정됨] 다크 테마에 맞춘 복사 버튼 UI (흰색 텍스트 및 캡슐형 테두리 버튼)
 html_code = f"""
 <div style="display: flex; align-items: center; gap: 10px; font-family: 'Malgun Gothic', sans-serif;">
-    <span style="font-size: 1.2rem; font-weight: 900; color: #2D3748;">{display_text}</span>
-    <button onclick="copyToClipboard()" style="background-color: #667EEA; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.2s;">
+    <span style="font-size: 1.2rem; font-weight: 900; color: #FFFFFF;">{display_text}</span>
+    <button onclick="copyToClipboard()" style="background-color: transparent; color: white; border: 1px solid white; padding: 6px 18px; border-radius: 30px; cursor: pointer; font-weight: bold; transition: 0.2s;">
         📋 복사하기
     </button>
 </div>
@@ -36,9 +37,11 @@ function copyToClipboard() {{
     var btn = document.querySelector('button');
     btn.innerHTML = '✅ 복사완료!';
     btn.style.backgroundColor = '#03C75A';
+    btn.style.borderColor = '#03C75A';
     setTimeout(function() {{
         btn.innerHTML = '📋 복사하기';
-        btn.style.backgroundColor = '#667EEA';
+        btn.style.backgroundColor = 'transparent';
+        btn.style.borderColor = 'white';
     }}, 2000);
 }}
 </script>
@@ -48,63 +51,79 @@ st.components.v1.html(html_code, height=50)
 # 2. 메인 제목
 st.title("📝 송장텍스트변환 <LYC> lodus11st@naver.com")
 
-# [수정됨] 첨부 이미지 스타일(퍼플블루 톤 & 카드형 UI) CSS 적용
+# [수정됨] 업로드하신 이미지의 다크 틸(Dark Teal) & 캡슐 테두리 스타일 적용
 st.markdown("""
 <style>
-    /* 제목의 이메일 주소 링크 밑줄 제거 및 기본 글자색 유지 */
-    h1 a {
-        text-decoration: none !important;
-        color: inherit !important;
-    }
-
-    /* 전체 배경을 연한 회색으로 변경하여 화이트 카드가 돋보이게 함 */
+    /* 전체 배경을 다크 청록색으로 변경 */
     .stApp {
-        background-color: #F8F9FA;
+        background-color: #1a3636 !important;
     }
     
-    /* 1. 탭 메뉴 스타일 (크기 26px, 굵기 900 유지 + 퍼플블루 색상) */
+    /* 전체 폰트 색상을 흰색으로 적용 */
+    .stApp h1, .stApp h2, .stApp h3, .stApp p, .stApp label, .stApp div[data-testid="stText"] {
+        color: #FFFFFF !important;
+    }
+
+    /* 제목의 이메일 주소 링크 밑줄 제거 및 흰색 유지 */
+    h1 a {
+        text-decoration: none !important;
+        color: #FFFFFF !important;
+    }
+    
+    /* 1. 탭 메뉴 스타일 */
     .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
         font-size: 26px !important;
         font-weight: 900 !important;
-        color: #718096 !important; /* 기본은 차분한 회색 */
+        color: #8da9a7 !important; /* 선택 안된 탭은 약간 어두운 회청색 */
     }
     
-    /* [수정됨] 기본 Streamlit의 빨간색 애니메이션 밑줄을 파란색으로 덮어씌워 두 줄 방지 */
+    /* 선택된 탭 밑줄(흰색) */
     .stTabs [data-baseweb="tab-highlight"] {
-        background-color: #667EEA !important;
+        background-color: #FFFFFF !important;
     }
     
+    /* 선택된 탭 글자색(흰색) */
     .stTabs [aria-selected="true"] p {
-        color: #667EEA !important; /* 선택된 탭 글자색 */
+        color: #FFFFFF !important; 
     }
     
-    /* 2. 버튼 스타일 (이미지의 꽉 찬 파란색 버튼 느낌) */
+    /* 2. 버튼 스타일 (투명 배경, 흰색 테두리, 캡슐 모양) */
     button[kind="secondary"] {
-        background-color: #667EEA !important;
-        border: none !important;
-        color: white !important;
-        border-radius: 6px !important;
+        background-color: transparent !important;
+        border: 1px solid #FFFFFF !important;
+        color: #FFFFFF !important;
+        border-radius: 30px !important; /* 둥근 캡슐형 */
         font-weight: bold !important;
         padding: 0.5rem 1.5rem !important;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
         transition: all 0.3s ease;
     }
     button[kind="secondary"]:hover {
-        background-color: #5A67D8 !important; /* 호버 시 더 진한 색상 */
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15) !important;
-        transform: translateY(-2px); /* 살짝 위로 떠오르는 효과 */
+        background-color: rgba(255, 255, 255, 0.1) !important; /* 호버 시 약간 밝아짐 */
+        transform: translateY(-2px); 
     }
     
-    /* 3. 텍스트 입력창 (그림자가 있는 화이트 카드 스타일) */
+    /* 3. 텍스트 입력창 (다크 모드형 어두운 배경) */
     div[data-baseweb="textarea"] > div {
-        background-color: white !important;
-        border: none !important;
-        border-radius: 12px !important;
-        box-shadow: 0 8px 24px rgba(149, 157, 165, 0.15) !important; /* 부드러운 그림자 */
+        background-color: #122626 !important; /* 배경보다 살짝 더 어두운 색 */
+        border: 1px solid #3c5e5d !important;
+        border-radius: 8px !important;
     }
     div[data-baseweb="textarea"] > div:focus-within {
-        border: 2px solid #667EEA !important; /* 클릭 시 포인트 컬러 */
-        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2) !important;
+        border: 1px solid #FFFFFF !important; /* 클릭 시 흰색 테두리 */
+    }
+    /* 텍스트 입력 시 글자색 */
+    textarea {
+        color: #FFFFFF !important;
+    }
+    
+    /* 4. st.info 알림창 다크 모드 최적화 */
+    .stAlert {
+        background-color: #214544 !important;
+        border: none !important;
+        color: #FFFFFF !important;
+    }
+    .stAlert p {
+        color: #FFFFFF !important;
     }
 </style>
 """, unsafe_allow_html=True)
