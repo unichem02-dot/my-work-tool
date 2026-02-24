@@ -253,10 +253,10 @@ try:
     
     # --- [상단 카테고리 리스트 가로 나열 (기존 드롭다운 대체)] ---
     unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
-    cat_options = ["● 전체 분류"] + [f"● {c}" for c in unique_cats]
+    cat_options = ["전체 분류"] + unique_cats
     
     selected_radio = st.radio("분류 필터", cat_options, horizontal=True, label_visibility="collapsed")
-    sel_cat = selected_radio.replace("● ", "")
+    sel_cat = selected_radio
     
     st.divider()
     
