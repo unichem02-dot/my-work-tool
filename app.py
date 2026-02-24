@@ -23,7 +23,7 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 2. 화면 기본 글씨 강제 흰색 */
+    /* 2. 화면 기본 글씨 강제 흰색 (충돌 속성 제거) */
     .stMarkdown, .stMarkdown p, .stMarkdown span, 
     label, .stText {
         color: #FFFFFF !important;
@@ -33,7 +33,6 @@ st.markdown("""
     h1, h2, h3, h4, h5, h6,
     h1 *, h2 *, h3 *, h4 *, h5 *, h6 * {
         color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
     }
 
     /* 3. ★ 모바일 입력 오류 해결 및 입력창 스타일 ★ */
@@ -103,31 +102,35 @@ st.markdown("""
     }
 
     /* ★ 토글 스위치(심플모드) 라벨 완벽 흰색 고정 ★ */
+    label[data-testid="stWidgetLabel"] p,
+    label[data-testid="stWidgetLabel"] span,
     div[data-testid="stToggle"] label p,
     div[data-testid="stToggle"] label span,
     div[data-testid="stCheckbox"] label p,
     div[data-testid="stCheckbox"] label span {
         color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
         font-weight: bold !important;
     }
 
     /* ★ 팝업창(Dialog) 최상단 제목 완벽 흰색 고정 ★ */
+    #새-항목-추가,
+    #항목-수정-및-삭제,
+    section[role="dialog"] h2,
+    section[role="dialog"] h2 *,
     div[role="dialog"] h2, 
     div[role="dialog"] h2 *,
     div[data-testid="stDialog"] h2,
     div[data-testid="stDialog"] h2 * {
         color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
     }
     
     /* ★ 로그인창(Expander) 제목 흰색 고정 ★ */
+    details summary,
     details summary p, 
     details summary span,
     div[data-testid="stExpander"] summary p,
     div[data-testid="stExpander"] summary span {
         color: #FFFFFF !important;
-        -webkit-text-fill-color: #FFFFFF !important;
     }
     </style>
     
