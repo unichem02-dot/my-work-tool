@@ -12,7 +12,7 @@ st.set_page_config(layout="wide", page_title="TOmBOy94's English")
 # --- [사용자 정의 디자인 (CSS)] ---
 st.markdown("""
     <style>
-    /* 1. 배경 설정 */
+    /* 1. 배경 설정: 짙은 다크그린 */
     [data-testid="stAppViewContainer"], 
     div[data-testid="stDialog"] > div,
     div[role="dialog"] > div {
@@ -22,25 +22,33 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 2. 텍스트 무조건 흰색 강제화 */
+    /* 2. ★ 글자색 화이트 강제화 (스크린샷 문제 해결 핵심) ★ */
+    /* 기본 모든 텍스트 */
     h1, h2, h3, h4, h5, h6, p, span, label, summary, b, strong {
         color: #FFFFFF !important;
     }
     
-    div[data-testid="stToggle"] p, 
-    div[data-testid="stToggle"] span {
-        color: #FFFFFF !important; 
+    /* 팝업창(Dialog) 제목: ID 기반 및 태그 기반 강력 타겟팅 */
+    #새-항목-추가, 
+    #항목-수정-및-삭제,
+    div[data-testid="stDialog"] h2,
+    div[role="dialog"] h2,
+    section[role="dialog"] h2 {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+    }
+    
+    /* 토글 스위치(심플모드) 라벨 */
+    div[data-testid="stToggle"] label p,
+    div[data-testid="stWidgetLabel"] p {
+        color: #FFFFFF !important;
         font-weight: bold !important;
     }
-    
-    div[role="dialog"] h2, 
-    div[data-testid="stDialog"] h2 {
-        color: #FFFFFF !important;
-    }
-    
-    details summary p, 
-    details summary span,
-    div[data-testid="stExpander"] p {
+
+    /* 로그인(Expander) 제목 */
+    div[data-testid="stExpander"] summary p,
+    div[data-testid="stExpander"] span,
+    details summary p {
         color: #FFFFFF !important;
     }
 
@@ -73,7 +81,7 @@ st.markdown("""
         text-decoration: underline;
     }
 
-    /* 4. 입력창 스타일 */
+    /* 4. 입력창 스타일: 배경 화이트 / 글자 블랙 */
     .stTextInput input {
         background-color: #FFFFFF !important;
         color: #000000 !important;
@@ -84,7 +92,7 @@ st.markdown("""
         border: 1px solid #FFFFFF !important;
     }
 
-    /* 버튼 공통 스타일 */
+    /* 5. 버튼 스타일: 알약 모양 */
     button, div.stDownloadButton > button {
         border-radius: 50px !important;
         padding: 0.5rem 1.5rem !important;
@@ -231,11 +239,11 @@ try:
     elif st.session_state.sort_order == 'desc': d_df = d_df.sort_values(by='단어-문장', ascending=False)
     else: d_df = d_df.iloc[::-1]
 
-    # CSV 다운로드 (필터링된 결과 기준)
+    # CSV 다운로드
     if st.session_state.authenticated:
         cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
 
-    # 페이지네이션 변수
+    # 페이지네이션 변수 초기화
     total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
     if 'curr_p' not in st.session_state: st.session_state.curr_p = 1
     if st.session_state.curr_p > pages: st.session_state.curr_p = 1
