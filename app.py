@@ -164,17 +164,18 @@ def get_sheet():
     client = init_connection()
     return client.open("English_Sentences").sheet1
 
-# 2. 데이터 불러오기
+# 2. 데이터 불러오기 (6열 구조로 변경)
 def load_dataframe(sheet):
     for _ in range(3):
         try:
             data = sheet.get_all_values()
             if not data: 
-                return pd.DataFrame(columns=['분류', '단어', '문장', '발음', '해석', '메모1', '메모2'])
+                return pd.DataFrame(columns=['분류', '단어-문장', '발음', '해석', '메모1', '메모2'])
             rows = data[1:]
-            headers = ['분류', '단어', '문장', '발음', '해석', '메모1', '메모2']
-            rows = [row + [""] * (7 - len(row)) for row in rows]
-            rows = [row[:7] for row in rows]
+            headers = ['분류', '단어-문장', '발음', '해석', '메모1', '메모2']
+            # 6열로 패딩 및 자르기
+            rows = [row + [""] * (6 - len(row)) for row in rows]
+            rows = [row[:6] for row in rows]
             df = pd.DataFrame(rows, columns=headers)
             for col in df.columns:
                 df[col] = df[col].astype(str).str.strip()
@@ -183,7 +184,7 @@ def load_dataframe(sheet):
             time.sleep(1)
     raise Exception("구글 시트 응답 지연 (잠시 후 다시 시도해주세요)")
 
-# 3. 팝업창 - 새 항목 추가
+# 3. 팝업창 - 새 항목 추가 (단어/문장 통합)
 @st.dialog("새 항목 추가")
 def add_dialog(sheet, full_df):
     unique_cats = full_df['분류'].unique().tolist() if not full_df.empty else []
@@ -198,16 +199,13 @@ def add_dialog(sheet, full_df):
         with col2:
             new_cat = st.text_input("새 분류 입력 (우선 적용됩니다)")
         
+        # 통합된 단어-문장 필드 (한 줄 전체 차지)
+        new_word_sent = st.text_input("단어-문장")
+            
         col3, col4 = st.columns(2)
         with col3:
-            new_word = st.text_input("단어")
-        with col4:
-            new_sent = st.text_input("문장")
-            
-        col5, col6 = st.columns(2)
-        with col5:
             new_pron = st.text_input("발음")
-        with col6:
+        with col4:
             new_mean = st.text_input("해석")
             
         new_memo1 = st.text_input("메모1")
@@ -217,19 +215,19 @@ def add_dialog(sheet, full_df):
         if submitted:
             final_cat = new_cat.strip() if new_cat.strip() else selected_cat
             if final_cat == "(새로 입력)": final_cat = ""
-            if new_word or new_sent:
+            if new_word_sent:
                 try:
-                    sheet.append_row([final_cat, new_word, new_sent, new_pron, new_mean, new_memo1, new_memo2])
+                    sheet.append_row([final_cat, new_word_sent, new_pron, new_mean, new_memo1, new_memo2])
                     st.success("저장되었습니다! 🔄")
                     time.sleep(1)
                     st.rerun()
                 except Exception as e: st.error(f"추가 오류: {e}")
             else: st.error("내용을 입력해주세요.")
 
-# 4. 팝업창 - 수정 및 삭제
+# 4. 팝업창 - 수정 및 삭제 (단어/문장 통합)
 @st.dialog("항목 수정 및 삭제")
 def edit_dialog(idx, row_data, sheet, full_df):
-    st.markdown(f"**[{row_data['분류']}] {row_data['단어']}** 데이터를 관리합니다.")
+    st.markdown(f"**[{row_data['분류']}] {row_data['단어-문장']}** 데이터를 관리합니다.")
     unique_cats = [x for x in full_df['분류'].unique().tolist() if x != '']
     try: unique_cats.sort(key=float)
     except: unique_cats.sort()
@@ -244,9 +242,8 @@ def edit_dialog(idx, row_data, sheet, full_df):
             edit_selected_cat = st.selectbox("분류 선택 (기존)", ["(직접 입력)"] + unique_cats, index=default_idx)
         with row1_col2: edit_new_cat = st.text_input("분류 직접 입력 (변경 시에만 입력)")
         
-        row2_col1, row2_col2 = st.columns(2)
-        with row2_col1: edit_word = st.text_input("단어", value=row_data['단어'])
-        with row2_col2: edit_sent = st.text_input("문장", value=row_data['문장'])
+        # 통합된 단어-문장 필드
+        edit_word_sent = st.text_input("단어-문장", value=row_data['단어-문장'])
         
         row3_col1, row3_col2 = st.columns(2)
         with row3_col1: edit_pron = st.text_input("발음", value=row_data['발음'])
@@ -263,11 +260,12 @@ def edit_dialog(idx, row_data, sheet, full_df):
         if update_submitted:
             final_edit_cat = edit_new_cat.strip() if edit_new_cat.strip() else edit_selected_cat
             if final_edit_cat == "(직접 입력)": final_edit_cat = ""
-            if edit_word or edit_sent:
+            if edit_word_sent:
                 try:
                     sheet_row = idx + 2 
-                    new_values = [final_edit_cat, edit_word, edit_sent, edit_pron, edit_mean, edit_memo1, edit_memo2]
-                    cell_list = sheet.range(f"A{sheet_row}:G{sheet_row}")
+                    new_values = [final_edit_cat, edit_word_sent, edit_pron, edit_mean, edit_memo1, edit_memo2]
+                    # F열까지 6개 열 업데이트
+                    cell_list = sheet.range(f"A{sheet_row}:F{sheet_row}")
                     for i, cell in enumerate(cell_list): cell.value = new_values[i]
                     sheet.update_cells(cell_list)
                     st.success("수정되었습니다! 🔄")
@@ -325,21 +323,18 @@ except Exception as e:
 if data_loaded:
     st.divider()
 
-    if 'filter_type' not in st.session_state:
-        st.session_state.filter_type = '전체보기'
-    
-    # 로그인 상태에 따라 컬럼을 동적으로 분할 (로그인 시 '새 항목 추가' 버튼 영역 활성화)
+    # 로그인 상태에 따라 컬럼을 동적으로 분할 (필터 버튼들을 제거하고 심플하게 유지)
     if st.session_state.authenticated:
-        cols = st.columns([1.5, 1.2, 2.0, 1.2, 0.7, 0.7, 0.7, 1.2])
+        cols = st.columns([1.5, 1.2, 3.0, 1.5, 1.5])
         col_add = cols[0]
-        col_h1, col_h2, col_h3, col_h4, col_h5, col_h6, col_h7 = cols[1:]
+        col_h1, col_h2, col_h3, col_dl = cols[1:]
         
         with col_add:
             if st.button("➕ 새 항목 추가", type="primary", use_container_width=True):
                 add_dialog(sheet, df)
     else:
-        cols = st.columns([1.2, 2.0, 1.2, 0.7, 0.7, 0.7, 1.2])
-        col_h1, col_h2, col_h3, col_h4, col_h5, col_h6, col_h7 = cols
+        cols = st.columns([1.2, 3.0, 1.5, 1.5])
+        col_h1, col_h2, col_h3, col_dl = cols
     
     with col_h1: 
         st.subheader("🔍 검색")
@@ -353,23 +348,10 @@ if data_loaded:
         except: unique_cats.sort()
         selected_category = st.selectbox("분류", ["전체 분류"] + unique_cats, label_visibility="collapsed")
         
-    with col_h4:
-        if st.button("단어", type="primary" if st.session_state.filter_type == '단어' else "secondary", use_container_width=True):
-            st.session_state.filter_type = '단어'; st.session_state.current_page = 1; st.rerun()
-            
-    with col_h5:
-        if st.button("문장", type="primary" if st.session_state.filter_type == '문장' else "secondary", use_container_width=True):
-            st.session_state.filter_type = '문장'; st.session_state.current_page = 1; st.rerun()
-            
-    with col_h6:
-        if st.button("전체보기", type="primary" if st.session_state.filter_type == '전체보기' else "secondary", use_container_width=True):
-            st.session_state.filter_type = '전체보기'; st.session_state.current_page = 1; st.rerun()
-
     # 필터링 로직
     display_df = df.copy()
-    if selected_category != "전체 분류": display_df = display_df[display_df['분류'] == selected_category]
-    if st.session_state.filter_type == '단어': display_df = display_df[display_df['단어'] != '']
-    elif st.session_state.filter_type == '문장': display_df = display_df[display_df['문장'] != '']
+    if selected_category != "전체 분류": 
+        display_df = display_df[display_df['분류'] == selected_category]
     
     if search_query:
         mask = display_df.apply(lambda r: r.astype(str).str.contains(search_query, case=False).any(), axis=1)
@@ -378,8 +360,8 @@ if data_loaded:
     # 최신 등록 항목이 위로 올라오도록 정렬 (인덱스는 유지해야 수정/삭제가 올바른 열을 찾아감)
     display_df = display_df.iloc[::-1]
 
-    # ★ CSV 내보내기는 페이지를 100개씩 자르기 전에 전체 필터링된 내용을 대상으로 생성합니다. ★
-    with col_h7:
+    # ★ CSV 내보내기는 전체 필터링된 내용을 대상으로 생성합니다. ★
+    with col_dl:
         if st.session_state.authenticated:
             csv_data = display_df.to_csv(index=False).encode('utf-8-sig')
             st.download_button(
@@ -416,13 +398,13 @@ if data_loaded:
             </div>
         """, unsafe_allow_html=True)
         
-        # 헤더 출력 부분
+        # 헤더 출력 부분 (6열에 맞춘 비율)
         if st.session_state.authenticated:
-            col_ratio = [1, 2, 4, 2, 3, 3, 3, 1]
-            h_labels = ["분류", "단어", "문장", "발음", "해석", "메모1", "메모2", "수정"]
+            col_ratio = [1.2, 4, 2, 2.5, 2.5, 2.5, 1]
+            h_labels = ["분류", "단어-문장", "발음", "해석", "메모1", "메모2", "수정"]
         else:
-            col_ratio = [1, 2, 4, 2, 3, 3, 3]
-            h_labels = ["분류", "단어", "문장", "발음", "해석", "메모1", "메모2"]
+            col_ratio = [1.2, 4, 2, 2.5, 2.5, 2.5]
+            h_labels = ["분류", "단어-문장", "발음", "해석", "메모1", "메모2"]
 
         header_cols = st.columns(col_ratio)
         for i, label in enumerate(h_labels): header_cols[i].markdown(f"**{label}**")
@@ -432,15 +414,14 @@ if data_loaded:
         for idx, row in page_df.iterrows():
             cols = st.columns(col_ratio)
             cols[0].write(row['분류'])
-            cols[1].markdown(f"<span style='font-size: 1.4em; font-weight: bold;'>{row['단어']}</span>", unsafe_allow_html=True)
-            cols[2].markdown(f"<span style='font-size: 1.4em; font-weight: bold;'>{row['문장']}</span>", unsafe_allow_html=True)
-            cols[3].write(row['발음'])
-            cols[4].write(row['해석'])
-            cols[5].write(row['메모1'])
-            cols[6].write(row['메모2'])
+            cols[1].markdown(f"<span style='font-size: 1.4em; font-weight: bold;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
+            cols[2].write(row['발음'])
+            cols[3].write(row['해석'])
+            cols[4].write(row['메모1'])
+            cols[5].write(row['메모2'])
             
             if st.session_state.authenticated:
-                if cols[7].button("✏️", key=f"edit_{idx}", type="secondary"):
+                if cols[6].button("✏️", key=f"edit_{idx}", type="secondary"):
                     edit_dialog(idx, row, sheet, df)
 
             # 💡 컨텐츠 라인마다 간격을 반으로 확 줄인 점선 추가 (기본 여백 상쇄용 음수 마진 적용)
