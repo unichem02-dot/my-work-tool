@@ -8,6 +8,82 @@ import io
 # --- [페이지 기본 설정] ---
 st.set_page_config(layout="wide", page_title="TOmBOy94's English")
 
+# --- [사용자 정의 디자인 (CSS)] ---
+st.markdown("""
+    <style>
+    /* 전체 배경색 설정 */
+    .stApp {
+        background-color: #0B3D3D;
+        color: #FFFFFF;
+    }
+    
+    /* 헤더 스타일 */
+    h1, h2, h3 {
+        color: #FFFFFF !important;
+    }
+    
+    /* 버튼 공통 스타일 (Pill shape) */
+    div.stButton > button {
+        border-radius: 50px !important;
+        padding: 0.5rem 2rem !important;
+        font-weight: bold !important;
+        transition: all 0.3s ease;
+    }
+    
+    /* Primary 버튼 (흰색 배경, 어두운 글자) */
+    div.stButton > button[kind="primary"] {
+        background-color: #FFFFFF !important;
+        color: #0B3D3D !important;
+        border: none !important;
+    }
+    div.stButton > button[kind="primary"]:hover {
+        background-color: #F0F0F0 !important;
+        transform: scale(1.05);
+    }
+    
+    /* Secondary 버튼 (테두리만 있는 스타일) */
+    div.stButton > button[kind="secondary"] {
+        background-color: transparent !important;
+        color: #FFFFFF !important;
+        border: 1px solid #FFFFFF !important;
+    }
+    div.stButton > button[kind="secondary"]:hover {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        transform: scale(1.05);
+    }
+    
+    /* 입력창 및 셀렉트박스 스타일 */
+    .stTextInput > div > div > input, .stSelectbox > div > div > div {
+        border-radius: 15px !important;
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
+    
+    /* 카드 형태 리스트 아이템 스타일 */
+    .data-row {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 15px;
+        padding: 15px;
+        margin-bottom: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    /* 엑셀 다운로드 버튼 스타일링 */
+    .stDownloadButton > button {
+        background-color: #FFFFFF !important;
+        color: #0B3D3D !important;
+        border-radius: 50px !important;
+        border: none !important;
+    }
+
+    /* 구분선 색상 */
+    hr {
+        border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 # --- [보안 설정: 비밀번호] ---
 LOGIN_PASSWORD = "0315" 
 
@@ -60,7 +136,7 @@ def add_dialog(sheet, full_df):
         with col1:
             selected_cat = st.selectbox("분류 선택 (기존)", ["(새로 입력)"] + unique_cats)
         with col2:
-            new_cat = st.text_input("새 분류 입력 (우선 적용됩니다)")
+            new_cat = st.text_input("새 분류 입력")
         
         col3, col4 = st.columns(2)
         with col3:
@@ -106,7 +182,7 @@ def edit_dialog(idx, row_data, sheet, full_df):
             try: default_idx = unique_cats.index(current_cat) + 1
             except: default_idx = 0
             edit_selected_cat = st.selectbox("분류 선택 (기존)", ["(직접 입력)"] + unique_cats, index=default_idx)
-        with row1_col2: edit_new_cat = st.text_input("분류 직접 입력 (변경 시에만 입력)")
+        with row1_col2: edit_new_cat = st.text_input("분류 직접 입력")
         
         row2_col1, row2_col2 = st.columns(2)
         with row2_col1: edit_word = st.text_input("단어", value=row_data['단어'])
@@ -160,7 +236,7 @@ with col_auth:
     if not st.session_state.authenticated:
         with st.expander("🔐 관리자 로그인"):
             password_input = st.text_input("Password", type="password")
-            if st.button("로그인", use_container_width=True):
+            if st.button("로그인", use_container_width=True, kind="primary"):
                 if password_input == LOGIN_PASSWORD:
                     st.session_state.authenticated = True
                     st.rerun()
@@ -168,7 +244,7 @@ with col_auth:
                     st.error("비밀번호 오류")
     else:
         st.write("")
-        if st.button("🔓 로그아웃", use_container_width=True):
+        if st.button("🔓 로그아웃", use_container_width=True, kind="secondary"):
             st.session_state.authenticated = False
             st.rerun()
 
@@ -190,36 +266,29 @@ if data_loaded:
     if 'filter_type' not in st.session_state:
         st.session_state.filter_type = '전체보기'
     
-    # 💡 검색창을 상단으로 이동하기 위해 컬럼 구조 재설계 (7개 컬럼)
-    col_h1, col_h2, col_h3, col_h4, col_h5, col_h6, col_h7 = st.columns([1.5, 2.0, 1.2, 0.7, 0.7, 0.7, 1.0])
+    col_h1, col_h2, col_h3, col_h4, col_h5, col_h6, col_h7 = st.columns([1, 2, 1.2, 0.7, 0.7, 0.7, 1])
     
     with col_h1: 
-        st.header("🔍 검색")
+        st.subheader("🔍 검색")
         
     with col_h2:
-        st.write("") # 간격 조절용
-        # 검색어 입력창을 제목 바로 옆으로 이동
         search_query = st.text_input("검색어", placeholder="검색어를 입력하세요...", label_visibility="collapsed")
         
     with col_h3:
-        st.write("")
         unique_cats = [x for x in df['분류'].unique().tolist() if x != '']
         try: unique_cats.sort(key=float)
         except: unique_cats.sort()
         selected_category = st.selectbox("분류", ["전체 분류"] + unique_cats, label_visibility="collapsed")
         
     with col_h4:
-        st.write("")
         if st.button("단어", type="primary" if st.session_state.filter_type == '단어' else "secondary", use_container_width=True):
             st.session_state.filter_type = '단어'; st.rerun()
             
     with col_h5:
-        st.write("")
         if st.button("문장", type="primary" if st.session_state.filter_type == '문장' else "secondary", use_container_width=True):
             st.session_state.filter_type = '문장'; st.rerun()
             
     with col_h6:
-        st.write("")
         if st.button("전체보기", type="primary" if st.session_state.filter_type == '전체보기' else "secondary", use_container_width=True):
             st.session_state.filter_type = '전체보기'; st.rerun()
 
@@ -229,21 +298,19 @@ if data_loaded:
     if st.session_state.filter_type == '단어': display_df = display_df[display_df['단어'] != '']
     elif st.session_state.filter_type == '문장': display_df = display_df[display_df['문장'] != '']
     
-    # search_query가 위에서 정의되었으므로 바로 사용 가능
     if search_query:
         mask = display_df.apply(lambda r: r.astype(str).str.contains(search_query, case=False).any(), axis=1)
         display_df = display_df[mask]
 
-    # 엑셀 내보내기 버튼 (맨 우측 col_h7)
+    # 엑셀 내보내기 버튼
     with col_h7:
-        st.write("")
         if st.session_state.authenticated:
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                 display_df.to_excel(writer, index=False, sheet_name='English_Data')
             excel_data = output.getvalue()
             st.download_button(
-                label="📥 엑셀",
+                label="📥 엑셀 다운로드",
                 data=excel_data,
                 file_name=f"English_Data_{time.strftime('%Y%m%d_%H%M%S')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -255,6 +322,7 @@ if data_loaded:
             st.info(f"최근 50개 항목 표시 중 (전체 {len(display_df)}개)")
             display_df = display_df.iloc[::-1].head(50)
         
+        # 컬럼 비율
         if st.session_state.authenticated:
             col_ratio = [1, 2, 4, 2, 3, 3, 3, 1]
             h_labels = ["분류", "단어", "문장", "발음", "해석", "메모1", "메모2", "수정"]
@@ -269,15 +337,15 @@ if data_loaded:
         for idx, row in display_df.iterrows():
             cols = st.columns(col_ratio)
             cols[0].write(row['분류'])
-            cols[1].markdown(f"<span style='font-size: 1.4em; font-weight: bold;'>{row['단어']}</span>", unsafe_allow_html=True)
-            cols[2].markdown(f"<span style='font-size: 1.4em; font-weight: bold;'>{row['문장']}</span>", unsafe_allow_html=True)
+            cols[1].markdown(f"<span style='font-size: 1.4em; font-weight: bold; color: #FFFFFF;'>{row['단어']}</span>", unsafe_allow_html=True)
+            cols[2].markdown(f"<span style='font-size: 1.4em; font-weight: bold; color: #FFFFFF;'>{row['문장']}</span>", unsafe_allow_html=True)
             cols[3].write(row['발음'])
             cols[4].write(row['해석'])
             cols[5].write(row['메모1'])
             cols[6].write(row['메모2'])
             
             if st.session_state.authenticated:
-                if cols[7].button("✏️", key=f"edit_{idx}"):
+                if cols[7].button("✏️", key=f"edit_{idx}", kind="secondary"):
                     edit_dialog(idx, row, sheet, df)
     else:
         st.warning("표시할 데이터가 없습니다.")
