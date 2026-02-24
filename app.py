@@ -111,10 +111,14 @@ st.markdown("""
     }
 
     /* 버튼 스타일 (알약 모양) */
-    button {
+    button, .stDownloadButton > button {
         border-radius: 50px !important;
         padding: 0.5rem 1.5rem !important;
         font-weight: 700 !important;
+        height: 40px !important; /* 높이 고정 */
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
         transition: all 0.3s ease !important;
     }
     button[kind="primary"] {
@@ -124,11 +128,9 @@ st.markdown("""
     button[kind="primary"] p {
         color: #224343 !important;
     }
-    button[kind="secondary"] {
+    button[kind="secondary"], .stDownloadButton > button {
         background-color: transparent !important;
         border: 2px solid #FFFFFF !important;
-    }
-    button[kind="secondary"] p {
         color: #FFFFFF !important;
     }
     
@@ -157,6 +159,7 @@ st.markdown("""
         [data-testid="stHeader"], 
         [data-testid="stSidebar"], 
         .stButton, 
+        .stDownloadButton,
         div[role="radiogroup"], 
         [data-testid="stExpander"], 
         [data-testid="stForm"],
@@ -291,7 +294,7 @@ try:
     
     st.divider()
     
-    # 컨트롤바 레이아웃
+    # 컨트롤바 레이아웃 (추가, 심플모드, 검색, 다운로드/프린트)
     if st.session_state.authenticated:
         cb = st.columns([1.3, 1.0, 0.2, 3.5, 1.2, 1.2]) 
         if cb[0].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
@@ -317,29 +320,28 @@ try:
 
     # ★ CSV 및 프린트 버튼 ★
     if st.session_state.authenticated:
+        # CSV 다운로드
         cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"English_Data_{time.strftime('%Y%m%d_%H%M%S')}.csv", use_container_width=True)
-        # 프린트 버튼 (인라인 자바스크립트 최적화)
+        # 프린트 버튼 (about:blank 방지를 위해 <button> 태그 사용 및 CSS 정밀 매칭)
         with cb[5]:
-            st.markdown(f"""
-                <a href="javascript:window.print()" style="text-decoration: none;">
-                    <div style="
-                        width: 100%;
-                        height: 38px;
-                        background-color: transparent;
-                        border: 2px solid #FFFFFF;
-                        color: #FFFFFF;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        cursor: pointer;
-                        border-radius: 50px;
-                        font-weight: 700;
-                        font-size: 0.85rem;
-                        transition: all 0.3s ease;
-                    " onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
-                        🖨️ 프린트
-                    </div>
-                </a>
+            st.markdown("""
+                <button type="button" onclick="window.print();" style="
+                    width: 100%;
+                    height: 40px;
+                    background-color: transparent;
+                    border: 2px solid #FFFFFF;
+                    color: #FFFFFF;
+                    cursor: pointer;
+                    border-radius: 50px;
+                    font-weight: 700;
+                    font-size: 0.85rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.3s ease;
+                " onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+                    🖨️ 프린트
+                </button>
             """, unsafe_allow_html=True)
 
     total = len(d_df)
