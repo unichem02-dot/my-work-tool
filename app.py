@@ -138,6 +138,8 @@ st.markdown("""
     /* 구분선 흐리게 */
     hr {
         border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
+        margin-top: 10px !important;
+        margin-bottom: 10px !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -441,8 +443,8 @@ if data_loaded:
                 if cols[7].button("✏️", key=f"edit_{idx}", type="secondary"):
                     edit_dialog(idx, row, sheet, df)
 
-            # 💡 컨텐츠 라인마다 흐린 점선 추가 (투명도 30%의 흰색 점선)
-            st.markdown("<div style='border-bottom: 1px dotted rgba(255, 255, 255, 0.3); margin: 15px 0;'></div>", unsafe_allow_html=True)
+            # 💡 컨텐츠 라인마다 간격을 반으로 확 줄인 점선 추가 (기본 여백 상쇄용 음수 마진 적용)
+            st.markdown("<div style='border-bottom: 1px dotted rgba(255, 255, 255, 0.3); margin-top: -10px; margin-bottom: 5px;'></div>", unsafe_allow_html=True)
 
         # --- [하단 페이지 번호 이동 컨트롤 UI] ---
         if total_pages > 1:
