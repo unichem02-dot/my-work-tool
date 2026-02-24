@@ -22,13 +22,12 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 2. ★ 글자색 화이트 강제화 (스크린샷 문제 해결 핵심) ★ */
-    /* 기본 모든 텍스트 */
+    /* 2. ★ 글자색 화이트 강제화 ★ */
     h1, h2, h3, h4, h5, h6, p, span, label, summary, b, strong {
         color: #FFFFFF !important;
     }
     
-    /* 팝업창(Dialog) 제목: ID 기반 및 태그 기반 강력 타겟팅 */
+    /* 팝업창(Dialog) 제목 */
     #새-항목-추가, 
     #항목-수정-및-삭제,
     div[data-testid="stDialog"] h2,
@@ -52,7 +51,19 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* 3. 상단 분류 리스트(Radio) 텍스트 버튼화 */
+    /* 3. ★ 컨텐츠 행(Row) 호버 효과 추가 ★ */
+    div[data-testid="stHorizontalBlock"]:has(.row-marker) {
+        transition: background-color 0.3s ease;
+        padding: 8px 12px !important;
+        border-radius: 12px;
+        margin-bottom: 2px;
+    }
+    /* 마우스를 대면 더 어두운 색(#1a2f2f)으로 변경 */
+    div[data-testid="stHorizontalBlock"]:has(.row-marker):hover {
+        background-color: #1a2f2f !important;
+    }
+
+    /* 4. 상단 분류 리스트(Radio) 텍스트 버튼화 */
     div[role="radiogroup"] {
         flex-direction: row !important;
         flex-wrap: wrap !important;
@@ -81,7 +92,7 @@ st.markdown("""
         text-decoration: underline;
     }
 
-    /* 4. 입력창 스타일: 배경 화이트 / 글자 블랙 */
+    /* 5. 입력창 스타일: 배경 화이트 / 글자 블랙 */
     .stTextInput input {
         background-color: #FFFFFF !important;
         color: #000000 !important;
@@ -92,7 +103,7 @@ st.markdown("""
         border: 1px solid #FFFFFF !important;
     }
 
-    /* 5. 버튼 스타일: 알약 모양 */
+    /* 6. 버튼 스타일: 알약 모양 */
     button, div.stDownloadButton > button {
         border-radius: 50px !important;
         padding: 0.5rem 1.5rem !important;
@@ -270,7 +281,10 @@ try:
     # 리스트 본문
     for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
         cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
-        cols[0].write(row['분류'])
+        
+        # ★ 호버 효과를 위한 투명 마커(row-marker) 삽입 ★
+        cols[0].markdown(f"<span class='row-marker'></span>{row['분류']}", unsafe_allow_html=True)
+        
         cols[1].markdown(f"<span style='font-size:2.0em;font-weight:bold;display:block;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
         cols[2].markdown(f"<span style='font-size:1.5em;display:block;'>{row['해석']}</span>", unsafe_allow_html=True)
         if not is_simple:
