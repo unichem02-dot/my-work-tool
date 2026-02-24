@@ -320,16 +320,23 @@ except Exception as e:
     st.error(f"데이터 연결 오류: {e}")
 
 if data_loaded:
-    if st.session_state.authenticated:
-        if st.button("➕ 새 항목 추가", type="primary", use_container_width=True):
-            add_dialog(sheet, df)
-    
     st.divider()
 
     if 'filter_type' not in st.session_state:
         st.session_state.filter_type = '전체보기'
     
-    col_h1, col_h2, col_h3, col_h4, col_h5, col_h6, col_h7 = st.columns([1.5, 2.0, 1.2, 0.7, 0.7, 0.7, 1.2])
+    # 💡 로그인 상태에 따라 컬럼을 동적으로 분할 (로그인 시 '새 항목 추가' 버튼 영역 활성화)
+    if st.session_state.authenticated:
+        cols = st.columns([1.5, 1.2, 2.0, 1.2, 0.7, 0.7, 0.7, 1.2])
+        col_add = cols[0]
+        col_h1, col_h2, col_h3, col_h4, col_h5, col_h6, col_h7 = cols[1:]
+        
+        with col_add:
+            if st.button("➕ 새 항목 추가", type="primary", use_container_width=True):
+                add_dialog(sheet, df)
+    else:
+        cols = st.columns([1.2, 2.0, 1.2, 0.7, 0.7, 0.7, 1.2])
+        col_h1, col_h2, col_h3, col_h4, col_h5, col_h6, col_h7 = cols
     
     with col_h1: 
         st.subheader("🔍 검색")
