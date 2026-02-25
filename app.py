@@ -436,7 +436,7 @@ with col_auth:
                 st.query_params["auth"] = "true"
                 st.rerun()
     else:
-        if st.button("🔓 로그아웃", use_container_width=True, type="secondary"):
+        if st.button("🔓 LOGOUT", use_container_width=True, type="secondary"):
             st.session_state.authenticated = False
             if "auth" in st.query_params: del st.query_params["auth"]
             st.rerun()
