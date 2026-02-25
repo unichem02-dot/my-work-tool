@@ -349,8 +349,8 @@ try:
     now_kst = datetime.now(kst)
     date_str = now_kst.strftime("%A, %B %d, %Y")
     
-    # ★ 날짜 표시줄 3분할 (정보 / 입력창 / 결과) ★
-    info_col, input_col, result_col = st.columns([3.5, 2.0, 4.5])
+    # ★ 날짜 표시줄 4분할 (정보 / 라벨 / 입력창 / 결과) ★
+    info_col, label_col, input_col, result_col = st.columns([3.3, 0.9, 1.8, 4.0])
     
     with info_col:
         st.markdown(f"""
@@ -359,6 +359,10 @@ try:
                 <span style='color: #FFD700;'>📅 {date_str}</span>
             </p>
         """, unsafe_allow_html=True)
+        
+    with label_col:
+        # 입력창 바로 앞의 텍스트 라벨
+        st.markdown("<p style='color:#FFF; font-weight:bold; margin-top:10px; text-align:right;'>Num.ENG :</p>", unsafe_allow_html=True)
         
     with input_col:
         # 입력창 생성 (자동 콤마 포맷팅 콜백 on_change 연결)
