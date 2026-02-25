@@ -39,36 +39,6 @@ st.markdown("""
         color: #FFFFFF !important;
         -webkit-text-fill-color: #FFFFFF !important;
     }
-    
-    /* ★ 토글 스위치(심플모드) 라벨 1.5 확대 및 디자인 ★ */
-    div[data-testid="stToggle"] label p {
-        color: #FFFFFF !important;
-        font-weight: bold !important;
-        font-size: 1.5rem !important; /* 1.5 사이즈로 확대 */
-        line-height: 1.5 !important;
-    }
-
-    /* ★ 토글 스위치 크기 자체를 1.8배로 시원하게 강제 확대 ★ */
-    div[data-testid="stToggle"] label > div:first-child {
-        transform: scale(1.8) !important;
-        transform-origin: left center !important;
-        margin-right: 25px !important; /* 스위치가 커진 만큼 텍스트와의 간격 확보 */
-    }
-
-    /* 토글 스위치 꺼져있을 때(Off) 트랙 시인성 대폭 개선 (밝은 회색) */
-    div[data-testid="stToggle"] label > div:first-child > div {
-        background-color: #95a5a6 !important;
-    }
-
-    /* 토글 스위치 켜져있을 때(On) 트랙 노란색 */
-    div[data-testid="stToggle"] label > div:first-child:has(input:checked) > div {
-        background-color: #FFD700 !important;
-    }
-    
-    /* 스위치 안의 동그라미(Thumb) 색상 고정 */
-    div[data-testid="stToggle"] label > div:first-child > div > div {
-        background-color: #FFFFFF !important;
-    }
 
     /* 로그인(Expander) 제목 */
     div[data-testid="stExpander"] summary p,
@@ -103,8 +73,8 @@ st.markdown("""
         margin: 0 !important;
     }
     div[role="radiogroup"] label p {
-        color: #FFD700 !important; /* 노란색으로 변경 */
-        font-size: 1.7rem !important; /* 1.7rem으로 확대 */
+        color: #FFD700 !important;
+        font-size: 1.7rem !important;
         font-weight: 800 !important;
         transition: color 0.2s ease;
     }
@@ -150,11 +120,15 @@ st.markdown("""
     }
     button[kind="primary"] p {
         color: #224343 !important;
+        font-size: 1.15rem !important;
     }
     button[kind="secondary"], div.stDownloadButton > button {
         background-color: transparent !important;
         border: 2px solid #FFFFFF !important;
         color: #FFFFFF !important;
+    }
+    button[kind="secondary"] p {
+        font-size: 1.15rem !important;
     }
 
     /* 8. 헤더 및 일반 텍스트용 클래스 (모바일 대응을 위한 분리) */
@@ -201,11 +175,12 @@ st.markdown("""
         /* 카드형태에서는 점선이 겹치므로 제거 */
         .row-divider { display: none !important; }
         
-        /* 버튼류 및 심플모드 텍스트 모바일용 축소 */
+        /* 버튼류 및 분류 텍스트 모바일용 축소 */
         .header-label { font-size: 1.2rem !important; }
         .sort-header-btn button { font-size: 1.2rem !important; }
         div[role="radiogroup"] label p { font-size: 1.2rem !important; }
-        div[data-testid="stToggle"] label p { font-size: 1.2rem !important; }
+        button[kind="primary"] p { font-size: 1.0rem !important; }
+        button[kind="secondary"] p { font-size: 1.0rem !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -295,6 +270,10 @@ if 'active_search' not in st.session_state:
 if 'search_input' not in st.session_state:
     st.session_state.search_input = ""
 
+# ★ 심플모드 상태 관리 변수 추가 ★
+if 'is_simple' not in st.session_state:
+    st.session_state.is_simple = False
+
 def format_num_input():
     raw_val = str(st.session_state.num_input)
     cleaned = re.sub(r'[^0-9]', '', raw_val)
@@ -376,7 +355,6 @@ with col_num_label:
     
 with col_num_input:
     st.markdown("<div class='num-input-container'>", unsafe_allow_html=True)
-    # ★ placeholder 내용을 지워 깔끔하게 만듦 ★
     st.text_input("숫자입력", key="num_input", on_change=format_num_input, label_visibility="collapsed")
     st.markdown("</div>", unsafe_allow_html=True)
     num_val = st.session_state.num_input
@@ -412,16 +390,33 @@ try:
     
     st.divider()
     
-    # ★ 컨트롤바 (글자 크기를 고려해 '심플모드' 토글 공간 확대) ★
+    # ★ 컨트롤바 (토글을 삭제하고 버튼식으로 변경) ★
     if st.session_state.authenticated:
         cb = st.columns([3.8, 1.5, 1.4, 0.3, 1.5])
         cb[0].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
         if cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
-        is_simple = cb[2].toggle("심플모드")
+        
+        # 버튼 텍스트 및 색상 동적 변경
+        btn_text = "🔄 전체모드" if st.session_state.is_simple else "✨ 심플모드"
+        btn_type = "secondary" if st.session_state.is_simple else "primary"
+        
+        if cb[2].button(btn_text, type=btn_type, use_container_width=True):
+            st.session_state.is_simple = not st.session_state.is_simple
+            st.rerun()
     else:
         cb = st.columns([5.3, 1.4, 3.3])
         cb[0].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
-        is_simple = cb[1].toggle("심플모드")
+        
+        # 버튼 텍스트 및 색상 동적 변경
+        btn_text = "🔄 전체모드" if st.session_state.is_simple else "✨ 심플모드"
+        btn_type = "secondary" if st.session_state.is_simple else "primary"
+        
+        if cb[1].button(btn_text, type=btn_type, use_container_width=True):
+            st.session_state.is_simple = not st.session_state.is_simple
+            st.rerun()
+
+    # 변수 매핑을 위해 is_simple 업데이트
+    is_simple = st.session_state.is_simple
 
     search = st.session_state.active_search
 
