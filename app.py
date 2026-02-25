@@ -47,12 +47,13 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* 3. ★ 컨텐츠 행(Row) 호버 효과 및 간격 최소화 ★ */
+    /* 3. ★ 컨텐츠 행(Row) 호버 효과 및 전체 셀 영역(Padding) 대폭 확대 ★ */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 2px 12px !important;
+        padding: 18px 20px !important; /* 상하좌우 여백을 넓혀서 텍스트뿐만 아니라 행 전체가 칠해지도록 변경 */
         border-radius: 12px;
         margin-bottom: 0px;
+        align-items: center !important; /* 모든 내용을 수직 정중앙으로 예쁘게 정렬 */
     }
     div[data-testid="stHorizontalBlock"]:has(.row-marker):hover {
         background-color: #1a2f2f !important;
@@ -127,7 +128,7 @@ st.markdown("""
         display: none !important;
     }
 
-    /* 7. 버튼 스타일: 알약 모양 및 글자 두껍게(Bold) 적용 */
+    /* 7. ★ 버튼 스타일: 알약 모양 및 글자 두껍게(Bold) 적용 ★ */
     button, div.stDownloadButton > button {
         border-radius: 50px !important;
         padding: 0.5rem 1.5rem !important;
@@ -151,6 +152,23 @@ st.markdown("""
     button[kind="secondary"] p {
         font-size: clamp(1rem, 1.2vw, 1.15rem) !important;
         font-weight: 900 !important;
+    }
+
+    /* ★ 수정 전용 투명 버튼 (둥근 테두리 제거 & 연필 아이콘만 남김) ★ */
+    button[kind="tertiary"] {
+        background-color: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        min-width: max-content !important;
+        box-shadow: none !important;
+    }
+    button[kind="tertiary"] p {
+        font-size: 1.8rem !important; /* 연필 아이콘 크기 조절 */
+        margin: 0 !important;
+        transition: transform 0.2s ease !important;
+    }
+    button[kind="tertiary"]:hover p {
+        transform: scale(1.3) !important; /* 마우스 올리면 아이콘 커짐 */
     }
 
     /* 8. 헤더 및 일반 텍스트용 클래스 */
@@ -195,9 +213,10 @@ st.markdown("""
     .num-result { color: #FFD700; font-weight: bold; font-size: clamp(1.1rem, 1.5vw, 1.6rem); margin-top: 12px; }
     .num-warning { color: #FF9999; font-weight: bold; font-size: clamp(0.9rem, 1.2vw, 1.2rem); margin-top: 16px; }
     
-    .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -25px; margin-bottom: 2px; }
+    /* 패딩 증가에 맞춰 구분선 위치 자연스럽게 재조정 */
+    .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -10px; margin-bottom: 10px; }
 
-    /* ★ 11. 전체 반응형 완벽 대응 (글자 세로 겹침 및 깨짐 원천 방지) ★ */
+    /* 11. 전체 반응형 완벽 대응 (글자 세로 겹침 및 깨짐 원천 방지) */
     button p, 
     div[data-testid="stExpander"] summary p, 
     .header-label, 
@@ -210,19 +229,17 @@ st.markdown("""
         min-width: max-content !important;
     }
 
-    /* 화면 폭이 부족할 때 컬럼들이 찌그러지지 않고 자연스럽게 다음 줄로 넘어가도록 처리 */
     div[data-testid="stHorizontalBlock"] {
         flex-wrap: wrap !important;
     }
 
-    /* ★ 12. 모바일 특화 레이아웃 (768px 이하) ★ */
+    /* 12. 모바일 특화 레이아웃 (768px 이하) */
     @media screen and (max-width: 768px) {
         h1 { font-size: 1.8rem !important; }
         
         .num-result { margin-top: 5px !important; }
         .num-warning { margin-top: 5px !important; }
         
-        /* 모바일에서는 Num.ENG 라벨과 입력창이 절대 겹치지 않게 세로로 나열 */
         div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) { 
             flex-direction: column !important; 
             align-items: flex-start !important;
@@ -239,7 +256,6 @@ st.markdown("""
         .word-text { font-size: 1.4em !important; }
         .mean-text { font-size: 1.1em !important; }
         
-        /* 모바일 카드형 레이아웃 세로 정렬 확실히 */
         div[data-testid="stHorizontalBlock"]:has(.row-marker) {
             flex-direction: column !important;
             padding: 15px !important;
@@ -579,8 +595,9 @@ try:
         
         if not is_simple:
             cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
-            if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}"): edit_dialog(idx, row, sheet, df)
-        elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}"): edit_dialog(idx, row, sheet, df)
+            # ★ type="tertiary"를 추가하여 둥근 테두리를 완벽 제거 ★
+            if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(idx, row, sheet, df)
+        elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(idx, row, sheet, df)
         
         st.markdown("<div class='row-divider'></div>", unsafe_allow_html=True)
 
