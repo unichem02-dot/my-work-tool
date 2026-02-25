@@ -383,7 +383,7 @@ current_year = datetime.now(timezone(timedelta(hours=9))).year
 st.markdown(f"""
     <div style='text-align: center; margin-top: 50px; margin-bottom: 20px; padding-top: 20px; border-top: 1px dotted rgba(255, 255, 255, 0.2);'>
         <p style='color: #A3B8B8; font-size: 0.95rem; font-weight: bold; margin-bottom: 5px;'>
-            Copyright © {current_year} TOmBOy94 (lodus11st@naver.com). All rights reserved.
+            Copyright © {current_year} TOmBOy94 &nbsp;|&nbsp; lodus11st@naver.com &nbsp;|&nbsp; All rights reserved.
         </p>
     </div>
 """, unsafe_allow_html=True)
