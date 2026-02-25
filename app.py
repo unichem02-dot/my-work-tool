@@ -5,6 +5,7 @@ import pandas as pd
 import time
 import io
 import math
+from datetime import datetime, timedelta, timezone
 
 # --- [페이지 기본 설정] ---
 st.set_page_config(layout="wide", page_title="TOmBOy94's English")
@@ -282,7 +283,17 @@ try:
     if st.session_state.curr_p > pages: st.session_state.curr_p = 1
     curr_p = st.session_state.curr_p
     
-    st.markdown(f"<p style='color:#FFF;font-weight:bold;margin-top:15px;'>총 {total}개 (페이지: {curr_p}/{pages})</p>", unsafe_allow_html=True)
+    # ★ 한국 시간 기준 날짜 계산 및 출력 추가 ★
+    kst = timezone(timedelta(hours=9))
+    now_kst = datetime.now(kst)
+    date_str = now_kst.strftime("%A, %B %d, %Y")
+    
+    st.markdown(f"""
+        <p style='color:#FFF; font-weight:bold; margin-top:15px;'>
+            총 {total}개 (페이지: {curr_p}/{pages}) &nbsp;&nbsp;&nbsp;&nbsp;
+            <span style='color: #FFD700;'>📅 {date_str}</span>
+        </p>
+    """, unsafe_allow_html=True)
     
     # 리스트 헤더 출력
     ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
