@@ -87,6 +87,7 @@ st.markdown("""
    
     div[data-testid="stRadio"] label {
         cursor: pointer !important;
+        margin: 0 !important;
         background-color: rgba(255, 255, 255, 0.1) !important;
         padding: 6px 18px !important;
         border-radius: 50px !important;
@@ -269,7 +270,7 @@ kst = timezone(timedelta(hours=9))
 now_kst = datetime.now(kst)
 date_str = now_kst.strftime("%A, %B %d, %Y")
 
-# ★ 상단 레이아웃: 로그인/아웃을 맨 앞으로 재배치 ★
+# ★ 상단 레이아웃: 로그인/아웃을 맨 앞으로 배치 ★
 col_auth, col_title, col_date, col_num_combined, col_num_result = st.columns([1.3, 2.0, 3.4, 2.4, 2.0])
 
 with col_auth:
@@ -381,7 +382,7 @@ try:
                 if (e.target && e.target.getAttribute('aria-label') === 'Num.ENG :') {{
                     let rawVal = e.target.value.replace(/[^0-9]/g, '');
                     if (rawVal) e.target.value = Number(rawVal).toLocaleString('en-US'); else e.target.value = '';
-                }
+                }}
             }});
             doc.formatListenerAdded = true;
         }}
