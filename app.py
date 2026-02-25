@@ -259,6 +259,14 @@ try:
     selected_radio = st.radio("분류 필터", cat_options, horizontal=True, label_visibility="collapsed")
     sel_cat = selected_radio
     
+    # ★ 새로고침 전용 버튼 (랜덤 10 상태일 때만 노출) ★
+    if sel_cat == "🔀 랜덤 10":
+        _, btn_col = st.columns([8.5, 1.5])
+        with btn_col:
+            if st.button("🔄 10개 다시 뽑기", type="primary", use_container_width=True):
+                st.session_state.random_df = df.sample(n=min(10, len(df)))
+                st.rerun()
+
     st.divider()
     
     # 컨트롤바
@@ -278,7 +286,7 @@ try:
     if sel_cat == "🔀 랜덤 10":
         # 사용자가 다른 카테고리에서 '랜덤 10'으로 막 넘어왔거나, 처음 시작할 때만 새로운 10개를 뽑음
         if st.session_state.current_cat != "🔀 랜덤 10" or 'random_df' not in st.session_state:
-            st.session_state.random_df = d_df.sample(n=min(10, len(d_df)))
+            st.session_state.random_df = df.sample(n=min(10, len(df)))
         # 심플모드 토글이나 검색 시 문장이 안 바뀌게 저장된 랜덤 데이터 사용
         d_df = st.session_state.random_df.copy()
     elif sel_cat != "전체 분류":
@@ -337,7 +345,7 @@ try:
     
     st.divider()
 
-    # 리스트 본문
+    # 리스트 본문 (★ Duplicate Key 에러 해결: pandas의 원래 idx 사용)
     for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
         cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
         
@@ -348,12 +356,8 @@ try:
         cols[2].markdown(f"<span style='font-size:1.5em;display:block;'>{row['해석']}</span>", unsafe_allow_html=True)
         if not is_simple:
             cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
-            # 원래 시트에서의 인덱스를 정확히 찾아가도록 df 매칭 (랜덤 샘플링된 상태에서도 정상 수정 가능)
-            original_idx = df.index[df['단어-문장'] == row['단어-문장']].tolist()[0] 
-            if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{original_idx}"): edit_dialog(original_idx, row, sheet, df)
-        elif st.session_state.authenticated:
-            original_idx = df.index[df['단어-문장'] == row['단어-문장']].tolist()[0]
-            if cols[3].button("✏️", key=f"es_{original_idx}"): edit_dialog(original_idx, row, sheet, df)
+            if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}"): edit_dialog(idx, row, sheet, df)
+        elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}"): edit_dialog(idx, row, sheet, df)
         
         # 점선 간격 극소화 (-25px 적용)
         st.markdown("<div style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-25px;margin-bottom:2px;'></div>", unsafe_allow_html=True)
