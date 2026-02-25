@@ -88,7 +88,7 @@ st.markdown("""
     
     div[data-testid="stRadio"] label p {
         color: #FFFFFF !important; 
-        font-size: clamp(1.1rem, 1.4vw, 1.4rem) !important; /* 반응형 크기 적용 */
+        font-size: clamp(1.1rem, 1.4vw, 1.4rem) !important; 
         font-weight: 800 !important;
         transition: color 0.2s ease;
         margin: 0 !important;
@@ -117,11 +117,6 @@ st.markdown("""
         border: 1px solid #FFFFFF !important;
     }
 
-    /* 특정 입력창(숫자입력) 폰트 크기 반응형 확대 (화면 폭에 따라 자동 조절) */
-    input[aria-label="숫자입력"] {
-        font-size: clamp(1.1rem, 1.5vw, 1.6rem) !important;
-    }
-
     /* 6. 패스워드 눈알 아이콘 숨기기 (모바일 입력 최적화) */
     div[data-testid="stTextInput"] button {
         display: none !important;
@@ -141,7 +136,7 @@ st.markdown("""
     button[kind="primary"] p {
         color: #224343 !important;
         font-size: clamp(1rem, 1.2vw, 1.15rem) !important;
-        font-weight: 900 !important; /* 아주 굵게 */
+        font-weight: 900 !important;
     }
     button[kind="secondary"], div.stDownloadButton > button {
         background-color: transparent !important;
@@ -150,49 +145,63 @@ st.markdown("""
     }
     button[kind="secondary"] p {
         font-size: clamp(1rem, 1.2vw, 1.15rem) !important;
-        font-weight: 900 !important; /* 아주 굵게 */
+        font-weight: 900 !important;
     }
 
-    /* 8. 헤더 및 일반 텍스트용 클래스 (모바일 대응을 위한 분리) */
+    /* 8. 헤더 및 일반 텍스트용 클래스 */
     .header-label { font-size: clamp(1.2rem, 1.5vw, 1.6rem) !important; font-weight: 800 !important; color: #FFFFFF !important; display: block; margin-bottom: 0px !important; }
     .sort-header-btn button { background-color: transparent !important; border: none !important; padding: 0 !important; color: #FFFFFF !important; font-weight: 800 !important; font-size: clamp(1.2rem, 1.5vw, 1.6rem) !important; text-decoration: underline !important; }
     
-    /* ★ 단어-문장 텍스트 색상을 노란색(#FFD700)으로 변경 ★ */
     .word-text { font-size: 2.0em; font-weight: bold; display: block; color: #FFD700 !important; }
     .mean-text { font-size: 1.5em; display: block; }
     
-    /* ★ 상단 숫자 변환 라벨 (수직 중앙 정렬을 위한 래퍼 추가) ★ */
-    .num-label-wrapper { 
-        display: flex; 
-        align-items: center; 
-        justify-content: flex-end; 
-        height: 42px; /* 입력창 높이와 맞춰 수직 정렬 */
-        margin-top: 8px; 
+    /* ★ 9. 검색창 크기 10자 내외로 축소 (강제 width 설정) ★ */
+    div[data-testid="stTextInput"]:has(input[placeholder*="검색"]) {
+        max-width: 180px !important;
     }
-    .num-label { color: #FFF; font-weight: bold; font-size: clamp(1.1rem, 1.5vw, 1.6rem); margin: 0; }
+
+    /* ★ 10. 상단 숫자 변환 (라벨 + 입력창 가로 정렬, 겹침 원천 차단) ★ */
+    div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 10px !important;
+        margin-top: 10px !important;
+    }
+    div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) label {
+        min-height: auto !important;
+        margin-bottom: 0 !important;
+        display: flex;
+        align-items: center;
+    }
+    div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) label p {
+        color: #FFF !important;
+        font-weight: bold !important;
+        font-size: clamp(1.1rem, 1.5vw, 1.6rem) !important;
+        white-space: nowrap !important; /* 모바일에서 글자 줄바꿈 완벽 방지 */
+        margin: 0 !important;
+    }
+    input[aria-label="Num.ENG :"] {
+        font-size: clamp(1.1rem, 1.5vw, 1.6rem) !important;
+        min-width: 80px !important; /* 모바일에서 너무 쪼그라들지 않게 최소 너비 보장 */
+    }
     
     .num-result { color: #FFD700; font-weight: bold; font-size: clamp(1.1rem, 1.5vw, 1.6rem); margin-top: 12px; }
     .num-warning { color: #FF9999; font-weight: bold; font-size: clamp(0.9rem, 1.2vw, 1.2rem); margin-top: 16px; }
-    .num-input-container { margin-top: 8px; }
     
     .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -25px; margin-bottom: 2px; }
 
-    /* 9. 모바일 반응형(Responsive) 디자인 최적화 (768px 이하에서 레이아웃 스택 대비) */
+    /* ★ 11. 모바일 반응형(Responsive) 디자인 최적화 ★ */
     @media screen and (max-width: 768px) {
-        /* 타이틀 및 상단 간격 축소 */
         h1 { font-size: 1.8rem !important; }
         
-        /* 모바일에서는 라벨을 좌측 정렬하고 폰트 크기 조정 */
-        .num-label-wrapper { justify-content: flex-start !important; height: auto !important; margin-top: 5px !important; }
         .num-result { margin-top: 5px !important; }
         .num-warning { margin-top: 5px !important; }
-        .num-input-container { margin-top: 0px !important; }
+        div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) { margin-top: 0px !important; }
         
-        /* 리스트 본문 글자 크기 축소 */
         .word-text { font-size: 1.4em !important; }
         .mean-text { font-size: 1.1em !important; }
         
-        /* 모바일에서는 표(가로) 형태가 아닌 카드(세로) 형태로 보여지므로 배경색과 패딩 추가 */
         div[data-testid="stHorizontalBlock"]:has(.row-marker) {
             padding: 15px !important;
             background-color: rgba(255, 255, 255, 0.05) !important;
@@ -202,10 +211,11 @@ st.markdown("""
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         
-        /* 카드형태에서는 점선이 겹치므로 제거 */
         .row-divider { display: none !important; }
         
-        /* 모바일용 분류 알약 버튼 사이즈 조정 */
+        .header-label { font-size: 1.2rem !important; }
+        .sort-header-btn button { font-size: 1.2rem !important; }
+        
         div[data-testid="stRadio"] > div[role="radiogroup"] { gap: 8px 10px !important; }
         div[data-testid="stRadio"] label { padding: 6px 16px !important; }
     }
@@ -339,8 +349,8 @@ kst = timezone(timedelta(hours=9))
 now_kst = datetime.now(kst)
 date_str = now_kst.strftime("%A, %B %d, %Y")
 
-# ★ 상단 레이아웃 (타이틀 + 날짜 + 숫자변환 + 로그인) 비율 재조정
-col_title, col_date, col_num_label, col_num_input, col_num_result, col_auth = st.columns([2.3, 2.2, 0.9, 1.5, 2.1, 1.0])
+# ★ 상단 레이아웃 완벽 최적화 (라벨과 입력창을 하나의 컬럼으로 합쳐 겹침 원천 방지) ★
+col_title, col_date, col_num_combined, col_num_result, col_auth = st.columns([2.3, 2.2, 2.4, 2.1, 1.0])
 
 with col_title:
     st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.6rem, 2.3vw, 2.2rem);'>TOmBOy94's English</h1>", unsafe_allow_html=True)
@@ -382,15 +392,10 @@ with col_date:
         }}
         </script>
     """, height=90)
-
-with col_num_label:
-    # ★ 텍스트가 입력창 중앙에 오도록 래퍼(div)로 감싸 정렬 ★
-    st.markdown("<div class='num-label-wrapper'><span class='num-label'>Num.ENG :</span></div>", unsafe_allow_html=True)
     
-with col_num_input:
-    st.markdown("<div class='num-input-container'>", unsafe_allow_html=True)
-    st.text_input("숫자입력", key="num_input", on_change=format_num_input, label_visibility="collapsed")
-    st.markdown("</div>", unsafe_allow_html=True)
+with col_num_combined:
+    # ★ 레이아웃 겹침 방지: 라벨(Num.ENG :)을 별도 컬럼이 아닌 입력창 이름(label)으로 할당하여 CSS(Flexbox)로 하나로 묶음 ★
+    st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
     num_val = st.session_state.num_input
     
 with col_num_result:
@@ -424,8 +429,9 @@ try:
     
     st.divider()
     
+    # ★ 검색창이 차지하는 비율을 대폭 축소하여 10자 내외 크기로 맞춤 ★
     if st.session_state.authenticated:
-        cb = st.columns([3.8, 1.5, 1.4, 0.3, 1.5])
+        cb = st.columns([1.5, 1.5, 1.4, 2.6, 1.5]) # 검색창(1.5) 크기 감소, 여백(2.6) 확보
         cb[0].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
         if cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
         
@@ -436,7 +442,7 @@ try:
             st.session_state.is_simple = not st.session_state.is_simple
             st.rerun()
     else:
-        cb = st.columns([5.3, 1.4, 3.3])
+        cb = st.columns([1.5, 1.4, 4.1]) # 검색창(1.5) 크기 감소, 여백(4.1) 확보
         cb[0].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
         
         btn_text = "🔄 전체모드" if st.session_state.is_simple else "✨ 심플모드"
@@ -492,7 +498,8 @@ try:
         const doc = window.parent.document;
         if (!doc.formatListenerAdded) {{
             doc.body.addEventListener('input', function(e) {{
-                if (e.target && e.target.getAttribute('aria-label') === '숫자입력') {{
+                // 안내문구 대신 aria-label로 추적 ('Num.ENG :' 로 변경)
+                if (e.target && e.target.getAttribute('aria-label') === 'Num.ENG :') {{
                     let rawVal = e.target.value.replace(/[^0-9]/g, '');
                     if (rawVal) {{
                         e.target.value = Number(rawVal).toLocaleString('en-US');
