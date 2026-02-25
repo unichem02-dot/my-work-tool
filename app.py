@@ -6,6 +6,7 @@ import time
 import io
 import math
 from datetime import datetime, timedelta, timezone
+import urllib.parse  # URL 인코딩을 위해 추가
 
 # --- [페이지 기본 설정] ---
 st.set_page_config(layout="wide", page_title="TOmBOy94's English")
@@ -221,7 +222,6 @@ def edit_dialog(idx, row_data, sheet, full_df):
             sheet.delete_rows(idx + 2); st.rerun()
 
 # --- [메인 실행] ---
-# 세션 상태 초기화 (랜덤 안정성을 위한 변수 포함)
 if "authenticated" not in st.session_state:
     if st.query_params.get("auth") == "true":
         st.session_state.authenticated = True
@@ -232,11 +232,10 @@ if 'sort_order' not in st.session_state:
     st.session_state.sort_order = 'None'
 
 if 'current_cat' not in st.session_state:
-    st.session_state.current_cat = "🔀 랜덤 10" # 첫 시작 시 기본 카테고리 기록
+    st.session_state.current_cat = "🔀 랜덤 10"
 
 col_title, col_auth = st.columns([7, 2])
 with col_title:
-    # ★ 타이틀 간소화 ★
     st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem;'>TOmBOy94's English</h1>", unsafe_allow_html=True)
 with col_auth:
     if not st.session_state.authenticated:
@@ -254,13 +253,11 @@ with col_auth:
 try:
     sheet = get_sheet(); df = load_dataframe(sheet)
     
-    # ★ 상단 카테고리 필터 ('🔀 랜덤 10'을 맨 앞에 추가) ★
     unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
     cat_options = ["🔀 랜덤 10", "전체 분류"] + unique_cats
     selected_radio = st.radio("분류 필터", cat_options, horizontal=True, label_visibility="collapsed")
     sel_cat = selected_radio
     
-    # ★ 새로고침 전용 버튼 (랜덤 10 상태일 때만 노출) ★
     if sel_cat == "🔀 랜덤 10":
         _, btn_col = st.columns([8.5, 1.5])
         with btn_col:
@@ -270,7 +267,6 @@ try:
 
     st.divider()
     
-    # 컨트롤바
     if st.session_state.authenticated:
         cb = st.columns([1.5, 1.2, 0.3, 4.0, 1.5])
         if cb[0].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
@@ -281,40 +277,32 @@ try:
         is_simple = cb[0].toggle("심플모드")
         search = cb[2].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
 
-    # ★ 필터링 및 랜덤 데이터 추출 로직 ★
     d_df = df.copy()
     
     if sel_cat == "🔀 랜덤 10":
-        # 사용자가 다른 카테고리에서 '랜덤 10'으로 막 넘어왔거나, 처음 시작할 때만 새로운 10개를 뽑음
         if st.session_state.current_cat != "🔀 랜덤 10" or 'random_df' not in st.session_state:
             st.session_state.random_df = df.sample(n=min(10, len(df)))
-        # 심플모드 토글이나 검색 시 문장이 안 바뀌게 저장된 랜덤 데이터 사용
         d_df = st.session_state.random_df.copy()
     elif sel_cat != "전체 분류":
         d_df = d_df[d_df['분류'] == sel_cat]
         
-    st.session_state.current_cat = sel_cat # 현재 선택된 카테고리 저장
+    st.session_state.current_cat = sel_cat 
     
-    # '단어-문장' 열에서만 검색
     if search:
         d_df = d_df[d_df['단어-문장'].str.contains(search, case=False, na=False)]
 
-    # 정렬
     if st.session_state.sort_order == 'asc': d_df = d_df.sort_values(by='단어-문장', ascending=True)
     elif st.session_state.sort_order == 'desc': d_df = d_df.sort_values(by='단어-문장', ascending=False)
     else: d_df = d_df.iloc[::-1]
 
-    # CSV 다운로드
     if st.session_state.authenticated:
         cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
 
-    # 페이지네이션 변수 초기화
     total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
     if 'curr_p' not in st.session_state: st.session_state.curr_p = 1
     if st.session_state.curr_p > pages: st.session_state.curr_p = 1
     curr_p = st.session_state.curr_p
     
-    # 한국 시간 기준 날짜 계산
     kst = timezone(timedelta(hours=9))
     now_kst = datetime.now(kst)
     date_str = now_kst.strftime("%A, %B %d, %Y")
@@ -326,9 +314,9 @@ try:
         </p>
     """, unsafe_allow_html=True)
     
-    # 리스트 헤더 출력
-    ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
-    labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
+    # ★ 레이아웃 비율 수정: '듣기' 컬럼(Column) 추가 반영 ★
+    ratio = [1.5, 5.0, 1.0, 4.5, 1.0] if is_simple else [1.2, 3.5, 0.8, 2.5, 2.0, 2.0, 2.0, 1.0]
+    labels = ["분류", "단어-문장", "듣기", "해석", "수정"] if is_simple else ["분류", "단어-문장", "듣기", "해석", "발음", "메모1", "메모2", "수정"]
     
     h_cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
     for i, l in enumerate(labels if st.session_state.authenticated else labels[:-1]):
@@ -346,21 +334,32 @@ try:
     
     st.divider()
 
-    # 리스트 본문 (★ Duplicate Key 에러 해결: pandas의 원래 idx 사용)
+    # 리스트 본문
     for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
         cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
         
-        # 호버 효과를 위한 투명 마커
+        # 1. 분류
         cols[0].markdown(f"<span class='row-marker'></span>{row['분류']}", unsafe_allow_html=True)
         
+        # 2. 단어-문장
         cols[1].markdown(f"<span style='font-size:2.0em;font-weight:bold;display:block;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
-        cols[2].markdown(f"<span style='font-size:1.5em;display:block;'>{row['해석']}</span>", unsafe_allow_html=True)
-        if not is_simple:
-            cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
-            if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}"): edit_dialog(idx, row, sheet, df)
-        elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}"): edit_dialog(idx, row, sheet, df)
         
-        # 점선 간격 극소화 (-25px 적용)
+        # 3. ★ 원어민 발음 듣기 버튼 (TTS) ★
+        if cols[2].button("🔊", key=f"tts_{idx}"):
+            encoded_text = urllib.parse.quote(row['단어-문장'])
+            # Google Translate TTS API를 활용한 숨김 오디오 재생
+            tts_url = f"https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q={encoded_text}"
+            st.markdown(f'<audio autoplay="true" src="{tts_url}" style="display:none;"></audio>', unsafe_allow_html=True)
+        
+        # 4. 해석
+        cols[3].markdown(f"<span style='font-size:1.5em;display:block;'>{row['해석']}</span>", unsafe_allow_html=True)
+        
+        if not is_simple:
+            # 5, 6, 7. 기타 정보들
+            cols[4].write(row['발음']); cols[5].write(row['메모1']); cols[6].write(row['메모2'])
+            if st.session_state.authenticated and cols[7].button("✏️", key=f"e_{idx}"): edit_dialog(idx, row, sheet, df)
+        elif st.session_state.authenticated and cols[4].button("✏️", key=f"es_{idx}"): edit_dialog(idx, row, sheet, df)
+        
         st.markdown("<div style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-25px;margin-bottom:2px;'></div>", unsafe_allow_html=True)
 
     # 하단 페이지네이션
