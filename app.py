@@ -48,25 +48,25 @@ st.markdown("""
         line-height: 1.5 !important;
     }
 
-    /* 토글 스위치 크기 자체를 1.6배로 시원하게 확대 */
-    div[data-testid="stToggle"] div[data-baseweb="toggle"] {
-        transform: scale(1.6) !important;
+    /* ★ 토글 스위치 크기 자체를 1.8배로 시원하게 강제 확대 ★ */
+    div[data-testid="stToggle"] label > div:first-child {
+        transform: scale(1.8) !important;
         transform-origin: left center !important;
-        margin-right: 15px !important; /* 스위치가 커진 만큼 텍스트와의 간격 확보 */
+        margin-right: 25px !important; /* 스위치가 커진 만큼 텍스트와의 간격 확보 */
     }
 
     /* 토글 스위치 꺼져있을 때(Off) 트랙 시인성 대폭 개선 (밝은 회색) */
-    div[data-testid="stToggle"] div[data-baseweb="toggle"] > div {
+    div[data-testid="stToggle"] label > div:first-child > div {
         background-color: #95a5a6 !important;
     }
 
     /* 토글 스위치 켜져있을 때(On) 트랙 노란색 */
-    div[data-testid="stToggle"] div[data-baseweb="toggle"]:has(input:checked) > div {
+    div[data-testid="stToggle"] label > div:first-child:has(input:checked) > div {
         background-color: #FFD700 !important;
     }
     
     /* 스위치 안의 동그라미(Thumb) 색상 고정 */
-    div[data-testid="stToggle"] div[data-baseweb="toggle"] > div > div {
+    div[data-testid="stToggle"] label > div:first-child > div > div {
         background-color: #FFFFFF !important;
     }
 
@@ -127,8 +127,8 @@ st.markdown("""
         border: 1px solid #FFFFFF !important;
     }
 
-    /* 특정 입력창(숫자입력) 폰트 크기 확대 (1.6rem) */
-    input[placeholder*="1,004"] {
+    /* ★ 특정 입력창(숫자입력) 폰트 크기 확대 (1.6rem) - 내부 라벨로 추적 ★ */
+    input[aria-label="숫자입력"] {
         font-size: 1.6rem !important;
     }
 
@@ -182,7 +182,7 @@ st.markdown("""
         .num-result { font-size: 1.3rem !important; margin-top: 5px !important; }
         .num-warning { margin-top: 5px !important; }
         .num-input-container { margin-top: 0px !important; }
-        input[placeholder*="1,004"] { font-size: 1.3rem !important; }
+        input[aria-label="숫자입력"] { font-size: 1.3rem !important; }
         
         /* 리스트 본문 글자 크기 축소 */
         .word-text { font-size: 1.4em !important; }
@@ -376,7 +376,8 @@ with col_num_label:
     
 with col_num_input:
     st.markdown("<div class='num-input-container'>", unsafe_allow_html=True)
-    st.text_input("숫자입력", key="num_input", on_change=format_num_input, placeholder="숫자 입력 (예: 1,004)", label_visibility="collapsed")
+    # ★ placeholder 내용을 지워 깔끔하게 만듦 ★
+    st.text_input("숫자입력", key="num_input", on_change=format_num_input, label_visibility="collapsed")
     st.markdown("</div>", unsafe_allow_html=True)
     num_val = st.session_state.num_input
     
@@ -452,7 +453,7 @@ try:
 
     search_msg = f"<span style='color: #FF9999; font-weight: bold; font-size: 1rem; margin-right: 15px;'>🔍 '{search}' 검색됨</span>" if search else ""
     
-    # ★ 총 개수와 검색 상태 알림 & JS 실시간 콤마 적용 로직 유지 ★
+    # ★ 총 개수와 검색 상태 알림 & JS 실시간 콤마 적용 로직 유지 (aria-label 기반 추적으로 변경) ★
     components.html(f"""
         <style>
             body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
@@ -467,7 +468,8 @@ try:
         const doc = window.parent.document;
         if (!doc.formatListenerAdded) {{
             doc.body.addEventListener('input', function(e) {{
-                if (e.target && e.target.placeholder === "숫자 입력 (예: 1,004)") {{
+                // 안내문구(placeholder) 삭제로 인해 aria-label로 추적 방식 변경
+                if (e.target && e.target.getAttribute('aria-label') === '숫자입력') {{
                     let rawVal = e.target.value.replace(/[^0-9]/g, '');
                     if (rawVal) {{
                         e.target.value = Number(rawVal).toLocaleString('en-US');
