@@ -50,10 +50,10 @@ st.markdown("""
     /* 3. ★ 컨텐츠 행(Row) 호버 효과 및 전체 셀 영역(Padding) 대폭 확대 ★ */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 18px 20px !important; /* 상하좌우 여백을 넓혀서 텍스트뿐만 아니라 행 전체가 칠해지도록 변경 */
+        padding: 18px 20px !important;
         border-radius: 12px;
         margin-bottom: 0px;
-        align-items: center !important; /* 모든 내용을 수직 정중앙으로 예쁘게 정렬 */
+        align-items: center !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.row-marker):hover {
         background-color: #1a2f2f !important;
@@ -539,6 +539,7 @@ try:
 
     search_msg = f"<span style='color: #FF9999; font-weight: bold; font-size: 1rem; margin-right: 15px;'>🔍 '{search}' 검색됨</span>" if search else ""
     
+    # ★ TOP 버튼 로직이 포함된 컴포넌트 추가 ★
     components.html(f"""
         <style>
             body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
@@ -551,6 +552,8 @@ try:
         </div>
         <script>
         const doc = window.parent.document;
+        
+        // 1. 숫자 포맷터 이벤트 연결
         if (!doc.formatListenerAdded) {{
             doc.body.addEventListener('input', function(e) {{
                 if (e.target && e.target.getAttribute('aria-label') === 'Num.ENG :') {{
@@ -563,6 +566,88 @@ try:
                 }}
             }});
             doc.formatListenerAdded = true;
+        }}
+
+        // 2. ★ 반응형 플로팅 TOP 버튼 추가 로직 ★
+        if (!doc.getElementById('top-btn-style')) {{
+            // 버튼 스타일 주입 (호버 애니메이션, 모바일 대응 등)
+            const style = doc.createElement('style');
+            style.id = 'top-btn-style';
+            style.innerHTML = `
+                #custom-top-btn {{
+                    position: fixed;
+                    bottom: 40px;
+                    right: 30px;
+                    background-color: #FFD700;
+                    color: #224343;
+                    border: none;
+                    border-radius: 50px;
+                    padding: 12px 24px;
+                    font-weight: 900;
+                    font-size: 1.2rem;
+                    cursor: pointer;
+                    z-index: 99999;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+                    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+                    opacity: 0;
+                    pointer-events: none;
+                    transform: translateY(20px);
+                }}
+                #custom-top-btn.visible {{
+                    opacity: 1;
+                    pointer-events: auto;
+                    transform: translateY(0);
+                }}
+                #custom-top-btn:hover {{
+                    background-color: #FFF;
+                    transform: translateY(-5px) scale(1.05);
+                    box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+                }}
+                @media screen and (max-width: 768px) {{
+                    #custom-top-btn {{
+                        bottom: 20px;
+                        right: 20px;
+                        padding: 10px 18px;
+                        font-size: 1rem;
+                    }}
+                }}
+            `;
+            doc.head.appendChild(style);
+            
+            // 버튼 생성 및 부착
+            const btn = doc.createElement('button');
+            btn.id = 'custom-top-btn';
+            btn.innerHTML = '⬆ TOP';
+            btn.onclick = () => {{
+                // Streamlit의 메인 컨테이너 또는 전체 창의 스크롤을 최상단으로 올림
+                const main = doc.querySelector('.main') || doc.querySelector('[data-testid="stAppViewContainer"]');
+                if (main && main.scrollHeight > main.clientHeight) {{
+                    main.scrollTo({{top: 0, behavior: 'smooth'}});
+                }} else {{
+                    doc.defaultView.scrollTo({{top: 0, behavior: 'smooth'}});
+                }}
+            }};
+            doc.body.appendChild(btn);
+
+            // 스크롤 위치 감지 함수
+            const checkScroll = () => {{
+                let st = 0;
+                const main = doc.querySelector('.main') || doc.querySelector('[data-testid="stAppViewContainer"]');
+                if (main) st = main.scrollTop;
+                if (st === 0) st = doc.defaultView.scrollY || doc.documentElement.scrollTop;
+                
+                // 스크롤이 300px 이상 내려가면 버튼 보이기
+                if (st > 300) {{
+                    btn.classList.add('visible');
+                }} else {{
+                    btn.classList.remove('visible');
+                }}
+            }};
+
+            // 스크롤 이벤트 리스너 등록
+            const main = doc.querySelector('.main') || doc.querySelector('[data-testid="stAppViewContainer"]');
+            if (main) main.addEventListener('scroll', checkScroll);
+            doc.defaultView.addEventListener('scroll', checkScroll);
         }}
         </script>
     """, height=40)
@@ -595,7 +680,6 @@ try:
         
         if not is_simple:
             cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
-            # ★ type="tertiary"를 추가하여 둥근 테두리를 완벽 제거 ★
             if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(idx, row, sheet, df)
         elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(idx, row, sheet, df)
         
