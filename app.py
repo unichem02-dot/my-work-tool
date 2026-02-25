@@ -342,22 +342,24 @@ now_kst = datetime.now(kst)
 date_str = now_kst.strftime("%A, %B %d, %Y")
 
 # ★ 상단 레이아웃 (타이틀 + 날짜 + 숫자변환 + 로그인) ★
-col_title, col_date, col_num_label, col_num_input, col_num_result, col_auth = st.columns([2.3, 1.7, 1.0, 1.5, 2.5, 1.0])
+# 날짜 영역이 잘리지 않도록 컬럼 가로 비율 조정 (col_date 영역 확대: 1.7 -> 2.5)
+col_title, col_date, col_num_label, col_num_input, col_num_result, col_auth = st.columns([2.2, 2.5, 0.9, 1.5, 2.0, 0.9])
 
 with col_title:
     st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem;'>TOmBOy94's English</h1>", unsafe_allow_html=True)
 
 with col_date:
+    # ★ 줄바꿈 방지(white-space: nowrap) 추가 및 높이(height) 확대 ★
     components.html(f"""
         <style>
             body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
             button:hover {{ background-color: rgba(255,255,255,0.2) !important; }}
         </style>
-        <div style="display: flex; align-items: center; gap: 10px; padding-top: 15px; font-family: sans-serif;">
+        <div style="display: flex; align-items: center; gap: 8px; padding-top: 15px; font-family: sans-serif; white-space: nowrap;">
             <span style="color: #FFFFFF; font-weight: bold; font-size: 1.3rem;">
                 📅 {date_str}
             </span>
-            <button onclick="copyDate()" style="background-color: transparent; border: 1px solid rgba(255,255,255,0.5); color: #FFF; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight:bold; transition: 0.3s; margin-top: 2px;">
+            <button onclick="copyDate()" style="background-color: transparent; border: 1px solid rgba(255,255,255,0.5); color: #FFF; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight:bold; transition: 0.3s; margin-top: 2px; white-space: nowrap;">
                 📋 복사
             </button>
         </div>
@@ -375,7 +377,7 @@ with col_date:
             setTimeout(function(){{ btn.innerHTML = "📋 복사"; }}, 2000);
         }}
         </script>
-    """, height=65)
+    """, height=80)
 
 with col_num_label:
     st.markdown("<p class='num-label'>Num.ENG :</p>", unsafe_allow_html=True)
