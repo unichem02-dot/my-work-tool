@@ -25,7 +25,7 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 2. ★ 글자색 화이트 강제화 ★ */
+    /* 2. 글자색 화이트 강제화 */
     h1, h2, h3, h4, h5, h6, p, span, label, summary, b, strong {
         color: #FFFFFF !important;
     }
@@ -47,18 +47,20 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* 3. ★ 컨텐츠 행(Row) 호버 효과 및 간격 최소화 ★ */
+    /* 3. ★ 컨텐츠 행(Row) 호버 효과 및 전체 영역 하이라이트 ★ */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 2px 12px !important;
+        padding: 15px 20px !important; /* 여백을 충분히 주어 행 전체 느낌 강조 */
         border-radius: 12px;
-        margin-bottom: 0px;
+        margin-bottom: 5px;
+        align-items: center !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.row-marker):hover {
-        background-color: #1a2f2f !important;
+        background-color: rgba(26, 47, 47, 0.8) !important;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
     }
 
-    /* 4. 상단 분류 리스트(Radio) 깔끔한 알약(태그) 형태로 디자인 개선 */
+    /* 4. 상단 분류 리스트(Radio) 알약 형태 */
     div[data-testid="stRadio"] > div[role="radiogroup"] {
         flex-direction: row !important;
         flex-wrap: wrap !important;
@@ -88,10 +90,9 @@ st.markdown("""
    
     div[data-testid="stRadio"] label p {
         color: #FFFFFF !important;
-        font-size: clamp(1.1rem, 1.4vw, 1.4rem) !important;
+        font-size: clamp(1.0rem, 1.3vw, 1.3rem) !important;
         font-weight: 800 !important;
-        transition: color 0.2s ease;
-        margin: 0 !important;
+        white-space: nowrap !important;
     }
    
     div[data-testid="stRadio"] label:has(input:checked),
@@ -106,7 +107,7 @@ st.markdown("""
         text-decoration: none !important;
     }
 
-    /* 5. 일반 입력창 스타일: 배경 화이트 / 글자 블랙 */
+    /* 5. 일반 입력창 스타일 */
     .stTextInput input {
         background-color: #FFFFFF !important;
         color: #000000 !important;
@@ -117,22 +118,18 @@ st.markdown("""
         border: 1px solid #FFFFFF !important;
     }
 
-    /* 특정 입력창(숫자입력) 폰트 크기 반응형 확대 */
-    input[aria-label="숫자입력"] {
-        font-size: clamp(1.1rem, 1.5vw, 1.6rem) !important;
-    }
-
     /* 6. 패스워드 눈알 아이콘 숨기기 */
     div[data-testid="stTextInput"] button {
         display: none !important;
     }
 
-    /* 7. 버튼 스타일: 알약 모양 및 글자 두껍게(Bold) 적용 */
+    /* 7. ★ 버튼 스타일: 글자 두껍게(Bold) 및 한 줄 유지(nowrap) ★ */
     button, div.stDownloadButton > button {
         border-radius: 50px !important;
         padding: 0.5rem 1.5rem !important;
-        font-weight: 700 !important;
+        font-weight: 900 !important;
         transition: all 0.3s ease !important;
+        white-space: nowrap !important;
     }
     button[kind="primary"] {
         background-color: #FFFFFF !important;
@@ -140,7 +137,7 @@ st.markdown("""
     }
     button[kind="primary"] p {
         color: #224343 !important;
-        font-size: clamp(1rem, 1.2vw, 1.15rem) !important;
+        font-size: clamp(0.95rem, 1.2vw, 1.15rem) !important;
         font-weight: 900 !important;
     }
     button[kind="secondary"], div.stDownloadButton > button {
@@ -149,114 +146,107 @@ st.markdown("""
         color: #FFFFFF !important;
     }
     button[kind="secondary"] p {
-        font-size: clamp(1rem, 1.2vw, 1.15rem) !important;
+        font-size: clamp(0.95rem, 1.2vw, 1.15rem) !important;
         font-weight: 900 !important;
     }
 
-    /* 8. 헤더 및 일반 텍스트용 클래스 */
-    .header-label { font-size: clamp(1.2rem, 1.5vw, 1.6rem) !important; font-weight: 800 !important; color: #FFFFFF !important; display: block; margin-bottom: 0px !important; }
-    .sort-header-btn button { background-color: transparent !important; border: none !important; padding: 0 !important; color: #FFFFFF !important; font-weight: 800 !important; font-size: clamp(1.2rem, 1.5vw, 1.6rem) !important; text-decoration: underline !important; }
+    /* ★ 8. 수정 버튼: 테두리 없는 투명 연필 아이콘 ★ */
+    button[kind="tertiary"], 
+    div[data-testid="stHorizontalBlock"] button:has(p:contains("✏️")) {
+        background-color: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        min-width: 40px !important;
+        box-shadow: none !important;
+    }
+    button[kind="tertiary"] p {
+        font-size: 1.8rem !important;
+        margin: 0 !important;
+        transition: transform 0.2s ease !important;
+    }
+    button[kind="tertiary"]:hover p {
+        transform: scale(1.3) !important;
+    }
+
+    /* 9. 헤더 및 텍스트 짤림 방지 */
+    .header-label, .sort-header-btn button { 
+        font-size: clamp(1.1rem, 1.4vw, 1.5rem) !important; 
+        font-weight: 800 !important; 
+        color: #FFFFFF !important; 
+        white-space: nowrap !important;
+    }
    
     .word-text { font-size: 2.0em; font-weight: bold; display: block; color: #FFD700 !important; }
     .mean-text { font-size: 1.5em; display: block; }
    
-    /* 9. 검색창 크기 축소 */
+    /* 10. 상단 레이아웃 보정 */
     div[data-testid="stTextInput"]:has(input[placeholder*="검색"]) {
         max-width: 180px !important;
     }
 
-    /* 10. 상단 숫자 변환 레이아웃 */
+    /* Num.ENG 레이아웃 */
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
         display: flex !important;
         flex-direction: row !important;
-        flex-wrap: wrap !important;
         align-items: center !important;
         gap: 10px !important;
         margin-top: 10px !important;
     }
-    div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) label {
-        min-height: auto !important;
-        margin-bottom: 0 !important;
-        display: flex;
-        align-items: center;
-    }
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) label p {
-        color: #FFF !important;
-        font-weight: bold !important;
+        font-weight: 900 !important;
         font-size: clamp(1.1rem, 1.5vw, 1.6rem) !important;
         white-space: nowrap !important;
-        margin: 0 !important;
     }
     input[aria-label="Num.ENG :"] {
         font-size: clamp(1.1rem, 1.5vw, 1.6rem) !important;
-        min-width: 80px !important;
+        min-width: 100px !important;
     }
    
     .num-result { color: #FFD700; font-weight: bold; font-size: clamp(1.1rem, 1.5vw, 1.6rem); margin-top: 12px; }
-    .num-warning { color: #FF9999; font-weight: bold; font-size: clamp(0.9rem, 1.2vw, 1.2rem); margin-top: 16px; }
    
-    .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -25px; margin-bottom: 2px; }
+    .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -10px; margin-bottom: 5px; }
 
-    /* ★ 11. 전체 반응형 완벽 대응 (글자 세로 겹침 및 깨짐 원천 방지) ★ */
-    button p,
-    div[data-testid="stExpander"] summary p,
-    .header-label,
-    .sort-header-btn button {
-        white-space: nowrap !important;
-        word-break: keep-all !important;
-    }
-
-    button, div[data-testid="stExpander"] summary {
-        min-width: max-content !important;
-    }
-
-    /* 화면 폭이 부족할 때 컬럼들이 찌그러지지 않고 자연스럽게 다음 줄로 넘어가도록 처리 */
-    div[data-testid="stHorizontalBlock"] {
-        flex-wrap: wrap !important;
-    }
-
-    /* ★ 12. 모바일 특화 레이아웃 (768px 이하) ★ */
+    /* ★ 11. 모바일 반응형 완벽 보정 (768px 이하) ★ */
     @media screen and (max-width: 768px) {
-        h1 { font-size: 1.8rem !important; }
-       
-        .num-result { margin-top: 5px !important; }
-        .num-warning { margin-top: 5px !important; }
-       
-        /* 모바일에서는 Num.ENG 라벨과 입력창이 절대 겹치지 않게 세로로 나열 */
+        h1 { font-size: 1.6rem !important; white-space: normal !important; }
+        
+        /* 상단 컨트롤러 버튼들 가로 정렬 및 줄바꿈 허용 */
+        div[data-testid="stHorizontalBlock"] {
+            flex-wrap: wrap !important;
+            gap: 10px !important;
+        }
+
+        /* Num.ENG 모바일 겹침 해결: 세로 정렬 */
         div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
             flex-direction: column !important;
             align-items: flex-start !important;
             gap: 5px !important;
-            margin-top: 0px !important;
-        }
-        div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) label {
-            margin-bottom: 5px !important;
-        }
-        input[aria-label="Num.ENG :"] {
-            width: 100% !important;
         }
        
-        .word-text { font-size: 1.4em !important; }
-        .mean-text { font-size: 1.1em !important; }
+        .word-text { font-size: 1.5em !important; }
+        .mean-text { font-size: 1.2em !important; }
        
-        /* 모바일 카드형 레이아웃 세로 정렬 확실히 */
+        /* 모바일 카드형 레이아웃 */
         div[data-testid="stHorizontalBlock"]:has(.row-marker) {
             flex-direction: column !important;
-            padding: 15px !important;
+            align-items: flex-start !important;
+            padding: 20px !important;
             background-color: rgba(255, 255, 255, 0.05) !important;
             border-radius: 15px;
             margin-bottom: 15px !important;
-            gap: 0.3rem !important;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        /* 모바일에서 수정 버튼 위치 조정 */
+        div[data-testid="stHorizontalBlock"]:has(.row-marker) div:last-child {
+            align-self: flex-end !important;
+            margin-top: 10px;
         }
        
         .row-divider { display: none !important; }
-       
-        .header-label { font-size: 1.2rem !important; }
-        .sort-header-btn button { font-size: 1.2rem !important; }
-       
-        div[data-testid="stRadio"] > div[role="radiogroup"] { gap: 8px 10px !important; }
-        div[data-testid="stRadio"] label { padding: 6px 16px !important; }
+        
+        /* 분류 라디오 버튼 모바일 최적화 */
+        div[data-testid="stRadio"] label { padding: 6px 15px !important; }
+        div[data-testid="stRadio"] label p { font-size: 0.95rem !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -389,10 +379,10 @@ now_kst = datetime.now(kst)
 date_str = now_kst.strftime("%A, %B %d, %Y")
 
 # 상단 레이아웃
-col_title, col_date, col_num_combined, col_num_result, col_auth = st.columns([2.3, 2.2, 2.4, 2.1, 1.0])
+col_title, col_date, col_num_combined, col_num_result, col_auth = st.columns([2.2, 2.5, 2.4, 2.0, 0.9])
 
 with col_title:
-    st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.6rem, 2.3vw, 2.2rem);'>TOmBOy94's English</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.4rem, 2.3vw, 2.2rem);'>TOmBOy94's English</h1>", unsafe_allow_html=True)
 
 with col_date:
     components.html(f"""
@@ -403,13 +393,13 @@ with col_date:
                 padding-top: 18px; font-family: sans-serif;
             }}
             .date-text {{
-                color: #FFFFFF; font-weight: bold; font-size: clamp(0.95rem, 1.4vw, 1.3rem);
+                color: #FFFFFF; font-weight: bold; font-size: clamp(0.9rem, 1.4vw, 1.3rem);
                 white-space: nowrap;
             }}
             .copy-btn {{
                 background-color: transparent; border: 1px solid rgba(255,255,255,0.5);
                 color: #FFF; padding: 4px 8px; border-radius: 6px; cursor: pointer;
-                font-size: clamp(0.75rem, 1vw, 0.9rem); font-weight:bold; transition: 0.3s;
+                font-size: clamp(0.7rem, 1vw, 0.9rem); font-weight:bold; transition: 0.3s;
                 white-space: nowrap;
             }}
             .copy-btn:hover {{ background-color: rgba(255,255,255,0.2) !important; }}
@@ -445,7 +435,7 @@ with col_num_result:
             eng_text = num_to_eng(int(clean_num)).capitalize()
             st.markdown(f"<p class='num-result'>📝 {eng_text}</p>", unsafe_allow_html=True)
         else:
-            st.markdown("<p class='num-warning'>⚠️ 숫자만 입력해주세요.</p>", unsafe_allow_html=True)
+            st.markdown("<p class='num-warning' style='color:#FF9999;font-weight:bold;'>⚠️ 숫자입력</p>", unsafe_allow_html=True)
 
 with col_auth:
     if not st.session_state.authenticated:
@@ -492,9 +482,7 @@ try:
             st.rerun()
 
     is_simple = st.session_state.is_simple
-
     search = st.session_state.active_search
-
     d_df = df.copy()
    
     if search:
@@ -506,7 +494,6 @@ try:
             d_df = st.session_state.random_df.copy()
         elif sel_cat != "전체 분류":
             d_df = d_df[d_df['분류'] == sel_cat]
-           
         st.session_state.current_cat = sel_cat
 
     if st.session_state.sort_order == 'asc': d_df = d_df.sort_values(by='단어-문장', ascending=True)
@@ -523,6 +510,7 @@ try:
 
     search_msg = f"<span style='color: #FF9999; font-weight: bold; font-size: 1rem; margin-right: 15px;'>🔍 '{search}' 검색됨</span>" if search else ""
    
+    # TOP 버튼 및 숫자 포맷터 JS
     components.html(f"""
         <style>
             body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
@@ -548,9 +536,41 @@ try:
             }});
             doc.formatListenerAdded = true;
         }}
+
+        if (!doc.getElementById('top-btn-style')) {{
+            const style = doc.createElement('style');
+            style.id = 'top-btn-style';
+            style.innerHTML = `
+                #custom-top-btn {{
+                    position: fixed; bottom: 40px; right: 30px; background-color: #FFD700; color: #224343;
+                    border: none; border-radius: 50px; padding: 12px 24px; font-weight: 900;
+                    font-size: 1.2rem; cursor: pointer; z-index: 99999; opacity: 0; transition: all 0.3s;
+                    pointer-events: none; transform: translateY(20px); box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+                }}
+                #custom-top-btn.visible {{ opacity: 1; pointer-events: auto; transform: translateY(0); }}
+                #custom-top-btn:hover {{ background-color: #FFF; transform: translateY(-5px); }}
+                @media screen and (max-width: 768px) {{ #custom-top-btn {{ bottom: 20px; right: 20px; padding: 10px 18px; font-size: 1rem; }} }}
+            `;
+            doc.head.appendChild(style);
+            const btn = doc.createElement('button');
+            btn.id = 'custom-top-btn'; btn.innerHTML = '⬆ TOP';
+            btn.onclick = () => {{
+                const main = doc.querySelector('.main') || doc.querySelector('[data-testid="stAppViewContainer"]');
+                if (main) main.scrollTo({{top: 0, behavior: 'smooth'}});
+                else doc.defaultView.scrollTo({{top: 0, behavior: 'smooth'}});
+            }};
+            doc.body.appendChild(btn);
+            const checkScroll = () => {{
+                let st = doc.querySelector('.main')?.scrollTop || doc.defaultView.scrollY || doc.documentElement.scrollTop;
+                if (st > 300) btn.classList.add('visible'); else btn.classList.remove('visible');
+            }};
+            doc.defaultView.addEventListener('scroll', checkScroll);
+            doc.querySelector('.main')?.addEventListener('scroll', checkScroll);
+        }}
         </script>
     """, height=40)
    
+    # 제목 행
     ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
     labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
    
@@ -558,18 +578,17 @@ try:
     for i, l in enumerate(labels if st.session_state.authenticated else labels[:-1]):
         if l == "단어-문장":
             sort_icon = " ↑" if st.session_state.sort_order == 'asc' else (" ↓" if st.session_state.sort_order == 'desc' else "")
-            st.markdown(f"<div class='sort-header-btn'>", unsafe_allow_html=True)
-            if h_cols[i].button(f"**{l}{sort_icon}**", key="sort_btn"):
+            if h_cols[i].button(f"{l}{sort_icon}", key="sort_btn"):
                 if st.session_state.sort_order == 'None': st.session_state.sort_order = 'asc'
                 elif st.session_state.sort_order == 'asc': st.session_state.sort_order = 'desc'
                 else: st.session_state.sort_order = 'None'
                 st.rerun()
-            st.markdown(f"</div>", unsafe_allow_html=True)
         else:
             h_cols[i].markdown(f"<span class='header-label'>{l}</span>", unsafe_allow_html=True)
    
     st.markdown("<div style='border-bottom: 2px solid rgba(255,255,255,0.4); margin-top: -20px; margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
+    # 본문 리스트
     for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
         cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
        
@@ -579,11 +598,12 @@ try:
        
         if not is_simple:
             cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
-            if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}"): edit_dialog(idx, row, sheet, df)
-        elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}"): edit_dialog(idx, row, sheet, df)
+            if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(idx, row, sheet, df)
+        elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(idx, row, sheet, df)
        
         st.markdown("<div class='row-divider'></div>", unsafe_allow_html=True)
 
+    # 페이지네이션
     if pages > 1:
         st.write(""); p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
         with p_cols[1]:
@@ -598,7 +618,7 @@ try:
 except Exception as e:
     st.error(f"오류 발생: {e}")
 
-# --- [푸터(Footer) 추가] ---
+# --- [푸터(Footer)] ---
 current_year = datetime.now(timezone(timedelta(hours=9))).year
 st.markdown(f"""
     <div style='text-align: center; margin-top: 50px; margin-bottom: 20px; padding-top: 20px; border-top: 1px dotted rgba(255, 255, 255, 0.2);'>
