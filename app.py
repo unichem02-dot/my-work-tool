@@ -265,7 +265,10 @@ try:
     # 필터링
     d_df = df.copy()
     if sel_cat != "전체 분류": d_df = d_df[d_df['분류'] == sel_cat]
-    if search: d_df = d_df[d_df.apply(lambda r: r.astype(str).str.contains(search, case=False).any(), axis=1)]
+    
+    # ★ 수정: '단어-문장' 열에서만 검색하도록 변경 ★
+    if search: 
+        d_df = d_df[d_df['단어-문장'].str.contains(search, case=False, na=False)]
 
     # 정렬
     if st.session_state.sort_order == 'asc': d_df = d_df.sort_values(by='단어-문장', ascending=True)
