@@ -244,7 +244,7 @@ if 'current_cat' not in st.session_state:
 if 'num_input' not in st.session_state:
     st.session_state.num_input = ""
 
-# ★ 입력창 자동 콤마(,) 추가 콜백 함수 ★
+# ★ 입력창 자동 콤마(,) 추가 콜백 함수 (Python 백업 처리용) ★
 def format_num_input():
     raw_val = str(st.session_state.num_input)
     # 숫자 이외의 문자(콤마 등)를 모두 제거
@@ -359,7 +359,7 @@ try:
     info_col, label_col, input_col, result_col = st.columns([4.0, 1.4, 2.2, 4.4])
     
     with info_col:
-        # ★ HTML/JS를 이용한 날짜 정보 & 복사 버튼 인라인 삽입 ★
+        # ★ HTML/JS를 이용한 날짜 정보 & 복사 버튼 & 실시간 콤마 로직 ★
         components.html(f"""
             <style>
                 body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
@@ -377,6 +377,7 @@ try:
                 </button>
             </div>
             <script>
+            // 1. 날짜 복사 기능
             function copyDate() {{
                 var temp = document.createElement("textarea");
                 temp.value = "{date_str}";
@@ -388,6 +389,22 @@ try:
                 var btn = document.querySelector("button");
                 btn.innerHTML = "✅ 복사됨";
                 setTimeout(function(){{ btn.innerHTML = "📋 복사"; }}, 2000);
+            }}
+
+            // 2. 실시간 콤마(,) 추가 로직 (타이핑 시 즉각 반영)
+            const doc = window.parent.document;
+            if (!doc.formatListenerAdded) {{
+                doc.body.addEventListener('input', function(e) {{
+                    if (e.target && e.target.placeholder === "숫자 입력 (예: 1,004)") {{
+                        let rawVal = e.target.value.replace(/[^0-9]/g, ''); // 숫자만 추출
+                        if (rawVal) {{
+                            e.target.value = Number(rawVal).toLocaleString('en-US'); // 콤마 포맷팅 적용
+                        }} else {{
+                            e.target.value = '';
+                        }}
+                    }}
+                }});
+                doc.formatListenerAdded = true;
             }}
             </script>
         """, height=50)
