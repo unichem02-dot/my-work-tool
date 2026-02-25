@@ -102,7 +102,12 @@ st.markdown("""
         border: 1px solid #FFFFFF !important;
     }
 
-    /* 6. 버튼 스타일: 알약 모양 */
+    /* ★ 6. 패스워드 눈알 아이콘 숨기기 (모바일 입력 최적화) ★ */
+    div[data-testid="stTextInput"] button {
+        display: none !important;
+    }
+
+    /* 7. 버튼 스타일: 알약 모양 */
     button, div.stDownloadButton > button {
         border-radius: 50px !important;
         padding: 0.5rem 1.5rem !important;
@@ -122,7 +127,7 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* ★ 7. 헤더 라벨 전용 스타일 ★ */
+    /* ★ 8. 헤더 라벨 전용 스타일 ★ */
     .header-label {
         font-size: 1.6rem !important;
         font-weight: 800 !important;
@@ -266,7 +271,7 @@ try:
     d_df = df.copy()
     if sel_cat != "전체 분류": d_df = d_df[d_df['분류'] == sel_cat]
     
-    # ★ 수정: '단어-문장' 열에서만 검색하도록 변경 ★
+    # '단어-문장' 열에서만 검색하도록 변경
     if search: 
         d_df = d_df[d_df['단어-문장'].str.contains(search, case=False, na=False)]
 
@@ -285,7 +290,7 @@ try:
     if st.session_state.curr_p > pages: st.session_state.curr_p = 1
     curr_p = st.session_state.curr_p
     
-    # ★ 한국 시간 기준 날짜 계산 ★
+    # 한국 시간 기준 날짜 계산
     kst = timezone(timedelta(hours=9))
     now_kst = datetime.now(kst)
     date_str = now_kst.strftime("%A, %B %d, %Y")
@@ -321,7 +326,7 @@ try:
     for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
         cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
         
-        # ★ 호버 효과를 위한 투명 마커 ★
+        # 호버 효과를 위한 투명 마커
         cols[0].markdown(f"<span class='row-marker'></span>{row['분류']}", unsafe_allow_html=True)
         
         cols[1].markdown(f"<span style='font-size:2.0em;font-weight:bold;display:block;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
@@ -331,7 +336,7 @@ try:
             if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}"): edit_dialog(idx, row, sheet, df)
         elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}"): edit_dialog(idx, row, sheet, df)
         
-        # ★ 점선 간격 극소화 (-25px 적용) ★
+        # 점선 간격 극소화 (-25px 적용)
         st.markdown("<div style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-25px;margin-bottom:2px;'></div>", unsafe_allow_html=True)
 
     # 하단 페이지네이션
