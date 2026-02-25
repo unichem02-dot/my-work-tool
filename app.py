@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components  # 복사 버튼(HTML/JS) 구현을 위해 추가
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
@@ -92,7 +93,7 @@ st.markdown("""
         text-decoration: underline;
     }
 
-    /* 5. 입력창 스타일: 배경 화이트 / 글자 블랙 */
+    /* 5. 일반 입력창 스타일: 배경 화이트 / 글자 블랙 */
     .stTextInput input {
         background-color: #FFFFFF !important;
         color: #000000 !important;
@@ -101,6 +102,11 @@ st.markdown("""
         padding-left: 15px !important;
         font-weight: 700 !important;
         border: 1px solid #FFFFFF !important;
+    }
+
+    /* ★ 특정 입력창(숫자입력) 폰트 크기 확대 (1.6rem) ★ */
+    input[placeholder*="1,004"] {
+        font-size: 1.6rem !important;
     }
 
     /* ★ 6. 패스워드 눈알 아이콘 숨기기 (모바일 입력 최적화) ★ */
@@ -349,34 +355,60 @@ try:
     now_kst = datetime.now(kst)
     date_str = now_kst.strftime("%A, %B %d, %Y")
     
-    # ★ 날짜 표시줄 4분할 (정보 / 라벨 / 입력창 / 결과) ★
-    info_col, label_col, input_col, result_col = st.columns([3.3, 0.9, 1.8, 4.0])
+    # ★ 레이아웃 조정 및 폰트 1.6 확대 적용 ★
+    info_col, label_col, input_col, result_col = st.columns([4.0, 1.4, 2.2, 4.4])
     
     with info_col:
-        st.markdown(f"""
-            <p style='color:#FFF; font-weight:bold; margin-top:10px;'>
-                총 {total}개 (페이지: {curr_p}/{pages}) &nbsp;&nbsp;&nbsp;&nbsp;
-                <span style='color: #FFD700;'>📅 {date_str}</span>
-            </p>
-        """, unsafe_allow_html=True)
+        # ★ HTML/JS를 이용한 날짜 정보 & 복사 버튼 인라인 삽입 ★
+        components.html(f"""
+            <style>
+                body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
+                button:hover {{ background-color: rgba(255,255,255,0.2) !important; }}
+            </style>
+            <div style="display: flex; align-items: center; justify-content: flex-start; height: 100%; padding-top: 10px; font-family: sans-serif;">
+                <span style="color: #FFF; font-weight: bold; font-size: 1rem; margin-right: 15px;">
+                    총 {total}개 (페이지: {curr_p}/{pages})
+                </span>
+                <span style="color: #FFD700; font-weight: bold; font-size: 1rem; margin-right: 8px;">
+                    📅 {date_str}
+                </span>
+                <button onclick="copyDate()" style="background-color: transparent; border: 1px solid rgba(255,255,255,0.5); color: #FFF; padding: 3px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; font-weight:bold; transition: 0.3s;">
+                    📋 복사
+                </button>
+            </div>
+            <script>
+            function copyDate() {{
+                var temp = document.createElement("textarea");
+                temp.value = "{date_str}";
+                document.body.appendChild(temp);
+                temp.select();
+                document.execCommand("copy");
+                document.body.removeChild(temp);
+                
+                var btn = document.querySelector("button");
+                btn.innerHTML = "✅ 복사됨";
+                setTimeout(function(){{ btn.innerHTML = "📋 복사"; }}, 2000);
+            }}
+            </script>
+        """, height=50)
         
     with label_col:
-        # 입력창 바로 앞의 텍스트 라벨
-        st.markdown("<p style='color:#FFF; font-weight:bold; margin-top:10px; text-align:right;'>Num.ENG :</p>", unsafe_allow_html=True)
+        # 라벨 글자 크기 1.6rem 확대 및 정렬 보정
+        st.markdown("<p style='color:#FFF; font-weight:bold; margin-top:8px; text-align:right; font-size:1.6rem;'>Num.ENG :</p>", unsafe_allow_html=True)
         
     with input_col:
-        # 입력창 생성 (자동 콤마 포맷팅 콜백 on_change 연결)
         st.text_input("숫자입력", key="num_input", on_change=format_num_input, placeholder="숫자 입력 (예: 1,004)", label_visibility="collapsed")
         num_val = st.session_state.num_input
         
     with result_col:
         if num_val:
-            clean_num = num_val.replace(",", "").strip() # 쉼표 자동 제거
+            clean_num = num_val.replace(",", "").strip()
             if clean_num.isdigit():
                 eng_text = num_to_eng(int(clean_num)).capitalize()
-                st.markdown(f"<p style='color:#FFD700; font-weight:bold; font-size:1.15rem; margin-top:8px;'>📝 {eng_text}</p>", unsafe_allow_html=True)
+                # 결과 영어 텍스트 1.6rem 확대 및 보정
+                st.markdown(f"<p style='color:#FFD700; font-weight:bold; font-size:1.6rem; margin-top:8px;'>📝 {eng_text}</p>", unsafe_allow_html=True)
             else:
-                st.markdown("<p style='color:#FF9999; font-weight:bold; margin-top:8px;'>⚠️ 숫자만 입력해주세요.</p>", unsafe_allow_html=True)
+                st.markdown("<p style='color:#FF9999; font-weight:bold; font-size:1.2rem; margin-top:12px;'>⚠️ 숫자만 입력해주세요.</p>", unsafe_allow_html=True)
     
     # 리스트 헤더 출력
     ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
