@@ -80,8 +80,8 @@ st.markdown("""
         margin: 0 !important;
     }
     div[role="radiogroup"] label p {
-        color: #A3B8B8 !important;
-        font-size: 1.15rem !important;
+        color: #FFD700 !important; /* 노란색으로 변경 */
+        font-size: 1.7rem !important; /* 1.7rem으로 확대 */
         font-weight: 800 !important;
         transition: color 0.2s ease;
     }
@@ -174,7 +174,7 @@ st.markdown("""
         /* 버튼류 글자 축소 */
         .header-label { font-size: 1.2rem !important; }
         .sort-header-btn button { font-size: 1.2rem !important; }
-        div[role="radiogroup"] label p { font-size: 0.95rem !important; }
+        div[role="radiogroup"] label p { font-size: 1.2rem !important; } /* 상단 분류 텍스트 모바일에서도 조금 더 크게 */
     }
     </style>
     """, unsafe_allow_html=True)
