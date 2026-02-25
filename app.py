@@ -5,6 +5,7 @@ import pandas as pd
 import time
 import io
 import math
+import re
 from datetime import datetime, timedelta, timezone
 
 # --- [페이지 기본 설정] ---
@@ -221,7 +222,7 @@ def edit_dialog(idx, row_data, sheet, full_df):
             sheet.delete_rows(idx + 2); st.rerun()
 
 # --- [메인 실행] ---
-# 세션 상태 초기화 (랜덤 안정성을 위한 변수 포함)
+# 세션 상태 초기화 (랜덤 안정성 및 숫자입력 변수 포함)
 if "authenticated" not in st.session_state:
     if st.query_params.get("auth") == "true":
         st.session_state.authenticated = True
@@ -233,6 +234,20 @@ if 'sort_order' not in st.session_state:
 
 if 'current_cat' not in st.session_state:
     st.session_state.current_cat = "🔀 랜덤 10" # 첫 시작 시 기본 카테고리 기록
+
+if 'num_input' not in st.session_state:
+    st.session_state.num_input = ""
+
+# ★ 입력창 자동 콤마(,) 추가 콜백 함수 ★
+def format_num_input():
+    raw_val = str(st.session_state.num_input)
+    # 숫자 이외의 문자(콤마 등)를 모두 제거
+    cleaned = re.sub(r'[^0-9]', '', raw_val)
+    if cleaned:
+        # 3자리마다 콤마를 찍어서 다시 세션 상태에 저장
+        st.session_state.num_input = f"{int(cleaned):,}"
+    else:
+        st.session_state.num_input = ""
 
 col_title, col_auth = st.columns([7, 2])
 with col_title:
@@ -346,8 +361,9 @@ try:
         """, unsafe_allow_html=True)
         
     with input_col:
-        # 입력창 생성
-        num_val = st.text_input("숫자입력", placeholder="숫자 입력 (예: 1004)", label_visibility="collapsed")
+        # 입력창 생성 (자동 콤마 포맷팅 콜백 on_change 연결)
+        st.text_input("숫자입력", key="num_input", on_change=format_num_input, placeholder="숫자 입력 (예: 1,004)", label_visibility="collapsed")
+        num_val = st.session_state.num_input
         
     with result_col:
         if num_val:
