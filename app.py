@@ -313,17 +313,50 @@ try:
     if st.session_state.curr_p > pages: st.session_state.curr_p = 1
     curr_p = st.session_state.curr_p
     
+    # ★ 숫자를 영어 단어로 변환하는 내부 함수 ★
+    def num_to_eng(num):
+        if num == 0: return "zero"
+        ones = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"]
+        tens = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
+        scales = ["", "thousand", "million", "billion", "trillion"]
+        def _convert(n):
+            if n < 20: return ones[n]
+            if n < 100: return tens[n // 10] + ("-" + ones[n % 10] if n % 10 != 0 else "")
+            if n < 1000: return ones[n // 100] + " hundred" + (" " + _convert(n % 100) if n % 100 != 0 else "")
+            for i in range(1, len(scales)):
+                if n < 1000 ** (i + 1):
+                    return _convert(n // (1000 ** i)) + " " + scales[i] + (" " + _convert(n % (1000 ** i)) if n % (1000 ** i) != 0 else "")
+            return str(n)
+        return _convert(num).strip()
+
     # 한국 시간 기준 날짜 계산
     kst = timezone(timedelta(hours=9))
     now_kst = datetime.now(kst)
     date_str = now_kst.strftime("%A, %B %d, %Y")
     
-    st.markdown(f"""
-        <p style='color:#FFF; font-weight:bold; margin-top:15px;'>
-            총 {total}개 (페이지: {curr_p}/{pages}) &nbsp;&nbsp;&nbsp;&nbsp;
-            <span style='color: #FFD700;'>📅 {date_str}</span>
-        </p>
-    """, unsafe_allow_html=True)
+    # ★ 날짜 표시줄 3분할 (정보 / 입력창 / 결과) ★
+    info_col, input_col, result_col = st.columns([3.5, 2.0, 4.5])
+    
+    with info_col:
+        st.markdown(f"""
+            <p style='color:#FFF; font-weight:bold; margin-top:10px;'>
+                총 {total}개 (페이지: {curr_p}/{pages}) &nbsp;&nbsp;&nbsp;&nbsp;
+                <span style='color: #FFD700;'>📅 {date_str}</span>
+            </p>
+        """, unsafe_allow_html=True)
+        
+    with input_col:
+        # 입력창 생성
+        num_val = st.text_input("숫자입력", placeholder="숫자 입력 (예: 1004)", label_visibility="collapsed")
+        
+    with result_col:
+        if num_val:
+            clean_num = num_val.replace(",", "").strip() # 쉼표 자동 제거
+            if clean_num.isdigit():
+                eng_text = num_to_eng(int(clean_num)).capitalize()
+                st.markdown(f"<p style='color:#FFD700; font-weight:bold; font-size:1.15rem; margin-top:8px;'>📝 {eng_text}</p>", unsafe_allow_html=True)
+            else:
+                st.markdown("<p style='color:#FF9999; font-weight:bold; margin-top:8px;'>⚠️ 숫자만 입력해주세요.</p>", unsafe_allow_html=True)
     
     # 리스트 헤더 출력
     ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
