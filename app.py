@@ -213,7 +213,7 @@ st.markdown("""
     /* ★ 11. 모바일 레이아웃 강제 교정 (PC처럼 정렬) ★ */
     @media screen and (max-width: 768px) {
         /* 타이틀 축소 */
-        h1 { font-size: 1.4rem !important; }
+        h1 { font-size: 1.6rem !important; }
         
         /* 모바일에서 행(Row) 가로 정렬 유지 */
         div[data-testid="stHorizontalBlock"]:has(.row-marker) {
@@ -587,3 +587,4 @@ st.markdown(f"""
         </p>
     </div>
 """, unsafe_allow_html=True)
+
