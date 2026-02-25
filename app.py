@@ -117,12 +117,17 @@ st.markdown("""
         border: 1px solid #FFFFFF !important;
     }
 
-    /* 6. 패스워드 눈알 아이콘 숨기기 (모바일 입력 최적화) */
+    /* 특정 입력창(숫자입력) 폰트 크기 반응형 확대 */
+    input[aria-label="숫자입력"] {
+        font-size: clamp(1.1rem, 1.5vw, 1.6rem) !important;
+    }
+
+    /* 6. 패스워드 눈알 아이콘 숨기기 */
     div[data-testid="stTextInput"] button {
         display: none !important;
     }
 
-    /* 7. ★ 버튼 스타일: 알약 모양 및 글자 두껍게(Bold) 적용 ★ */
+    /* 7. 버튼 스타일: 알약 모양 및 글자 두껍게(Bold) 적용 */
     button, div.stDownloadButton > button {
         border-radius: 50px !important;
         padding: 0.5rem 1.5rem !important;
@@ -155,15 +160,16 @@ st.markdown("""
     .word-text { font-size: 2.0em; font-weight: bold; display: block; color: #FFD700 !important; }
     .mean-text { font-size: 1.5em; display: block; }
     
-    /* ★ 9. 검색창 크기 10자 내외로 축소 (강제 width 설정) ★ */
+    /* 9. 검색창 크기 축소 */
     div[data-testid="stTextInput"]:has(input[placeholder*="검색"]) {
         max-width: 180px !important;
     }
 
-    /* ★ 10. 상단 숫자 변환 (라벨 + 입력창 가로 정렬, 겹침 원천 차단) ★ */
+    /* 10. 상단 숫자 변환 레이아웃 */
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
         display: flex !important;
         flex-direction: row !important;
+        flex-wrap: wrap !important;
         align-items: center !important;
         gap: 10px !important;
         margin-top: 10px !important;
@@ -178,12 +184,12 @@ st.markdown("""
         color: #FFF !important;
         font-weight: bold !important;
         font-size: clamp(1.1rem, 1.5vw, 1.6rem) !important;
-        white-space: nowrap !important; /* 모바일에서 글자 줄바꿈 완벽 방지 */
+        white-space: nowrap !important; 
         margin: 0 !important;
     }
     input[aria-label="Num.ENG :"] {
         font-size: clamp(1.1rem, 1.5vw, 1.6rem) !important;
-        min-width: 80px !important; /* 모바일에서 너무 쪼그라들지 않게 최소 너비 보장 */
+        min-width: 80px !important; 
     }
     
     .num-result { color: #FFD700; font-weight: bold; font-size: clamp(1.1rem, 1.5vw, 1.6rem); margin-top: 12px; }
@@ -191,18 +197,51 @@ st.markdown("""
     
     .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -25px; margin-bottom: 2px; }
 
-    /* ★ 11. 모바일 반응형(Responsive) 디자인 최적화 ★ */
+    /* ★ 11. 전체 반응형 완벽 대응 (글자 세로 겹침 및 깨짐 원천 방지) ★ */
+    button p, 
+    div[data-testid="stExpander"] summary p, 
+    .header-label, 
+    .sort-header-btn button {
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+    }
+
+    button, div[data-testid="stExpander"] summary {
+        min-width: max-content !important;
+    }
+
+    /* 화면 폭이 부족할 때 컬럼들이 찌그러지지 않고 자연스럽게 다음 줄로 넘어가도록 처리 */
+    div[data-testid="stHorizontalBlock"] {
+        flex-wrap: wrap !important;
+    }
+
+    /* ★ 12. 모바일 특화 레이아웃 (768px 이하) ★ */
     @media screen and (max-width: 768px) {
         h1 { font-size: 1.8rem !important; }
         
         .num-result { margin-top: 5px !important; }
         .num-warning { margin-top: 5px !important; }
-        div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) { margin-top: 0px !important; }
+        
+        /* 모바일에서는 Num.ENG 라벨과 입력창이 절대 겹치지 않게 세로로 나열 */
+        div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) { 
+            flex-direction: column !important; 
+            align-items: flex-start !important;
+            gap: 5px !important;
+            margin-top: 0px !important; 
+        }
+        div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) label {
+            margin-bottom: 5px !important;
+        }
+        input[aria-label="Num.ENG :"] { 
+            width: 100% !important; 
+        }
         
         .word-text { font-size: 1.4em !important; }
         .mean-text { font-size: 1.1em !important; }
         
+        /* 모바일 카드형 레이아웃 세로 정렬 확실히 */
         div[data-testid="stHorizontalBlock"]:has(.row-marker) {
+            flex-direction: column !important;
             padding: 15px !important;
             background-color: rgba(255, 255, 255, 0.05) !important;
             border-radius: 15px;
@@ -349,7 +388,7 @@ kst = timezone(timedelta(hours=9))
 now_kst = datetime.now(kst)
 date_str = now_kst.strftime("%A, %B %d, %Y")
 
-# ★ 상단 레이아웃 완벽 최적화 (라벨과 입력창을 하나의 컬럼으로 합쳐 겹침 원천 방지) ★
+# 상단 레이아웃
 col_title, col_date, col_num_combined, col_num_result, col_auth = st.columns([2.3, 2.2, 2.4, 2.1, 1.0])
 
 with col_title:
@@ -365,11 +404,13 @@ with col_date:
             }}
             .date-text {{
                 color: #FFFFFF; font-weight: bold; font-size: clamp(0.95rem, 1.4vw, 1.3rem);
+                white-space: nowrap;
             }}
             .copy-btn {{
                 background-color: transparent; border: 1px solid rgba(255,255,255,0.5); 
                 color: #FFF; padding: 4px 8px; border-radius: 6px; cursor: pointer; 
                 font-size: clamp(0.75rem, 1vw, 0.9rem); font-weight:bold; transition: 0.3s;
+                white-space: nowrap;
             }}
             .copy-btn:hover {{ background-color: rgba(255,255,255,0.2) !important; }}
         </style>
@@ -394,7 +435,6 @@ with col_date:
     """, height=90)
     
 with col_num_combined:
-    # ★ 레이아웃 겹침 방지: 라벨(Num.ENG :)을 별도 컬럼이 아닌 입력창 이름(label)으로 할당하여 CSS(Flexbox)로 하나로 묶음 ★
     st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
     num_val = st.session_state.num_input
     
@@ -429,9 +469,8 @@ try:
     
     st.divider()
     
-    # ★ 검색창이 차지하는 비율을 대폭 축소하여 10자 내외 크기로 맞춤 ★
     if st.session_state.authenticated:
-        cb = st.columns([1.5, 1.5, 1.4, 2.6, 1.5]) # 검색창(1.5) 크기 감소, 여백(2.6) 확보
+        cb = st.columns([1.5, 1.5, 1.4, 2.6, 1.5])
         cb[0].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
         if cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
         
@@ -442,7 +481,7 @@ try:
             st.session_state.is_simple = not st.session_state.is_simple
             st.rerun()
     else:
-        cb = st.columns([1.5, 1.4, 4.1]) # 검색창(1.5) 크기 감소, 여백(4.1) 확보
+        cb = st.columns([1.5, 1.4, 4.1])
         cb[0].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
         
         btn_text = "🔄 전체모드" if st.session_state.is_simple else "✨ 심플모드"
@@ -498,7 +537,6 @@ try:
         const doc = window.parent.document;
         if (!doc.formatListenerAdded) {{
             doc.body.addEventListener('input', function(e) {{
-                // 안내문구 대신 aria-label로 추적 ('Num.ENG :' 로 변경)
                 if (e.target && e.target.getAttribute('aria-label') === 'Num.ENG :') {{
                     let rawVal = e.target.value.replace(/[^0-9]/g, '');
                     if (rawVal) {{
