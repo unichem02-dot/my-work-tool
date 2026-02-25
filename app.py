@@ -552,7 +552,7 @@ try:
     for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
         cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
        
-        cols[0].markdown(f"<span class='row-marker'></span><span style='font-size:1.2rem;'>{row['분류']}</span>", unsafe_allow_html=True)
+        cols[0].markdown(f"<span class='row-marker'></span><span style='font-size:1.4rem;'>{row['분류']}</span>", unsafe_allow_html=True)
         cols[1].markdown(f"<span class='word-text'>{row['단어-문장']}</span>", unsafe_allow_html=True)
         cols[2].markdown(f"<span class='mean-text'>{row['해석']}</span>", unsafe_allow_html=True)
        
