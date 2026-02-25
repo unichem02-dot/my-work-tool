@@ -14,10 +14,10 @@ st.set_page_config(layout="wide", page_title="TOmBOy94's English")
 st.markdown("""
     <style>
     /* 1. 배경 설정: 짙은 다크그린 */
-    [data-testid="stAppViewContainer"], 
+    [data-testid="stAppViewContainer"],
     div[data-testid="stDialog"] > div,
     div[role="dialog"] > div {
-        background-color: #224343 !important; 
+        background-color: #224343 !important;
     }
     [data-testid="stHeader"] {
         background-color: transparent !important;
@@ -29,7 +29,7 @@ st.markdown("""
     }
     
     /* 팝업창(Dialog) 제목 */
-    #새-항목-추가, 
+    #새-항목-추가,
     #항목-수정-및-삭제,
     div[data-testid="stDialog"] h2,
     div[role="dialog"] h2,
@@ -87,7 +87,7 @@ st.markdown("""
         color: #FFFFFF !important;
     }
     div[role="radiogroup"] label:has(div[aria-checked="true"]) p {
-        color: #FFD700 !important; 
+        color: #FFD700 !important;
         text-decoration: underline;
     }
 
@@ -150,14 +150,14 @@ st.markdown("""
     /* ★ 구분선 간격 압축 (최소화) ★ */
     hr {
         margin-top: 0px !important;
-        margin-bottom: 5px !important; 
+        margin-bottom: 5px !important;
         border-top: 1px dotted rgba(255, 255, 255, 0.3) !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
 # --- [보안 설정] ---
-LOGIN_PASSWORD = "0315" 
+LOGIN_PASSWORD = "0315"
 
 @st.cache_resource
 def init_connection():
@@ -221,6 +221,7 @@ def edit_dialog(idx, row_data, sheet, full_df):
             sheet.delete_rows(idx + 2); st.rerun()
 
 # --- [메인 실행] ---
+# 세션 상태 초기화 (랜덤 안정성을 위한 변수 포함)
 if "authenticated" not in st.session_state:
     if st.query_params.get("auth") == "true":
         st.session_state.authenticated = True
@@ -228,7 +229,10 @@ if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
 
 if 'sort_order' not in st.session_state:
-    st.session_state.sort_order = 'None' 
+    st.session_state.sort_order = 'None'
+
+if 'current_cat' not in st.session_state:
+    st.session_state.current_cat = "🔀 랜덤 10" # 첫 시작 시 기본 카테고리 기록
 
 col_title, col_auth = st.columns([7, 2])
 with col_title:
@@ -236,22 +240,23 @@ with col_title:
 with col_auth:
     if not st.session_state.authenticated:
         with st.expander("🔐 로그인"):
-            if st.text_input("Password", type="password") == LOGIN_PASSWORD: 
+            if st.text_input("Password", type="password") == LOGIN_PASSWORD:
                 st.session_state.authenticated = True
-                st.query_params["auth"] = "true" 
+                st.query_params["auth"] = "true"
                 st.rerun()
     else:
-        if st.button("🔓 로그아웃", use_container_width=True, type="secondary"): 
+        if st.button("🔓 로그아웃", use_container_width=True, type="secondary"):
             st.session_state.authenticated = False
-            if "auth" in st.query_params: del st.query_params["auth"] 
+            if "auth" in st.query_params: del st.query_params["auth"]
             st.rerun()
 
 try:
     sheet = get_sheet(); df = load_dataframe(sheet)
     
-    # 상단 카테고리 필터
+    # ★ 상단 카테고리 필터 ('🔀 랜덤 10'을 맨 앞에 추가) ★
     unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
-    selected_radio = st.radio("분류 필터", ["전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed")
+    cat_options = ["🔀 랜덤 10", "전체 분류"] + unique_cats
+    selected_radio = st.radio("분류 필터", cat_options, horizontal=True, label_visibility="collapsed")
     sel_cat = selected_radio
     
     st.divider()
@@ -267,12 +272,22 @@ try:
         is_simple = cb[0].toggle("심플모드")
         search = cb[2].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
 
-    # 필터링
+    # ★ 필터링 및 랜덤 데이터 추출 로직 ★
     d_df = df.copy()
-    if sel_cat != "전체 분류": d_df = d_df[d_df['분류'] == sel_cat]
     
-    # '단어-문장' 열에서만 검색하도록 변경
-    if search: 
+    if sel_cat == "🔀 랜덤 10":
+        # 사용자가 다른 카테고리에서 '랜덤 10'으로 막 넘어왔거나, 처음 시작할 때만 새로운 10개를 뽑음
+        if st.session_state.current_cat != "🔀 랜덤 10" or 'random_df' not in st.session_state:
+            st.session_state.random_df = d_df.sample(n=min(10, len(d_df)))
+        # 심플모드 토글이나 검색 시 문장이 안 바뀌게 저장된 랜덤 데이터 사용
+        d_df = st.session_state.random_df.copy()
+    elif sel_cat != "전체 분류":
+        d_df = d_df[d_df['분류'] == sel_cat]
+        
+    st.session_state.current_cat = sel_cat # 현재 선택된 카테고리 저장
+    
+    # '단어-문장' 열에서만 검색
+    if search:
         d_df = d_df[d_df['단어-문장'].str.contains(search, case=False, na=False)]
 
     # 정렬
@@ -333,8 +348,12 @@ try:
         cols[2].markdown(f"<span style='font-size:1.5em;display:block;'>{row['해석']}</span>", unsafe_allow_html=True)
         if not is_simple:
             cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
-            if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}"): edit_dialog(idx, row, sheet, df)
-        elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}"): edit_dialog(idx, row, sheet, df)
+            # 원래 시트에서의 인덱스를 정확히 찾아가도록 df 매칭 (랜덤 샘플링된 상태에서도 정상 수정 가능)
+            original_idx = df.index[df['단어-문장'] == row['단어-문장']].tolist()[0] 
+            if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{original_idx}"): edit_dialog(original_idx, row, sheet, df)
+        elif st.session_state.authenticated:
+            original_idx = df.index[df['단어-문장'] == row['단어-문장']].tolist()[0]
+            if cols[3].button("✏️", key=f"es_{original_idx}"): edit_dialog(original_idx, row, sheet, df)
         
         # 점선 간격 극소화 (-25px 적용)
         st.markdown("<div style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-25px;margin-bottom:2px;'></div>", unsafe_allow_html=True)
