@@ -206,11 +206,11 @@ st.markdown("""
    
     .num-result { color: #FFD700; font-weight: bold; font-size: clamp(1.0rem, 1.4vw, 1.5rem); margin-top: 10px; }
    
-    .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -5px; margin-bottom: 5px; }
+    .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -25px; margin-bottom: 5px; }
 
-    /* 11. 모바일 레이아웃 교정 */
+    /* ★ 11. 모바일 레이아웃 강제 교정 (PC처럼 정렬) ★ */
     @media screen and (max-width: 768px) {
-        h1 { font-size: 1.4rem !important; }
+        h1 { font-size: clamp(1.2rem, 1.8vw, 1.6rem) !important; }
         
         div[data-testid="stHorizontalBlock"]:has(.row-marker) {
             display: flex !important;
@@ -219,9 +219,9 @@ st.markdown("""
             gap: 10px !important;
         }
 
-        div[data-testid="stHorizontalBlock"]:has(.row-marker) > div:nth-child(1) { width: 15% !important; min-width: 50px; } 
-        div[data-testid="stHorizontalBlock"]:has(.row-marker) > div:nth-child(2) { width: 40% !important; } 
-        div[data-testid="stHorizontalBlock"]:has(.row-marker) > div:nth-child(3) { width: 35% !important; } 
+        div[data-testid="stHorizontalBlock"]:has(.row-marker) > div:nth-child(1) { width: 18% !important; min-width: 55px; } 
+        div[data-testid="stHorizontalBlock"]:has(.row-marker) > div:nth-child(2) { width: 38% !important; } 
+        div[data-testid="stHorizontalBlock"]:has(.row-marker) > div:nth-child(3) { width: 34% !important; } 
         div[data-testid="stHorizontalBlock"]:has(.row-marker) > div:last-child { width: 10% !important; min-width: 40px; text-align: right; } 
 
         .word-text { font-size: 1.1rem !important; }
@@ -362,30 +362,30 @@ kst = timezone(timedelta(hours=9))
 now_kst = datetime.now(kst)
 date_str = now_kst.strftime("%A, %B %d, %Y")
 
-# 상단 레이아웃
-col_title, col_date, col_num_combined, col_num_result, col_auth = st.columns([2.0, 3.2, 2.4, 2.0, 0.9])
+# ★ 상단 레이아웃 (타이틀 + 날짜 + 숫자변환 + 로그인) 비율 최적화 ★
+col_title, col_date, col_num_combined, col_num_result, col_auth = st.columns([2.0, 3.4, 2.4, 2.0, 0.9])
 
 with col_title:
     st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.2rem, 2.2vw, 2.2rem);'>TOmBOy94's English</h1>", unsafe_allow_html=True)
 
 with col_date:
-    # ★ 오늘 날짜 텍스트 크기 2배 확대 (clamp 값 조정) ★
+    # ★ 날짜 텍스트 반응형 완벽 보정 (clamp 활용하여 최소/최대 크기 제한 및 여백 확보) ★
     components.html(f"""
         <style>
-            body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
+            body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: visible; }}
             .date-wrapper {{
-                display: flex; flex-wrap: wrap; align-items: center; gap: 15px;
-                padding-top: 15px; font-family: sans-serif;
+                display: flex; flex-wrap: wrap; align-items: center; gap: clamp(5px, 1.5vw, 15px);
+                padding-top: 15px; font-family: sans-serif; width: 100%;
             }}
             .date-text {{
                 color: #FFFFFF; font-weight: bold; 
-                font-size: clamp(1.8rem, 2.8vw, 2.6rem); /* 2배로 확대 */
+                font-size: clamp(1.1rem, 2.6vw, 2.6rem); /* 반응형 2배 크기 조절 */
                 white-space: nowrap;
             }}
             .copy-btn {{
                 background-color: transparent; border: 1px solid rgba(255,255,255,0.5);
                 color: #FFF; padding: 6px 12px; border-radius: 8px; cursor: pointer;
-                font-size: clamp(1.0rem, 1.4vw, 1.3rem); font-weight:bold; transition: 0.3s;
+                font-size: clamp(0.7rem, 1vw, 1.1rem); font-weight:bold; transition: 0.3s;
                 white-space: nowrap;
             }}
             .copy-btn:hover {{ background-color: rgba(255,255,255,0.2) !important; }}
@@ -408,7 +408,7 @@ with col_date:
             setTimeout(function(){{ btn.innerHTML = "📋 복사"; }}, 1500);
         }}
         </script>
-    """, height=120)
+    """, height=130)
    
 with col_num_combined:
     st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
