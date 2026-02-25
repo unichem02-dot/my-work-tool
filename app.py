@@ -57,7 +57,7 @@ st.markdown("""
     /* 3. ★ 컨텐츠 행(Row) 호버 효과 및 간격 최소화 ★ */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 2px 12px !important; /* 상하 패딩 추가 축소 */
+        padding: 2px 12px !important;
         border-radius: 12px;
         margin-bottom: 0px;
     }
@@ -134,31 +134,47 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* 8. 헤더 라벨 전용 스타일 */
-    .header-label {
-        font-size: 1.6rem !important;
-        font-weight: 800 !important;
-        color: #FFFFFF !important;
-        display: block;
-        margin-bottom: 0px !important;
-    }
+    /* 8. 헤더 및 일반 텍스트용 클래스 (모바일 대응을 위한 분리) */
+    .header-label { font-size: 1.6rem !important; font-weight: 800 !important; color: #FFFFFF !important; display: block; margin-bottom: 0px !important; }
+    .sort-header-btn button { background-color: transparent !important; border: none !important; padding: 0 !important; color: #FFFFFF !important; font-weight: 800 !important; font-size: 1.6rem !important; text-decoration: underline !important; }
+    
+    .word-text { font-size: 2.0em; font-weight: bold; display: block; }
+    .mean-text { font-size: 1.5em; display: block; }
+    .num-label { color: #FFF; font-weight: bold; margin-top: 8px; text-align: right; font-size: 1.6rem; }
+    .num-result { color: #FFD700; font-weight: bold; font-size: 1.6rem; margin-top: 8px; }
+    .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -25px; margin-bottom: 2px; }
 
-    /* 정렬 헤더 버튼 크기 및 간격 조정 */
-    .sort-header-btn button {
-        background-color: transparent !important;
-        border: none !important;
-        padding: 0 !important;
-        color: #FFFFFF !important;
-        font-weight: 800 !important;
-        font-size: 1.6rem !important;
-        text-decoration: underline !important;
-    }
-
-    /* 구분선 간격 압축 (최소화) */
-    hr {
-        margin-top: 0px !important;
-        margin-bottom: 5px !important;
-        border-top: 1px dotted rgba(255, 255, 255, 0.3) !important;
+    /* ★ 9. 모바일 반응형(Responsive) 디자인 최적화 ★ */
+    @media screen and (max-width: 768px) {
+        /* 타이틀 및 상단 간격 축소 */
+        h1 { font-size: 1.8rem !important; }
+        
+        /* 모바일에서는 라벨을 좌측 정렬하고 폰트 크기 조정 */
+        .num-label { font-size: 1.2rem !important; text-align: left !important; margin-top: 0px !important; }
+        .num-result { font-size: 1.3rem !important; margin-top: 2px !important; }
+        input[placeholder*="1,004"] { font-size: 1.3rem !important; }
+        
+        /* 리스트 본문 글자 크기 축소 */
+        .word-text { font-size: 1.4em !important; }
+        .mean-text { font-size: 1.1em !important; }
+        
+        /* 모바일에서는 표(가로) 형태가 아닌 카드(세로) 형태로 보여지므로 배경색과 패딩 추가 */
+        div[data-testid="stHorizontalBlock"]:has(.row-marker) {
+            padding: 15px !important;
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            border-radius: 15px;
+            margin-bottom: 15px !important;
+            gap: 0.3rem !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        /* 카드형태에서는 점선이 겹치므로 제거 */
+        .row-divider { display: none !important; }
+        
+        /* 버튼류 글자 축소 */
+        .header-label { font-size: 1.2rem !important; }
+        .sort-header-btn button { font-size: 1.2rem !important; }
+        div[role="radiogroup"] label p { font-size: 0.95rem !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -228,7 +244,6 @@ def edit_dialog(idx, row_data, sheet, full_df):
             sheet.delete_rows(idx + 2); st.rerun()
 
 # --- [메인 실행] ---
-# 세션 상태 초기화 (랜덤 안정성, 숫자입력, 검색 변수 포함)
 if "authenticated" not in st.session_state:
     if st.query_params.get("auth") == "true":
         st.session_state.authenticated = True
@@ -249,7 +264,6 @@ if 'active_search' not in st.session_state:
 if 'search_input' not in st.session_state:
     st.session_state.search_input = ""
 
-# 입력창 콜백 함수 모음
 def format_num_input():
     raw_val = str(st.session_state.num_input)
     cleaned = re.sub(r'[^0-9]', '', raw_val)
@@ -259,17 +273,14 @@ def format_num_input():
         st.session_state.num_input = ""
 
 def handle_search():
-    # 검색창에서 엔터 시 호출됨
     val = st.session_state.search_input.strip()
     if val:
         st.session_state.active_search = val
     else:
         st.session_state.active_search = ""
-    # 검색 후 입력창을 바로 비워줌
     st.session_state.search_input = ""
 
 def clear_search():
-    # 분류(카테고리)가 변경될 때 검색 상태 초기화
     st.session_state.active_search = ""
 
 col_title, col_auth = st.columns([7, 2])
@@ -291,15 +302,12 @@ with col_auth:
 try:
     sheet = get_sheet(); df = load_dataframe(sheet)
     
-    # 상단 카테고리 필터
     unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
     cat_options = ["🔀 랜덤 10", "전체 분류"] + unique_cats
-    # 카테고리 변경 시 on_change를 통해 검색어 초기화
     sel_cat = st.radio("분류 필터", cat_options, horizontal=True, label_visibility="collapsed", key="cat_radio", on_change=clear_search)
     
     st.divider()
     
-    # 컨트롤바 (검색 입력창 연결)
     if st.session_state.authenticated:
         cb = st.columns([1.5, 1.2, 0.3, 4.0, 1.5])
         if cb[0].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
@@ -310,17 +318,13 @@ try:
         is_simple = cb[0].toggle("심플모드")
         cb[2].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
 
-    # 활성화된 검색어 가져오기
     search = st.session_state.active_search
 
-    # ★ 필터링 로직 (검색 최우선) ★
     d_df = df.copy()
     
     if search:
-        # 검색어가 활성화되면 카테고리를 무시하고 전체 데이터에서 검색
         d_df = d_df[d_df['단어-문장'].str.contains(search, case=False, na=False)]
     else:
-        # 검색어가 없을 때만 정상적인 카테고리 필터 적용
         if sel_cat == "🔀 랜덤 10":
             if st.session_state.current_cat != "🔀 랜덤 10" or 'random_df' not in st.session_state:
                 st.session_state.random_df = df.sample(n=min(10, len(df)))
@@ -330,22 +334,18 @@ try:
             
         st.session_state.current_cat = sel_cat
 
-    # 정렬
     if st.session_state.sort_order == 'asc': d_df = d_df.sort_values(by='단어-문장', ascending=True)
     elif st.session_state.sort_order == 'desc': d_df = d_df.sort_values(by='단어-문장', ascending=False)
     else: d_df = d_df.iloc[::-1]
 
-    # CSV 다운로드
     if st.session_state.authenticated:
         cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
 
-    # 페이지네이션 변수 초기화
     total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
     if 'curr_p' not in st.session_state: st.session_state.curr_p = 1
     if st.session_state.curr_p > pages: st.session_state.curr_p = 1
     curr_p = st.session_state.curr_p
     
-    # 숫자를 영어 단어로 변환하는 내부 함수
     def num_to_eng(num):
         if num == 0: return "zero"
         ones = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"]
@@ -361,29 +361,27 @@ try:
             return str(n)
         return _convert(num).strip()
 
-    # 한국 시간 기준 날짜 계산
     kst = timezone(timedelta(hours=9))
     now_kst = datetime.now(kst)
     date_str = now_kst.strftime("%A, %B %d, %Y")
     
-    # 레이아웃 조정
     info_col, label_col, input_col, result_col = st.columns([4.0, 1.4, 2.2, 4.4])
     
     with info_col:
-        # 검색 활성화 시 표시할 알림 문구
         search_msg = f"<span style='color: #FF9999; font-weight: bold; font-size: 1rem; margin-right: 15px;'>🔍 '{search}' 검색됨</span>" if search else ""
         
+        # 모바일에서 줄바꿈(wrap)이 자연스럽게 되도록 flex-wrap 설정 및 높이 여유 부여
         components.html(f"""
             <style>
                 body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
                 button:hover {{ background-color: rgba(255,255,255,0.2) !important; }}
             </style>
-            <div style="display: flex; align-items: center; justify-content: flex-start; height: 100%; padding-top: 10px; font-family: sans-serif;">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 8px; padding-top: 10px; font-family: sans-serif;">
                 {search_msg}
-                <span style="color: #FFF; font-weight: bold; font-size: 1rem; margin-right: 15px;">
+                <span style="color: #FFF; font-weight: bold; font-size: 1rem;">
                     총 {total}개 (페이지: {curr_p}/{pages})
                 </span>
-                <span style="color: #FFD700; font-weight: bold; font-size: 1rem; margin-right: 8px;">
+                <span style="color: #FFD700; font-weight: bold; font-size: 1rem;">
                     📅 {date_str}
                 </span>
                 <button onclick="copyDate()" style="background-color: transparent; border: 1px solid rgba(255,255,255,0.5); color: #FFF; padding: 3px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; font-weight:bold; transition: 0.3s;">
@@ -419,10 +417,10 @@ try:
                 doc.formatListenerAdded = true;
             }}
             </script>
-        """, height=50)
+        """, height=65)
         
     with label_col:
-        st.markdown("<p style='color:#FFF; font-weight:bold; margin-top:8px; text-align:right; font-size:1.6rem;'>Num.ENG :</p>", unsafe_allow_html=True)
+        st.markdown("<p class='num-label'>Num.ENG :</p>", unsafe_allow_html=True)
         
     with input_col:
         st.text_input("숫자입력", key="num_input", on_change=format_num_input, placeholder="숫자 입력 (예: 1,004)", label_visibility="collapsed")
@@ -433,11 +431,10 @@ try:
             clean_num = num_val.replace(",", "").strip()
             if clean_num.isdigit():
                 eng_text = num_to_eng(int(clean_num)).capitalize()
-                st.markdown(f"<p style='color:#FFD700; font-weight:bold; font-size:1.6rem; margin-top:8px;'>📝 {eng_text}</p>", unsafe_allow_html=True)
+                st.markdown(f"<p class='num-result'>📝 {eng_text}</p>", unsafe_allow_html=True)
             else:
-                st.markdown("<p style='color:#FF9999; font-weight:bold; font-size:1.2rem; margin-top:12px;'>⚠️ 숫자만 입력해주세요.</p>", unsafe_allow_html=True)
+                st.markdown("<p style='color:#FF9999; font-weight:bold; font-size:1.2rem; margin-top:8px;'>⚠️ 숫자만 입력해주세요.</p>", unsafe_allow_html=True)
     
-    # 리스트 헤더 출력
     ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
     labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
     
@@ -457,22 +454,20 @@ try:
     
     st.divider()
 
-    # 리스트 본문
     for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
         cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
         
         cols[0].markdown(f"<span class='row-marker'></span>{row['분류']}", unsafe_allow_html=True)
-        cols[1].markdown(f"<span style='font-size:2.0em;font-weight:bold;display:block;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
-        cols[2].markdown(f"<span style='font-size:1.5em;display:block;'>{row['해석']}</span>", unsafe_allow_html=True)
+        cols[1].markdown(f"<span class='word-text'>{row['단어-문장']}</span>", unsafe_allow_html=True)
+        cols[2].markdown(f"<span class='mean-text'>{row['해석']}</span>", unsafe_allow_html=True)
         
         if not is_simple:
             cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
             if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}"): edit_dialog(idx, row, sheet, df)
         elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}"): edit_dialog(idx, row, sheet, df)
         
-        st.markdown("<div style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-25px;margin-bottom:2px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div class='row-divider'></div>", unsafe_allow_html=True)
 
-    # 하단 페이지네이션
     if pages > 1:
         st.write(""); p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
         with p_cols[1]:
