@@ -140,8 +140,13 @@ st.markdown("""
     
     .word-text { font-size: 2.0em; font-weight: bold; display: block; }
     .mean-text { font-size: 1.5em; display: block; }
-    .num-label { color: #FFF; font-weight: bold; margin-top: 8px; text-align: right; font-size: 1.6rem; }
-    .num-result { color: #FFD700; font-weight: bold; font-size: 1.6rem; margin-top: 8px; }
+    
+    /* 상단 숫자 변환 라벨 및 결과용 클래스 */
+    .num-label { color: #FFF; font-weight: bold; margin-top: 12px; text-align: right; font-size: 1.6rem; }
+    .num-result { color: #FFD700; font-weight: bold; font-size: 1.6rem; margin-top: 12px; }
+    .num-warning { color: #FF9999; font-weight: bold; font-size: 1.2rem; margin-top: 16px; }
+    .num-input-container { margin-top: 8px; }
+    
     .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -25px; margin-bottom: 2px; }
 
     /* ★ 9. 모바일 반응형(Responsive) 디자인 최적화 ★ */
@@ -150,8 +155,10 @@ st.markdown("""
         h1 { font-size: 1.8rem !important; }
         
         /* 모바일에서는 라벨을 좌측 정렬하고 폰트 크기 조정 */
-        .num-label { font-size: 1.2rem !important; text-align: left !important; margin-top: 0px !important; }
-        .num-result { font-size: 1.3rem !important; margin-top: 2px !important; }
+        .num-label { font-size: 1.2rem !important; text-align: left !important; margin-top: 5px !important; }
+        .num-result { font-size: 1.3rem !important; margin-top: 5px !important; }
+        .num-warning { margin-top: 5px !important; }
+        .num-input-container { margin-top: 0px !important; }
         input[placeholder*="1,004"] { font-size: 1.3rem !important; }
         
         /* 리스트 본문 글자 크기 축소 */
@@ -283,9 +290,45 @@ def handle_search():
 def clear_search():
     st.session_state.active_search = ""
 
-col_title, col_auth = st.columns([7, 2])
+def num_to_eng(num):
+    if num == 0: return "zero"
+    ones = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"]
+    tens = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
+    scales = ["", "thousand", "million", "billion", "trillion"]
+    def _convert(n):
+        if n < 20: return ones[n]
+        if n < 100: return tens[n // 10] + ("-" + ones[n % 10] if n % 10 != 0 else "")
+        if n < 1000: return ones[n // 100] + " hundred" + (" " + _convert(n % 100) if n % 100 != 0 else "")
+        for i in range(1, len(scales)):
+            if n < 1000 ** (i + 1):
+                return _convert(n // (1000 ** i)) + " " + scales[i] + (" " + _convert(n % (1000 ** i)) if n % (1000 ** i) != 0 else "")
+        return str(n)
+    return _convert(num).strip()
+
+# ★ 상단 레이아웃 (타이틀 + 숫자변환 + 로그인) ★
+col_title, col_num_label, col_num_input, col_num_result, col_auth = st.columns([2.5, 1.2, 1.8, 3.5, 1.0])
+
 with col_title:
     st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem;'>TOmBOy94's English</h1>", unsafe_allow_html=True)
+
+with col_num_label:
+    st.markdown("<p class='num-label'>Num.ENG :</p>", unsafe_allow_html=True)
+    
+with col_num_input:
+    st.markdown("<div class='num-input-container'>", unsafe_allow_html=True)
+    st.text_input("숫자입력", key="num_input", on_change=format_num_input, placeholder="숫자 입력 (예: 1,004)", label_visibility="collapsed")
+    st.markdown("</div>", unsafe_allow_html=True)
+    num_val = st.session_state.num_input
+    
+with col_num_result:
+    if num_val:
+        clean_num = num_val.replace(",", "").strip()
+        if clean_num.isdigit():
+            eng_text = num_to_eng(int(clean_num)).capitalize()
+            st.markdown(f"<p class='num-result'>📝 {eng_text}</p>", unsafe_allow_html=True)
+        else:
+            st.markdown("<p class='num-warning'>⚠️ 숫자만 입력해주세요.</p>", unsafe_allow_html=True)
+
 with col_auth:
     if not st.session_state.authenticated:
         with st.expander("🔐 로그인"):
@@ -345,95 +388,61 @@ try:
     if 'curr_p' not in st.session_state: st.session_state.curr_p = 1
     if st.session_state.curr_p > pages: st.session_state.curr_p = 1
     curr_p = st.session_state.curr_p
-    
-    def num_to_eng(num):
-        if num == 0: return "zero"
-        ones = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"]
-        tens = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
-        scales = ["", "thousand", "million", "billion", "trillion"]
-        def _convert(n):
-            if n < 20: return ones[n]
-            if n < 100: return tens[n // 10] + ("-" + ones[n % 10] if n % 10 != 0 else "")
-            if n < 1000: return ones[n // 100] + " hundred" + (" " + _convert(n % 100) if n % 100 != 0 else "")
-            for i in range(1, len(scales)):
-                if n < 1000 ** (i + 1):
-                    return _convert(n // (1000 ** i)) + " " + scales[i] + (" " + _convert(n % (1000 ** i)) if n % (1000 ** i) != 0 else "")
-            return str(n)
-        return _convert(num).strip()
 
     kst = timezone(timedelta(hours=9))
     now_kst = datetime.now(kst)
     date_str = now_kst.strftime("%A, %B %d, %Y")
     
-    info_col, label_col, input_col, result_col = st.columns([4.0, 1.4, 2.2, 4.4])
+    search_msg = f"<span style='color: #FF9999; font-weight: bold; font-size: 1rem; margin-right: 15px;'>🔍 '{search}' 검색됨</span>" if search else ""
     
-    with info_col:
-        search_msg = f"<span style='color: #FF9999; font-weight: bold; font-size: 1rem; margin-right: 15px;'>🔍 '{search}' 검색됨</span>" if search else ""
-        
-        # 모바일에서 줄바꿈(wrap)이 자연스럽게 되도록 flex-wrap 설정 및 높이 여유 부여
-        components.html(f"""
-            <style>
-                body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
-                button:hover {{ background-color: rgba(255,255,255,0.2) !important; }}
-            </style>
-            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 8px; padding-top: 10px; font-family: sans-serif;">
-                {search_msg}
-                <span style="color: #FFF; font-weight: bold; font-size: 1rem;">
-                    총 {total}개 (페이지: {curr_p}/{pages})
-                </span>
-                <span style="color: #FFD700; font-weight: bold; font-size: 1rem;">
-                    📅 {date_str}
-                </span>
-                <button onclick="copyDate()" style="background-color: transparent; border: 1px solid rgba(255,255,255,0.5); color: #FFF; padding: 3px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; font-weight:bold; transition: 0.3s;">
-                    📋 복사
-                </button>
-            </div>
-            <script>
-            function copyDate() {{
-                var temp = document.createElement("textarea");
-                temp.value = "{date_str}";
-                document.body.appendChild(temp);
-                temp.select();
-                document.execCommand("copy");
-                document.body.removeChild(temp);
-                
-                var btn = document.querySelector("button");
-                btn.innerHTML = "✅ 복사됨";
-                setTimeout(function(){{ btn.innerHTML = "📋 복사"; }}, 2000);
-            }}
+    # ★ 날짜 글자색 화이트 적용 및 복사 버튼 유지 ★
+    components.html(f"""
+        <style>
+            body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
+            button:hover {{ background-color: rgba(255,255,255,0.2) !important; }}
+        </style>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 8px; padding-top: 10px; font-family: sans-serif;">
+            {search_msg}
+            <span style="color: #FFF; font-weight: bold; font-size: 1rem;">
+                총 {total}개 (페이지: {curr_p}/{pages})
+            </span>
+            <span style="color: #FFFFFF; font-weight: bold; font-size: 1rem;">
+                📅 {date_str}
+            </span>
+            <button onclick="copyDate()" style="background-color: transparent; border: 1px solid rgba(255,255,255,0.5); color: #FFF; padding: 3px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; font-weight:bold; transition: 0.3s;">
+                📋 복사
+            </button>
+        </div>
+        <script>
+        function copyDate() {{
+            var temp = document.createElement("textarea");
+            temp.value = "{date_str}";
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand("copy");
+            document.body.removeChild(temp);
+            
+            var btn = document.querySelector("button");
+            btn.innerHTML = "✅ 복사됨";
+            setTimeout(function(){{ btn.innerHTML = "📋 복사"; }}, 2000);
+        }}
 
-            const doc = window.parent.document;
-            if (!doc.formatListenerAdded) {{
-                doc.body.addEventListener('input', function(e) {{
-                    if (e.target && e.target.placeholder === "숫자 입력 (예: 1,004)") {{
-                        let rawVal = e.target.value.replace(/[^0-9]/g, '');
-                        if (rawVal) {{
-                            e.target.value = Number(rawVal).toLocaleString('en-US');
-                        }} else {{
-                            e.target.value = '';
-                        }}
+        const doc = window.parent.document;
+        if (!doc.formatListenerAdded) {{
+            doc.body.addEventListener('input', function(e) {{
+                if (e.target && e.target.placeholder === "숫자 입력 (예: 1,004)") {{
+                    let rawVal = e.target.value.replace(/[^0-9]/g, '');
+                    if (rawVal) {{
+                        e.target.value = Number(rawVal).toLocaleString('en-US');
+                    }} else {{
+                        e.target.value = '';
                     }}
-                }});
-                doc.formatListenerAdded = true;
-            }}
-            </script>
-        """, height=65)
-        
-    with label_col:
-        st.markdown("<p class='num-label'>Num.ENG :</p>", unsafe_allow_html=True)
-        
-    with input_col:
-        st.text_input("숫자입력", key="num_input", on_change=format_num_input, placeholder="숫자 입력 (예: 1,004)", label_visibility="collapsed")
-        num_val = st.session_state.num_input
-        
-    with result_col:
-        if num_val:
-            clean_num = num_val.replace(",", "").strip()
-            if clean_num.isdigit():
-                eng_text = num_to_eng(int(clean_num)).capitalize()
-                st.markdown(f"<p class='num-result'>📝 {eng_text}</p>", unsafe_allow_html=True)
-            else:
-                st.markdown("<p style='color:#FF9999; font-weight:bold; font-size:1.2rem; margin-top:8px;'>⚠️ 숫자만 입력해주세요.</p>", unsafe_allow_html=True)
+                }}
+            }});
+            doc.formatListenerAdded = true;
+        }}
+        </script>
+    """, height=65)
     
     ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
     labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
