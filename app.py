@@ -58,7 +58,7 @@ st.markdown("""
         background-color: #1a2f2f !important;
     }
 
-    /* ★ 4. 상단 분류 리스트(Radio) 깔끔한 알약(태그) 형태로 디자인 개선 ★ */
+    /* 4. 상단 분류 리스트(Radio) 깔끔한 알약(태그) 형태로 디자인 개선 */
     div[data-testid="stRadio"] > div[role="radiogroup"] {
         flex-direction: row !important;
         flex-wrap: wrap !important;
@@ -67,12 +67,10 @@ st.markdown("""
         padding-bottom: 5px !important;
     }
     
-    /* 기존 동그란 라디오 아이콘 완벽하게 숨기기 */
     div[data-testid="stRadio"] label > div:first-of-type {
         display: none !important;
     }
     
-    /* 라벨(버튼) 기본 스타일 */
     div[data-testid="stRadio"] label {
         cursor: pointer !important;
         margin: 0 !important;
@@ -83,22 +81,19 @@ st.markdown("""
         transition: all 0.3s ease !important;
     }
     
-    /* 마우스 호버 효과 */
     div[data-testid="stRadio"] label:hover {
         background-color: rgba(255, 255, 255, 0.2) !important;
         border-color: #FFD700 !important;
     }
     
-    /* 텍스트 기본 상태 */
     div[data-testid="stRadio"] label p {
         color: #FFFFFF !important; 
-        font-size: 1.4rem !important; 
+        font-size: clamp(1.1rem, 1.4vw, 1.4rem) !important; /* 반응형 크기 적용 */
         font-weight: 800 !important;
         transition: color 0.2s ease;
         margin: 0 !important;
     }
     
-    /* ★ 선택된 분류 상태 (배경 노란색, 글자 다크그린) ★ */
     div[data-testid="stRadio"] label:has(input:checked),
     div[data-testid="stRadio"] label:has(div[aria-checked="true"]) {
         background-color: #FFD700 !important;
@@ -107,8 +102,8 @@ st.markdown("""
     
     div[data-testid="stRadio"] label:has(input:checked) p,
     div[data-testid="stRadio"] label:has(div[aria-checked="true"]) p {
-        color: #224343 !important; /* 다크그린 배경을 글자색으로 */
-        text-decoration: none !important; /* 밑줄 제거 */
+        color: #224343 !important;
+        text-decoration: none !important;
     }
 
     /* 5. 일반 입력창 스타일: 배경 화이트 / 글자 블랙 */
@@ -122,9 +117,9 @@ st.markdown("""
         border: 1px solid #FFFFFF !important;
     }
 
-    /* 특정 입력창(숫자입력) 폰트 크기 확대 (1.6rem) - 내부 라벨로 추적 */
+    /* ★ 특정 입력창(숫자입력) 폰트 크기 반응형 확대 (화면 폭에 따라 자동 조절) ★ */
     input[aria-label="숫자입력"] {
-        font-size: 1.6rem !important;
+        font-size: clamp(1.1rem, 1.5vw, 1.6rem) !important;
     }
 
     /* 6. 패스워드 눈알 아이콘 숨기기 (모바일 입력 최적화) */
@@ -145,7 +140,7 @@ st.markdown("""
     }
     button[kind="primary"] p {
         color: #224343 !important;
-        font-size: 1.15rem !important;
+        font-size: clamp(1rem, 1.2vw, 1.15rem) !important;
     }
     button[kind="secondary"], div.stDownloadButton > button {
         background-color: transparent !important;
@@ -153,35 +148,34 @@ st.markdown("""
         color: #FFFFFF !important;
     }
     button[kind="secondary"] p {
-        font-size: 1.15rem !important;
+        font-size: clamp(1rem, 1.2vw, 1.15rem) !important;
     }
 
     /* 8. 헤더 및 일반 텍스트용 클래스 (모바일 대응을 위한 분리) */
-    .header-label { font-size: 1.6rem !important; font-weight: 800 !important; color: #FFFFFF !important; display: block; margin-bottom: 0px !important; }
-    .sort-header-btn button { background-color: transparent !important; border: none !important; padding: 0 !important; color: #FFFFFF !important; font-weight: 800 !important; font-size: 1.6rem !important; text-decoration: underline !important; }
+    .header-label { font-size: clamp(1.2rem, 1.5vw, 1.6rem) !important; font-weight: 800 !important; color: #FFFFFF !important; display: block; margin-bottom: 0px !important; }
+    .sort-header-btn button { background-color: transparent !important; border: none !important; padding: 0 !important; color: #FFFFFF !important; font-weight: 800 !important; font-size: clamp(1.2rem, 1.5vw, 1.6rem) !important; text-decoration: underline !important; }
     
     .word-text { font-size: 2.0em; font-weight: bold; display: block; }
     .mean-text { font-size: 1.5em; display: block; }
     
-    /* 상단 숫자 변환 라벨 및 결과용 클래스 */
-    .num-label { color: #FFF; font-weight: bold; margin-top: 12px; text-align: right; font-size: 1.6rem; }
-    .num-result { color: #FFD700; font-weight: bold; font-size: 1.6rem; margin-top: 12px; }
-    .num-warning { color: #FF9999; font-weight: bold; font-size: 1.2rem; margin-top: 16px; }
+    /* ★ 상단 숫자 변환 라벨 및 결과용 클래스 (반응형 폰트 clamp 적용) ★ */
+    .num-label { color: #FFF; font-weight: bold; margin-top: 12px; text-align: right; font-size: clamp(1.1rem, 1.5vw, 1.6rem); }
+    .num-result { color: #FFD700; font-weight: bold; font-size: clamp(1.1rem, 1.5vw, 1.6rem); margin-top: 12px; }
+    .num-warning { color: #FF9999; font-weight: bold; font-size: clamp(0.9rem, 1.2vw, 1.2rem); margin-top: 16px; }
     .num-input-container { margin-top: 8px; }
     
     .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -25px; margin-bottom: 2px; }
 
-    /* ★ 9. 모바일 반응형(Responsive) 디자인 최적화 ★ */
+    /* ★ 9. 모바일 반응형(Responsive) 디자인 최적화 (768px 이하에서 레이아웃 스택 대비) ★ */
     @media screen and (max-width: 768px) {
         /* 타이틀 및 상단 간격 축소 */
         h1 { font-size: 1.8rem !important; }
         
         /* 모바일에서는 라벨을 좌측 정렬하고 폰트 크기 조정 */
-        .num-label { font-size: 1.2rem !important; text-align: left !important; margin-top: 5px !important; }
-        .num-result { font-size: 1.3rem !important; margin-top: 5px !important; }
+        .num-label { text-align: left !important; margin-top: 5px !important; }
+        .num-result { margin-top: 5px !important; }
         .num-warning { margin-top: 5px !important; }
         .num-input-container { margin-top: 0px !important; }
-        input[aria-label="숫자입력"] { font-size: 1.3rem !important; }
         
         /* 리스트 본문 글자 크기 축소 */
         .word-text { font-size: 1.4em !important; }
@@ -200,16 +194,9 @@ st.markdown("""
         /* 카드형태에서는 점선이 겹치므로 제거 */
         .row-divider { display: none !important; }
         
-        /* 버튼류 및 분류 텍스트 모바일용 축소 */
-        .header-label { font-size: 1.2rem !important; }
-        .sort-header-btn button { font-size: 1.2rem !important; }
-        button[kind="primary"] p { font-size: 1.0rem !important; }
-        button[kind="secondary"] p { font-size: 1.0rem !important; }
-        
         /* 모바일용 분류 알약 버튼 사이즈 조정 */
         div[data-testid="stRadio"] > div[role="radiogroup"] { gap: 8px 10px !important; }
         div[data-testid="stRadio"] label { padding: 6px 16px !important; }
-        div[data-testid="stRadio"] label p { font-size: 1.1rem !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -341,27 +328,36 @@ kst = timezone(timedelta(hours=9))
 now_kst = datetime.now(kst)
 date_str = now_kst.strftime("%A, %B %d, %Y")
 
-# ★ 상단 레이아웃 (타이틀 + 날짜 + 숫자변환 + 로그인) ★
-# 날짜 영역이 잘리지 않도록 컬럼 가로 비율 조정 (col_date 영역 확대: 1.7 -> 2.5)
-col_title, col_date, col_num_label, col_num_input, col_num_result, col_auth = st.columns([2.2, 2.5, 0.9, 1.5, 2.0, 0.9])
+# ★ 상단 레이아웃 (타이틀 + 날짜 + 숫자변환 + 로그인) 비율 재조정 ★
+# 좁아지는 화면을 대비해 비율을 더 여유롭게 잡고, 요소들이 스택되기 전까지 버티게 함
+col_title, col_date, col_num_label, col_num_input, col_num_result, col_auth = st.columns([2.3, 2.2, 0.9, 1.5, 2.1, 1.0])
 
 with col_title:
-    st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem;'>TOmBOy94's English</h1>", unsafe_allow_html=True)
+    # 제목 폰트 크기도 화면에 맞게 반응형(clamp)으로 조절
+    st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.6rem, 2.3vw, 2.2rem);'>TOmBOy94's English</h1>", unsafe_allow_html=True)
 
 with col_date:
-    # ★ 줄바꿈 방지(white-space: nowrap) 추가 및 높이(height) 확대 ★
+    # ★ 줄바꿈 허용(flex-wrap: wrap) 및 높이(height=90) 확대하여 짤림 완벽 방지, 폰트 반응형(clamp) ★
     components.html(f"""
         <style>
             body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
-            button:hover {{ background-color: rgba(255,255,255,0.2) !important; }}
+            .date-wrapper {{
+                display: flex; flex-wrap: wrap; align-items: center; gap: 8px; 
+                padding-top: 18px; font-family: sans-serif;
+            }}
+            .date-text {{
+                color: #FFFFFF; font-weight: bold; font-size: clamp(0.95rem, 1.4vw, 1.3rem);
+            }}
+            .copy-btn {{
+                background-color: transparent; border: 1px solid rgba(255,255,255,0.5); 
+                color: #FFF; padding: 4px 8px; border-radius: 6px; cursor: pointer; 
+                font-size: clamp(0.75rem, 1vw, 0.9rem); font-weight:bold; transition: 0.3s;
+            }}
+            .copy-btn:hover {{ background-color: rgba(255,255,255,0.2) !important; }}
         </style>
-        <div style="display: flex; align-items: center; gap: 8px; padding-top: 15px; font-family: sans-serif; white-space: nowrap;">
-            <span style="color: #FFFFFF; font-weight: bold; font-size: 1.3rem;">
-                📅 {date_str}
-            </span>
-            <button onclick="copyDate()" style="background-color: transparent; border: 1px solid rgba(255,255,255,0.5); color: #FFF; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight:bold; transition: 0.3s; margin-top: 2px; white-space: nowrap;">
-                📋 복사
-            </button>
+        <div class="date-wrapper">
+            <span class="date-text">📅 {date_str}</span>
+            <button class="copy-btn" onclick="copyDate()">📋 복사</button>
         </div>
         <script>
         function copyDate() {{
@@ -372,12 +368,12 @@ with col_date:
             document.execCommand("copy");
             document.body.removeChild(temp);
             
-            var btn = document.querySelector("button");
+            var btn = document.querySelector(".copy-btn");
             btn.innerHTML = "✅";
             setTimeout(function(){{ btn.innerHTML = "📋 복사"; }}, 2000);
         }}
         </script>
-    """, height=80)
+    """, height=90)
 
 with col_num_label:
     st.markdown("<p class='num-label'>Num.ENG :</p>", unsafe_allow_html=True)
@@ -479,7 +475,7 @@ try:
         </style>
         <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 8px; padding-top: 10px; font-family: sans-serif;">
             {search_msg}
-            <span style="color: #FFF; font-weight: bold; font-size: 1rem;">
+            <span style="color: #FFF; font-weight: bold; font-size: clamp(0.9rem, 1.2vw, 1rem);">
                 총 {total}개 (페이지: {curr_p}/{pages})
             </span>
         </div>
