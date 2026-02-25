@@ -236,7 +236,8 @@ if 'current_cat' not in st.session_state:
 
 col_title, col_auth = st.columns([7, 2])
 with col_title:
-    st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem;'>TOmBOy94's English words and sentences : lodus11st@naver.com</h1>", unsafe_allow_html=True)
+    # ★ 타이틀 간소화 ★
+    st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem;'>TOmBOy94's English</h1>", unsafe_allow_html=True)
 with col_auth:
     if not st.session_state.authenticated:
         with st.expander("🔐 로그인"):
@@ -376,3 +377,10 @@ try:
 
 except Exception as e:
     st.error(f"오류 발생: {e}")
+
+# --- [푸터(Footer) 추가] ---
+st.markdown("""
+    <div style='text-align: center; margin-top: 50px; margin-bottom: 20px; padding-top: 20px; border-top: 1px dotted rgba(255, 255, 255, 0.2);'>
+        <p style='color: #A3B8B8; font-size: 1.0rem; font-weight: bold;'>email : lodus11st@naver.com</p>
+    </div>
+""", unsafe_allow_html=True)
