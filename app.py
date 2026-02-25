@@ -40,11 +40,24 @@ st.markdown("""
         -webkit-text-fill-color: #FFFFFF !important;
     }
     
-    /* 토글 스위치(심플모드) 라벨 */
+    /* ★ 토글 스위치(심플모드) 라벨 1.5 확대 및 디자인 ★ */
     div[data-testid="stToggle"] label p,
-    div[data-testid="stWidgetLabel"] p {
+    div[data-testid="stToggle"] div[data-testid="stWidgetLabel"] p {
         color: #FFFFFF !important;
         font-weight: bold !important;
+        font-size: 1.5rem !important; /* 1.5 사이즈로 확대 */
+    }
+
+    /* 토글 스위치 꺼져있을 때(Off) 시인성 개선: 테두리 및 밝은 배경 */
+    div[data-testid="stToggle"] div[data-baseweb="toggle"] > div:first-child {
+        background-color: #6e8e8e !important; 
+        border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    }
+    
+    /* 토글 스위치 켜져있을 때(On) 포인트 컬러(노란색) 적용 */
+    div[data-testid="stToggle"] div[data-baseweb="toggle"]:has(input:checked) > div:first-child {
+        background-color: #FFD700 !important;
+        border-color: #FFD700 !important;
     }
 
     /* 로그인(Expander) 제목 */
@@ -178,10 +191,11 @@ st.markdown("""
         /* 카드형태에서는 점선이 겹치므로 제거 */
         .row-divider { display: none !important; }
         
-        /* 버튼류 글자 축소 */
+        /* 버튼류 및 심플모드 텍스트 모바일용 축소 */
         .header-label { font-size: 1.2rem !important; }
         .sort-header-btn button { font-size: 1.2rem !important; }
-        div[role="radiogroup"] label p { font-size: 1.2rem !important; } /* 상단 분류 텍스트 모바일에서도 조금 더 크게 */
+        div[role="radiogroup"] label p { font-size: 1.2rem !important; }
+        div[data-testid="stToggle"] label p { font-size: 1.2rem !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -387,14 +401,14 @@ try:
     
     st.divider()
     
-    # ★ 컨트롤바 (검색 입력창을 가장 앞으로 배치) ★
+    # ★ 컨트롤바 (글자 크기를 고려해 '심플모드' 토글 공간 확대) ★
     if st.session_state.authenticated:
-        cb = st.columns([4.0, 1.5, 1.2, 0.3, 1.5])
+        cb = st.columns([3.8, 1.5, 1.4, 0.3, 1.5])
         cb[0].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
         if cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
         is_simple = cb[2].toggle("심플모드")
     else:
-        cb = st.columns([5.5, 1.2, 3.3])
+        cb = st.columns([5.3, 1.4, 3.3])
         cb[0].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
         is_simple = cb[1].toggle("심플모드")
 
