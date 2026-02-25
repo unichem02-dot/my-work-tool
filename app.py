@@ -117,7 +117,7 @@ st.markdown("""
         border: 1px solid #FFFFFF !important;
     }
 
-    /* ★ 특정 입력창(숫자입력) 폰트 크기 반응형 확대 (화면 폭에 따라 자동 조절) ★ */
+    /* 특정 입력창(숫자입력) 폰트 크기 반응형 확대 (화면 폭에 따라 자동 조절) */
     input[aria-label="숫자입력"] {
         font-size: clamp(1.1rem, 1.5vw, 1.6rem) !important;
     }
@@ -127,7 +127,7 @@ st.markdown("""
         display: none !important;
     }
 
-    /* 7. 버튼 스타일: 알약 모양 */
+    /* 7. ★ 버튼 스타일: 알약 모양 및 글자 두껍게(Bold) 적용 ★ */
     button, div.stDownloadButton > button {
         border-radius: 50px !important;
         padding: 0.5rem 1.5rem !important;
@@ -141,6 +141,7 @@ st.markdown("""
     button[kind="primary"] p {
         color: #224343 !important;
         font-size: clamp(1rem, 1.2vw, 1.15rem) !important;
+        font-weight: 900 !important; /* 아주 굵게 */
     }
     button[kind="secondary"], div.stDownloadButton > button {
         background-color: transparent !important;
@@ -149,30 +150,40 @@ st.markdown("""
     }
     button[kind="secondary"] p {
         font-size: clamp(1rem, 1.2vw, 1.15rem) !important;
+        font-weight: 900 !important; /* 아주 굵게 */
     }
 
     /* 8. 헤더 및 일반 텍스트용 클래스 (모바일 대응을 위한 분리) */
     .header-label { font-size: clamp(1.2rem, 1.5vw, 1.6rem) !important; font-weight: 800 !important; color: #FFFFFF !important; display: block; margin-bottom: 0px !important; }
     .sort-header-btn button { background-color: transparent !important; border: none !important; padding: 0 !important; color: #FFFFFF !important; font-weight: 800 !important; font-size: clamp(1.2rem, 1.5vw, 1.6rem) !important; text-decoration: underline !important; }
     
-    .word-text { font-size: 2.0em; font-weight: bold; display: block; }
+    /* ★ 단어-문장 텍스트 색상을 노란색(#FFD700)으로 변경 ★ */
+    .word-text { font-size: 2.0em; font-weight: bold; display: block; color: #FFD700 !important; }
     .mean-text { font-size: 1.5em; display: block; }
     
-    /* ★ 상단 숫자 변환 라벨 및 결과용 클래스 (반응형 폰트 clamp 적용) ★ */
-    .num-label { color: #FFF; font-weight: bold; margin-top: 12px; text-align: right; font-size: clamp(1.1rem, 1.5vw, 1.6rem); }
+    /* ★ 상단 숫자 변환 라벨 (수직 중앙 정렬을 위한 래퍼 추가) ★ */
+    .num-label-wrapper { 
+        display: flex; 
+        align-items: center; 
+        justify-content: flex-end; 
+        height: 42px; /* 입력창 높이와 맞춰 수직 정렬 */
+        margin-top: 8px; 
+    }
+    .num-label { color: #FFF; font-weight: bold; font-size: clamp(1.1rem, 1.5vw, 1.6rem); margin: 0; }
+    
     .num-result { color: #FFD700; font-weight: bold; font-size: clamp(1.1rem, 1.5vw, 1.6rem); margin-top: 12px; }
     .num-warning { color: #FF9999; font-weight: bold; font-size: clamp(0.9rem, 1.2vw, 1.2rem); margin-top: 16px; }
     .num-input-container { margin-top: 8px; }
     
     .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -25px; margin-bottom: 2px; }
 
-    /* ★ 9. 모바일 반응형(Responsive) 디자인 최적화 (768px 이하에서 레이아웃 스택 대비) ★ */
+    /* 9. 모바일 반응형(Responsive) 디자인 최적화 (768px 이하에서 레이아웃 스택 대비) */
     @media screen and (max-width: 768px) {
         /* 타이틀 및 상단 간격 축소 */
         h1 { font-size: 1.8rem !important; }
         
         /* 모바일에서는 라벨을 좌측 정렬하고 폰트 크기 조정 */
-        .num-label { text-align: left !important; margin-top: 5px !important; }
+        .num-label-wrapper { justify-content: flex-start !important; height: auto !important; margin-top: 5px !important; }
         .num-result { margin-top: 5px !important; }
         .num-warning { margin-top: 5px !important; }
         .num-input-container { margin-top: 0px !important; }
@@ -328,16 +339,13 @@ kst = timezone(timedelta(hours=9))
 now_kst = datetime.now(kst)
 date_str = now_kst.strftime("%A, %B %d, %Y")
 
-# ★ 상단 레이아웃 (타이틀 + 날짜 + 숫자변환 + 로그인) 비율 재조정 ★
-# 좁아지는 화면을 대비해 비율을 더 여유롭게 잡고, 요소들이 스택되기 전까지 버티게 함
+# ★ 상단 레이아웃 (타이틀 + 날짜 + 숫자변환 + 로그인) 비율 재조정
 col_title, col_date, col_num_label, col_num_input, col_num_result, col_auth = st.columns([2.3, 2.2, 0.9, 1.5, 2.1, 1.0])
 
 with col_title:
-    # 제목 폰트 크기도 화면에 맞게 반응형(clamp)으로 조절
     st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.6rem, 2.3vw, 2.2rem);'>TOmBOy94's English</h1>", unsafe_allow_html=True)
 
 with col_date:
-    # ★ 줄바꿈 허용(flex-wrap: wrap) 및 높이(height=90) 확대하여 짤림 완벽 방지, 폰트 반응형(clamp) ★
     components.html(f"""
         <style>
             body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
@@ -376,7 +384,8 @@ with col_date:
     """, height=90)
 
 with col_num_label:
-    st.markdown("<p class='num-label'>Num.ENG :</p>", unsafe_allow_html=True)
+    # ★ 텍스트가 입력창 중앙에 오도록 래퍼(div)로 감싸 정렬 ★
+    st.markdown("<div class='num-label-wrapper'><span class='num-label'>Num.ENG :</span></div>", unsafe_allow_html=True)
     
 with col_num_input:
     st.markdown("<div class='num-input-container'>", unsafe_allow_html=True)
