@@ -41,23 +41,33 @@ st.markdown("""
     }
     
     /* ★ 토글 스위치(심플모드) 라벨 1.5 확대 및 디자인 ★ */
-    div[data-testid="stToggle"] label p,
-    div[data-testid="stToggle"] div[data-testid="stWidgetLabel"] p {
+    div[data-testid="stToggle"] label p {
         color: #FFFFFF !important;
         font-weight: bold !important;
         font-size: 1.5rem !important; /* 1.5 사이즈로 확대 */
+        line-height: 1.5 !important;
     }
 
-    /* 토글 스위치 꺼져있을 때(Off) 시인성 개선: 테두리 및 밝은 배경 */
-    div[data-testid="stToggle"] div[data-baseweb="toggle"] > div:first-child {
-        background-color: #6e8e8e !important; 
-        border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    /* 토글 스위치 크기 자체를 1.6배로 시원하게 확대 */
+    div[data-testid="stToggle"] div[data-baseweb="toggle"] {
+        transform: scale(1.6) !important;
+        transform-origin: left center !important;
+        margin-right: 15px !important; /* 스위치가 커진 만큼 텍스트와의 간격 확보 */
+    }
+
+    /* 토글 스위치 꺼져있을 때(Off) 트랙 시인성 대폭 개선 (밝은 회색) */
+    div[data-testid="stToggle"] div[data-baseweb="toggle"] > div {
+        background-color: #95a5a6 !important;
+    }
+
+    /* 토글 스위치 켜져있을 때(On) 트랙 노란색 */
+    div[data-testid="stToggle"] div[data-baseweb="toggle"]:has(input:checked) > div {
+        background-color: #FFD700 !important;
     }
     
-    /* 토글 스위치 켜져있을 때(On) 포인트 컬러(노란색) 적용 */
-    div[data-testid="stToggle"] div[data-baseweb="toggle"]:has(input:checked) > div:first-child {
-        background-color: #FFD700 !important;
-        border-color: #FFD700 !important;
+    /* 스위치 안의 동그라미(Thumb) 색상 고정 */
+    div[data-testid="stToggle"] div[data-baseweb="toggle"] > div > div {
+        background-color: #FFFFFF !important;
     }
 
     /* 로그인(Expander) 제목 */
@@ -488,7 +498,8 @@ try:
         else:
             h_cols[i].markdown(f"<span class='header-label'>{l}</span>", unsafe_allow_html=True)
     
-    st.divider()
+    # ★ 제목부분과 컨텐츠 사이의 간격을 대폭 좁히기 위해 st.divider() 대신 커스텀 구분선 사용 ★
+    st.markdown("<div style='border-bottom: 2px solid rgba(255,255,255,0.4); margin-top: -20px; margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
     for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
         cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
