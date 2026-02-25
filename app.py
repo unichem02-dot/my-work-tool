@@ -430,7 +430,7 @@ with col_num_result:
 
 with col_auth:
     if not st.session_state.authenticated:
-        with st.expander("🔐 로그인"):
+        with st.expander("🔐 LOGIN"):
             if st.text_input("Password", type="password") == LOGIN_PASSWORD:
                 st.session_state.authenticated = True
                 st.query_params["auth"] = "true"
