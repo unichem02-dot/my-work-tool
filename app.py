@@ -1,5 +1,5 @@
 import streamlit as st
-import streamlit.components.v1 as components  # 복사 버튼(HTML/JS) 구현을 위해 추가
+import streamlit.components.v1 as components
 import gspread
 from google.oauth2.service_account import Credentials
 import pandas as pd
@@ -104,12 +104,12 @@ st.markdown("""
         border: 1px solid #FFFFFF !important;
     }
 
-    /* ★ 특정 입력창(숫자입력) 폰트 크기 확대 (1.6rem) ★ */
+    /* 특정 입력창(숫자입력) 폰트 크기 확대 (1.6rem) */
     input[placeholder*="1,004"] {
         font-size: 1.6rem !important;
     }
 
-    /* ★ 6. 패스워드 눈알 아이콘 숨기기 (모바일 입력 최적화) ★ */
+    /* 6. 패스워드 눈알 아이콘 숨기기 (모바일 입력 최적화) */
     div[data-testid="stTextInput"] button {
         display: none !important;
     }
@@ -134,7 +134,7 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* ★ 8. 헤더 라벨 전용 스타일 ★ */
+    /* 8. 헤더 라벨 전용 스타일 */
     .header-label {
         font-size: 1.6rem !important;
         font-weight: 800 !important;
@@ -154,7 +154,7 @@ st.markdown("""
         text-decoration: underline !important;
     }
 
-    /* ★ 구분선 간격 압축 (최소화) ★ */
+    /* 구분선 간격 압축 (최소화) */
     hr {
         margin-top: 0px !important;
         margin-bottom: 5px !important;
@@ -228,7 +228,7 @@ def edit_dialog(idx, row_data, sheet, full_df):
             sheet.delete_rows(idx + 2); st.rerun()
 
 # --- [메인 실행] ---
-# 세션 상태 초기화 (랜덤 안정성 및 숫자입력 변수 포함)
+# 세션 상태 초기화 (랜덤 안정성, 숫자입력, ★검색 변수 포함★)
 if "authenticated" not in st.session_state:
     if st.query_params.get("auth") == "true":
         st.session_state.authenticated = True
@@ -239,21 +239,38 @@ if 'sort_order' not in st.session_state:
     st.session_state.sort_order = 'None'
 
 if 'current_cat' not in st.session_state:
-    st.session_state.current_cat = "🔀 랜덤 10" # 첫 시작 시 기본 카테고리 기록
+    st.session_state.current_cat = "🔀 랜덤 10"
 
 if 'num_input' not in st.session_state:
     st.session_state.num_input = ""
 
-# ★ 입력창 자동 콤마(,) 추가 콜백 함수 (Python 백업 처리용) ★
+if 'active_search' not in st.session_state:
+    st.session_state.active_search = ""
+if 'search_input' not in st.session_state:
+    st.session_state.search_input = ""
+
+# 입력창 콜백 함수 모음
 def format_num_input():
     raw_val = str(st.session_state.num_input)
-    # 숫자 이외의 문자(콤마 등)를 모두 제거
     cleaned = re.sub(r'[^0-9]', '', raw_val)
     if cleaned:
-        # 3자리마다 콤마를 찍어서 다시 세션 상태에 저장
         st.session_state.num_input = f"{int(cleaned):,}"
     else:
         st.session_state.num_input = ""
+
+def handle_search():
+    # 검색창에서 엔터 시 호출됨
+    val = st.session_state.search_input.strip()
+    if val:
+        st.session_state.active_search = val
+    else:
+        st.session_state.active_search = ""
+    # 검색 후 입력창을 바로 비워줌
+    st.session_state.search_input = ""
+
+def clear_search():
+    # 분류(카테고리)가 변경될 때 검색 상태 초기화
+    st.session_state.active_search = ""
 
 col_title, col_auth = st.columns([7, 2])
 with col_title:
@@ -274,13 +291,13 @@ with col_auth:
 try:
     sheet = get_sheet(); df = load_dataframe(sheet)
     
-    # ★ 상단 카테고리 필터 ('🔀 랜덤 10'을 맨 앞에 추가) ★
+    # 상단 카테고리 필터
     unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
     cat_options = ["🔀 랜덤 10", "전체 분류"] + unique_cats
-    selected_radio = st.radio("분류 필터", cat_options, horizontal=True, label_visibility="collapsed")
-    sel_cat = selected_radio
+    # 카테고리 변경 시 on_change를 통해 검색어 초기화
+    sel_cat = st.radio("분류 필터", cat_options, horizontal=True, label_visibility="collapsed", key="cat_radio", on_change=clear_search)
     
-    # ★ 새로고침 전용 버튼 (랜덤 10 상태일 때만 노출) ★
+    # 새로고침 전용 버튼 (랜덤 10 상태일 때만 노출)
     if sel_cat == "🔀 랜덤 10":
         _, btn_col = st.columns([8.5, 1.5])
         with btn_col:
@@ -290,34 +307,36 @@ try:
 
     st.divider()
     
-    # 컨트롤바
+    # 컨트롤바 (검색 입력창 연결)
     if st.session_state.authenticated:
         cb = st.columns([1.5, 1.2, 0.3, 4.0, 1.5])
         if cb[0].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
         is_simple = cb[1].toggle("심플모드")
-        search = cb[3].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
+        cb[3].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
     else:
         cb = st.columns([1.2, 0.3, 5.5, 1.5])
         is_simple = cb[0].toggle("심플모드")
-        search = cb[2].text_input("검색", placeholder="검색어 입력...", label_visibility="collapsed")
+        cb[2].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
 
-    # ★ 필터링 및 랜덤 데이터 추출 로직 ★
+    # 활성화된 검색어 가져오기
+    search = st.session_state.active_search
+
+    # ★ 필터링 로직 (검색 최우선) ★
     d_df = df.copy()
     
-    if sel_cat == "🔀 랜덤 10":
-        # 사용자가 다른 카테고리에서 '랜덤 10'으로 막 넘어왔거나, 처음 시작할 때만 새로운 10개를 뽑음
-        if st.session_state.current_cat != "🔀 랜덤 10" or 'random_df' not in st.session_state:
-            st.session_state.random_df = df.sample(n=min(10, len(df)))
-        # 심플모드 토글이나 검색 시 문장이 안 바뀌게 저장된 랜덤 데이터 사용
-        d_df = st.session_state.random_df.copy()
-    elif sel_cat != "전체 분류":
-        d_df = d_df[d_df['분류'] == sel_cat]
-        
-    st.session_state.current_cat = sel_cat # 현재 선택된 카테고리 저장
-    
-    # '단어-문장' 열에서만 검색
     if search:
+        # 검색어가 활성화되면 카테고리를 무시하고 전체 데이터에서 검색
         d_df = d_df[d_df['단어-문장'].str.contains(search, case=False, na=False)]
+    else:
+        # 검색어가 없을 때만 정상적인 카테고리 필터 적용
+        if sel_cat == "🔀 랜덤 10":
+            if st.session_state.current_cat != "🔀 랜덤 10" or 'random_df' not in st.session_state:
+                st.session_state.random_df = df.sample(n=min(10, len(df)))
+            d_df = st.session_state.random_df.copy()
+        elif sel_cat != "전체 분류":
+            d_df = d_df[d_df['분류'] == sel_cat]
+            
+        st.session_state.current_cat = sel_cat
 
     # 정렬
     if st.session_state.sort_order == 'asc': d_df = d_df.sort_values(by='단어-문장', ascending=True)
@@ -334,7 +353,7 @@ try:
     if st.session_state.curr_p > pages: st.session_state.curr_p = 1
     curr_p = st.session_state.curr_p
     
-    # ★ 숫자를 영어 단어로 변환하는 내부 함수 ★
+    # 숫자를 영어 단어로 변환하는 내부 함수
     def num_to_eng(num):
         if num == 0: return "zero"
         ones = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"]
@@ -355,17 +374,20 @@ try:
     now_kst = datetime.now(kst)
     date_str = now_kst.strftime("%A, %B %d, %Y")
     
-    # ★ 레이아웃 조정 및 폰트 1.6 확대 적용 ★
+    # 레이아웃 조정
     info_col, label_col, input_col, result_col = st.columns([4.0, 1.4, 2.2, 4.4])
     
     with info_col:
-        # ★ HTML/JS를 이용한 날짜 정보 & 복사 버튼 & 실시간 콤마 로직 ★
+        # 검색 활성화 시 표시할 알림 문구
+        search_msg = f"<span style='color: #FF9999; font-weight: bold; font-size: 1rem; margin-right: 15px;'>🔍 '{search}' 검색됨</span>" if search else ""
+        
         components.html(f"""
             <style>
                 body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
                 button:hover {{ background-color: rgba(255,255,255,0.2) !important; }}
             </style>
             <div style="display: flex; align-items: center; justify-content: flex-start; height: 100%; padding-top: 10px; font-family: sans-serif;">
+                {search_msg}
                 <span style="color: #FFF; font-weight: bold; font-size: 1rem; margin-right: 15px;">
                     총 {total}개 (페이지: {curr_p}/{pages})
                 </span>
@@ -377,7 +399,6 @@ try:
                 </button>
             </div>
             <script>
-            // 1. 날짜 복사 기능
             function copyDate() {{
                 var temp = document.createElement("textarea");
                 temp.value = "{date_str}";
@@ -391,14 +412,13 @@ try:
                 setTimeout(function(){{ btn.innerHTML = "📋 복사"; }}, 2000);
             }}
 
-            // 2. 실시간 콤마(,) 추가 로직 (타이핑 시 즉각 반영)
             const doc = window.parent.document;
             if (!doc.formatListenerAdded) {{
                 doc.body.addEventListener('input', function(e) {{
                     if (e.target && e.target.placeholder === "숫자 입력 (예: 1,004)") {{
-                        let rawVal = e.target.value.replace(/[^0-9]/g, ''); // 숫자만 추출
+                        let rawVal = e.target.value.replace(/[^0-9]/g, '');
                         if (rawVal) {{
-                            e.target.value = Number(rawVal).toLocaleString('en-US'); // 콤마 포맷팅 적용
+                            e.target.value = Number(rawVal).toLocaleString('en-US');
                         }} else {{
                             e.target.value = '';
                         }}
@@ -410,7 +430,6 @@ try:
         """, height=50)
         
     with label_col:
-        # 라벨 글자 크기 1.6rem 확대 및 정렬 보정
         st.markdown("<p style='color:#FFF; font-weight:bold; margin-top:8px; text-align:right; font-size:1.6rem;'>Num.ENG :</p>", unsafe_allow_html=True)
         
     with input_col:
@@ -422,7 +441,6 @@ try:
             clean_num = num_val.replace(",", "").strip()
             if clean_num.isdigit():
                 eng_text = num_to_eng(int(clean_num)).capitalize()
-                # 결과 영어 텍스트 1.6rem 확대 및 보정
                 st.markdown(f"<p style='color:#FFD700; font-weight:bold; font-size:1.6rem; margin-top:8px;'>📝 {eng_text}</p>", unsafe_allow_html=True)
             else:
                 st.markdown("<p style='color:#FF9999; font-weight:bold; font-size:1.2rem; margin-top:12px;'>⚠️ 숫자만 입력해주세요.</p>", unsafe_allow_html=True)
@@ -447,21 +465,19 @@ try:
     
     st.divider()
 
-    # 리스트 본문 (★ Duplicate Key 에러 해결: pandas의 원래 idx 사용)
+    # 리스트 본문
     for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
         cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
         
-        # 호버 효과를 위한 투명 마커
         cols[0].markdown(f"<span class='row-marker'></span>{row['분류']}", unsafe_allow_html=True)
-        
         cols[1].markdown(f"<span style='font-size:2.0em;font-weight:bold;display:block;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
         cols[2].markdown(f"<span style='font-size:1.5em;display:block;'>{row['해석']}</span>", unsafe_allow_html=True)
+        
         if not is_simple:
             cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
             if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}"): edit_dialog(idx, row, sheet, df)
         elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}"): edit_dialog(idx, row, sheet, df)
         
-        # 점선 간격 극소화 (-25px 적용)
         st.markdown("<div style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-25px;margin-bottom:2px;'></div>", unsafe_allow_html=True)
 
     # 하단 페이지네이션
