@@ -228,7 +228,7 @@ def edit_dialog(idx, row_data, sheet, full_df):
             sheet.delete_rows(idx + 2); st.rerun()
 
 # --- [메인 실행] ---
-# 세션 상태 초기화 (랜덤 안정성, 숫자입력, ★검색 변수 포함★)
+# 세션 상태 초기화 (랜덤 안정성, 숫자입력, 검색 변수 포함)
 if "authenticated" not in st.session_state:
     if st.query_params.get("auth") == "true":
         st.session_state.authenticated = True
@@ -297,14 +297,6 @@ try:
     # 카테고리 변경 시 on_change를 통해 검색어 초기화
     sel_cat = st.radio("분류 필터", cat_options, horizontal=True, label_visibility="collapsed", key="cat_radio", on_change=clear_search)
     
-    # 새로고침 전용 버튼 (랜덤 10 상태일 때만 노출)
-    if sel_cat == "🔀 랜덤 10":
-        _, btn_col = st.columns([8.5, 1.5])
-        with btn_col:
-            if st.button("🔄 10개 다시 뽑기", type="primary", use_container_width=True):
-                st.session_state.random_df = df.sample(n=min(10, len(df)))
-                st.rerun()
-
     st.divider()
     
     # 컨트롤바 (검색 입력창 연결)
