@@ -69,7 +69,6 @@ st.markdown("""
         flex-wrap: wrap !important;
         gap: 10px 25px !important;
         padding-top: 10px !important;
-        padding-bottom: 5px !important;
     }
     div[role="radiogroup"] div[role="radio"] {
         display: none !important;
@@ -146,7 +145,7 @@ st.markdown("""
     /* ★ 구분선 간격 압축 (최소화) ★ */
     hr {
         margin-top: 0px !important;
-        margin-bottom: 5px !important; /* 간격 더 축소 */
+        margin-bottom: 5px !important; 
         border-top: 1px dotted rgba(255, 255, 255, 0.3) !important;
     }
     </style>
@@ -329,8 +328,8 @@ try:
             if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}"): edit_dialog(idx, row, sheet, df)
         elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}"): edit_dialog(idx, row, sheet, df)
         
-        # ★ 점선 간격 최소화 (-15px 적용) ★
-        st.markdown("<div style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-15px;margin-bottom:2px;'></div>", unsafe_allow_html=True)
+        # ★ 점선 간격 극소화 (-25px 적용) ★
+        st.markdown("<div style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-25px;margin-bottom:2px;'></div>", unsafe_allow_html=True)
 
     # 하단 페이지네이션
     if pages > 1:
