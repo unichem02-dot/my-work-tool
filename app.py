@@ -305,11 +305,47 @@ def num_to_eng(num):
         return str(n)
     return _convert(num).strip()
 
-# ★ 상단 레이아웃 (타이틀 + 숫자변환 + 로그인) ★
-col_title, col_num_label, col_num_input, col_num_result, col_auth = st.columns([2.5, 1.2, 1.8, 3.5, 1.0])
+# 오늘 날짜 계산 (최상단으로 이동)
+kst = timezone(timedelta(hours=9))
+now_kst = datetime.now(kst)
+date_str = now_kst.strftime("%A, %B %d, %Y")
+
+# ★ 상단 레이아웃 (타이틀 + 날짜 + 숫자변환 + 로그인) ★
+col_title, col_date, col_num_label, col_num_input, col_num_result, col_auth = st.columns([2.3, 1.7, 1.0, 1.5, 2.5, 1.0])
 
 with col_title:
     st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem;'>TOmBOy94's English</h1>", unsafe_allow_html=True)
+
+with col_date:
+    # ★ 타이틀 바로 옆 화이트 톤 날짜 및 복사 버튼 ★
+    components.html(f"""
+        <style>
+            body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
+            button:hover {{ background-color: rgba(255,255,255,0.2) !important; }}
+        </style>
+        <div style="display: flex; align-items: center; gap: 5px; padding-top: 20px; font-family: sans-serif;">
+            <span style="color: #FFFFFF; font-weight: bold; font-size: 0.9rem;">
+                📅 {date_str}
+            </span>
+            <button onclick="copyDate()" style="background-color: transparent; border: 1px solid rgba(255,255,255,0.5); color: #FFF; padding: 2px 6px; border-radius: 5px; cursor: pointer; font-size: 0.75rem; font-weight:bold; transition: 0.3s;">
+                📋 복사
+            </button>
+        </div>
+        <script>
+        function copyDate() {{
+            var temp = document.createElement("textarea");
+            temp.value = "{date_str}";
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand("copy");
+            document.body.removeChild(temp);
+            
+            var btn = document.querySelector("button");
+            btn.innerHTML = "✅";
+            setTimeout(function(){{ btn.innerHTML = "📋 복사"; }}, 2000);
+        }}
+        </script>
+    """, height=50)
 
 with col_num_label:
     st.markdown("<p class='num-label'>Num.ENG :</p>", unsafe_allow_html=True)
@@ -351,15 +387,16 @@ try:
     
     st.divider()
     
+    # ★ 컨트롤바 (검색 입력창을 가장 앞으로 배치) ★
     if st.session_state.authenticated:
-        cb = st.columns([1.5, 1.2, 0.3, 4.0, 1.5])
-        if cb[0].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
-        is_simple = cb[1].toggle("심플모드")
-        cb[3].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
+        cb = st.columns([4.0, 1.5, 1.2, 0.3, 1.5])
+        cb[0].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
+        if cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
+        is_simple = cb[2].toggle("심플모드")
     else:
-        cb = st.columns([1.2, 0.3, 5.5, 1.5])
-        is_simple = cb[0].toggle("심플모드")
-        cb[2].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
+        cb = st.columns([5.5, 1.2, 3.3])
+        cb[0].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
+        is_simple = cb[1].toggle("심플모드")
 
     search = st.session_state.active_search
 
@@ -389,44 +426,20 @@ try:
     if st.session_state.curr_p > pages: st.session_state.curr_p = 1
     curr_p = st.session_state.curr_p
 
-    kst = timezone(timedelta(hours=9))
-    now_kst = datetime.now(kst)
-    date_str = now_kst.strftime("%A, %B %d, %Y")
-    
     search_msg = f"<span style='color: #FF9999; font-weight: bold; font-size: 1rem; margin-right: 15px;'>🔍 '{search}' 검색됨</span>" if search else ""
     
-    # ★ 날짜 글자색 화이트 적용 및 복사 버튼 유지 ★
+    # ★ 총 개수와 검색 상태 알림 & JS 실시간 콤마 적용 로직 유지 ★
     components.html(f"""
         <style>
             body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
-            button:hover {{ background-color: rgba(255,255,255,0.2) !important; }}
         </style>
         <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 8px; padding-top: 10px; font-family: sans-serif;">
             {search_msg}
             <span style="color: #FFF; font-weight: bold; font-size: 1rem;">
                 총 {total}개 (페이지: {curr_p}/{pages})
             </span>
-            <span style="color: #FFFFFF; font-weight: bold; font-size: 1rem;">
-                📅 {date_str}
-            </span>
-            <button onclick="copyDate()" style="background-color: transparent; border: 1px solid rgba(255,255,255,0.5); color: #FFF; padding: 3px 10px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; font-weight:bold; transition: 0.3s;">
-                📋 복사
-            </button>
         </div>
         <script>
-        function copyDate() {{
-            var temp = document.createElement("textarea");
-            temp.value = "{date_str}";
-            document.body.appendChild(temp);
-            temp.select();
-            document.execCommand("copy");
-            document.body.removeChild(temp);
-            
-            var btn = document.querySelector("button");
-            btn.innerHTML = "✅ 복사됨";
-            setTimeout(function(){{ btn.innerHTML = "📋 복사"; }}, 2000);
-        }}
-
         const doc = window.parent.document;
         if (!doc.formatListenerAdded) {{
             doc.body.addEventListener('input', function(e) {{
@@ -442,7 +455,7 @@ try:
             doc.formatListenerAdded = true;
         }}
         </script>
-    """, height=65)
+    """, height=40)
     
     ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
     labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
