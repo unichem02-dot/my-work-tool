@@ -59,17 +59,21 @@ st.markdown("""
     }
 
     /* ★ 4. 상단 분류 리스트(Radio) 깔끔한 알약(태그) 형태로 디자인 개선 ★ */
-    div[role="radiogroup"] {
+    div[data-testid="stRadio"] > div[role="radiogroup"] {
         flex-direction: row !important;
         flex-wrap: wrap !important;
         gap: 12px 15px !important;
         padding-top: 10px !important;
         padding-bottom: 5px !important;
     }
-    div[role="radiogroup"] div[role="radio"] {
+    
+    /* 기존 동그란 라디오 아이콘 완벽하게 숨기기 */
+    div[data-testid="stRadio"] label > div:first-of-type {
         display: none !important;
     }
-    div[role="radiogroup"] label {
+    
+    /* 라벨(버튼) 기본 스타일 */
+    div[data-testid="stRadio"] label {
         cursor: pointer !important;
         margin: 0 !important;
         background-color: rgba(255, 255, 255, 0.1) !important;
@@ -78,23 +82,31 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.2) !important;
         transition: all 0.3s ease !important;
     }
-    div[role="radiogroup"] label:hover {
+    
+    /* 마우스 호버 효과 */
+    div[data-testid="stRadio"] label:hover {
         background-color: rgba(255, 255, 255, 0.2) !important;
         border-color: #FFD700 !important;
     }
-    div[role="radiogroup"] label p {
+    
+    /* 텍스트 기본 상태 */
+    div[data-testid="stRadio"] label p {
         color: #FFFFFF !important; 
         font-size: 1.4rem !important; 
         font-weight: 800 !important;
         transition: color 0.2s ease;
         margin: 0 !important;
     }
-    /* 선택된 분류 상태 (색상 반전) */
-    div[role="radiogroup"] label:has(div[aria-checked="true"]) {
+    
+    /* ★ 선택된 분류 상태 (배경 노란색, 글자 다크그린) ★ */
+    div[data-testid="stRadio"] label:has(input:checked),
+    div[data-testid="stRadio"] label:has(div[aria-checked="true"]) {
         background-color: #FFD700 !important;
         border-color: #FFD700 !important;
     }
-    div[role="radiogroup"] label:has(div[aria-checked="true"]) p {
+    
+    div[data-testid="stRadio"] label:has(input:checked) p,
+    div[data-testid="stRadio"] label:has(div[aria-checked="true"]) p {
         color: #224343 !important; /* 다크그린 배경을 글자색으로 */
         text-decoration: none !important; /* 밑줄 제거 */
     }
@@ -195,9 +207,9 @@ st.markdown("""
         button[kind="secondary"] p { font-size: 1.0rem !important; }
         
         /* 모바일용 분류 알약 버튼 사이즈 조정 */
-        div[role="radiogroup"] { gap: 8px 10px !important; }
-        div[role="radiogroup"] label { padding: 6px 16px !important; }
-        div[role="radiogroup"] label p { font-size: 1.1rem !important; }
+        div[data-testid="stRadio"] > div[role="radiogroup"] { gap: 8px 10px !important; }
+        div[data-testid="stRadio"] label { padding: 6px 16px !important; }
+        div[data-testid="stRadio"] label p { font-size: 1.1rem !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -336,7 +348,6 @@ with col_title:
     st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem;'>TOmBOy94's English</h1>", unsafe_allow_html=True)
 
 with col_date:
-    # ★ 날짜 글자 크기(1.3rem) 및 패딩/정렬 개선 ★
     components.html(f"""
         <style>
             body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
