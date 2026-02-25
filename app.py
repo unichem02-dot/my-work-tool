@@ -58,12 +58,13 @@ st.markdown("""
         background-color: #1a2f2f !important;
     }
 
-    /* 4. 상단 분류 리스트(Radio) 텍스트 버튼화 */
+    /* ★ 4. 상단 분류 리스트(Radio) 깔끔한 알약(태그) 형태로 디자인 개선 ★ */
     div[role="radiogroup"] {
         flex-direction: row !important;
         flex-wrap: wrap !important;
-        gap: 10px 25px !important;
+        gap: 12px 15px !important;
         padding-top: 10px !important;
+        padding-bottom: 5px !important;
     }
     div[role="radiogroup"] div[role="radio"] {
         display: none !important;
@@ -71,19 +72,31 @@ st.markdown("""
     div[role="radiogroup"] label {
         cursor: pointer !important;
         margin: 0 !important;
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        padding: 8px 22px !important;
+        border-radius: 50px !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        transition: all 0.3s ease !important;
+    }
+    div[role="radiogroup"] label:hover {
+        background-color: rgba(255, 255, 255, 0.2) !important;
+        border-color: #FFD700 !important;
     }
     div[role="radiogroup"] label p {
-        color: #FFD700 !important;
-        font-size: 1.7rem !important;
+        color: #FFFFFF !important; 
+        font-size: 1.4rem !important; 
         font-weight: 800 !important;
         transition: color 0.2s ease;
+        margin: 0 !important;
     }
-    div[role="radiogroup"] label:hover p {
-        color: #FFFFFF !important;
+    /* 선택된 분류 상태 (색상 반전) */
+    div[role="radiogroup"] label:has(div[aria-checked="true"]) {
+        background-color: #FFD700 !important;
+        border-color: #FFD700 !important;
     }
     div[role="radiogroup"] label:has(div[aria-checked="true"]) p {
-        color: #FFD700 !important;
-        text-decoration: underline;
+        color: #224343 !important; /* 다크그린 배경을 글자색으로 */
+        text-decoration: none !important; /* 밑줄 제거 */
     }
 
     /* 5. 일반 입력창 스타일: 배경 화이트 / 글자 블랙 */
@@ -97,7 +110,7 @@ st.markdown("""
         border: 1px solid #FFFFFF !important;
     }
 
-    /* ★ 특정 입력창(숫자입력) 폰트 크기 확대 (1.6rem) - 내부 라벨로 추적 ★ */
+    /* 특정 입력창(숫자입력) 폰트 크기 확대 (1.6rem) - 내부 라벨로 추적 */
     input[aria-label="숫자입력"] {
         font-size: 1.6rem !important;
     }
@@ -178,9 +191,13 @@ st.markdown("""
         /* 버튼류 및 분류 텍스트 모바일용 축소 */
         .header-label { font-size: 1.2rem !important; }
         .sort-header-btn button { font-size: 1.2rem !important; }
-        div[role="radiogroup"] label p { font-size: 1.2rem !important; }
         button[kind="primary"] p { font-size: 1.0rem !important; }
         button[kind="secondary"] p { font-size: 1.0rem !important; }
+        
+        /* 모바일용 분류 알약 버튼 사이즈 조정 */
+        div[role="radiogroup"] { gap: 8px 10px !important; }
+        div[role="radiogroup"] label { padding: 6px 16px !important; }
+        div[role="radiogroup"] label p { font-size: 1.1rem !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -270,7 +287,6 @@ if 'active_search' not in st.session_state:
 if 'search_input' not in st.session_state:
     st.session_state.search_input = ""
 
-# ★ 심플모드 상태 관리 변수 추가 ★
 if 'is_simple' not in st.session_state:
     st.session_state.is_simple = False
 
@@ -308,7 +324,7 @@ def num_to_eng(num):
         return str(n)
     return _convert(num).strip()
 
-# 오늘 날짜 계산 (최상단으로 이동)
+# 오늘 날짜 계산
 kst = timezone(timedelta(hours=9))
 now_kst = datetime.now(kst)
 date_str = now_kst.strftime("%A, %B %d, %Y")
@@ -320,17 +336,17 @@ with col_title:
     st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem;'>TOmBOy94's English</h1>", unsafe_allow_html=True)
 
 with col_date:
-    # ★ 타이틀 바로 옆 화이트 톤 날짜 및 복사 버튼 ★
+    # ★ 날짜 글자 크기(1.3rem) 및 패딩/정렬 개선 ★
     components.html(f"""
         <style>
             body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
             button:hover {{ background-color: rgba(255,255,255,0.2) !important; }}
         </style>
-        <div style="display: flex; align-items: center; gap: 5px; padding-top: 20px; font-family: sans-serif;">
-            <span style="color: #FFFFFF; font-weight: bold; font-size: 0.9rem;">
+        <div style="display: flex; align-items: center; gap: 10px; padding-top: 15px; font-family: sans-serif;">
+            <span style="color: #FFFFFF; font-weight: bold; font-size: 1.3rem;">
                 📅 {date_str}
             </span>
-            <button onclick="copyDate()" style="background-color: transparent; border: 1px solid rgba(255,255,255,0.5); color: #FFF; padding: 2px 6px; border-radius: 5px; cursor: pointer; font-size: 0.75rem; font-weight:bold; transition: 0.3s;">
+            <button onclick="copyDate()" style="background-color: transparent; border: 1px solid rgba(255,255,255,0.5); color: #FFF; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight:bold; transition: 0.3s; margin-top: 2px;">
                 📋 복사
             </button>
         </div>
@@ -348,7 +364,7 @@ with col_date:
             setTimeout(function(){{ btn.innerHTML = "📋 복사"; }}, 2000);
         }}
         </script>
-    """, height=50)
+    """, height=65)
 
 with col_num_label:
     st.markdown("<p class='num-label'>Num.ENG :</p>", unsafe_allow_html=True)
@@ -390,13 +406,11 @@ try:
     
     st.divider()
     
-    # ★ 컨트롤바 (토글을 삭제하고 버튼식으로 변경) ★
     if st.session_state.authenticated:
         cb = st.columns([3.8, 1.5, 1.4, 0.3, 1.5])
         cb[0].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
         if cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
         
-        # 버튼 텍스트 및 색상 동적 변경
         btn_text = "🔄 전체모드" if st.session_state.is_simple else "✨ 심플모드"
         btn_type = "secondary" if st.session_state.is_simple else "primary"
         
@@ -407,7 +421,6 @@ try:
         cb = st.columns([5.3, 1.4, 3.3])
         cb[0].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
         
-        # 버튼 텍스트 및 색상 동적 변경
         btn_text = "🔄 전체모드" if st.session_state.is_simple else "✨ 심플모드"
         btn_type = "secondary" if st.session_state.is_simple else "primary"
         
@@ -415,7 +428,6 @@ try:
             st.session_state.is_simple = not st.session_state.is_simple
             st.rerun()
 
-    # 변수 매핑을 위해 is_simple 업데이트
     is_simple = st.session_state.is_simple
 
     search = st.session_state.active_search
@@ -448,7 +460,6 @@ try:
 
     search_msg = f"<span style='color: #FF9999; font-weight: bold; font-size: 1rem; margin-right: 15px;'>🔍 '{search}' 검색됨</span>" if search else ""
     
-    # ★ 총 개수와 검색 상태 알림 & JS 실시간 콤마 적용 로직 유지 (aria-label 기반 추적으로 변경) ★
     components.html(f"""
         <style>
             body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
@@ -463,7 +474,6 @@ try:
         const doc = window.parent.document;
         if (!doc.formatListenerAdded) {{
             doc.body.addEventListener('input', function(e) {{
-                // 안내문구(placeholder) 삭제로 인해 aria-label로 추적 방식 변경
                 if (e.target && e.target.getAttribute('aria-label') === '숫자입력') {{
                     let rawVal = e.target.value.replace(/[^0-9]/g, '');
                     if (rawVal) {{
@@ -495,7 +505,6 @@ try:
         else:
             h_cols[i].markdown(f"<span class='header-label'>{l}</span>", unsafe_allow_html=True)
     
-    # ★ 제목부분과 컨텐츠 사이의 간격을 대폭 좁히기 위해 st.divider() 대신 커스텀 구분선 사용 ★
     st.markdown("<div style='border-bottom: 2px solid rgba(255,255,255,0.4); margin-top: -20px; margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
     for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
