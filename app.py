@@ -373,7 +373,7 @@ date_str = now_kst.strftime("%A, %B %d, %Y")
 col_title, col_date, col_num_combined, col_num_result, col_auth = st.columns([2.0, 2.7, 2.4, 2.0, 0.9])
 
 with col_title:
-    st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.2rem, 2.2vw, 2.2rem);'>TOmBOy94's English</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.5rem, 2.2vw, 2.2rem);'>TOmBOy94's English</h1>", unsafe_allow_html=True)
 
 with col_date:
     components.html(f"""
