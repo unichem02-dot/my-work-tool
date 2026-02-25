@@ -52,10 +52,10 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* 3. ★ 컨텐츠 행(Row) 호버 효과 추가 ★ */
+    /* 3. ★ 컨텐츠 행(Row) 호버 효과 및 간격 최소화 ★ */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 4px 12px !important; /* 상하 패딩 축소 */
+        padding: 2px 12px !important; /* 상하 패딩 추가 축소 */
         border-radius: 12px;
         margin-bottom: 0px;
     }
@@ -123,13 +123,13 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* ★ 7. 헤더 라벨 전용 스타일 (간격 축소 조정) ★ */
+    /* ★ 7. 헤더 라벨 전용 스타일 ★ */
     .header-label {
         font-size: 1.6rem !important;
         font-weight: 800 !important;
         color: #FFFFFF !important;
         display: block;
-        margin-bottom: 0px !important; /* 하단 마진 제거 */
+        margin-bottom: 0px !important;
     }
 
     /* 정렬 헤더 버튼 크기 및 간격 조정 */
@@ -143,10 +143,10 @@ st.markdown("""
         text-decoration: underline !important;
     }
 
-    /* ★ 구분선 간격 압축 ★ */
+    /* ★ 구분선 간격 압축 (최소화) ★ */
     hr {
         margin-top: 0px !important;
-        margin-bottom: 10px !important;
+        margin-bottom: 5px !important; /* 간격 더 축소 */
         border-top: 1px dotted rgba(255, 255, 255, 0.3) !important;
     }
     </style>
@@ -283,7 +283,7 @@ try:
     if st.session_state.curr_p > pages: st.session_state.curr_p = 1
     curr_p = st.session_state.curr_p
     
-    # ★ 한국 시간 기준 날짜 계산 및 출력 추가 ★
+    # ★ 한국 시간 기준 날짜 계산 ★
     kst = timezone(timedelta(hours=9))
     now_kst = datetime.now(kst)
     date_str = now_kst.strftime("%A, %B %d, %Y")
@@ -303,7 +303,6 @@ try:
     for i, l in enumerate(labels if st.session_state.authenticated else labels[:-1]):
         if l == "단어-문장":
             sort_icon = " ↑" if st.session_state.sort_order == 'asc' else (" ↓" if st.session_state.sort_order == 'desc' else "")
-            # 단어-문장 헤더도 크기를 맞추기 위해 커스텀 스타일 적용된 버튼 사용
             st.markdown(f"<div class='sort-header-btn'>", unsafe_allow_html=True)
             if h_cols[i].button(f"**{l}{sort_icon}**", key="sort_btn"):
                 if st.session_state.sort_order == 'None': st.session_state.sort_order = 'asc'
@@ -312,17 +311,15 @@ try:
                 st.rerun()
             st.markdown(f"</div>", unsafe_allow_html=True)
         else:
-            # 나머지 헤더들의 글씨 크기를 키움 (1.6rem)
             h_cols[i].markdown(f"<span class='header-label'>{l}</span>", unsafe_allow_html=True)
     
-    # ★ 구분선 추가 (간격이 좁게 설정됨) ★
     st.divider()
 
     # 리스트 본문
     for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
         cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
         
-        # ★ 호버 효과를 위한 투명 마커(row-marker) 삽입 ★
+        # ★ 호버 효과를 위한 투명 마커 ★
         cols[0].markdown(f"<span class='row-marker'></span>{row['분류']}", unsafe_allow_html=True)
         
         cols[1].markdown(f"<span style='font-size:2.0em;font-weight:bold;display:block;'>{row['단어-문장']}</span>", unsafe_allow_html=True)
@@ -331,7 +328,9 @@ try:
             cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
             if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}"): edit_dialog(idx, row, sheet, df)
         elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}"): edit_dialog(idx, row, sheet, df)
-        st.markdown("<div style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-10px;margin-bottom:5px;'></div>", unsafe_allow_html=True)
+        
+        # ★ 점선 간격 최소화 (-15px 적용) ★
+        st.markdown("<div style='border-bottom:1px dotted rgba(255,255,255,0.2);margin-top:-15px;margin-bottom:2px;'></div>", unsafe_allow_html=True)
 
     # 하단 페이지네이션
     if pages > 1:
