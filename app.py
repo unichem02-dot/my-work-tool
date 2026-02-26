@@ -287,30 +287,35 @@ st.markdown("""
             font-size: 1.2rem !important;
         }
 
-        /* ★ [정밀 수정] 새 항목 추가 및 학습모드 버튼 - 일자로 길게 표시 ★ */
+        /* ★ [간격 확보 및 일자 표시 최적화] 검색창 옆 버튼들 ★ */
+        div[data-testid="stHorizontalBlock"]:has(input[aria-label="🔍"]) {
+            gap: 15px !important; /* 버튼들 사이의 가로 간격 추가 */
+        }
+
         div[data-testid="stHorizontalBlock"]:has(input[aria-label="🔍"]) button {
             height: auto !important;
             min-height: 55px !important; 
-            width: max-content !important; /* 글자 길이에 맞춰 자동 확장 */
+            width: max-content !important; 
             min-width: max-content !important;
-            padding: 8px 15px !important;
+            padding: 8px 18px !important;
             overflow: visible !important;
             border-radius: 50px !important;
         }
         
         div[data-testid="stHorizontalBlock"]:has(input[aria-label="🔍"]) button p {
-            font-size: 1.6rem !important; /* 약 40% 확대 */
-            white-space: nowrap !important; /* 줄바꿈 절대 방지 (일자로 표시) */
+            font-size: 1.6rem !important; 
+            white-space: nowrap !important; 
             overflow: visible !important;
             line-height: 1.0 !important;
             margin: 0 !important;
         }
 
-        /* 모바일에서 버튼들이 나란히 배치되도록 컬럼 너비 제한 해제 */
+        /* 각 컬럼이 줄바꿈 되지 않고 나란히 있게 유지하면서 마진 확보 */
         div[data-testid="stHorizontalBlock"]:has(input[aria-label="🔍"]) div[data-testid="column"] {
             width: auto !important;
             flex: 0 0 auto !important;
             min-width: fit-content !important;
+            margin-right: 5px !important; /* 추가적인 안전 간격 */
         }
     }
     </style>
