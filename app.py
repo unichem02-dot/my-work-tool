@@ -287,22 +287,18 @@ st.markdown("""
             font-size: 1.2rem !important;
         }
 
-        /* ★ 모바일 버튼 글자 가려짐 방지 및 확실한 40% 확대 ★ */
-        button, div.stDownloadButton > button {
+        /* ★ [특정 버튼만 확대] 검색창 옆 '새 항목 추가' 및 '학습모드' 버튼만 정밀 타겟팅 ★ */
+        div[data-testid="stHorizontalBlock"]:has(input[aria-label="🔍"]) button {
             height: auto !important;
-            min-height: 55px !important; /* 터치 영역 확보 */
-            padding: 10px 18px !important; /* 내부 여백 조절 */
-            overflow: visible !important; /* 가려짐 제거 */
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-        }
-
-        button p, div.stDownloadButton > button p {
-            font-size: 1.6rem !important; /* 약 40% 이상 확대 */
-            line-height: 1.2 !important;
-            white-space: normal !important; /* 줄바꿈 대응으로 가려짐 방지 */
+            min-height: 58px !important; 
             overflow: visible !important;
+            padding: 10px 20px !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has(input[aria-label="🔍"]) button p {
+            font-size: 1.6rem !important; /* 약 40% 확대 */
+            white-space: normal !important;
+            overflow: visible !important;
+            line-height: 1.1 !important;
         }
     }
     </style>
