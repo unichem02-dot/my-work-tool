@@ -21,7 +21,8 @@ if not st.session_state.authenticated:
         submit_btn = st.form_submit_button("확인", type="primary", use_container_width=True)
         
         if submit_btn:
-            if pwd == "3709":
+            # 💡 하드코딩된 "3709" 대신 스트림릿 시크릿에서 비밀번호 불러오기
+            if pwd == str(st.secrets["tom_password"]):
                 st.session_state.authenticated = True
                 st.rerun()
             else:
