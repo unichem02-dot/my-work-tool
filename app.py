@@ -365,15 +365,21 @@ else:
     # Spacer 컬럼은 비워둠
 
     with col_num_combined:
-        st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
-        num_val = st.session_state.num_input
+        # 입력창과 지우기 버튼을 위한 내부 컬럼 분할
+        num_in_col, num_clear_col = st.columns([0.85, 0.15])
+        with num_in_col:
+            st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
+        with num_clear_col:
+            st.markdown("<div style='height:30px;'></div>", unsafe_allow_html=True) # 라벨 높이 맞춤
+            if st.button("❌", key="btn_clear_num", help="숫자 지우기"):
+                st.session_state.num_input = ""
+                st.rerun()
        
     with col_num_result:
-        if num_val:
-            clean_num = num_val.replace(",", "").strip()
+        if st.session_state.num_input:
+            clean_num = st.session_state.num_input.replace(",", "").strip()
             if clean_num.isdigit():
                 eng_text = num_to_eng(int(clean_num)).capitalize()
-                # 텍스트 크기 확대를 위해 스타일 최적화
                 st.markdown(f"<div style='padding-top:2px;'><p class='num-result'>📝 {eng_text}</p></div>", unsafe_allow_html=True)
             else:
                 st.markdown("<div style='padding-top:2px;'><p class='num-result' style='color:#FF9999;'>⚠️ 숫자만</p></div>", unsafe_allow_html=True)
