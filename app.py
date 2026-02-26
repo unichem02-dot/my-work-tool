@@ -167,18 +167,16 @@ st.markdown("""
     .mean-text { font-size: 1.3em; display: block; word-break: keep-all; }
     .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; }
    
-    /* 9. Num.ENG 레이아웃 */
+    /* 9. Num.ENG 레이아웃 (상단 라인 이동 대비 패딩 제거) */
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
         display: flex !important;
         flex-direction: row !important;
         align-items: center !important;
         gap: 8px !important;
-        margin-top: 5px !important;
     }
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) label p {
         font-weight: 900 !important;
         font-size: clamp(1.0rem, 1.4vw, 1.5rem) !important;
-        white-space: nowrap !important;
         margin: 0 !important;
     }
     input[aria-label="Num.ENG :"] {
@@ -186,7 +184,7 @@ st.markdown("""
         min-width: 90px !important;
     }
    
-    .num-result { color: #FFD700; font-weight: bold; font-size: clamp(1.0rem, 1.4vw, 1.5rem); margin-top: 10px; }
+    .num-result { color: #FFD700; font-weight: bold; font-size: clamp(1.0rem, 1.4vw, 1.5rem); }
     .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -25px; margin-bottom: 5px; }
 
     /* 10. 모바일 레이아웃 강제 교정 */
@@ -339,9 +337,10 @@ if not st.session_state.authenticated and st.session_state.logging_in:
 else:
     # ★ 2. 메인 앱 화면 ★
     
-    # 2-1. [상단 줄] 로그인/아웃 버튼 (타이틀 위로 독립 배치)
-    auth_col1, auth_col2 = st.columns([1.5, 8.5])
-    with auth_col1:
+    # 2-1. [상단 줄] LOGIN/OUT + Num.ENG 입력 + Num.ENG 결과
+    col_auth, col_num_combined, col_num_result = st.columns([1.5, 2.4, 6.1])
+    
+    with col_auth:
         if not st.session_state.authenticated:
             if st.button("🔐 LOGIN", use_container_width=True):
                 st.session_state.logging_in = True
@@ -352,13 +351,26 @@ else:
                 if "auth" in st.query_params: del st.query_params["auth"]
                 st.rerun()
 
+    with col_num_combined:
+        st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
+        num_val = st.session_state.num_input
+       
+    with col_num_result:
+        if num_val:
+            clean_num = num_val.replace(",", "").strip()
+            if clean_num.isdigit():
+                eng_text = num_to_eng(int(clean_num)).capitalize()
+                st.markdown(f"<div style='padding-top:10px;'><p class='num-result'>📝 {eng_text}</p></div>", unsafe_allow_html=True)
+            else:
+                st.markdown("<div style='padding-top:10px;'><p class='num-result' style='color:#FF9999;'>⚠️ 숫자만</p></div>", unsafe_allow_html=True)
+
     # 오늘 날짜 정보
     kst = timezone(timedelta(hours=9))
     now_kst = datetime.now(kst)
     date_str = now_kst.strftime("%A, %B %d, %Y")
 
-    # 2-2. [타이틀 줄]
-    col_title, col_date, col_num_combined, col_num_result = st.columns([2.0, 3.4, 2.4, 2.0])
+    # 2-2. [타이틀 줄] 타이틀 + 날짜
+    col_title, col_date = st.columns([4.0, 6.0])
 
     with col_title:
         st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.2rem, 2.2vw, 2.2rem);'>TOmBOy94 English</h1>", unsafe_allow_html=True)
@@ -384,19 +396,6 @@ else:
             }}
             </script>
         """, height=130)
-       
-    with col_num_combined:
-        st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
-        num_val = st.session_state.num_input
-       
-    with col_num_result:
-        if num_val:
-            clean_num = num_val.replace(",", "").strip()
-            if clean_num.isdigit():
-                eng_text = num_to_eng(int(clean_num)).capitalize()
-                st.markdown(f"<p class='num-result'>📝 {eng_text}</p>", unsafe_allow_html=True)
-            else:
-                st.markdown("<p class='num-result' style='color:#FF9999;'>⚠️ 숫자만</p>", unsafe_allow_html=True)
 
     try:
         sheet = get_sheet(); df = load_dataframe(sheet)
