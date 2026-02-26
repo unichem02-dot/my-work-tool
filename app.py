@@ -29,7 +29,7 @@ st.markdown("""
     h1, h2, h3, h4, h5, h6, p, span, label, summary, b, strong {
         color: #FFFFFF !important;
     }
-   
+    
     /* 팝업창(Dialog) 제목 */
     #새-항목-추가,
     #항목-수정-및-삭제,
@@ -54,14 +54,14 @@ st.markdown("""
         display: none !important;
     }
 
-    /* ★ 4. 컨텐츠 행(Row) 호버 효과 - 배경 꽉 채우기 및 상하 여백 밸런스 완벽 보정 ★ */
+    /* 4. 컨텐츠 행(Row) 호버 효과 및 레이아웃 보정 */
     div.element-container:has(.row-marker) {
         width: 100% !important;
         min-width: 100% !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 16px 10px !important; /* 상하 여백을 16px로 늘려 텍스트와 점선 간의 공간 확보 */
+        padding: 16px 10px !important;
         border-radius: 0px !important; 
         margin-bottom: 0px !important;
         border-bottom: 1px dotted rgba(255, 255, 255, 0.2) !important; 
@@ -72,13 +72,12 @@ st.markdown("""
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         align-items: center !important; 
-        overflow: visible !important; /* 글자 확대 시 잘림 방지 */
+        overflow: visible !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.row-marker):hover {
         background-color: rgba(26, 47, 47, 0.9) !important;
     }
     
-    /* 텍스트 쳐짐(하단 점선 달라붙음) 완벽 해결 */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) > div[data-testid="column"] {
         display: flex !important;
         flex-direction: column !important;
@@ -88,14 +87,13 @@ st.markdown("""
         overflow: visible !important;
     }
     
-    /* p 태그에 강제 부여되었던 flex 해제, 블록 단위로 정상 줄간격 확보 */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) div.element-container,
     div[data-testid="stHorizontalBlock"]:has(.row-marker) div.stMarkdown,
     div[data-testid="stHorizontalBlock"]:has(.row-marker) p {
         display: block !important; 
         margin: 0 !important;
         padding: 0 !important;
-        line-height: 1.5 !important; /* g, y, p 등 알파벳 꼬리 잘림 방지 */
+        line-height: 1.5 !important;
         width: 100% !important;
     }
 
@@ -169,10 +167,6 @@ st.markdown("""
         border: 2px solid #FFFFFF !important;
         color: #FFFFFF !important;
     }
-    button[kind="secondary"] p, div.stDownloadButton > button p {
-        font-size: clamp(0.75rem, 1.1vw, 1.15rem) !important;
-        font-weight: 900 !important;
-    }
 
     /* 7. 수정 버튼: 투명 연필 아이콘 */
     button[kind="tertiary"] {
@@ -190,14 +184,13 @@ st.markdown("""
         font-size: 1.6rem !important;
         margin: 0 !important;
         padding: 0 !important;
-        line-height: normal !important;
         transition: transform 0.2s ease !important;
     }
     button[kind="tertiary"]:hover p {
         transform: scale(1.2) !important;
     }
 
-    /* 8. 헤더 라벨 및 텍스트 시인성 */
+    /* 8. 텍스트 스타일 */
     .header-label { 
         font-size: clamp(1.0rem, 1.4vw, 1.5rem) !important; 
         font-weight: 800 !important; 
@@ -205,13 +198,16 @@ st.markdown("""
         white-space: nowrap !important;
     }
    
-    /* 텍스트를 위로 살짝 띄워주는 시각적 보정 (margin-bottom: 2px) */
-    /* 단어-문장 크기 기존 1.8em에서 10% 확대 (1.98em) */
-    .word-text { font-size: 1.98em; font-weight: bold; color: #FFD700 !important; word-break: keep-all; display: inline-block !important; margin-bottom: 2px !important; }
+    .word-text { font-size: 1.98em; font-weight: bold; color: #FFD700 !important; word-break: keep-all; display: inline-block !important; margin-bottom: 2px !important; transition: transform 0.2s ease !important; transform-origin: left center !important; }
     .mean-text { font-size: 1.3em; word-break: keep-all; display: inline-block !important; margin-bottom: 2px !important; }
     .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; display: inline-block !important; margin-bottom: 2px !important; }
    
-    /* 9. Num.ENG 레이아웃 최적화 및 가로 크기 제한 */
+    div[data-testid="stHorizontalBlock"]:has(.row-marker):hover .word-text {
+        transform: scale(1.1) !important;
+        z-index: 10 !important;
+    }
+
+    /* 9. Num.ENG 레이아웃 */
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
         display: flex !important;
         flex-direction: row !important;
@@ -219,49 +215,7 @@ st.markdown("""
         gap: 8px !important;
         max-width: 350px !important; 
     }
-    div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) label p {
-        font-weight: 900 !important;
-        font-size: clamp(0.8rem, 1.1vw, 1.1rem) !important; 
-        margin: 0 !important;
-        white-space: nowrap !important;
-    }
-    input[aria-label="Num.ENG :"] {
-        font-size: clamp(1.0rem, 1.4vw, 1.5rem) !important;
-        min-width: 80px !important;
-    }
     
-    /* 전체 검색창 이모지 한 줄 정렬 CSS */
-    div[data-testid="stTextInput"]:has(input[placeholder*="검색"]) {
-        display: flex !important;
-        flex-direction: row !important;
-        align-items: center !important;
-        gap: 5px !important;
-    }
-    div[data-testid="stTextInput"]:has(input[placeholder*="검색"]) label {
-        margin-bottom: 0 !important;
-        display: flex;
-        align-items: center;
-    }
-    div[data-testid="stTextInput"]:has(input[placeholder*="검색"]) label p {
-        font-size: 1.2rem !important;
-        margin: 0 !important;
-    }
-   
-    /* 10. Num.ENG 결과물과 X 버튼 한 줄 배치 (Flexbox) */
-    div[data-testid="stHorizontalBlock"]:has(.num-result) {
-        display: flex !important;
-        flex-direction: row !important;
-        align-items: center !important;
-        justify-content: flex-start !important;
-        gap: 15px !important;
-        padding-top: 5px !important;
-    }
-    div[data-testid="stHorizontalBlock"]:has(.num-result) > div {
-        width: auto !important; 
-        flex: 0 1 auto !important;
-    }
-    
-    /* 결과물 텍스트 스타일 */
     .num-result { 
         color: #FFD700 !important; 
         font-weight: bold; 
@@ -270,62 +224,10 @@ st.markdown("""
         line-height: 1.1;
         white-space: nowrap !important;
     }
-    
-    /* ❌ 버튼 전용 스타일 */
-    div[data-testid="stHorizontalBlock"]:has(.num-result) button {
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        width: auto !important;
-        height: auto !important;
-        min-width: unset !important;
-        margin-top: 5px !important; 
-    }
-    div[data-testid="stHorizontalBlock"]:has(.num-result) button p {
-        font-size: 1.2rem !important; 
-        margin: 0 !important;
-        color: rgba(255, 255, 255, 0.6) !important;
-        transition: transform 0.2s ease, color 0.2s ease !important;
-    }
-    div[data-testid="stHorizontalBlock"]:has(.num-result) button:hover p {
-        color: rgba(255, 255, 255, 1.0) !important;
-        transform: scale(1.2) !important;
-    }
 
-    /* 11. 모바일 레이아웃 강제 교정 */
     @media screen and (max-width: 768px) {
-        h1 { font-size: clamp(1.6rem, 2.5vw, 2.5rem) !important; }
-        
-        div[data-testid="stHorizontalBlock"]:has(.row-marker) {
-            display: flex !important;
-            flex-direction: row !important;
-            padding: 12px 8px !important; /* 모바일에서도 넉넉한 패딩 적용 */
-            width: 100% !important;
-            gap: 8px !important;
-        }
-
-        div[data-testid="stHorizontalBlock"]:has(.row-marker) > div:nth-child(1) { width: 18% !important; min-width: 55px; } 
-        div[data-testid="stHorizontalBlock"]:has(.row-marker) > div:nth-child(2) { width: 38% !important; } 
-        div[data-testid="stHorizontalBlock"]:has(.row-marker) > div:nth-child(3) { width: 34% !important; } 
-        div[data-testid="stHorizontalBlock"]:has(.row-marker) > div:last-child { width: 10% !important; min-width: 40px; text-align: right; } 
-
-        /* 단어-문장 크기 기존 1.1rem에서 10% 확대 (1.21rem) */
         .word-text { font-size: 1.21rem !important; }
         .mean-text { font-size: 0.9rem !important; }
-        
-        button { padding: 0.5rem 0.8rem !important; }
-    }
-
-    /* ★ 12. 컨텐츠(행) 마우스 오버 시 '단어-문장' 열만 10% 확대 (스무스 효과) ★ */
-    div[data-testid="stHorizontalBlock"]:has(.row-marker) .word-text {
-        transition: transform 0.2s ease !important;
-        transform-origin: left center !important; /* 좌측 기준 확대 (글자가 왼쪽으로 넘어가지 않음) */
-    }
-    div[data-testid="stHorizontalBlock"]:has(.row-marker):hover .word-text {
-        transform: scale(1.1) !important; /* 10% 확대 */
-        z-index: 10 !important; /* 커진 글씨가 다른 요소를 가리지 않도록 최상단 배치 */
     }
     </style>
     """, unsafe_allow_html=True)
@@ -446,7 +348,7 @@ def num_to_eng(num):
 
 # --- [메인 로직] ---
 
-# ★ 1. 로그인 전용 화면 ★
+# 1. 로그인 화면
 if not st.session_state.authenticated and st.session_state.logging_in:
     st.write("## 🔐 Security Login")
     with st.form("login_form", clear_on_submit=False):
@@ -465,8 +367,7 @@ if not st.session_state.authenticated and st.session_state.logging_in:
         st.session_state.logging_in = False
         st.rerun()
 else:
-    # ★ 2. 메인 앱 화면 ★
-    
+    # 2. 메인 앱 화면
     col_auth, col_spacer, col_num_combined = st.columns([2.0, 0.2, 7.8])
     
     with col_auth:
@@ -491,7 +392,7 @@ else:
             with res_col1:
                 st.markdown(f"<p class='num-result'>{eng_text}</p>", unsafe_allow_html=True)
             with res_col2:
-                st.button("❌", key="btn_clear_res_inline", on_click=clear_num_input, help="")
+                st.button("❌", key="btn_clear_res_inline", on_click=clear_num_input)
         else:
             st.markdown("<p class='num-result' style='color:#FF9999!important; font-size:1.5rem!important;'>⚠️ 숫자만 입력 가능</p>", unsafe_allow_html=True)
 
@@ -500,7 +401,6 @@ else:
     date_str = now_kst.strftime("%A, %B %d, %Y")
 
     col_title, col_date = st.columns([4.0, 6.0])
-
     with col_title:
         st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.6rem, 2.9vw, 2.9rem);'>TOmBOy94 English</h1>", unsafe_allow_html=True)
 
@@ -530,13 +430,13 @@ else:
         sheet = get_sheet(); df = load_dataframe(sheet)
         unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
         sel_cat = st.radio("분류 필터", ["🔀 랜덤 10", "전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed", key="cat_radio", on_change=clear_search)
-       
+        
         st.divider()
-       
+        
         cb_cols = [1.5, 1.5, 1.4, 2.6, 1.5] if st.session_state.authenticated else [1.5, 1.4, 4.1]
         cb = st.columns(cb_cols)
-        
-        cb[0].text_input("🔍", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...")
+        # 검색창 플레이스홀더 텍스트 삭제
+        cb[0].text_input("🔍", key="search_input", on_change=handle_search)
         
         if st.session_state.authenticated and cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(unique_cats)
         
@@ -562,12 +462,7 @@ else:
         else: d_df = d_df.iloc[::-1]
 
         if st.session_state.authenticated:
-            cb[4].download_button(
-                "📥 CSV", 
-                d_df.to_csv(index=False).encode('utf-8-sig'), 
-                f"Data_{time.strftime('%Y%m%d')}.csv", 
-                use_container_width=True
-            )
+            cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
 
         total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
         curr_p = st.session_state.curr_p if 'curr_p' in st.session_state else 1
@@ -580,11 +475,7 @@ else:
             </div>
             <script>
             const doc = window.parent.document;
-            
-            if (doc.liveCommaHandler) {{
-                doc.removeEventListener('input', doc.liveCommaHandler, true);
-            }}
-            
+            if (doc.liveCommaHandler) {{ doc.removeEventListener('input', doc.liveCommaHandler, true); }}
             doc.liveCommaHandler = function(e) {{
                 if (e.target && e.target.tagName === 'INPUT') {{
                     let label = e.target.getAttribute('aria-label');
@@ -592,30 +483,18 @@ else:
                         let val = e.target.value;
                         let numStr = val.replace(/[^0-9]/g, '');
                         let formatted = numStr ? Number(numStr).toLocaleString('en-US') : '';
-                        
                         if (val !== formatted) {{
-                            let cursorPosition = e.target.selectionStart;
-                            let oldLength = val.length;
-                            
                             let nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
                             nativeSetter.call(e.target, formatted);
                             e.target.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                            
-                            let newLength = formatted.length;
-                            let newCursorPos = cursorPosition + (newLength - oldLength);
-                            
-                            setTimeout(() => {{
-                                e.target.setSelectionRange(newCursorPos, newCursorPos);
-                            }}, 0);
                         }}
                     }}
                 }}
             }};
-            
             doc.addEventListener('input', doc.liveCommaHandler, true);
             </script>
         """, height=35)
-       
+        
         ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
         labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
         h_cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
@@ -626,7 +505,7 @@ else:
                     st.session_state.sort_order = 'asc' if st.session_state.sort_order == 'None' else ('desc' if st.session_state.sort_order == 'asc' else 'None')
                     st.rerun()
             else: h_cols[i].markdown(f"<span class='header-label'>{l}</span>", unsafe_allow_html=True)
-       
+        
         st.markdown("<div style='border-bottom:2px solid rgba(255,255,255,0.4); margin-top:-20px; margin-bottom:5px;'></div>", unsafe_allow_html=True)
 
         for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
@@ -655,4 +534,3 @@ else:
             </p>
         </div>
     """, unsafe_allow_html=True)
-
