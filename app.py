@@ -12,6 +12,18 @@ from datetime import datetime, timedelta, timezone
 # --- [페이지 기본 설정] ---
 st.set_page_config(layout="wide", page_title="TOmBOy94 English")
 
+# --- [세션 상태 관리 초기화] ---
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = st.query_params.get("auth") == "true"
+if "logging_in" not in st.session_state:
+    st.session_state.logging_in = False
+if 'sort_order' not in st.session_state: st.session_state.sort_order = 'None'
+if 'current_cat' not in st.session_state: st.session_state.current_cat = "🔀 랜덤 10"
+if 'num_input' not in st.session_state: st.session_state.num_input = ""
+if 'active_search' not in st.session_state: st.session_state.active_search = ""
+if 'search_input' not in st.session_state: st.session_state.search_input = ""
+if 'is_simple' not in st.session_state: st.session_state.is_simple = False
+
 # --- [사용자 정의 디자인 (CSS)] ---
 st.markdown("""
     <style>
@@ -232,18 +244,18 @@ st.markdown("""
         max-width: 350px !important; 
     }
     
-    /* ★ 10. Num.ENG 결과물과 ❌ 버튼 가로 밀착 배치 (수정된 핵심 섹션) ★ */
+    /* 10. Num.ENG 결과물과 ❌ 버튼 가로 밀착 배치 */
     div[data-testid="stHorizontalBlock"]:has(.num-result) {
         display: flex !important;
         flex-direction: row !important;
         align-items: center !important;
         justify-content: flex-start !important;
-        gap: 12px !important; /* 텍스트와 ❌ 사이의 간격 */
+        gap: 12px !important; 
         width: 100% !important;
     }
     
     div[data-testid="stHorizontalBlock"]:has(.num-result) > div {
-        width: fit-content !important; /* 컬럼 너비를 내용물에 맞게 축소 */
+        width: fit-content !important; 
         flex: 0 1 auto !important;
         min-width: unset !important;
     }
@@ -264,7 +276,7 @@ st.markdown("""
         box-shadow: none !important;
         padding: 0 !important;
         margin: 0 !important;
-        margin-top: 2px !important; /* 텍스트와 높이 맞춤 */
+        margin-top: 2px !important; 
     }
 
     @media screen and (max-width: 768px) {
@@ -272,6 +284,24 @@ st.markdown("""
         .mean-text { font-size: 0.9rem !important; }
     }
     </style>
+    """, unsafe_allow_html=True)
+
+# ★ [심플모드 + 모바일 전용 40% 확대 CSS 추가] ★
+if st.session_state.is_simple:
+    st.markdown("""
+        <style>
+        @media screen and (max-width: 768px) {
+            /* 기존 대비 약 40% 확대 계산값 적용 */
+            .word-text { 
+                font-size: 1.7rem !important; 
+                line-height: 1.3 !important;
+            }
+            .mean-text { 
+                font-size: 1.26rem !important; 
+                line-height: 1.3 !important;
+            }
+        }
+        </style>
     """, unsafe_allow_html=True)
 
 # --- [보안 설정 및 Google Sheets 연결] ---
@@ -347,19 +377,7 @@ def edit_dialog(idx, row_data, unique_cats):
             sheet.delete_rows(idx + 2)
             st.rerun()
 
-# --- [세션 상태 관리] ---
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = st.query_params.get("auth") == "true"
-if "logging_in" not in st.session_state:
-    st.session_state.logging_in = False
-if 'sort_order' not in st.session_state: st.session_state.sort_order = 'None'
-if 'current_cat' not in st.session_state: st.session_state.current_cat = "🔀 랜덤 10"
-if 'num_input' not in st.session_state: st.session_state.num_input = ""
-if 'active_search' not in st.session_state: st.session_state.active_search = ""
-if 'search_input' not in st.session_state: st.session_state.search_input = ""
-if 'is_simple' not in st.session_state: st.session_state.is_simple = False
-
-# 콜백 함수들
+# --- [비즈니스 로직 함수] ---
 def format_num_input():
     cleaned = re.sub(r'[^0-9]', '', str(st.session_state.num_input))
     st.session_state.num_input = f"{int(cleaned):,}" if cleaned else ""
@@ -430,7 +448,6 @@ else:
         clean_num = st.session_state.num_input.replace(",", "").strip()
         if clean_num.isdigit():
             eng_text = num_to_eng(int(clean_num)).capitalize()
-            # 결과물과 버튼 컬럼 생성
             res_col1, res_col2 = st.columns([1, 1])
             with res_col1:
                 st.markdown(f"<p class='num-result'>{eng_text}</p>", unsafe_allow_html=True)
