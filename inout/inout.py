@@ -117,20 +117,81 @@ try:
         df['year'] = df[date_col].dt.year.astype(int)
         df['month'] = df[date_col].dt.month.astype(int)
 
-        filter_col1, filter_col2, filter_col3 = st.columns([2, 2, 6])
+        # ---------------------------------------------------------
+        # 💡 업그레이드된 통합 검색 UI
+        # ---------------------------------------------------------
+        st.markdown("### 🔍 상세 검색 조건")
         
-        with filter_col1:
-            years = sorted(df['year'].unique().tolist(), reverse=True)
-            selected_year = st.selectbox("📅 조회 년도 선택", years)
+        with st.container(border=True): # 깔끔한 박스 테두리 적용
+            row1_1, row1_2, row1_3 = st.columns([1.5, 3, 5])
             
-        with filter_col2:
-            months = list(range(1, 13))
-            this_month = datetime.now().month
-            selected_month = st.selectbox("📆 조회 월 선택", months, index=this_month-1)
+            with row1_1:
+                search_mode = st.radio("조회 방식", ["월별 검색", "기간 검색", "빠른 일검색"])
+                
+            with row1_2:
+                if search_mode == "월별 검색":
+                    years = sorted(df['year'].unique().tolist(), reverse=True)
+                    sel_year = st.selectbox("📅 년도", years)
+                    sel_month = st.selectbox("📆 월", list(range(1, 13)), index=datetime.now().month-1)
+                elif search_mode == "기간 검색":
+                    start_date = datetime.now().date() - timedelta(days=30)
+                    end_date = datetime.now().date()
+                    date_range = st.date_input("🗓️ 기간 선택", [start_date, end_date])
+                else: # 빠른 일검색
+                    quick_mode = st.radio("일자 선택", ["오늘", "어제", "내일", "직접 선택"], horizontal=True)
+                    if quick_mode == "오늘": target_date = datetime.now().date()
+                    elif quick_mode == "어제": target_date = (datetime.now() - timedelta(days=1)).date()
+                    elif quick_mode == "내일": target_date = (datetime.now() + timedelta(days=1)).date()
+                    else: target_date = st.date_input("특정일 선택", datetime.now().date())
+            
+            with row1_3:
+                trade_type = st.radio("구분 (매입/매출)", ["ALL (전체)", "매입 (입고)", "매출 (출고)"], horizontal=True)
+                col_k1, col_k2 = st.columns(2)
+                with col_k1:
+                    search_company = st.text_input("🏢 거래처 검색 (입/출고처)")
+                with col_k2:
+                    search_item = st.text_input("📦 품목 검색 (입/출고품목)")
 
-        mask = (df['year'] == selected_year) & (df['month'] == selected_month)
-        filtered_df = df[mask].copy()
+        # ---------------------------------------------------------
+        # 💡 데이터 필터링 실행
+        # ---------------------------------------------------------
+        filtered_df = df.copy()
 
+        # 1. 날짜 필터 적용
+        if search_mode == "월별 검색":
+            filtered_df = filtered_df[(filtered_df['year'] == sel_year) & (filtered_df['month'] == sel_month)]
+        elif search_mode == "기간 검색":
+            if len(date_range) == 2:
+                filtered_df = filtered_df[(filtered_df[date_col].dt.date >= date_range[0]) & (filtered_df[date_col].dt.date <= date_range[1])]
+            elif len(date_range) == 1: # 사용자가 아직 종료일을 선택하지 않은 경우 방어코드
+                filtered_df = filtered_df[filtered_df[date_col].dt.date == date_range[0]]
+        else: # 빠른 일검색
+            filtered_df = filtered_df[filtered_df[date_col].dt.date == target_date]
+
+        # 2. 분류 필터 적용 (매입/매출)
+        if trade_type == "매입 (입고)":
+            filtered_df = filtered_df[filtered_df['incom'].astype(str).str.strip() != '']
+        elif trade_type == "매출 (출고)":
+            filtered_df = filtered_df[filtered_df['outcom'].astype(str).str.strip() != '']
+
+        # 3. 키워드 필터 적용 (거래처 및 품목)
+        if search_company:
+            mask_com = (
+                filtered_df['incom'].astype(str).str.contains(search_company, case=False, na=False) |
+                filtered_df['outcom'].astype(str).str.contains(search_company, case=False, na=False)
+            )
+            filtered_df = filtered_df[mask_com]
+            
+        if search_item:
+            mask_item = (
+                filtered_df['initem'].astype(str).str.contains(search_item, case=False, na=False) |
+                filtered_df['outitem'].astype(str).str.contains(search_item, case=False, na=False)
+            )
+            filtered_df = filtered_df[mask_item]
+
+        # ---------------------------------------------------------
+        # 💡 결과 출력
+        # ---------------------------------------------------------
         display_df = filtered_df.drop(columns=['year', 'month'])
         display_df = display_df.sort_values(by=date_col, ascending=False)
         
@@ -144,12 +205,12 @@ try:
         display_df = display_df.rename(columns=rename_dict)
 
         st.divider()
-        st.subheader(f"📊 {selected_year}년 {selected_month}월 상세 내역 (총 {len(display_df)}건)")
+        st.subheader(f"📊 검색 결과 상세 내역 (총 {len(display_df)}건)")
         
         if not display_df.empty:
             st.dataframe(display_df, use_container_width=True, hide_index=True)
         else:
-            st.info(f"선택하신 {selected_year}년 {selected_month}월에는 데이터가 없습니다.")
+            st.info("조건에 맞는 데이터가 없습니다. 검색 조건을 다시 확인해주세요.")
     else:
         st.error(f"❌ 시트의 헤더에서 '{date_col}' 열을 찾을 수 없습니다. 엑셀의 첫 줄 이름을 확인해 주세요.")
 
