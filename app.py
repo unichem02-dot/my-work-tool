@@ -287,9 +287,10 @@ st.markdown("""
             font-size: 1.2rem !important;
         }
 
-        /* ★ [간격 확보 및 일자 표시 최적화] 검색창 옆 버튼들 ★ */
+        /* ★ [정밀 수정] 새 항목 추가 및 학습모드 버튼 - 일자로 길게 표시 및 간격 확실히 확보 ★ */
         div[data-testid="stHorizontalBlock"]:has(input[aria-label="🔍"]) {
-            gap: 15px !important; /* 버튼들 사이의 가로 간격 추가 */
+            gap: 25px !important; /* 행 전체 간격 확대 */
+            justify-content: flex-start !important;
         }
 
         div[data-testid="stHorizontalBlock"]:has(input[aria-label="🔍"]) button {
@@ -297,25 +298,26 @@ st.markdown("""
             min-height: 55px !important; 
             width: max-content !important; 
             min-width: max-content !important;
-            padding: 8px 18px !important;
+            padding: 8px 20px !important;
             overflow: visible !important;
             border-radius: 50px !important;
+            margin-left: 15px !important; /* 버튼 왼쪽 여백 강제 추가하여 서로 떼어놓음 */
         }
         
         div[data-testid="stHorizontalBlock"]:has(input[aria-label="🔍"]) button p {
-            font-size: 1.6rem !important; 
-            white-space: nowrap !important; 
+            font-size: 1.6rem !important; /* 요청하신 40% 확대 유지 */
+            white-space: nowrap !important; /* 일자로 표시 */
             overflow: visible !important;
             line-height: 1.0 !important;
             margin: 0 !important;
         }
 
-        /* 각 컬럼이 줄바꿈 되지 않고 나란히 있게 유지하면서 마진 확보 */
+        /* 각 컬럼의 너비를 자동화하고 마진 추가 */
         div[data-testid="stHorizontalBlock"]:has(input[aria-label="🔍"]) div[data-testid="column"] {
             width: auto !important;
             flex: 0 0 auto !important;
             min-width: fit-content !important;
-            margin-right: 5px !important; /* 추가적인 안전 간격 */
+            padding-right: 10px !important;
         }
     }
     </style>
