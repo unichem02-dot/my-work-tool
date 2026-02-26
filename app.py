@@ -206,7 +206,8 @@ st.markdown("""
     }
    
     /* 텍스트를 위로 살짝 띄워주는 시각적 보정 (margin-bottom: 2px) */
-    .word-text { font-size: 1.8em; font-weight: bold; color: #FFD700 !important; word-break: keep-all; display: inline-block !important; margin-bottom: 2px !important; }
+    /* 단어-문장 크기 기존 1.8em에서 10% 확대 (1.98em) */
+    .word-text { font-size: 1.98em; font-weight: bold; color: #FFD700 !important; word-break: keep-all; display: inline-block !important; margin-bottom: 2px !important; }
     .mean-text { font-size: 1.3em; word-break: keep-all; display: inline-block !important; margin-bottom: 2px !important; }
     .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; display: inline-block !important; margin-bottom: 2px !important; }
    
@@ -310,7 +311,8 @@ st.markdown("""
         div[data-testid="stHorizontalBlock"]:has(.row-marker) > div:nth-child(3) { width: 34% !important; } 
         div[data-testid="stHorizontalBlock"]:has(.row-marker) > div:last-child { width: 10% !important; min-width: 40px; text-align: right; } 
 
-        .word-text { font-size: 1.1rem !important; }
+        /* 단어-문장 크기 기존 1.1rem에서 10% 확대 (1.21rem) */
+        .word-text { font-size: 1.21rem !important; }
         .mean-text { font-size: 0.9rem !important; }
         
         button { padding: 0.5rem 0.8rem !important; }
