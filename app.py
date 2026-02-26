@@ -483,7 +483,7 @@ else:
 
     try:
         sheet = get_sheet(); df = load_dataframe(sheet)
-        unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
+        unique_cats = sorted([x for x in full_df['분류'].unique().tolist() if x != ''])
         sel_cat = st.radio("분류 필터", ["🔀 랜덤 10", "전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed", key="cat_radio", on_change=clear_search)
        
         st.divider()
@@ -520,6 +520,7 @@ else:
         total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
         curr_p = st.session_state.curr_p if 'curr_p' in st.session_state else 1
         
+        # ★ JS: setInterval을 활용하여 Streamlit 렌더링 중에도 영구적으로 이벤트가 바인딩되도록 개선된 실시간 콤마 로직 ★
         components.html(f"""
             <style>body {{ margin:0; padding:0; background:transparent!important; overflow:hidden; }}</style>
             <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:5px; font-family:sans-serif;">
@@ -528,24 +529,15 @@ else:
             </div>
             <script>
             const doc = window.parent.document;
-            if (!doc.liveCommaAdded) {{
-                function setNativeValue(element, value) {{
-                    const valueSetter = Object.getOwnPropertyDescriptor(element, 'value').set;
-                    const prototype = Object.getPrototypeOf(element);
-                    const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, 'value').set;
-                    
-                    if (valueSetter && valueSetter !== prototypeValueSetter) {{
-                        prototypeValueSetter.call(element, value);
-                    }} else {{
-                        valueSetter.call(element, value);
-                    }}
-                    element.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                }}
-
-                doc.addEventListener('input', function(e) {{
-                    if (e.target && e.target.tagName === 'INPUT') {{
-                        let label = e.target.getAttribute('aria-label');
-                        if (label && label.includes('Num.ENG')) {{
+            
+            function applyLiveComma() {{
+                const inputs = doc.querySelectorAll('input[aria-label*="Num.ENG"]');
+                inputs.forEach(input => {{
+                    // 리스너가 중복 등록되지 않도록 속성으로 체크
+                    if (!input.hasAttribute('data-live-comma')) {{
+                        input.setAttribute('data-live-comma', 'true');
+                        
+                        input.addEventListener('input', function(e) {{
                             let val = e.target.value;
                             let numStr = val.replace(/[^0-9]/g, '');
                             let formatted = numStr ? Number(numStr).toLocaleString('en-US') : '';
@@ -554,16 +546,24 @@ else:
                                 let cursorPosition = e.target.selectionStart;
                                 let oldLength = val.length;
                                 
-                                setNativeValue(e.target, formatted);
+                                // Native Setter: React 가상 DOM을 우회하여 입력창에 값을 즉시 강제 반영
+                                let nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                                nativeSetter.call(e.target, formatted);
+                                e.target.dispatchEvent(new Event('input', {{ bubbles: true }}));
                                 
+                                // 콤마 삽입 후 커서가 맨 뒤로 날아가는 현상 보정
                                 let newLength = formatted.length;
                                 let newCursorPos = cursorPosition + (newLength - oldLength);
                                 e.target.setSelectionRange(newCursorPos, newCursorPos);
                             }}
-                        }}
+                        }});
                     }}
-                }}, true);
-                doc.liveCommaAdded = true;
+                }});
+            }}
+            
+            // Streamlit은 동작마다 화면을 새로 그리므로 0.3초마다 체크하여 연결을 복구함
+            if (!window.liveCommaInterval) {{
+                window.liveCommaInterval = setInterval(applyLiveComma, 300);
             }}
             </script>
         """, height=35)
