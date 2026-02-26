@@ -167,7 +167,7 @@ st.markdown("""
     .mean-text { font-size: 1.3em; display: block; word-break: keep-all; }
     .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; }
    
-    /* 9. Num.ENG 레이아웃 (상단 라인 이동 대비 패딩 제거) */
+    /* ★ 9. Num.ENG 레이아웃 및 라벨 크기 축소 ★ */
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
         display: flex !important;
         flex-direction: row !important;
@@ -176,7 +176,8 @@ st.markdown("""
     }
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) label p {
         font-weight: 900 !important;
-        font-size: clamp(1.0rem, 1.4vw, 1.5rem) !important;
+        /* 라벨 글자 크기를 기존보다 작게 설정 */
+        font-size: clamp(0.8rem, 1.1vw, 1.1rem) !important; 
         margin: 0 !important;
     }
     input[aria-label="Num.ENG :"] {
@@ -189,7 +190,8 @@ st.markdown("""
 
     /* 10. 모바일 레이아웃 강제 교정 */
     @media screen and (max-width: 768px) {
-        h1 { font-size: clamp(1.1rem, 1.8vw, 1.6rem) !important; }
+        /* 타이틀 반응형 크기도 30% 가량 상향 */
+        h1 { font-size: clamp(1.4rem, 2.5vw, 2.5rem) !important; }
         
         div[data-testid="stHorizontalBlock"]:has(.row-marker) {
             display: flex !important;
@@ -337,8 +339,9 @@ if not st.session_state.authenticated and st.session_state.logging_in:
 else:
     # ★ 2. 메인 앱 화면 ★
     
-    # 2-1. [상단 줄] LOGIN/OUT + Num.ENG 입력 + Num.ENG 결과
-    col_auth, col_num_combined, col_num_result = st.columns([1.5, 2.4, 6.1])
+    # 2-1. [상단 줄] LOGIN/OUT + Spacer + Num.ENG 입력 + Num.ENG 결과
+    # Spacer(0.5)를 추가하여 로그인 버튼과 입력창 사이 간격 확보
+    col_auth, col_spacer, col_num_combined, col_num_result = st.columns([1.2, 0.5, 2.4, 5.9])
     
     with col_auth:
         if not st.session_state.authenticated:
@@ -350,6 +353,8 @@ else:
                 st.session_state.authenticated = False
                 if "auth" in st.query_params: del st.query_params["auth"]
                 st.rerun()
+
+    # Spacer 컬럼은 비워둠
 
     with col_num_combined:
         st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
@@ -373,7 +378,8 @@ else:
     col_title, col_date = st.columns([4.0, 6.0])
 
     with col_title:
-        st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.2rem, 2.2vw, 2.2rem);'>TOmBOy94 English</h1>", unsafe_allow_html=True)
+        # 타이틀 글자 크기를 CSS clamp 수치를 높여 30% 가량 증대
+        st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.6rem, 2.9vw, 2.9rem);'>TOmBOy94 English</h1>", unsafe_allow_html=True)
 
     with col_date:
         components.html(f"""
