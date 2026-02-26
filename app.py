@@ -487,7 +487,7 @@ else:
         total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
         curr_p = st.session_state.curr_p if 'curr_p' in st.session_state else 1
         
-        # ★ JS: 실시간 3자리 콤마 자동 입력 기능 강화 ★
+        # ★ JS: 최신 React 지원 네이티브 Setter를 통한 실시간 3자리 콤마 자동 입력 기능 ★
         components.html(f"""
             <style>body {{ margin:0; padding:0; background:transparent!important; overflow:hidden; }}</style>
             <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:5px; font-family:sans-serif;">
@@ -497,24 +497,20 @@ else:
             <script>
             const doc = window.parent.document;
             if (!doc.liveCommaAdded) {{
-                doc.body.addEventListener('input', function(e) {{
-                    let label = e.target.getAttribute('aria-label');
-                    if (label && label.includes('Num.ENG')) {{
-                        let val = e.target.value;
-                        let numStr = val.replace(/[^0-9]/g, '');
-                        if (numStr) {{
-                            let formatted = Number(numStr).toLocaleString('en-US');
+                doc.addEventListener('input', function(e) {{
+                    if (e.target && e.target.tagName === 'INPUT') {{
+                        let label = e.target.getAttribute('aria-label');
+                        if (label && label.includes('Num.ENG')) {{
+                            let val = e.target.value;
+                            let numStr = val.replace(/[^0-9]/g, '');
+                            let formatted = numStr ? Number(numStr).toLocaleString('en-US') : '';
+                            
+                            // Streamlit(React)의 통제를 뚫고 실시간으로 값 업데이트 (Native Setter 사용)
                             if (val !== formatted) {{
-                                e.target.value = formatted;
-                                let tracker = e.target._valueTracker;
-                                if (tracker) tracker.setValue(formatted);
+                                let nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                                nativeSetter.call(e.target, formatted);
                                 e.target.dispatchEvent(new Event('input', {{ bubbles: true }}));
                             }}
-                        }} else if (val !== '') {{
-                            e.target.value = '';
-                            let tracker = e.target._valueTracker;
-                            if (tracker) tracker.setValue('');
-                            e.target.dispatchEvent(new Event('input', {{ bubbles: true }}));
                         }}
                     }}
                 }}, true);
