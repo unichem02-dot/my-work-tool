@@ -40,32 +40,21 @@ st.markdown("""
         -webkit-text-fill-color: #FFFFFF !important;
     }
 
-    /* 로그인(Expander) 제목 및 스타일 최적화 */
-    div[data-testid="stExpander"] {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        border-radius: 15px !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        margin-top: 10px !important;
-    }
-    div[data-testid="stExpander"] summary p {
-        font-size: 1.1rem !important;
-        font-weight: 900 !important;
-        color: #FFFFFF !important;
-    }
-    /* 모바일/PC 로그인 입력창 크게 */
-    div[data-testid="stExpander"] .stTextInput input {
+    /* 3. 로그인 입력창 모바일 최적화 및 눈알 제거 */
+    .stTextInput input {
         height: 50px !important;
         font-size: 1.2rem !important;
         background-color: #FFFFFF !important;
         color: #000000 !important;
+        border-radius: 10px !important;
     }
     
-    /* ★ 비밀번호 입력창 눈알 아이콘(비밀번호 보기 버튼) 제거 ★ */
+    /* 비밀번호 입력창 눈알 아이콘 제거 */
     div[data-testid="stTextInput"] button {
         display: none !important;
     }
 
-    /* 3. 컨텐츠 행(Row) 호버 효과 */
+    /* 4. 컨텐츠 행(Row) 호버 효과 */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
         padding: 12px 15px !important;
@@ -80,7 +69,7 @@ st.markdown("""
         background-color: rgba(26, 47, 47, 0.9) !important;
     }
 
-    /* 4. 상단 분류 리스트(Radio) 알약 형태 */
+    /* 5. 상단 분류 리스트(Radio) 알약 형태 */
     div[data-testid="stRadio"] > div[role="radiogroup"] {
         flex-direction: row !important;
         flex-wrap: wrap !important;
@@ -126,7 +115,7 @@ st.markdown("""
         color: #224343 !important;
     }
 
-    /* 5. 버튼 스타일 */
+    /* 6. 버튼 스타일 */
     button, div.stDownloadButton > button {
         border-radius: 50px !important;
         padding: 0.5rem 1.2rem !important;
@@ -149,7 +138,7 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* 6. 수정 버튼: 투명 연필 아이콘 */
+    /* 7. 수정 버튼: 투명 연필 아이콘 */
     button[kind="tertiary"] {
         background-color: transparent !important;
         border: none !important;
@@ -166,7 +155,7 @@ st.markdown("""
         transform: scale(1.2) !important;
     }
 
-    /* 7. 헤더 라벨 */
+    /* 8. 헤더 라벨 및 텍스트 시인성 */
     .header-label { 
         font-size: clamp(1.0rem, 1.4vw, 1.5rem) !important; 
         font-weight: 800 !important; 
@@ -174,12 +163,11 @@ st.markdown("""
         white-space: nowrap !important;
     }
    
-    /* 컨텐츠 텍스트 강조 */
     .word-text { font-size: 1.8em; font-weight: bold; display: block; color: #FFD700 !important; word-break: keep-all; }
     .mean-text { font-size: 1.3em; display: block; word-break: keep-all; }
     .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; }
    
-    /* 8. Num.ENG 레이아웃 */
+    /* 9. Num.ENG 레이아웃 */
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
         display: flex !important;
         flex-direction: row !important;
@@ -199,10 +187,9 @@ st.markdown("""
     }
    
     .num-result { color: #FFD700; font-weight: bold; font-size: clamp(1.0rem, 1.4vw, 1.5rem); margin-top: 10px; }
-   
     .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -25px; margin-bottom: 5px; }
 
-    /* 9. 모바일 레이아웃 교정 */
+    /* 10. 모바일 레이아웃 강제 교정 */
     @media screen and (max-width: 768px) {
         h1 { font-size: clamp(1.1rem, 1.8vw, 1.6rem) !important; }
         
@@ -289,10 +276,11 @@ def edit_dialog(idx, row_data, sheet, full_df):
         if b2.form_submit_button("🗑️ 삭제", use_container_width=True):
             sheet.delete_rows(idx + 2); st.rerun()
 
-# --- [메인 로직 실행] ---
+# --- [세션 상태 관리] ---
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = st.query_params.get("auth") == "true"
-
+if "logging_in" not in st.session_state:
+    st.session_state.logging_in = False
 if 'sort_order' not in st.session_state: st.session_state.sort_order = 'None'
 if 'current_cat' not in st.session_state: st.session_state.current_cat = "🔀 랜덤 10"
 if 'num_input' not in st.session_state: st.session_state.num_input = ""
@@ -326,171 +314,194 @@ def num_to_eng(num):
         return str(n)
     return _convert(num).strip()
 
-# 오늘 날짜
-kst = timezone(timedelta(hours=9))
-now_kst = datetime.now(kst)
-date_str = now_kst.strftime("%A, %B %d, %Y")
+# --- [메인 로직] ---
 
-# ★ 상단 레이아웃: 로그인/아웃을 맨 앞(좌측)에 배치 ★
-col_auth, col_title, col_date, col_num_combined, col_num_result = st.columns([1.5, 2.0, 3.4, 2.4, 2.0])
-
-with col_auth:
-    if not st.session_state.authenticated:
-        with st.expander("🔐 LOGIN"):
-            if st.text_input("Password", type="password", key="login_pass") == LOGIN_PASSWORD:
+# ★ 1. 로그인 전용 화면 (로그인 버튼을 눌렀을 때만 표시) ★
+if not st.session_state.authenticated and st.session_state.logging_in:
+    st.write("## 🔐 Security Login")
+    with st.container():
+        st.markdown("<div style='height: 100px;'></div>", unsafe_allow_html=True)
+        pwd = st.text_input("Enter Password", type="password", placeholder="비밀번호를 입력하세요...")
+        
+        c1, c2 = st.columns(2)
+        if c1.button("✅ LOGIN", use_container_width=True, type="primary"):
+            if pwd == LOGIN_PASSWORD:
                 st.session_state.authenticated = True
+                st.session_state.logging_in = False
                 st.query_params["auth"] = "true"
                 st.rerun()
-    else:
-        if st.button("🔓 LOGOUT", use_container_width=True, type="secondary"):
-            st.session_state.authenticated = False
-            if "auth" in st.query_params: del st.query_params["auth"]
+            else:
+                st.error("❌ 비밀번호가 틀렸습니다.")
+        
+        if c2.button("🔙 CANCEL", use_container_width=True):
+            st.session_state.logging_in = False
             st.rerun()
-
-with col_title:
-    st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.2rem, 2.2vw, 2.2rem);'>TOmBOy94 English</h1>", unsafe_allow_html=True)
-
-with col_date:
-    components.html(f"""
-        <style>
-            body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: visible; }}
-            .date-wrapper {{ display: flex; flex-wrap: wrap; align-items: center; gap: clamp(5px, 1.5vw, 15px); padding-top: 15px; font-family: sans-serif; width: 100%; }}
-            .date-text {{ color: #FFFFFF; font-weight: bold; font-size: clamp(1.1rem, 2.6vw, 2.6rem); white-space: nowrap; }}
-            .copy-btn {{ background-color: transparent; border: 1px solid rgba(255,255,255,0.5); color: #FFF; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: clamp(0.7rem, 1vw, 1.1rem); font-weight:bold; transition: 0.3s; white-space: nowrap; }}
-            .copy-btn:hover {{ background-color: rgba(255,255,255,0.2) !important; }}
-        </style>
-        <div class="date-wrapper">
-            <span class="date-text">📅 {date_str}</span>
-            <button class="copy-btn" onclick="copyDate()">📋 복사</button>
-        </div>
-        <script>
-        function copyDate() {{
-            var temp = document.createElement("textarea"); temp.value = "{date_str}"; document.body.appendChild(temp); temp.select(); document.execCommand("copy"); document.body.removeChild(temp);
-            var btn = document.querySelector(".copy-btn"); btn.innerHTML = "✅"; 
-            setTimeout(function(){{ btn.innerHTML = "📋 복사"; }}, 1500);
-        }}
-        </script>
-    """, height=130)
-   
-with col_num_combined:
-    st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
-    num_val = st.session_state.num_input
-   
-with col_num_result:
-    if num_val:
-        clean_num = num_val.replace(",", "").strip()
-        if clean_num.isdigit():
-            eng_text = num_to_eng(int(clean_num)).capitalize()
-            st.markdown(f"<p class='num-result'>📝 {eng_text}</p>", unsafe_allow_html=True)
-        else:
-            st.markdown("<p class='num-result' style='color:#FF9999;'>⚠️ 숫자만</p>", unsafe_allow_html=True)
-
-try:
-    sheet = get_sheet(); df = load_dataframe(sheet)
-    unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
-    sel_cat = st.radio("분류 필터", ["🔀 랜덤 10", "전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed", key="cat_radio", on_change=clear_search)
-   
-    st.divider()
-   
-    # 컨트롤 바 디자인
-    cb_cols = [1.5, 1.5, 1.4, 2.6, 1.5] if st.session_state.authenticated else [1.5, 1.4, 4.1]
-    cb = st.columns(cb_cols)
-    cb[0].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
+else:
+    # ★ 2. 메인 앱 화면 (평상시 또는 로그인 완료 후 표시) ★
     
-    if st.session_state.authenticated and cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
-    
-    btn_idx = 2 if st.session_state.authenticated else 1
-    btn_text = "🔄 전체모드" if st.session_state.is_simple else "✨ 심플모드"
-    btn_type = "secondary" if st.session_state.is_simple else "primary"
-    if cb[btn_idx].button(btn_text, type=btn_type, use_container_width=True):
-        st.session_state.is_simple = not st.session_state.is_simple; st.rerun()
+    # 오늘 날짜
+    kst = timezone(timedelta(hours=9))
+    now_kst = datetime.now(kst)
+    date_str = now_kst.strftime("%A, %B %d, %Y")
 
-    is_simple = st.session_state.is_simple
-    search = st.session_state.active_search
-    d_df = df.copy()
-   
-    if search:
-        d_df = d_df[d_df['단어-문장'].str.contains(search, case=False, na=False)]
-    else:
-        if sel_cat == "🔀 랜덤 10":
-            if st.session_state.current_cat != "🔀 랜덤 10" or 'random_df' not in st.session_state:
-                st.session_state.random_df = df.sample(n=min(10, len(df)))
-            d_df = st.session_state.random_df.copy()
-        elif sel_cat != "전체 분류": d_df = d_df[d_df['분류'] == sel_cat]
-        st.session_state.current_cat = sel_cat
+    # 상단 레이아웃
+    col_auth, col_title, col_date, col_num_combined, col_num_result = st.columns([1.5, 2.0, 3.4, 2.4, 2.0])
 
-    if st.session_state.sort_order == 'asc': d_df = d_df.sort_values(by='단어-문장', ascending=True)
-    elif st.session_state.sort_order == 'desc': d_df = d_df.sort_values(by='단어-문장', ascending=False)
-    else: d_df = d_df.iloc[::-1]
-
-    if st.session_state.authenticated:
-        cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
-
-    total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
-    if 'curr_p' not in st.session_state: st.session_state.curr_p = 1
-    curr_p = st.session_state.curr_p
-
-    # JS 숫자 포맷터 연동
-    components.html(f"""
-        <style>body {{ margin:0; padding:0; background:transparent!important; overflow:hidden; }}</style>
-        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:5px; font-family:sans-serif;">
-            <span style="color:#FF9999; font-weight:bold; font-size:0.9rem; margin-right:15px;">{'🔍 ' + search if search else ''}</span>
-            <span style="color:#FFF; font-weight:bold; font-size:0.95rem;">총 {total}개 (페이지: {curr_p}/{pages})</span>
-        </div>
-        <script>
-        const doc = window.parent.document;
-        if (!doc.formatListenerAdded) {{
-            doc.body.addEventListener('input', function(e) {{
-                if (e.target && e.target.getAttribute('aria-label') === 'Num.ENG :') {{
-                    let rawVal = e.target.value.replace(/[^0-9]/g, '');
-                    if (rawVal) e.target.value = Number(rawVal).toLocaleString('en-US'); else e.target.value = '';
-                }}
-            }});
-            doc.formatListenerAdded = true;
-        }}
-        </script>
-    """, height=35)
-   
-    # 리스트 헤더 및 본문 출력
-    ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
-    labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
-    h_cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
-    for i, l in enumerate(labels if st.session_state.authenticated else labels[:-1]):
-        if l == "단어-문장":
-            sort_icon = " ↑" if st.session_state.sort_order == 'asc' else (" ↓" if st.session_state.sort_order == 'desc' else "")
-            if h_cols[i].button(f"{l}{sort_icon}", key="sort_btn"):
-                st.session_state.sort_order = 'asc' if st.session_state.sort_order == 'None' else ('desc' if st.session_state.sort_order == 'asc' else 'None')
+    with col_auth:
+        if not st.session_state.authenticated:
+            if st.button("🔐 LOGIN", use_container_width=True):
+                st.session_state.logging_in = True
                 st.rerun()
-        else: h_cols[i].markdown(f"<span class='header-label'>{l}</span>", unsafe_allow_html=True)
-   
-    st.markdown("<div style='border-bottom:2px solid rgba(255,255,255,0.4); margin-top:-20px; margin-bottom:5px;'></div>", unsafe_allow_html=True)
+        else:
+            if st.button("🔓 LOGOUT", use_container_width=True, type="secondary"):
+                st.session_state.authenticated = False
+                if "auth" in st.query_params: del st.query_params["auth"]
+                st.rerun()
 
-    for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
-        cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
-        cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold' style='font-weight:bold; font-size:0.95rem;'>{row['분류']}</span>", unsafe_allow_html=True)
-        cols[1].markdown(f"<span class='word-text'>{row['단어-문장']}</span>", unsafe_allow_html=True)
-        cols[2].markdown(f"<span class='mean-text'>{row['해석']}</span>", unsafe_allow_html=True)
-        if not is_simple:
-            cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
-            if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(idx, row, sheet, df)
-        elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(idx, row, sheet, df)
-        st.markdown("<div class='row-divider'></div>", unsafe_allow_html=True)
+    with col_title:
+        st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.2rem, 2.2vw, 2.2rem);'>TOmBOy94 English</h1>", unsafe_allow_html=True)
 
-    # 페이지네이션
-    if pages > 1:
-        p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
-        if p_cols[1].button("◀ 이전", disabled=(curr_p == 1), use_container_width=True): st.session_state.curr_p -= 1; st.rerun()
-        p_cols[2].markdown(f"<div style='text-align:center; padding:10px; color:#FFD700; font-weight:bold;'>Page {curr_p} / {pages}</div>", unsafe_allow_html=True)
-        if p_cols[3].button("다음 ▶", disabled=(curr_p == pages), use_container_width=True): st.session_state.curr_p += 1; st.rerun()
+    with col_date:
+        components.html(f"""
+            <style>
+                body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: visible; }}
+                .date-wrapper {{ display: flex; flex-wrap: wrap; align-items: center; gap: clamp(5px, 1.5vw, 15px); padding-top: 15px; font-family: sans-serif; width: 100%; }}
+                .date-text {{ color: #FFFFFF; font-weight: bold; font-size: clamp(1.1rem, 2.6vw, 2.6rem); white-space: nowrap; }}
+                .copy-btn {{ background-color: transparent; border: 1px solid rgba(255,255,255,0.5); color: #FFF; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: clamp(0.7rem, 1vw, 1.1rem); font-weight:bold; transition: 0.3s; white-space: nowrap; }}
+                .copy-btn:hover {{ background-color: rgba(255,255,255,0.2) !important; }}
+            </style>
+            <div class="date-wrapper">
+                <span class="date-text">📅 {date_str}</span>
+                <button class="copy-btn" onclick="copyDate()">📋 복사</button>
+            </div>
+            <script>
+            function copyDate() {{
+                var temp = document.createElement("textarea"); temp.value = "{date_str}"; document.body.appendChild(temp); temp.select(); document.execCommand("copy"); document.body.removeChild(temp);
+                var btn = document.querySelector(".copy-btn"); btn.innerHTML = "✅"; 
+                setTimeout(function(){{ btn.innerHTML = "📋 복사"; }}, 1500);
+            }}
+            </script>
+        """, height=130)
+       
+    with col_num_combined:
+        st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
+        num_val = st.session_state.num_input
+       
+    with col_num_result:
+        if num_val:
+            clean_num = num_val.replace(",", "").strip()
+            if clean_num.isdigit():
+                eng_text = num_to_eng(int(clean_num)).capitalize()
+                st.markdown(f"<p class='num-result'>📝 {eng_text}</p>", unsafe_allow_html=True)
+            else:
+                st.markdown("<p class='num-result' style='color:#FF9999;'>⚠️ 숫자만</p>", unsafe_allow_html=True)
 
-except Exception as e: st.error(f"오류 발생: {e}")
+    try:
+        sheet = get_sheet(); df = load_dataframe(sheet)
+        unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
+        sel_cat = st.radio("분류 필터", ["🔀 랜덤 10", "전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed", key="cat_radio", on_change=clear_search)
+       
+        st.divider()
+       
+        # 컨트롤 바 디자인
+        cb_cols = [1.5, 1.5, 1.4, 2.6, 1.5] if st.session_state.authenticated else [1.5, 1.4, 4.1]
+        cb = st.columns(cb_cols)
+        cb[0].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
+        
+        if st.session_state.authenticated and cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
+        
+        btn_idx = 2 if st.session_state.authenticated else 1
+        btn_text = "🔄 전체모드" if st.session_state.is_simple else "✨ 심플모드"
+        btn_type = "secondary" if st.session_state.is_simple else "primary"
+        if cb[btn_idx].button(btn_text, type=btn_type, use_container_width=True):
+            st.session_state.is_simple = not st.session_state.is_simple; st.rerun()
 
-# --- [푸터] ---
-current_year = datetime.now(timezone(timedelta(hours=9))).year
-st.markdown(f"""
-    <div style='text-align: center; margin-top: 30px; margin-bottom: 20px; padding-top: 15px; border-top: 1px dotted rgba(255, 255, 255, 0.2);'>
-        <p style='color: #A3B8B8; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px;'>
-            Copyright © {current_year} TOmBOy94 &nbsp;|&nbsp; lodus11st@naver.com &nbsp;|&nbsp; All rights reserved.
-        </p>
-    </div>
-""", unsafe_allow_html=True)
+        is_simple = st.session_state.is_simple
+        search = st.session_state.active_search
+        d_df = df.copy()
+       
+        if search:
+            d_df = d_df[d_df['단어-문장'].str.contains(search, case=False, na=False)]
+        else:
+            if sel_cat == "🔀 랜덤 10":
+                if st.session_state.current_cat != "🔀 랜덤 10" or 'random_df' not in st.session_state:
+                    st.session_state.random_df = df.sample(n=min(10, len(df)))
+                d_df = st.session_state.random_df.copy()
+            elif sel_cat != "전체 분류": d_df = d_df[d_df['분류'] == sel_cat]
+            st.session_state.current_cat = sel_cat
+
+        if st.session_state.sort_order == 'asc': d_df = d_df.sort_values(by='단어-문장', ascending=True)
+        elif st.session_state.sort_order == 'desc': d_df = d_df.sort_values(by='단어-문장', ascending=False)
+        else: d_df = d_df.iloc[::-1]
+
+        if st.session_state.authenticated:
+            cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
+
+        total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
+        if 'curr_p' not in st.session_state: st.session_state.curr_p = 1
+        curr_p = st.session_state.curr_p
+
+        # JS 숫자 포맷터 연동
+        components.html(f"""
+            <style>body {{ margin:0; padding:0; background:transparent!important; overflow:hidden; }}</style>
+            <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:5px; font-family:sans-serif;">
+                <span style="color:#FF9999; font-weight:bold; font-size:0.9rem; margin-right:15px;">{'🔍 ' + search if search else ''}</span>
+                <span style="color:#FFF; font-weight:bold; font-size:0.95rem;">총 {total}개 (페이지: {curr_p}/{pages})</span>
+            </div>
+            <script>
+            const doc = window.parent.document;
+            if (!doc.formatListenerAdded) {{
+                doc.body.addEventListener('input', function(e) {{
+                    if (e.target && e.target.getAttribute('aria-label') === 'Num.ENG :') {{
+                        let rawVal = e.target.value.replace(/[^0-9]/g, '');
+                        if (rawVal) e.target.value = Number(rawVal).toLocaleString('en-US'); else e.target.value = '';
+                    }}
+                }});
+                doc.formatListenerAdded = true;
+            }}
+            </script>
+        """, height=35)
+       
+        # 리스트 헤더 및 본문 출력
+        ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
+        labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
+        h_cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
+        for i, l in enumerate(labels if st.session_state.authenticated else labels[:-1]):
+            if l == "단어-문장":
+                sort_icon = " ↑" if st.session_state.sort_order == 'asc' else (" ↓" if st.session_state.sort_order == 'desc' else "")
+                if h_cols[i].button(f"{l}{sort_icon}", key="sort_btn"):
+                    st.session_state.sort_order = 'asc' if st.session_state.sort_order == 'None' else ('desc' if st.session_state.sort_order == 'asc' else 'None')
+                    st.rerun()
+            else: h_cols[i].markdown(f"<span class='header-label'>{l}</span>", unsafe_allow_html=True)
+       
+        st.markdown("<div style='border-bottom:2px solid rgba(255,255,255,0.4); margin-top:-20px; margin-bottom:5px;'></div>", unsafe_allow_html=True)
+
+        for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
+            cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
+            cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold' style='font-weight:bold; font-size:0.95rem;'>{row['분류']}</span>", unsafe_allow_html=True)
+            cols[1].markdown(f"<span class='word-text'>{row['단어-문장']}</span>", unsafe_allow_html=True)
+            cols[2].markdown(f"<span class='mean-text'>{row['해석']}</span>", unsafe_allow_html=True)
+            if not is_simple:
+                cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
+                if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(idx, row, sheet, df)
+            elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(idx, row, sheet, df)
+            st.markdown("<div class='row-divider'></div>", unsafe_allow_html=True)
+
+        # 페이지네이션
+        if pages > 1:
+            p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
+            if p_cols[1].button("◀ 이전", disabled=(curr_p == 1), use_container_width=True): st.session_state.curr_p -= 1; st.rerun()
+            p_cols[2].markdown(f"<div style='text-align:center; padding:10px; color:#FFD700; font-weight:bold;'>Page {curr_p} / {pages}</div>", unsafe_allow_html=True)
+            if p_cols[3].button("다음 ▶", disabled=(curr_p == pages), use_container_width=True): st.session_state.curr_p += 1; st.rerun()
+
+    except Exception as e: st.error(f"오류 발생: {e}")
+
+    # --- [푸터] ---
+    current_year = datetime.now(timezone(timedelta(hours=9))).year
+    st.markdown(f"""
+        <div style='text-align: center; margin-top: 30px; margin-bottom: 20px; padding-top: 15px; border-top: 1px dotted rgba(255, 255, 255, 0.2);'>
+            <p style='color: #A3B8B8; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px;'>
+                Copyright © {current_year} TOmBOy94 &nbsp;|&nbsp; lodus11st@naver.com &nbsp;|&nbsp; All rights reserved.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
