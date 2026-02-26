@@ -40,7 +40,7 @@ st.markdown("""
         -webkit-text-fill-color: #FFFFFF !important;
     }
 
-    /* 3. 일반 입력창 모바일 최적화 및 눈알 제거 */
+    /* 3. 로그인 입력창 모바일 최적화 및 눈알 제거 */
     .stTextInput input {
         height: 50px !important;
         font-size: 1.2rem !important;
@@ -61,7 +61,7 @@ st.markdown("""
     }
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 16px 10px !important; 
+        padding: 16px 10px !important; /* 상하 여백을 16px로 늘려 텍스트와 점선 간의 공간 확보 */
         border-radius: 0px !important; 
         margin-bottom: 0px !important;
         border-bottom: 1px dotted rgba(255, 255, 255, 0.2) !important; 
@@ -72,13 +72,13 @@ st.markdown("""
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         align-items: center !important; 
-        overflow: visible !important; 
+        overflow: visible !important; /* 글자 확대 시 잘림 방지 */
     }
     div[data-testid="stHorizontalBlock"]:has(.row-marker):hover {
         background-color: rgba(26, 47, 47, 0.9) !important;
     }
     
-    /* 텍스트 쳐짐 완벽 해결 */
+    /* 텍스트 쳐짐(하단 점선 달라붙음) 완벽 해결 */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) > div[data-testid="column"] {
         display: flex !important;
         flex-direction: column !important;
@@ -88,13 +88,14 @@ st.markdown("""
         overflow: visible !important;
     }
     
+    /* p 태그에 강제 부여되었던 flex 해제, 블록 단위로 정상 줄간격 확보 */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) div.element-container,
     div[data-testid="stHorizontalBlock"]:has(.row-marker) div.stMarkdown,
     div[data-testid="stHorizontalBlock"]:has(.row-marker) p {
         display: block !important; 
         margin: 0 !important;
         padding: 0 !important;
-        line-height: 1.5 !important; 
+        line-height: 1.5 !important; /* g, y, p 등 알파벳 꼬리 잘림 방지 */
         width: 100% !important;
     }
 
@@ -150,6 +151,9 @@ st.markdown("""
         padding: 0.5rem 1.2rem !important;
         font-weight: 900 !important;
         transition: all 0.3s ease !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
     }
     button[kind="primary"] {
         background-color: #FFFFFF !important;
@@ -207,72 +211,6 @@ st.markdown("""
     .mean-text { font-size: 1.3em; word-break: keep-all; display: inline-block !important; margin-bottom: 2px !important; }
     .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; display: inline-block !important; margin-bottom: 2px !important; }
    
-    /* 13. 로그인 PIN 입력창 사이트 테마 맞춤형 디자인 (Dark Green & Gold) */
-    #login-pin-container div[data-testid="stForm"] {
-        background-color: rgba(0, 0, 0, 0.2) !important; 
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        padding: 40px 30px !important;
-        border-radius: 25px !important;
-        max-width: 400px !important;
-        margin: 60px auto !important;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4) !important;
-    }
-    
-    #login-pin-container h3 {
-        color: #FFD700 !important; 
-        text-align: center !important;
-        font-size: 1.5rem !important;
-        font-weight: 900 !important;
-        margin-bottom: 30px !important;
-    }
-    
-    #login-pin-container input[aria-label^="pin"] {
-        height: 75px !important;
-        font-size: 2.5rem !important;
-        text-align: center !important;
-        border-radius: 15px !important;
-        border: 2px solid rgba(255, 255, 255, 0.2) !important;
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        color: #FFFFFF !important;
-        padding: 0 !important;
-        caret-color: #FFD700 !important;
-        -webkit-text-security: disc;
-    }
-    
-    #login-pin-container input[aria-label^="pin"]:focus {
-        border-color: #FFD700 !important; 
-        background-color: rgba(255, 255, 255, 0.1) !important;
-        box-shadow: 0 0 15px rgba(255, 215, 0, 0.3) !important;
-    }
-    
-    /* 취소 버튼 (Secondary 스타일) */
-    #login-pin-container div[data-testid="column"]:nth-child(1) button {
-        background-color: transparent !important;
-        border: 2px solid #FFFFFF !important;
-        border-radius: 50px !important;
-        height: 50px !important;
-    }
-    #login-pin-container div[data-testid="column"]:nth-child(1) button p {
-        color: #FFFFFF !important;
-        font-weight: 800 !important;
-    }
-    
-    /* 인증하기 버튼 (Primary 골드 스타일) */
-    #login-pin-container div[data-testid="column"]:nth-child(2) button {
-        background-color: #FFD700 !important;
-        border: none !important;
-        border-radius: 50px !important;
-        height: 50px !important;
-    }
-    #login-pin-container div[data-testid="column"]:nth-child(2) button p {
-        color: #224343 !important;
-        font-weight: 900 !important;
-    }
-    #login-pin-container div[data-testid="column"]:nth-child(2) button:hover {
-        transform: scale(1.05);
-        box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
-    }
-
     /* 9. Num.ENG 레이아웃 최적화 및 가로 크기 제한 */
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
         display: flex !important;
@@ -373,6 +311,7 @@ st.markdown("""
         div[data-testid="stHorizontalBlock"]:has(.row-marker) > div:nth-child(3) { width: 34% !important; } 
         div[data-testid="stHorizontalBlock"]:has(.row-marker) > div:last-child { width: 10% !important; min-width: 40px; text-align: right; } 
 
+        /* 단어-문장 크기 기존 1.1rem에서 10% 확대 (1.21rem) */
         .word-text { font-size: 1.21rem !important; }
         .mean-text { font-size: 0.9rem !important; }
         
@@ -396,37 +335,24 @@ LOGIN_PASSWORD = "0315"
 
 @st.cache_resource
 def init_connection():
-    try:
-        scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-        creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
-        return gspread.authorize(creds)
-    except Exception:
-        return None
+    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
+    return gspread.authorize(creds)
 
 def get_sheet():
-    client = init_connection()
-    return client.open("English_Sentences").sheet1 if client else None
+    return init_connection().open("English_Sentences").sheet1
 
 def load_dataframe(sheet):
-    if sheet:
-        for _ in range(3):
-            try:
-                data = sheet.get_all_values()
-                if not data: return pd.DataFrame(columns=['분류', '단어-문장', '해석', '발음', '메모1', '메모2'])
-                rows = [row + [""] * (6 - len(row)) for row in data[1:]]
-                df = pd.DataFrame(rows, columns=['분류', '단어-문장', '해석', '발음', '메모1', '메모2'])
-                for col in df.columns: df[col] = df[col].astype(str).str.strip()
-                return df
-            except Exception:
-                time.sleep(1)
-    
-    #Fallback 임시 데이터
-    return pd.DataFrame([
-        ['구동사', 'Hang out', '시간 보내다/놀다', '행아웃', '', ''],
-        ['여행', 'Keep the change.', '잔돈은 가지세요.', '킵 더 체인지', '', ''],
-        ['독해(구분)', 'so that', '~하기 위해서 / 그래서 ~하도록', '', '', ''],
-        ['TOM사용영어', 'The tracking number is missing.', '송장번호 누락', '더 트래킹 넘버 이즈 미씽', '', '']
-    ], columns=['분류', '단어-문장', '해석', '발음', '메모1', '메모2'])
+    for _ in range(3):
+        try:
+            data = sheet.get_all_values()
+            if not data: return pd.DataFrame(columns=['분류', '단어-문장', '해석', '발음', '메모1', '메모2'])
+            rows = [row + [""] * (6 - len(row)) for row in data[1:]]
+            df = pd.DataFrame(rows, columns=['분류', '단어-문장', '해석', '발음', '메모1', '메모2'])
+            for col in df.columns: df[col] = df[col].astype(str).str.strip()
+            return df
+        except: time.sleep(1)
+    raise Exception("데이터 로드 실패")
 
 # --- [다이얼로그 설정] ---
 @st.dialog("새 항목 추가")
@@ -445,11 +371,10 @@ def add_dialog(unique_cats):
             final_cat = new_cat.strip() if new_cat.strip() else (selected_cat if selected_cat != "(새로 입력)" else "")
             if word_sent:
                 sheet = get_sheet()
-                if sheet:
-                    sheet.append_row([final_cat, word_sent, mean, pron, m1, m2])
-                    st.success("저장 완료!")
-                    time.sleep(1)
-                    st.rerun()
+                sheet.append_row([final_cat, word_sent, mean, pron, m1, m2])
+                st.success("저장 완료!")
+                time.sleep(1)
+                st.rerun()
 
 @st.dialog("항목 수정 및 삭제")
 def edit_dialog(idx, row_data, unique_cats):
@@ -471,14 +396,12 @@ def edit_dialog(idx, row_data, unique_cats):
         if b1.form_submit_button("💾 저장", use_container_width=True, type="primary"):
             final_cat = new_cat.strip() if new_cat.strip() else edit_cat
             sheet = get_sheet()
-            if sheet:
-                sheet.update(f"A{idx+2}:F{idx+2}", [[final_cat, word_sent, mean, pron, m1, m2]])
-                st.rerun()
+            sheet.update(f"A{idx+2}:F{idx+2}", [[final_cat, word_sent, mean, pron, m1, m2]])
+            st.rerun()
         if b2.form_submit_button("🗑️ 삭제", use_container_width=True):
             sheet = get_sheet()
-            if sheet:
-                sheet.delete_rows(idx + 2)
-                st.rerun()
+            sheet.delete_rows(idx + 2)
+            st.rerun()
 
 # --- [세션 상태 관리] ---
 if "authenticated" not in st.session_state:
@@ -523,67 +446,29 @@ def num_to_eng(num):
 
 # --- [메인 로직] ---
 
-# ★ 1. 로그인 전용 화면 (사이트 테마 맞춤형 PIN 입력창) ★
+# ★ 1. 로그인 전용 화면 ★
 if not st.session_state.authenticated and st.session_state.logging_in:
-    st.markdown('<div id="login-pin-container">', unsafe_allow_html=True)
-    with st.form("login_form", clear_on_submit=True):
-        st.markdown("<h3>비밀번호 4자리 입력</h3>", unsafe_allow_html=True)
-        c1, c2, c3, c4 = st.columns(4)
-        pwd1 = c1.text_input("pin1", max_chars=1, type="password", label_visibility="collapsed")
-        pwd2 = c2.text_input("pin2", max_chars=1, type="password", label_visibility="collapsed")
-        pwd3 = c3.text_input("pin3", max_chars=1, type="password", label_visibility="collapsed")
-        pwd4 = c4.text_input("pin4", max_chars=1, type="password", label_visibility="collapsed")
-        st.markdown("<div style='height:15px;'></div>", unsafe_allow_html=True)
-        bc1, bc2 = st.columns(2)
-        cancel = bc1.form_submit_button("취소", use_container_width=True)
-        submit = bc2.form_submit_button("인증하기", use_container_width=True)
+    st.write("## 🔐 Security Login")
+    with st.form("login_form", clear_on_submit=False):
+        st.markdown("<div style='height: 100px;'></div>", unsafe_allow_html=True)
+        pwd = st.text_input("Enter Password", type="password", placeholder="비밀번호를 입력하세요...")
+        submit = st.form_submit_button("✅ LOGIN", use_container_width=True, type="primary")
         if submit:
-            entered_pwd = pwd1 + pwd2 + pwd3 + pwd4
-            if entered_pwd == LOGIN_PASSWORD:
+            if pwd == LOGIN_PASSWORD:
                 st.session_state.authenticated = True
                 st.session_state.logging_in = False
                 st.query_params["auth"] = "true"
                 st.rerun()
             else:
                 st.error("❌ 비밀번호가 틀렸습니다.")
-        if cancel:
-            st.session_state.logging_in = False
-            st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # PIN 자동 이동 및 오토 서브밋 JS
-    components.html("""
-        <script>
-        const doc = window.parent.document;
-        function setupPin() {
-            const inputs = ['pin1', 'pin2', 'pin3', 'pin4'].map(id => doc.querySelector(`input[aria-label="${id}"]`));
-            if (!inputs[0] || inputs[0].hasAttribute('data-bound')) return;
-            inputs.forEach((input, i) => {
-                input.setAttribute('data-bound', 'true');
-                if(i===0) setTimeout(() => input.focus(), 300);
-                input.addEventListener('input', (e) => {
-                    let val = e.target.value.replace(/[^0-9]/g, '').slice(-1);
-                    let setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                    setter.call(e.target, val);
-                    e.target.dispatchEvent(new Event('input', { bubbles: true }));
-                    if(val && i < 3) inputs[i+1].focus();
-                    else if(val && i === 3) {
-                        const btn = Array.from(doc.querySelectorAll('button')).find(b => b.innerText.includes('인증하기'));
-                        if(btn) setTimeout(() => btn.click(), 150);
-                    }
-                });
-                input.addEventListener('keydown', (e) => {
-                    if(e.key === 'Backspace' && !e.target.value && i > 0) inputs[i-1].focus();
-                });
-            });
-        }
-        setInterval(setupPin, 300);
-        </script>
-    """, height=0)
-
+    if st.button("🔙 CANCEL", use_container_width=True):
+        st.session_state.logging_in = False
+        st.rerun()
 else:
     # ★ 2. 메인 앱 화면 ★
+    
     col_auth, col_spacer, col_num_combined = st.columns([2.0, 0.2, 7.8])
+    
     with col_auth:
         if not st.session_state.authenticated:
             if st.button("🔐 LOGIN", use_container_width=True):
@@ -603,14 +488,21 @@ else:
         if clean_num.isdigit():
             eng_text = num_to_eng(int(clean_num)).capitalize()
             res_col1, res_col2 = st.columns([1, 1])
-            with res_col1: st.markdown(f"<p class='num-result'>{eng_text}</p>", unsafe_allow_html=True)
-            with res_col2: st.button("❌", key="btn_clear_res_inline", on_click=clear_num_input)
+            with res_col1:
+                st.markdown(f"<p class='num-result'>{eng_text}</p>", unsafe_allow_html=True)
+            with res_col2:
+                st.button("❌", key="btn_clear_res_inline", on_click=clear_num_input, help="")
         else:
             st.markdown("<p class='num-result' style='color:#FF9999!important; font-size:1.5rem!important;'>⚠️ 숫자만 입력 가능</p>", unsafe_allow_html=True)
 
-    kst = timezone(timedelta(hours=9)); now_kst = datetime.now(kst); date_str = now_kst.strftime("%A, %B %d, %Y")
+    kst = timezone(timedelta(hours=9))
+    now_kst = datetime.now(kst)
+    date_str = now_kst.strftime("%A, %B %d, %Y")
+
     col_title, col_date = st.columns([4.0, 6.0])
-    with col_title: st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.6rem, 2.9vw, 2.9rem);'>TOmBOy94 English</h1>", unsafe_allow_html=True)
+
+    with col_title:
+        st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.6rem, 2.9vw, 2.9rem);'>TOmBOy94 English</h1>", unsafe_allow_html=True)
 
     with col_date:
         components.html(f"""
@@ -638,14 +530,16 @@ else:
         sheet = get_sheet(); df = load_dataframe(sheet)
         unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
         sel_cat = st.radio("분류 필터", ["🔀 랜덤 10", "전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed", key="cat_radio", on_change=clear_search)
+       
         st.divider()
+       
         cb_cols = [1.5, 1.5, 1.4, 2.6, 1.5] if st.session_state.authenticated else [1.5, 1.4, 4.1]
         cb = st.columns(cb_cols)
         
-        # ★ 검색창 내부의 '전체 검색 후 엔터...' 문구 제거 ★
-        cb[0].text_input("🔍", key="search_input", on_change=handle_search)
+        cb[0].text_input("🔍", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...")
         
         if st.session_state.authenticated and cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(unique_cats)
+        
         btn_idx = 2 if st.session_state.authenticated else 1
         btn_text = "🔄 전체모드" if st.session_state.is_simple else "✨ 심플모드"
         if cb[btn_idx].button(btn_text, type="primary" if not st.session_state.is_simple else "secondary", use_container_width=True):
@@ -751,8 +645,7 @@ else:
             p_cols[2].markdown(f"<div style='text-align:center; padding:10px; color:#FFD700; font-weight:bold;'>Page {curr_p} / {pages}</div>", unsafe_allow_html=True)
             if p_cols[3].button("다음 ▶", disabled=(curr_p == pages)): st.session_state.curr_p += 1; st.rerun()
 
-    except Exception:
-        pass
+    except Exception as e: st.error(f"오류 발생: {e}")
 
     current_year = datetime.now(timezone(timedelta(hours=9))).year
     st.markdown(f"""
@@ -762,3 +655,4 @@ else:
             </p>
         </div>
     """, unsafe_allow_html=True)
+
