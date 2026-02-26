@@ -54,10 +54,10 @@ st.markdown("""
         display: none !important;
     }
 
-    /* 4. 컨텐츠 행(Row) 호버 효과 및 내부 여백 0으로 조정 */
+    /* 4. 컨텐츠 행(Row) 호버 효과 및 상단 여백 완벽 제거 ★ */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 0px !important; /* 내부 여백 0으로 설정 */
+        padding: 0px !important; 
         border-radius: 8px;
         margin-bottom: 0px !important;
         display: flex !important;
@@ -67,6 +67,19 @@ st.markdown("""
     }
     div[data-testid="stHorizontalBlock"]:has(.row-marker):hover {
         background-color: rgba(26, 47, 47, 0.9) !important;
+    }
+    /* 컨텐츠 내부 요소들의 불필요한 기본 여백을 0으로 강제화 */
+    div[data-testid="stHorizontalBlock"]:has(.row-marker) > div {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.row-marker) div.element-container {
+        margin-bottom: 0 !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.row-marker) p {
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: 1.2 !important; /* 줄간격 압축 */
     }
 
     /* 5. 상단 분류 리스트(Radio) 알약 형태 */
@@ -223,7 +236,7 @@ st.markdown("""
         flex: 0 1 auto !important;
     }
     
-    /* 결과물 텍스트 스타일 (크기 축소 유지) */
+    /* 결과물 텍스트 스타일 */
     .num-result { 
         color: #FFD700 !important; 
         font-weight: bold; 
@@ -256,8 +269,8 @@ st.markdown("""
         transform: scale(1.2) !important;
     }
 
-    /* 구분선 간격 조밀하게 변경 */
-    .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -20px; margin-bottom: 2px; }
+    /* 구분선 간격 조밀하게 변경 (내부 여백이 줄었으므로 margin-top 완화) */
+    .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -5px; margin-bottom: 2px; }
 
     /* 11. 모바일 레이아웃 강제 교정 */
     @media screen and (max-width: 768px) {
@@ -266,7 +279,7 @@ st.markdown("""
         div[data-testid="stHorizontalBlock"]:has(.row-marker) {
             display: flex !important;
             flex-direction: row !important;
-            padding: 0px !important; /* 모바일에서도 내부 여백 0으로 설정 */
+            padding: 0px !important;
             gap: 8px !important;
         }
 
@@ -517,7 +530,7 @@ else:
         total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
         curr_p = st.session_state.curr_p if 'curr_p' in st.session_state else 1
         
-        # ★ 안정성을 극대화한 실시간 콤마(,) 자동 입력 로직 ★
+        # JS: setInterval을 활용하여 Streamlit 렌더링 중에도 영구적으로 이벤트가 바인딩되도록 개선된 실시간 콤마 로직
         components.html(f"""
             <style>body {{ margin:0; padding:0; background:transparent!important; overflow:hidden; }}</style>
             <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:5px; font-family:sans-serif;">
@@ -527,12 +540,10 @@ else:
             <script>
             const doc = window.parent.document;
             
-            // 기존 중복된 리스너가 있다면 제거 (메모리 릭 및 중복 동작 완벽 방지)
             if (doc.liveCommaHandler) {{
                 doc.removeEventListener('input', doc.liveCommaHandler, true);
             }}
             
-            // Document Level Event Delegation 방식 (요소가 다시 그려져도 이벤트 유지됨)
             doc.liveCommaHandler = function(e) {{
                 if (e.target && e.target.tagName === 'INPUT') {{
                     let label = e.target.getAttribute('aria-label');
@@ -542,20 +553,16 @@ else:
                         let formatted = numStr ? Number(numStr).toLocaleString('en-US') : '';
                         
                         if (val !== formatted) {{
-                            // 커서 위치 추적
                             let cursorPosition = e.target.selectionStart;
                             let oldLength = val.length;
                             
-                            // React 가상 DOM 상태 우회를 위한 Native Setter
                             let nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
                             nativeSetter.call(e.target, formatted);
                             e.target.dispatchEvent(new Event('input', {{ bubbles: true }}));
                             
-                            // 콤마 길이 변화에 따른 커서 위치 재조정
                             let newLength = formatted.length;
                             let newCursorPos = cursorPosition + (newLength - oldLength);
                             
-                            // 렌더링 주기 후 안전하게 커서 고정 (글자가 튀는 현상 방지)
                             setTimeout(() => {{
                                 e.target.setSelectionRange(newCursorPos, newCursorPos);
                             }}, 0);
@@ -564,7 +571,6 @@ else:
                 }}
             }};
             
-            // 캡처링 모드(true)로 이벤트를 등록해 무조건 가로챔
             doc.addEventListener('input', doc.liveCommaHandler, true);
             </script>
         """, height=35)
@@ -601,10 +607,11 @@ else:
 
     except Exception as e: st.error(f"오류 발생: {e}")
 
+    # ★ 푸터(Copyright) 텍스트 크기 2배(1.7rem)로 변경 ★
     current_year = datetime.now(timezone(timedelta(hours=9))).year
     st.markdown(f"""
         <div style='text-align: center; margin-top: 30px; margin-bottom: 20px; padding-top: 15px; border-top: 1px dotted rgba(255, 255, 255, 0.2);'>
-            <p style='color: #A3B8B8; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px;'>
+            <p style='color: #A3B8B8; font-size: 1.7rem; font-weight: bold; margin-bottom: 5px;'>
                 Copyright © {current_year} TOmBOy94 &nbsp;|&nbsp; lodus11st@naver.com &nbsp;|&nbsp; All rights reserved.
             </p>
         </div>
