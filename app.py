@@ -167,13 +167,13 @@ st.markdown("""
     .mean-text { font-size: 1.3em; display: block; word-break: keep-all; }
     .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; }
    
-    /* 9. Num.ENG 레이아웃 최적화 및 줄바꿈 방지 */
+    /* 9. Num.ENG 레이아웃 최적화 및 가로 크기 제한 */
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
         display: flex !important;
         flex-direction: row !important;
         align-items: center !important;
         gap: 8px !important;
-        width: 100% !important;
+        max-width: 350px !important; 
     }
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) label p {
         font-weight: 900 !important;
@@ -186,17 +186,18 @@ st.markdown("""
         min-width: 80px !important;
     }
    
-    /* ★ Num.ENG 결과물 텍스트 크기 2배 확대 및 정렬 최적화 ★ */
+    /* ★ Num.ENG 결과물 텍스트: 노란색 강조 및 2배 확대 적용 ★ */
     .num-result { 
-        color: #FFD700; 
+        color: #FFD700 !important; /* 노란색 강제 적용 */
         font-weight: bold; 
         font-size: clamp(2.0rem, 2.8vw, 3.0rem) !important; 
         margin: 0 !important;
-        line-height: 1.2;
+        line-height: 1.1;
+        display: inline-block;
     }
     .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -25px; margin-bottom: 5px; }
 
-    /* ★ 숫자 지우기(❌) 버튼: 테두리와 배경을 없애 이모지만 보이게 설정 ★ */
+    /* 숫자 지우기(❌) 버튼 전용 스타일 */
     .small-button div.stButton > button {
         background: transparent !important;
         border: none !important;
@@ -205,10 +206,11 @@ st.markdown("""
         width: auto !important;
         height: auto !important;
         min-width: unset !important;
-        margin-top: 38px !important; 
+        margin-left: 10px !important; /* 텍스트와 버튼 사이 간격 */
+        margin-top: 5px !important; /* 높이 미세 조정 */
     }
     .small-button div.stButton > button p {
-        font-size: 1.1rem !important; 
+        font-size: 1.3rem !important; 
         margin: 0 !important;
     }
 
@@ -379,25 +381,24 @@ else:
                 st.rerun()
 
     with col_num_combined:
-        # 입력창과 지우기 버튼 내부 분할
-        num_in_col, num_clear_col = st.columns([0.9, 0.1])
-        with num_in_col:
-            st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
-        with num_clear_col:
-            if st.session_state.num_input:
-                st.markdown('<div class="small-button">', unsafe_allow_html=True)
-                st.button("❌", key="btn_clear_num", on_click=clear_num_input)
-                st.markdown('</div>', unsafe_allow_html=True)
+        st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
 
-    # ★ Num.ENG 결과물 전용 행 (다음 칸 표시 및 이모지 삭제) ★
+    # ★ 2-1-2. Num.ENG 결과물(노란색) + 지우기(❌) 버튼 ★
     if st.session_state.num_input:
         clean_num = st.session_state.num_input.replace(",", "").strip()
         if clean_num.isdigit():
             eng_text = num_to_eng(int(clean_num)).capitalize()
-            # 이모지 삭제 후 다음 행에 단독 표시
-            st.markdown(f"<p class='num-result'>{eng_text}</p>", unsafe_allow_html=True)
+            # 결과물 텍스트와 ❌ 버튼을 자연스럽게 한 줄로 배치
+            res_row = st.columns([0.9, 0.1])
+            with res_row[0]:
+                st.markdown(f"<div><span class='num-result'>{eng_text}</span>", unsafe_allow_html=True)
+                # ❌ 버튼을 텍스트 바로 뒤에 배치하기 위해 컨테이너 내부에서 처리
+                st.markdown('<span class="small-button" style="display:inline-block; vertical-align:middle;">', unsafe_allow_html=True)
+                if st.button("❌", key="btn_clear_res_inline", on_click=clear_num_input):
+                    pass
+                st.markdown('</span></div>', unsafe_allow_html=True)
         else:
-            st.markdown("<p class='num-result' style='color:#FF9999; font-size:1.5rem!important;'>⚠️ 숫자만 입력 가능</p>", unsafe_allow_html=True)
+            st.markdown("<p class='num-result' style='color:#FF9999!important; font-size:1.5rem!important;'>⚠️ 숫자만 입력 가능</p>", unsafe_allow_html=True)
 
     # 오늘 날짜 정보
     kst = timezone(timedelta(hours=9))
@@ -439,7 +440,6 @@ else:
        
         st.divider()
        
-        # 컨트롤 바 디자인
         cb_cols = [1.5, 1.5, 1.4, 2.6, 1.5] if st.session_state.authenticated else [1.5, 1.4, 4.1]
         cb = st.columns(cb_cols)
         cb[0].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
@@ -450,7 +450,6 @@ else:
         if cb[btn_idx].button(btn_text, type="primary" if not st.session_state.is_simple else "secondary", use_container_width=True):
             st.session_state.is_simple = not st.session_state.is_simple; st.rerun()
 
-        # 데이터 필터링 및 정렬
         is_simple = st.session_state.is_simple
         search = st.session_state.active_search
         d_df = df.copy()
@@ -467,7 +466,6 @@ else:
         elif st.session_state.sort_order == 'desc': d_df = d_df.sort_values(by='단어-문장', ascending=False)
         else: d_df = d_df.iloc[::-1]
 
-        # 정보 표시 및 실시간 콤마 JS
         total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
         curr_p = st.session_state.curr_p if 'curr_p' in st.session_state else 1
         
@@ -491,7 +489,6 @@ else:
             </script>
         """, height=35)
        
-        # 리스트 출력
         ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
         labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
         h_cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
