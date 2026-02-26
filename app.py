@@ -277,7 +277,7 @@ st.markdown("""
         margin-top: 2px !important; 
     }
 
-    /* 모바일 전용 스타일 최적화 */
+    /* 모바일 전용 스타일 최적화 (대폭 수정) */
     @media screen and (max-width: 768px) {
         .word-text { font-size: 1.21rem !important; }
         .mean-text { font-size: 0.9rem !important; }
@@ -287,37 +287,43 @@ st.markdown("""
             font-size: 1.2rem !important;
         }
 
-        /* ★ [정밀 수정] 새 항목 추가 및 학습모드 버튼 - 일자로 길게 표시 및 간격 확실히 확보 ★ */
+        /* ★ [중요] 제어행(검색+버튼들) 레이아웃 모바일 최적화 ★ */
         div[data-testid="stHorizontalBlock"]:has(input[aria-label="🔍"]) {
-            gap: 25px !important; /* 행 전체 간격 확대 */
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important; /* 공간 부족 시 다음 줄로 넘김 */
+            gap: 15px 10px !important;
             justify-content: flex-start !important;
+            align-items: center !important;
         }
 
+        /* 검색창 컬럼: 모바일에서 상단 100% 점유하여 버튼 공간 확보 */
+        div[data-testid="stHorizontalBlock"]:has(input[aria-label="🔍"]) > div:first-child {
+            flex: 1 1 100% !important;
+            margin-bottom: 10px !important;
+        }
+
+        /* 버튼 컬럼들: 가로로 나열되도록 설정 */
+        div[data-testid="stHorizontalBlock"]:has(input[aria-label="🔍"]) > div:not(:first-child) {
+            flex: 0 0 auto !important;
+            width: auto !important;
+            min-width: fit-content !important;
+        }
+
+        /* 버튼 자체 디자인 보정 */
         div[data-testid="stHorizontalBlock"]:has(input[aria-label="🔍"]) button {
             height: auto !important;
-            min-height: 55px !important; 
-            width: max-content !important; 
-            min-width: max-content !important;
-            padding: 8px 20px !important;
+            min-height: 52px !important; 
+            padding: 5px 15px !important;
             overflow: visible !important;
             border-radius: 50px !important;
-            margin-left: 15px !important; /* 버튼 왼쪽 여백 강제 추가하여 서로 떼어놓음 */
         }
         
+        /* 새 항목 추가 및 학습모드 버튼 40% 확대 유지 */
         div[data-testid="stHorizontalBlock"]:has(input[aria-label="🔍"]) button p {
-            font-size: 1.6rem !important; /* 요청하신 40% 확대 유지 */
-            white-space: nowrap !important; /* 일자로 표시 */
-            overflow: visible !important;
+            font-size: 1.6rem !important; 
+            white-space: nowrap !important; 
             line-height: 1.0 !important;
-            margin: 0 !important;
-        }
-
-        /* 각 컬럼의 너비를 자동화하고 마진 추가 */
-        div[data-testid="stHorizontalBlock"]:has(input[aria-label="🔍"]) div[data-testid="column"] {
-            width: auto !important;
-            flex: 0 0 auto !important;
-            min-width: fit-content !important;
-            padding-right: 10px !important;
         }
     }
     </style>
