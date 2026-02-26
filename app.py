@@ -54,20 +54,19 @@ st.markdown("""
         display: none !important;
     }
 
-    /* ★ 4. 컨텐츠 행(Row) 호버 효과 - 배경 꽉 채우기 및 상하 여백 밸런스 ★ */
-    /* 부모 컨테이너부터 100% 꽉 채우도록 강제 */
+    /* ★ 4. 컨텐츠 행(Row) 호버 효과 - 배경 꽉 채우기 및 상하 여백 밸런스 완벽 보정 ★ */
     div.element-container:has(.row-marker) {
         width: 100% !important;
         min-width: 100% !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 12px 10px !important; /* 텍스트가 위아래 점선에 붙지 않도록 최적의 여백 제공 */
+        padding: 16px 10px !important; /* 상하 여백을 16px로 늘려 텍스트와 점선 간의 공간 확보 */
         border-radius: 0px !important; 
         margin-bottom: 0px !important;
         border-bottom: 1px dotted rgba(255, 255, 255, 0.2) !important; 
         width: 100% !important; 
-        min-width: 100% !important; /* 호버 시 우측 끝까지 완벽하게 색상이 차도록 설정 */
+        min-width: 100% !important; 
         flex: 1 1 100% !important;
         display: flex !important;
         flex-direction: row !important;
@@ -78,21 +77,23 @@ st.markdown("""
         background-color: rgba(26, 47, 47, 0.9) !important;
     }
     
-    /* 컨텐츠 내부 텍스트 완벽 수직 중앙 정렬 및 쳐짐 현상 해결 */
+    /* 텍스트 쳐짐(하단 점선 달라붙음) 완벽 해결 */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) > div[data-testid="column"] {
         display: flex !important;
-        align-items: center !important; 
+        flex-direction: column !important;
+        justify-content: center !important; 
         padding: 0 !important;
         margin: 0 !important;
     }
+    
+    /* p 태그에 강제 부여되었던 flex 해제, 블록 단위로 정상 줄간격 확보 */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) div.element-container,
     div[data-testid="stHorizontalBlock"]:has(.row-marker) div.stMarkdown,
     div[data-testid="stHorizontalBlock"]:has(.row-marker) p {
-        display: flex !important;
-        align-items: center !important; 
+        display: block !important; 
         margin: 0 !important;
         padding: 0 !important;
-        line-height: normal !important; /* 줄간격 1로 인한 텍스트 밑동 짤림/붙음 완전 해결 */
+        line-height: 1.5 !important; /* g, y, p 등 알파벳 꼬리 잘림 방지 */
         width: 100% !important;
     }
 
@@ -202,9 +203,10 @@ st.markdown("""
         white-space: nowrap !important;
     }
    
-    .word-text { font-size: 1.8em; font-weight: bold; color: #FFD700 !important; word-break: keep-all; }
-    .mean-text { font-size: 1.3em; word-break: keep-all; }
-    .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; }
+    /* 텍스트를 위로 살짝 띄워주는 시각적 보정 (margin-bottom: 2px) */
+    .word-text { font-size: 1.8em; font-weight: bold; color: #FFD700 !important; word-break: keep-all; display: inline-block !important; margin-bottom: 2px !important; }
+    .mean-text { font-size: 1.3em; word-break: keep-all; display: inline-block !important; margin-bottom: 2px !important; }
+    .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; display: inline-block !important; margin-bottom: 2px !important; }
    
     /* 9. Num.ENG 레이아웃 최적화 및 가로 크기 제한 */
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
@@ -296,7 +298,7 @@ st.markdown("""
         div[data-testid="stHorizontalBlock"]:has(.row-marker) {
             display: flex !important;
             flex-direction: row !important;
-            padding: 8px 8px !important;
+            padding: 12px 8px !important; /* 모바일에서도 넉넉한 패딩 적용 */
             width: 100% !important;
             gap: 8px !important;
         }
