@@ -186,7 +186,12 @@ st.markdown("""
         min-width: 80px !important;
     }
    
-    .num-result { color: #FFD700; font-weight: bold; font-size: clamp(1.0rem, 1.4vw, 1.5rem); }
+    /* ★ Num.ENG 결과물 텍스트 크기 2배 확대 적용 ★ */
+    .num-result { 
+        color: #FFD700; 
+        font-weight: bold; 
+        font-size: clamp(2.0rem, 2.8vw, 3.0rem) !important; 
+    }
     .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -25px; margin-bottom: 5px; }
 
     /* 10. 모바일 레이아웃 강제 교정 */
@@ -357,6 +362,8 @@ else:
                 if "auth" in st.query_params: del st.query_params["auth"]
                 st.rerun()
 
+    # Spacer 컬럼은 비워둠
+
     with col_num_combined:
         st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
         num_val = st.session_state.num_input
@@ -366,9 +373,10 @@ else:
             clean_num = num_val.replace(",", "").strip()
             if clean_num.isdigit():
                 eng_text = num_to_eng(int(clean_num)).capitalize()
-                st.markdown(f"<div style='padding-top:10px;'><p class='num-result'>📝 {eng_text}</p></div>", unsafe_allow_html=True)
+                # 텍스트 크기 확대를 위해 스타일 최적화
+                st.markdown(f"<div style='padding-top:2px;'><p class='num-result'>📝 {eng_text}</p></div>", unsafe_allow_html=True)
             else:
-                st.markdown("<div style='padding-top:10px;'><p class='num-result' style='color:#FF9999;'>⚠️ 숫자만</p></div>", unsafe_allow_html=True)
+                st.markdown("<div style='padding-top:2px;'><p class='num-result' style='color:#FF9999;'>⚠️ 숫자만</p></div>", unsafe_allow_html=True)
 
     # 오늘 날짜 정보
     kst = timezone(timedelta(hours=9))
