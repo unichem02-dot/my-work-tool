@@ -316,12 +316,12 @@ def num_to_eng(num):
 
 # --- [메인 로직] ---
 
-# ★ 1. 로그인 전용 화면 (로그인 버튼을 눌렀을 때만 표시) ★
+# ★ 1. 로그인 전용 화면 ★
 if not st.session_state.authenticated and st.session_state.logging_in:
     st.write("## 🔐 Security Login")
     with st.container():
         st.markdown("<div style='height: 100px;'></div>", unsafe_allow_html=True)
-        pwd = st.text_input("Enter Password", type="password", placeholder="비밀번호를 입력하세요...")
+        pwd = st.text_input("Enter Password", type="password", placeholder="비밀번호를 입력하세요...", key="login_input")
         
         c1, c2 = st.columns(2)
         if c1.button("✅ LOGIN", use_container_width=True, type="primary"):
@@ -337,17 +337,11 @@ if not st.session_state.authenticated and st.session_state.logging_in:
             st.session_state.logging_in = False
             st.rerun()
 else:
-    # ★ 2. 메인 앱 화면 (평상시 또는 로그인 완료 후 표시) ★
+    # ★ 2. 메인 앱 화면 ★
     
-    # 오늘 날짜
-    kst = timezone(timedelta(hours=9))
-    now_kst = datetime.now(kst)
-    date_str = now_kst.strftime("%A, %B %d, %Y")
-
-    # 상단 레이아웃
-    col_auth, col_title, col_date, col_num_combined, col_num_result = st.columns([1.5, 2.0, 3.4, 2.4, 2.0])
-
-    with col_auth:
+    # 2-1. [상단 줄] 로그인/아웃 버튼 (타이틀 위로 독립 배치)
+    auth_col1, auth_col2 = st.columns([1.5, 8.5])
+    with auth_col1:
         if not st.session_state.authenticated:
             if st.button("🔐 LOGIN", use_container_width=True):
                 st.session_state.logging_in = True
@@ -357,6 +351,14 @@ else:
                 st.session_state.authenticated = False
                 if "auth" in st.query_params: del st.query_params["auth"]
                 st.rerun()
+
+    # 오늘 날짜 정보
+    kst = timezone(timedelta(hours=9))
+    now_kst = datetime.now(kst)
+    date_str = now_kst.strftime("%A, %B %d, %Y")
+
+    # 2-2. [타이틀 줄]
+    col_title, col_date, col_num_combined, col_num_result = st.columns([2.0, 3.4, 2.4, 2.0])
 
     with col_title:
         st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.2rem, 2.2vw, 2.2rem);'>TOmBOy94 English</h1>", unsafe_allow_html=True)
