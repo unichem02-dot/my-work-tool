@@ -483,7 +483,8 @@ else:
 
     try:
         sheet = get_sheet(); df = load_dataframe(sheet)
-        unique_cats = sorted([x for x in full_df['분류'].unique().tolist() if x != ''])
+        # ★오류 해결 부분: full_df 변수 대신 df 사용★
+        unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
         sel_cat = st.radio("분류 필터", ["🔀 랜덤 10", "전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed", key="cat_radio", on_change=clear_search)
        
         st.divider()
