@@ -115,13 +115,15 @@ st.markdown("""
         color: #224343 !important;
     }
 
-    /* 6. 버튼 스타일 */
+    /* 6. 버튼 스타일 (모바일 글자 넘침 방지를 위해 폰트 하한선 조정) */
     button, div.stDownloadButton > button {
         border-radius: 50px !important;
         padding: 0.5rem 1.2rem !important;
         font-weight: 900 !important;
         transition: all 0.3s ease !important;
         white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
     }
     button[kind="primary"] {
         background-color: #FFFFFF !important;
@@ -129,13 +131,17 @@ st.markdown("""
     }
     button[kind="primary"] p {
         color: #224343 !important;
-        font-size: clamp(0.9rem, 1.1vw, 1.15rem) !important;
+        font-size: clamp(0.75rem, 1.1vw, 1.15rem) !important;
         font-weight: 900 !important;
     }
     button[kind="secondary"], div.stDownloadButton > button {
         background-color: transparent !important;
         border: 2px solid #FFFFFF !important;
         color: #FFFFFF !important;
+    }
+    button[kind="secondary"] p, div.stDownloadButton > button p {
+        font-size: clamp(0.75rem, 1.1vw, 1.15rem) !important;
+        font-weight: 900 !important;
     }
 
     /* 7. 수정 버튼: 투명 연필 아이콘 */
@@ -185,18 +191,35 @@ st.markdown("""
         font-size: clamp(1.0rem, 1.4vw, 1.5rem) !important;
         min-width: 80px !important;
     }
+    
+    /* ★ 전체 검색창 이모지 한 줄 정렬 CSS ★ */
+    div[data-testid="stTextInput"]:has(input[placeholder*="검색"]) {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 5px !important;
+    }
+    div[data-testid="stTextInput"]:has(input[placeholder*="검색"]) label {
+        margin-bottom: 0 !important;
+        display: flex;
+        align-items: center;
+    }
+    div[data-testid="stTextInput"]:has(input[placeholder*="검색"]) label p {
+        font-size: 1.2rem !important;
+        margin: 0 !important;
+    }
    
-    /* ★ 10. Num.ENG 결과물과 X 버튼 한 줄 배치 (Flexbox) ★ */
+    /* 10. Num.ENG 결과물과 X 버튼 한 줄 배치 (Flexbox) */
     div[data-testid="stHorizontalBlock"]:has(.num-result) {
         display: flex !important;
         flex-direction: row !important;
         align-items: center !important;
         justify-content: flex-start !important;
-        gap: 15px !important; /* 텍스트와 버튼 사이 간격 */
+        gap: 15px !important;
         padding-top: 5px !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.num-result) > div {
-        width: auto !important; /* 컬럼 너비를 글자 길이에 맞춤 */
+        width: auto !important; 
         flex: 0 1 auto !important;
     }
     
@@ -220,7 +243,7 @@ st.markdown("""
         width: auto !important;
         height: auto !important;
         min-width: unset !important;
-        margin-top: 5px !important; /* 수직 높이 미세 조정 */
+        margin-top: 5px !important; 
     }
     div[data-testid="stHorizontalBlock"]:has(.num-result) button p {
         font-size: 1.5rem !important; 
@@ -253,6 +276,8 @@ st.markdown("""
 
         .word-text { font-size: 1.1rem !important; }
         .mean-text { font-size: 0.9rem !important; }
+        
+        button { padding: 0.5rem 0.8rem !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -387,8 +412,8 @@ if not st.session_state.authenticated and st.session_state.logging_in:
 else:
     # ★ 2. 메인 앱 화면 ★
     
-    # 2-1. [상단 줄] LOGIN/OUT + Spacer + Num.ENG 입력
-    col_auth, col_spacer, col_num_combined = st.columns([1.4, 0.4, 8.2])
+    # 2-1. [상단 줄] LOGIN/OUT + Spacer + Num.ENG 입력 (버튼 가로 영역 2.0으로 넓힘)
+    col_auth, col_spacer, col_num_combined = st.columns([2.0, 0.2, 7.8])
     
     with col_auth:
         if not st.session_state.authenticated:
@@ -404,12 +429,11 @@ else:
     with col_num_combined:
         st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
 
-    # ★ 2-1-2. Num.ENG 결과물(노란색) + 지우기(❌) 버튼 (바로 옆에 밀착) ★
+    # 2-1-2. Num.ENG 결과물(노란색) + 지우기(❌) 버튼
     if st.session_state.num_input:
         clean_num = st.session_state.num_input.replace(",", "").strip()
         if clean_num.isdigit():
             eng_text = num_to_eng(int(clean_num)).capitalize()
-            # 컨테이너를 생성하여 내부 요소들을 flexbox(CSS)로 제어
             res_col1, res_col2 = st.columns([1, 1])
             with res_col1:
                 st.markdown(f"<p class='num-result'>{eng_text}</p>", unsafe_allow_html=True)
@@ -453,14 +477,17 @@ else:
 
     try:
         sheet = get_sheet(); df = load_dataframe(sheet)
-        unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
+        unique_cats = sorted([x for x in full_df['분류'].unique().tolist() if x != ''])
         sel_cat = st.radio("분류 필터", ["🔀 랜덤 10", "전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed", key="cat_radio", on_change=clear_search)
        
         st.divider()
        
+        # 컨트롤 바 디자인
         cb_cols = [1.5, 1.5, 1.4, 2.6, 1.5] if st.session_state.authenticated else [1.5, 1.4, 4.1]
         cb = st.columns(cb_cols)
-        cb[0].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
+        # ★ 전체검색 창 라벨에 🔍 이모지를 넣고 보이도록 수정 ★
+        cb[0].text_input("🔍", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...")
+        
         if st.session_state.authenticated and cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
         
         btn_idx = 2 if st.session_state.authenticated else 1
@@ -487,7 +514,7 @@ else:
         total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
         curr_p = st.session_state.curr_p if 'curr_p' in st.session_state else 1
         
-        # ★ JS: 최신 React 지원 네이티브 Setter를 통한 실시간 3자리 콤마 자동 입력 기능 ★
+        # ★ JS: 최신 React 지원 네이티브 Setter를 통한 완벽한 실시간 3자리 콤마 자동 입력 ★
         components.html(f"""
             <style>body {{ margin:0; padding:0; background:transparent!important; overflow:hidden; }}</style>
             <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:5px; font-family:sans-serif;">
@@ -497,6 +524,21 @@ else:
             <script>
             const doc = window.parent.document;
             if (!doc.liveCommaAdded) {{
+                // React 상태 우회를 위한 Native Setter 함수 정의
+                function setNativeValue(element, value) {{
+                    const valueSetter = Object.getOwnPropertyDescriptor(element, 'value').set;
+                    const prototype = Object.getPrototypeOf(element);
+                    const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, 'value').set;
+                    
+                    if (valueSetter && valueSetter !== prototypeValueSetter) {{
+                        prototypeValueSetter.call(element, value);
+                    }} else {{
+                        valueSetter.call(element, value);
+                    }}
+                    // React가 인지할 수 있도록 input 이벤트 강제 트리거
+                    element.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                }}
+
                 doc.addEventListener('input', function(e) {{
                     if (e.target && e.target.tagName === 'INPUT') {{
                         let label = e.target.getAttribute('aria-label');
@@ -505,11 +547,17 @@ else:
                             let numStr = val.replace(/[^0-9]/g, '');
                             let formatted = numStr ? Number(numStr).toLocaleString('en-US') : '';
                             
-                            // Streamlit(React)의 통제를 뚫고 실시간으로 값 업데이트 (Native Setter 사용)
                             if (val !== formatted) {{
-                                let nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                                nativeSetter.call(e.target, formatted);
-                                e.target.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                // 커서 위치 유지를 위한 계산
+                                let cursorPosition = e.target.selectionStart;
+                                let oldLength = val.length;
+                                
+                                setNativeValue(e.target, formatted);
+                                
+                                // 커서 재정렬
+                                let newLength = formatted.length;
+                                let newCursorPos = cursorPosition + (newLength - oldLength);
+                                e.target.setSelectionRange(newCursorPos, newCursorPos);
                             }}
                         }}
                     }}
