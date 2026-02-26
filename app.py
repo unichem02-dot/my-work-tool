@@ -483,7 +483,7 @@ else:
                 setTimeout(function(){{ btn.innerHTML = "📋 복사"; }}, 1500);
             }}
             </script>
-        """, height=90) # 높이 130 -> 90 축소
+        """, height=90) 
 
     try:
         sheet = get_sheet(); df = load_dataframe(sheet)
