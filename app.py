@@ -446,24 +446,197 @@ def num_to_eng(num):
 
 # --- [메인 로직] ---
 
-# ★ 1. 로그인 전용 화면 ★
+# ★ 1. 로그인 전용 화면 (4자리 PIN 형태 및 오토서브밋 기능 완벽 구현) ★
 if not st.session_state.authenticated and st.session_state.logging_in:
-    st.write("## 🔐 Security Login")
-    with st.form("login_form", clear_on_submit=False):
-        st.markdown("<div style='height: 100px;'></div>", unsafe_allow_html=True)
-        pwd = st.text_input("Enter Password", type="password", placeholder="비밀번호를 입력하세요...")
-        submit = st.form_submit_button("✅ LOGIN", use_container_width=True, type="primary")
+    
+    # 로그인 화면 전용 스페셜 CSS 적용 (이미지 UI 완전 복제)
+    st.markdown("""
+        <style>
+        /* 폼 전체를 감싸는 하얀색 고급스러운 카드 UI */
+        div[data-testid="stForm"] {
+            background-color: #FFFFFF !important;
+            border: none !important;
+            padding: 40px 30px !important;
+            border-radius: 20px !important;
+            max-width: 360px !important;
+            margin: 60px auto !important;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6) !important;
+        }
+        
+        /* 다크모드 무시하고 텍스트는 검정색/진회색으로 고정 */
+        div[data-testid="stForm"] h3 {
+            color: #333333 !important;
+            text-align: center !important;
+            font-size: 1.4rem !important;
+            font-weight: 800 !important;
+            margin-bottom: 25px !important;
+            padding-bottom: 0 !important;
+        }
+        div[data-testid="stForm"] p { color: #555555 !important; }
+        
+        /* 4자리 사각형 입력창 디자인 */
+        input[aria-label^="pin"] {
+            height: 70px !important;
+            font-size: 2.2rem !important;
+            text-align: center !important;
+            border-radius: 12px !important;
+            border: 2px solid #E5E7EB !important; /* 연한 회색 테두리 */
+            background-color: #FFFFFF !important;
+            color: #333333 !important;
+            padding: 0 !important;
+            caret-color: #8B5CF6 !important; /* 커서 색상 보라색 */
+            box-shadow: none !important;
+            -webkit-text-security: disc; /* 비밀번호 동그라미 처리 */
+        }
+        input[aria-label^="pin"]:focus {
+            border-color: #8B5CF6 !important; /* 활성화 시 보라색 테두리 */
+            outline: none !important;
+            box-shadow: 0 0 0 1px #8B5CF6 !important;
+        }
+        
+        /* 버튼 영역 여백 정리 */
+        div[data-testid="stForm"] .stHorizontalBlock {
+            margin-top: 15px !important;
+            gap: 12px !important;
+        }
+        
+        /* '취소' 버튼 스타일 (흰색 배경 + 보라색 테두리/글자) */
+        div[data-testid="stForm"] div[data-testid="column"]:nth-child(1) button {
+            background-color: #FFFFFF !important;
+            border: 2px solid #E5E7EB !important;
+            border-radius: 10px !important;
+            height: 48px !important;
+            width: 100% !important;
+            transition: all 0.2s !important;
+        }
+        div[data-testid="stForm"] div[data-testid="column"]:nth-child(1) button p {
+            color: #8B5CF6 !important;
+            font-size: 1.05rem !important;
+            font-weight: 700 !important;
+        }
+        div[data-testid="stForm"] div[data-testid="column"]:nth-child(1) button:hover {
+            border-color: #8B5CF6 !important;
+        }
+        
+        /* '인증하기' 버튼 스타일 (보라색 배경 + 흰색 글자) */
+        div[data-testid="stForm"] div[data-testid="column"]:nth-child(2) button {
+            background-color: #8B5CF6 !important;
+            border: none !important;
+            border-radius: 10px !important;
+            height: 48px !important;
+            width: 100% !important;
+            transition: all 0.2s !important;
+        }
+        div[data-testid="stForm"] div[data-testid="column"]:nth-child(2) button p {
+            color: #FFFFFF !important;
+            font-size: 1.05rem !important;
+            font-weight: 700 !important;
+        }
+        div[data-testid="stForm"] div[data-testid="column"]:nth-child(2) button:hover {
+            background-color: #7C3AED !important; /* 살짝 진한 보라색 */
+            transform: scale(1.02);
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    with st.form("login_form", clear_on_submit=True):
+        st.markdown("<h3>비밀번호 4자리 입력</h3>", unsafe_allow_html=True)
+        
+        # 4개의 개별 PIN 칸 생성
+        c1, c2, c3, c4 = st.columns(4)
+        pwd1 = c1.text_input("pin1", max_chars=1, type="password", label_visibility="collapsed")
+        pwd2 = c2.text_input("pin2", max_chars=1, type="password", label_visibility="collapsed")
+        pwd3 = c3.text_input("pin3", max_chars=1, type="password", label_visibility="collapsed")
+        pwd4 = c4.text_input("pin4", max_chars=1, type="password", label_visibility="collapsed")
+        
+        st.markdown("<div style='height:15px;'></div>", unsafe_allow_html=True)
+        
+        # 버튼 영역
+        bc1, bc2 = st.columns(2)
+        cancel = bc1.form_submit_button("취소", use_container_width=True)
+        submit = bc2.form_submit_button("인증하기", use_container_width=True)
+        
+        # 로직 처리
         if submit:
-            if pwd == LOGIN_PASSWORD:
+            entered_pwd = pwd1 + pwd2 + pwd3 + pwd4
+            if entered_pwd == LOGIN_PASSWORD:
                 st.session_state.authenticated = True
                 st.session_state.logging_in = False
                 st.query_params["auth"] = "true"
                 st.rerun()
             else:
-                st.error("❌ 비밀번호가 틀렸습니다.")
-    if st.button("🔙 CANCEL", use_container_width=True):
-        st.session_state.logging_in = False
-        st.rerun()
+                st.error("❌ 비밀번호가 틀렸습니다. 다시 시도해주세요.")
+        
+        if cancel:
+            st.session_state.logging_in = False
+            st.rerun()
+
+    # ★ 자동 포커스 및 4번째 숫자 입력 시 자동 인증(서브밋) JS 로직 ★
+    components.html("""
+        <script>
+        const doc = window.parent.document;
+        
+        function setupPinInputs() {
+            const pin1 = doc.querySelector('input[aria-label="pin1"]');
+            const pin2 = doc.querySelector('input[aria-label="pin2"]');
+            const pin3 = doc.querySelector('input[aria-label="pin3"]');
+            const pin4 = doc.querySelector('input[aria-label="pin4"]');
+            const inputs = [pin1, pin2, pin3, pin4];
+            
+            if (!pin1 || pin1.hasAttribute('data-pin-bound')) return;
+            
+            inputs.forEach((input, index) => {
+                if(!input) return;
+                input.setAttribute('data-pin-bound', 'true');
+                
+                // 첫 번째 칸 자동 포커스
+                if (index === 0 && !input.value) { setTimeout(() => input.focus(), 300); }
+                
+                input.addEventListener('input', (e) => {
+                    let val = e.target.value.replace(/[^0-9]/g, ''); // 숫자만 허용
+                    val = val.slice(-1); // 복사 붙여넣기 방지 및 마지막 글자만
+                    
+                    // React/Streamlit 가상 DOM에 즉시 값 강제 반영 (아주 중요함)
+                    let nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                    nativeSetter.call(e.target, val);
+                    e.target.dispatchEvent(new Event('input', { bubbles: true }));
+
+                    if (val.length === 1) {
+                        if (index < 3) {
+                            // 다음 칸으로 자동 이동
+                            inputs[index + 1].focus();
+                        } else if (index === 3) {
+                            // 4번째 숫자가 입력되면 즉시 "인증하기" 버튼 자동 클릭!
+                            const buttons = Array.from(doc.querySelectorAll('div[data-testid="stForm"] button'));
+                            const submitBtn = buttons.find(b => b.innerText.includes('인증하기'));
+                            if(submitBtn) {
+                                // 백엔드 동기화 딜레이 확보 후 0.05초 뒤 클릭
+                                setTimeout(() => submitBtn.click(), 50); 
+                            }
+                        }
+                    }
+                });
+                
+                // 지우기(Backspace) 누를 때 이전 칸으로 자동 이동
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
+                        inputs[index - 1].focus();
+                        // 이전 칸의 값도 깔끔하게 지워줌
+                        let nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                        nativeSetter.call(inputs[index - 1], '');
+                        inputs[index - 1].dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                });
+            });
+        }
+        
+        // 화면 재랜더링 시에도 이벤트가 유지되도록 감시
+        if (!window.pinIntervalId) {
+            window.pinIntervalId = setInterval(setupPinInputs, 300);
+        }
+        </script>
+    """, height=0)
+
 else:
     # ★ 2. 메인 앱 화면 ★
     
