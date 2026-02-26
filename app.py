@@ -118,7 +118,7 @@ st.markdown("""
         flex-direction: row !important;
         flex-wrap: wrap !important;
         gap: 10px 12px !important;
-        padding-top: 0px !important; /* 상단 여백 제거 */
+        padding-top: 0px !important; 
         padding-bottom: 5px !important;
     }
    
@@ -282,6 +282,10 @@ st.markdown("""
     @media screen and (max-width: 768px) {
         .word-text { font-size: 1.21rem !important; }
         .mean-text { font-size: 0.9rem !important; }
+        /* 분류 필터 텍스트 30% 확대 */
+        div[data-testid="stRadio"] label p {
+            font-size: 1.2rem !important;
+        }
     }
     </style>
     """, unsafe_allow_html=True)
