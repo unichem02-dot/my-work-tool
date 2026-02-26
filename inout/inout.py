@@ -2,63 +2,118 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
+from datetime import datetime
 
-# --- [1. 기본 설정] ---
-st.set_page_config(layout="wide", page_title="데이터 조회")
+# --- [1. 페이지 기본 설정] ---
+# 레이아웃을 넓게 설정하고 웹 브라우저 탭 제목을 지정합니다.
+st.set_page_config(layout="wide", page_title="입출력 관리 시스템 (inout)")
 
-# --- [2. 구글 시트 연결] ---
+# --- [2. 구글 시트 연결 및 데이터 로드] ---
+
 @st.cache_resource
 def init_connection():
-    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    """구글 서비스 계정 인증 정보를 사용하여 gspread 클라이언트를 초기화합니다."""
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    # Streamlit Cloud의 Secrets에 저장된 정보를 사용합니다.
     creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
     return gspread.authorize(creds)
 
-@st.cache_data(ttl=600) # 10분마다 데이터 새로고침
+@st.cache_data(ttl=300) # 5분(300초) 동안 데이터를 캐싱하여 속도를 높입니다.
 def load_data():
+    """구글 시트에서 데이터를 읽어와 Pandas 데이터프레임으로 변환합니다."""
     client = init_connection()
-    # 지정하신 구글 시트 이름 연결
+    # 지정하신 시트 이름으로 연결합니다.
     sheet = client.open('SQL백업260211-jeilinout').sheet1
-    data = sheet.get_all_records()
-    return pd.DataFrame(data)
+    
+    # get_all_records()의 중복 헤더 오류를 피하기 위해 전체 값을 리스트로 먼저 가져옵니다.
+    raw_data = sheet.get_all_values()
+    if not raw_data:
+        return pd.DataFrame()
+    
+    # 첫 번째 줄(헤더) 처리: 중복된 이름이나 빈 칸이 있으면 숫자를 붙여 고유하게 만듭니다.
+    original_header = raw_data[0]
+    new_header = []
+    for i, name in enumerate(original_header):
+        clean_name = name.strip()
+        if not clean_name:
+            new_header.append(f"empty_{i}")
+        elif clean_name in new_header:
+            new_header.append(f"{clean_name}_{i}")
+        else:
+            new_header.append(clean_name)
+            
+    # 데이터프레임 생성 (두 번째 줄부터 데이터)
+    df = pd.DataFrame(raw_data[1:], columns=new_header)
+    return df
 
-# --- [3. 메인 화면 및 필터링 로직] ---
-st.title("📊 월별 데이터 조회 프로그램")
+# --- [3. 메인 화면 구성 및 로직] ---
+
+st.title("📂 입출력 내역 조회 시스템")
 
 try:
     df = load_data()
     
-    # 🚨 필수 확인: 실제 구글 시트의 날짜가 적힌 열 이름을 아래에 적어주세요! (예: '일자', 'Date', '주문일' 등)
-    date_col = '날짜' 
+    # 알려주신 날짜 열 이름 'iddate'를 사용합니다.
+    date_col = 'iddate'
     
     if date_col in df.columns:
-        # 1. 텍스트 날짜를 진짜 날짜형식으로 변환하고 '년도', '월' 추출
+        # 1. 날짜 데이터 형식 변환 (에러 발생 시 NaT로 처리)
         df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
-        df['년도'] = df[date_col].dt.year
-        df['월'] = df[date_col].dt.month
-
-        # 2. 화면을 2칸으로 나누어 드롭다운(선택창) 배치
-        col1, col2 = st.columns(2)
         
-        with col1:
-            # 시트에 있는 년도만 뽑아서 내림차순 정렬 (최신년도가 위로 오게)
-            years = sorted(df['년도'].dropna().unique().tolist(), reverse=True)
-            selected_year = st.selectbox("📅 년도 선택", years)
+        # 2. 날짜값이 비어있는 행은 제거합니다.
+        df = df.dropna(subset=[date_col])
+        
+        # 3. 필터링을 위한 년도(year)와 월(month) 열 생성
+        df['year'] = df[date_col].dt.year.astype(int)
+        df['month'] = df[date_col].dt.month.astype(int)
+
+        # --- 상단 선택 필터 구역 ---
+        filter_col1, filter_col2, filter_col3 = st.columns([2, 2, 6])
+        
+        with filter_col1:
+            # 시트에 있는 년도 목록 (최신순 정렬)
+            years = sorted(df['year'].unique().tolist(), reverse=True)
+            selected_year = st.selectbox("📅 조회 년도 선택", years)
             
-        with col2:
-            # 1월 ~ 12월 리스트 생성
+        with filter_col2:
+            # 1월부터 12월까지 선택
             months = list(range(1, 13))
-            selected_month = st.selectbox("📆 월 선택", months)
+            # 현재 시스템 날짜의 월을 기본값으로 설정
+            this_month = datetime.now().month
+            selected_month = st.selectbox("📆 조회 월 선택", months, index=this_month-1)
 
-        # 3. 선택한 년도와 월에 해당하는 데이터만 걸러내기(필터링)
-        filtered_df = df[(df['년도'] == selected_year) & (df['월'] == selected_month)]
+        # --- 데이터 필터링 실행 ---
+        mask = (df['year'] == selected_year) & (df['month'] == selected_month)
+        filtered_df = df[mask].copy()
 
-        # 4. 필터링된 데이터 화면에 출력
-        st.divider()
-        st.write(f"### 📋 {int(selected_year)}년 {selected_month}월 데이터 (총 {len(filtered_df)}건)")
-        st.dataframe(filtered_df, use_container_width=True)
+        # 사용자에게 보여줄 때는 내부용으로 만든 year, month 열은 숨깁니다.
+        display_df = filtered_df.drop(columns=['year', 'month'])
         
+        # 보기 좋게 날짜순으로 정렬 (최신 날짜가 위로)
+        display_df = display_df.sort_values(by=date_col, ascending=False)
+
+        st.divider()
+        st.subheader(f"📊 {selected_year}년 {selected_month}월 상세 내역 (총 {len(display_df)}건)")
+        
+        # --- 결과 테이블 출력 ---
+        if not display_df.empty:
+            st.dataframe(
+                display_df, 
+                use_container_width=True, 
+                hide_index=True # 인덱스 번호는 숨겨서 엑셀처럼 보이게 함
+            )
+        else:
+            st.info(f"선택하신 {selected_year}년 {selected_month}월에는 데이터가 없습니다.")
+
     else:
-        st.error(f"❌ 구글 시트 첫 번째 줄(헤더)에 '{date_col}' 이라는 열이 없습니다. 코드 31번째 줄의 date_col 이름을 수정해주세요.")
+        st.error(f"❌ 시트의 헤더에서 '{date_col}' 열을 찾을 수 없습니다. 엑셀의 첫 줄 이름을 확인해 주세요.")
 
 except Exception as e:
-    st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {e}")
+    st.error(f"⚠️ 시스템 오류가 발생했습니다: {e}")
+
+# --- [4. 하단 카피라이트] ---
+st.markdown("---")
+st.caption(f"© {datetime.now().year} unichem02-dot. All rights reserved.")
