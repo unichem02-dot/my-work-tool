@@ -54,13 +54,14 @@ st.markdown("""
         display: none !important;
     }
 
-    /* 4. 컨텐츠 행(Row) 호버 효과 (행 전체를 꽉 채우도록 개선) ★ */
+    /* ★ 4. 컨텐츠 행(Row) 호버 효과 - 구분선 통합 및 꽉 찬 배경 ★ */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 8px 15px !important; /* 글자에 너무 붙지 않도록 최소한의 여백 제공 */
-        border-radius: 8px;
+        padding: 10px 10px !important; /* 호버 시 위아래 공간이 꽉 차보이도록 최적의 패딩 복구 */
+        border-radius: 0px !important; /* 점선과 모서리가 어긋나지 않게 직각 처리 */
         margin-bottom: 0px !important;
-        width: 100% !important; /* 가로 영역 100% 꽉 채우기 */
+        border-bottom: 1px dotted rgba(255, 255, 255, 0.2) !important; /* 별도 점선 요소 대신 테두리로 통합! */
+        width: 100% !important; 
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
@@ -69,7 +70,7 @@ st.markdown("""
     div[data-testid="stHorizontalBlock"]:has(.row-marker):hover {
         background-color: rgba(26, 47, 47, 0.9) !important;
     }
-    /* 컨텐츠 내부 요소들의 불필요한 기본 여백을 0으로 강제화 */
+    /* 컨텐츠 내부 기본 여백 0 강제 */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) > div {
         padding-top: 0 !important;
         padding-bottom: 0 !important;
@@ -80,7 +81,7 @@ st.markdown("""
     div[data-testid="stHorizontalBlock"]:has(.row-marker) p {
         margin: 0 !important;
         padding: 0 !important;
-        line-height: 1.2 !important; /* 줄간격 압축 */
+        line-height: 1.2 !important;
     }
 
     /* 5. 상단 분류 리스트(Radio) 알약 형태 */
@@ -129,7 +130,7 @@ st.markdown("""
         color: #224343 !important;
     }
 
-    /* 6. 버튼 스타일 (모바일 글자 넘침 방지를 위해 폰트 하한선 조정) */
+    /* 6. 버튼 스타일 */
     button, div.stDownloadButton > button {
         border-radius: 50px !important;
         padding: 0.5rem 1.2rem !important;
@@ -237,7 +238,7 @@ st.markdown("""
         flex: 0 1 auto !important;
     }
     
-    /* 결과물 텍스트 스타일 (크기 20% 축소) */
+    /* 결과물 텍스트 스타일 */
     .num-result { 
         color: #FFD700 !important; 
         font-weight: bold; 
@@ -270,9 +271,6 @@ st.markdown("""
         transform: scale(1.2) !important;
     }
 
-    /* 구분선 간격 조밀하게 변경 */
-    .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -5px; margin-bottom: 2px; }
-
     /* 11. 모바일 레이아웃 강제 교정 */
     @media screen and (max-width: 768px) {
         h1 { font-size: clamp(1.6rem, 2.5vw, 2.5rem) !important; }
@@ -280,7 +278,7 @@ st.markdown("""
         div[data-testid="stHorizontalBlock"]:has(.row-marker) {
             display: flex !important;
             flex-direction: row !important;
-            padding: 6px 8px !important; /* 모바일 전용 호버 여백 복구 */
+            padding: 8px 8px !important;
             width: 100% !important;
             gap: 8px !important;
         }
@@ -598,7 +596,7 @@ else:
                 cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
                 if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(idx, row.to_dict(), unique_cats)
             elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(idx, row.to_dict(), unique_cats)
-            st.markdown("<div class='row-divider'></div>", unsafe_allow_html=True)
+            # 파이썬 루프 안의 점선 생성 코드(<div class='row-divider'>)는 완전히 삭제됨! (CSS 테두리로 통합)
 
         if pages > 1:
             p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
@@ -608,7 +606,6 @@ else:
 
     except Exception as e: st.error(f"오류 발생: {e}")
 
-    # ★ 푸터(Copyright) 텍스트 크기 2배(1.7rem)로 변경 ★
     current_year = datetime.now(timezone(timedelta(hours=9))).year
     st.markdown(f"""
         <div style='text-align: center; margin-top: 30px; margin-bottom: 20px; padding-top: 15px; border-top: 1px dotted rgba(255, 255, 255, 0.2);'>
