@@ -7,10 +7,9 @@ from datetime import datetime, timedelta
 # --- [1. 페이지 기본 설정 및 테마 스타일] ---
 st.set_page_config(layout="wide", page_title="입출력 관리 시스템 (inout)")
 
-# 커스텀 CSS 주입 (이미지의 화려한 느낌 재현)
+# 커스텀 CSS 주입
 st.markdown("""
     <style>
-    /* 전체 배경 및 폰트 설정 */
     [data-testid="stAppViewContainer"] {
         background-color: #1e2530;
     }
@@ -21,7 +20,6 @@ st.markdown("""
         color: #ffffff !important;
     }
     
-    /* 검색 컨테이너 스타일 */
     [data-testid="stVerticalBlock"] > div:has(div.stContainer) {
         background-color: #262f3d;
         border-radius: 15px;
@@ -29,7 +27,6 @@ st.markdown("""
         border: 1px solid #3d4b5f;
     }
     
-    /* 요약 카드 스타일 */
     .metric-card {
         background: linear-gradient(135deg, #2b3648 0%, #1e2530 100%);
         border-radius: 12px;
@@ -39,18 +36,12 @@ st.markdown("""
         text-align: center;
     }
     
-    /* 버튼 스타일 커스텀 */
     div.stButton > button {
         border-radius: 8px !important;
         font-weight: bold !important;
         transition: all 0.3s ease;
     }
-    div.stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.4);
-    }
     
-    /* 테이블 스타일 */
     [data-testid="stDataFrame"] {
         background-color: #ffffff;
         border-radius: 10px;
@@ -59,7 +50,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- [2. 강력한 보안 및 세션 상태 관리] ---
+# --- [2. 보안 및 세션 관리] ---
 if "authenticated" not in st.session_state: st.session_state.authenticated = False
 if "failed_attempts" not in st.session_state: st.session_state.failed_attempts = 0
 if "lockout_until" not in st.session_state: st.session_state.lockout_until = None
@@ -67,7 +58,6 @@ if "last_activity" not in st.session_state: st.session_state.last_activity = Non
 
 now = datetime.now()
 
-# [보안 A] 5회 실패로 인한 계정 잠금 확인
 if st.session_state.lockout_until:
     if now < st.session_state.lockout_until:
         lock_minutes = (st.session_state.lockout_until - now).seconds // 60
@@ -77,23 +67,19 @@ if st.session_state.lockout_until:
         st.session_state.lockout_until = None
         st.session_state.failed_attempts = 0
 
-# [보안 B] 30분 미사용 시 자동 로그아웃 확인
 if st.session_state.authenticated and st.session_state.last_activity:
     if now - st.session_state.last_activity > timedelta(minutes=30):
         st.session_state.authenticated = False
         st.warning("⏱️ 안전을 위해 장시간(30분) 미사용으로 자동 로그아웃 되었습니다.")
 
-# --- [3. 로그인 화면 렌더링] ---
+# --- [3. 로그인 화면] ---
 if not st.session_state.authenticated:
     st.markdown("<h1 style='text-align: center; color: #4e8cff !important;'>🛡️ ADMIN ACCESS</h1>", unsafe_allow_html=True)
-    
     col_l, col_c, col_r = st.columns([1, 1.2, 1])
     with col_c:
         with st.form("login_form"):
-            st.markdown("<p style='text-align: center;'>시스템 보호를 위해 비밀번호를 입력하세요.</p>", unsafe_allow_html=True)
             pwd = st.text_input("PASSWORD", type="password", placeholder="••••")
             submit_btn = st.form_submit_button("SYSTEM LOGIN", use_container_width=True, type="primary")
-            
             if submit_btn:
                 if "tom_password" not in st.secrets:
                     st.error("⚠️ Streamlit Secrets 설정 오류")
@@ -112,12 +98,11 @@ if not st.session_state.authenticated:
                         st.error(f"❌ 비밀번호 오류 (남은 기회: {remains}번)")
     st.stop()
 
-# --- [4. 상단 상태바 & 로그아웃 버튼] ---
+# --- [4. 상단 상태바] ---
 st.session_state.last_activity = datetime.now()
-
 col_status, col_logout = st.columns([8.5, 1.5])
 with col_status:
-    st.markdown(f"🟢 **보안 접속 중** | 마지막 활동: {datetime.now().strftime('%H:%M:%S')}")
+    st.markdown(f"🟢 **보안 접속 중** | 현재 시각: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 with col_logout:
     if st.button("🔓 LOGOUT", use_container_width=True, type="secondary"):
         st.session_state.authenticated = False
@@ -125,7 +110,7 @@ with col_logout:
 
 st.markdown("<hr style='border: 0.5px solid #3d4b5f;'>", unsafe_allow_html=True)
 
-# --- [5. 데이터 로드 함수] ---
+# --- [5. 데이터 로드] ---
 @st.cache_resource
 def init_connection():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
@@ -162,10 +147,19 @@ try:
         df = df.dropna(subset=[date_col])
         df['year'] = df[date_col].dt.year.astype(int)
         df['month'] = df[date_col].dt.month.astype(int)
+        df['year_month'] = df[date_col].dt.strftime('%Y-%m')
 
-        # ---------------------------------------------------------
-        # 💡 컬러풀한 상세 검색 패널
-        # ---------------------------------------------------------
+        # 금액 계산을 위한 숫자형 변환
+        df['inq_val'] = pd.to_numeric(df['inq'], errors='coerce').fillna(0)
+        df['inprice_val'] = pd.to_numeric(df['inprice'], errors='coerce').fillna(0)
+        df['outq_val'] = pd.to_numeric(df['outq'], errors='coerce').fillna(0)
+        df['outprice_val'] = pd.to_numeric(df['outprice'], errors='coerce').fillna(0)
+        
+        # 총액 계산
+        df['in_total'] = df['inq_val'] * df['inprice_val']
+        df['out_total'] = df['outq_val'] * df['outprice_val']
+
+        # --- 검색 패널 ---
         with st.container():
             st.markdown("### 🔍 SEARCH FILTERS")
             r1_1, r1_2, r1_3 = st.columns([2, 4, 4])
@@ -188,15 +182,11 @@ try:
                     else: target_date = st.date_input("날짜 선택", datetime.now().date())
             
             with r1_3:
-                search_company = st.text_input("🏢 거래처 입력", placeholder="거래처명을 입력하세요")
+                search_company = st.text_input("🏢 거래처 입력 (그래프 분석 대상)", placeholder="업체명을 입력하세요")
                 search_item = st.text_input("📦 품목 입력", placeholder="품목명을 입력하세요")
 
-        # ---------------------------------------------------------
-        # 💡 데이터 필터링 로직
-        # ---------------------------------------------------------
+        # --- 필터링 ---
         f_df = df.copy()
-
-        # 날짜 필터
         if search_mode == "월별 검색":
             f_df = f_df[(f_df['year'] == sel_year) & (f_df['month'] == sel_month)]
         elif search_mode == "기간 검색":
@@ -205,36 +195,31 @@ try:
         else:
             f_df = f_df[f_df[date_col].dt.date == target_date]
 
-        # 매입/매출 필터
         if trade_type == "매입(입고)":
             f_df = f_df[f_df['incom'].astype(str).str.strip() != '']
         elif trade_type == "매출(출고)":
             f_df = f_df[f_df['outcom'].astype(str).str.strip() != '']
 
-        # 키워드 필터
         if search_company:
             f_df = f_df[f_df['incom'].str.contains(search_company, case=False) | f_df['outcom'].str.contains(search_company, case=False)]
         if search_item:
             f_df = f_df[f_df['initem'].str.contains(search_item, case=False) | f_df['outitem'].str.contains(search_item, case=False)]
 
-        # ---------------------------------------------------------
-        # 📊 요약 대시보드 섹션
-        # ---------------------------------------------------------
+        # --- 요약 대시보드 ---
         st.markdown("<br>", unsafe_allow_html=True)
-        # 수량 계산 (숫자형 변환 후 합산)
-        total_in = pd.to_numeric(f_df['inq'], errors='coerce').sum()
-        total_out = pd.to_numeric(f_df['outq'], errors='coerce').sum()
+        total_in_amt = f_df['in_total'].sum()
+        total_out_amt = f_df['out_total'].sum()
         
         m1, m2, m3 = st.columns(3)
         with m1:
             st.markdown(f"""<div class='metric-card' style='border-left-color: #00c853;'>
-                <p style='margin:0; font-size: 0.9rem; color: #aeb9cc;'>TOTAL IN (입고)</p>
-                <h2 style='margin:0; color: #00c853 !important;'>{total_in:,.0f}</h2>
+                <p style='margin:0; font-size: 0.9rem; color: #aeb9cc;'>TOTAL IN AMT (매입금액)</p>
+                <h2 style='margin:0; color: #00c853 !important;'>₩ {total_in_amt:,.0f}</h2>
             </div>""", unsafe_allow_html=True)
         with m2:
             st.markdown(f"""<div class='metric-card' style='border-left-color: #ff5252;'>
-                <p style='margin:0; font-size: 0.9rem; color: #aeb9cc;'>TOTAL OUT (출고)</p>
-                <h2 style='margin:0; color: #ff5252 !important;'>{total_out:,.0f}</h2>
+                <p style='margin:0; font-size: 0.9rem; color: #aeb9cc;'>TOTAL OUT AMT (매출금액)</p>
+                <h2 style='margin:0; color: #ff5252 !important;'>₩ {total_out_amt:,.0f}</h2>
             </div>""", unsafe_allow_html=True)
         with m3:
             st.markdown(f"""<div class='metric-card' style='border-left-color: #4e8cff;'>
@@ -242,10 +227,27 @@ try:
                 <h2 style='margin:0; color: #4e8cff !important;'>{len(f_df)}건</h2>
             </div>""", unsafe_allow_html=True)
 
-        # ---------------------------------------------------------
-        # 💡 결과 데이터 테이블
-        # ---------------------------------------------------------
-        display_df = f_df.drop(columns=['year', 'month']).sort_values(by=date_col, ascending=False)
+        # --- 📈 거래처 실적 그래프 섹션 ---
+        if search_company and not f_df.empty:
+            st.markdown(f"### 📈 '{search_company}' 월별 실적 분석")
+            
+            # 전체 데이터에서 해당 거래처 데이터만 다시 필터링 (조회 기간에 상관없이 흐름을 보기 위함)
+            chart_df = df[df['incom'].str.contains(search_company, case=False) | df['outcom'].str.contains(search_company, case=False)].copy()
+            
+            if not chart_df.empty:
+                # 월별 그룹화
+                monthly_stats = chart_df.groupby('year_month')[['in_total', 'out_total']].sum().sort_index()
+                
+                # 컬럼명 변경 (그래프 범례용)
+                monthly_stats.columns = ['매입금액(IN)', '매출금액(OUT)']
+                
+                # 막대 그래프 표시
+                st.bar_chart(monthly_stats)
+            else:
+                st.info("그래프를 표시할 데이터가 부족합니다.")
+
+        # --- 결과 테이블 ---
+        display_df = f_df.drop(columns=['year', 'month', 'year_month', 'inq_val', 'inprice_val', 'outq_val', 'outprice_val', 'in_total', 'out_total']).sort_values(by=date_col, ascending=False)
         
         rename_dict = {
             'id': '순번', 'date': '날짜', 'incom': '입고처', 'initem': '입고품목',
