@@ -232,6 +232,22 @@ st.markdown("""
         max-width: 350px !important; 
     }
     
+    /* ★ 10. Num.ENG 결과물과 ❌ 버튼 가로 밀착 배치 (수정된 핵심 섹션) ★ */
+    div[data-testid="stHorizontalBlock"]:has(.num-result) {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 12px !important; /* 텍스트와 ❌ 사이의 간격 */
+        width: 100% !important;
+    }
+    
+    div[data-testid="stHorizontalBlock"]:has(.num-result) > div {
+        width: fit-content !important; /* 컬럼 너비를 내용물에 맞게 축소 */
+        flex: 0 1 auto !important;
+        min-width: unset !important;
+    }
+
     .num-result { 
         color: #FFD700 !important; 
         font-weight: bold; 
@@ -239,6 +255,16 @@ st.markdown("""
         margin: 0 !important;
         line-height: 1.1;
         white-space: nowrap !important;
+    }
+
+    /* ❌ 버튼 위치 및 크기 세부 조정 */
+    div[data-testid="stHorizontalBlock"]:has(.num-result) button {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        margin-top: 2px !important; /* 텍스트와 높이 맞춤 */
     }
 
     @media screen and (max-width: 768px) {
@@ -404,6 +430,7 @@ else:
         clean_num = st.session_state.num_input.replace(",", "").strip()
         if clean_num.isdigit():
             eng_text = num_to_eng(int(clean_num)).capitalize()
+            # 결과물과 버튼 컬럼 생성
             res_col1, res_col2 = st.columns([1, 1])
             with res_col1:
                 st.markdown(f"<p class='num-result'>{eng_text}</p>", unsafe_allow_html=True)
@@ -451,7 +478,6 @@ else:
         
         cb_cols = [1.5, 1.5, 1.4, 2.6, 1.5] if st.session_state.authenticated else [1.5, 1.4, 4.1]
         cb = st.columns(cb_cols)
-        # 검색창 레이블로 🔍 아이콘 사용
         cb[0].text_input("🔍", key="search_input", on_change=handle_search)
         
         if st.session_state.authenticated and cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(unique_cats)
