@@ -318,12 +318,12 @@ st.markdown("""
         button { padding: 0.5rem 0.8rem !important; }
     }
 
-    /* ★ 12. 컨텐츠(행) 마우스 오버 시 글자 30% 확대 (스무스 효과) ★ */
-    div[data-testid="stHorizontalBlock"]:has(.row-marker) div[data-testid="stMarkdownContainer"] {
+    /* ★ 12. 컨텐츠(행) 마우스 오버 시 '단어-문장' 열만 30% 확대 (스무스 효과) ★ */
+    div[data-testid="stHorizontalBlock"]:has(.row-marker) .word-text {
         transition: transform 0.2s ease !important;
         transform-origin: left center !important; /* 좌측 기준 확대 (글자가 왼쪽으로 넘어가지 않음) */
     }
-    div[data-testid="stHorizontalBlock"]:has(.row-marker):hover div[data-testid="stMarkdownContainer"] {
+    div[data-testid="stHorizontalBlock"]:has(.row-marker):hover .word-text {
         transform: scale(1.3) !important; /* 30% 확대 */
         z-index: 10 !important; /* 커진 글씨가 다른 요소를 가리지 않도록 최상단 배치 */
     }
@@ -561,7 +561,6 @@ else:
         elif st.session_state.sort_order == 'desc': d_df = d_df.sort_values(by='단어-문장', ascending=False)
         else: d_df = d_df.iloc[::-1]
 
-        # ★ CSV 다운로드 버튼 복구 (로그인 상태일 때 컨트롤 바 맨 우측 cb[4] 영역에 표시) ★
         if st.session_state.authenticated:
             cb[4].download_button(
                 "📥 CSV", 
