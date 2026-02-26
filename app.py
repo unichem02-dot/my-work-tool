@@ -159,15 +159,13 @@ st.markdown("""
         color: #224343 !important;
     }
 
-    /* 6. 버튼 스타일 */
+    /* 6. 버튼 기본 스타일 */
     button, div.stDownloadButton > button {
         border-radius: 50px !important;
         padding: 0.5rem 1.2rem !important;
         font-weight: 900 !important;
         transition: all 0.3s ease !important;
         white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
     }
     button[kind="primary"] {
         background-color: #FFFFFF !important;
@@ -279,16 +277,32 @@ st.markdown("""
         margin-top: 2px !important; 
     }
 
+    /* 모바일 전용 스타일 최적화 */
     @media screen and (max-width: 768px) {
         .word-text { font-size: 1.21rem !important; }
         .mean-text { font-size: 0.9rem !important; }
+        
         /* 분류 필터 텍스트 30% 확대 */
         div[data-testid="stRadio"] label p {
             font-size: 1.2rem !important;
         }
-        /* ★ 추가: 모바일 제어 버튼 텍스트 40% 확대 ★ */
+
+        /* ★ 모바일 버튼 글자 가려짐 방지 및 확실한 40% 확대 ★ */
+        button, div.stDownloadButton > button {
+            height: auto !important;
+            min-height: 55px !important; /* 터치 영역 확보 */
+            padding: 10px 18px !important; /* 내부 여백 조절 */
+            overflow: visible !important; /* 가려짐 제거 */
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
         button p, div.stDownloadButton > button p {
-            font-size: 1.4rem !important;
+            font-size: 1.6rem !important; /* 약 40% 이상 확대 */
+            line-height: 1.2 !important;
+            white-space: normal !important; /* 줄바꿈 대응으로 가려짐 방지 */
+            overflow: visible !important;
         }
     }
     </style>
