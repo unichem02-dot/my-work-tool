@@ -392,10 +392,11 @@ else:
         with num_in_col:
             st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
         with num_clear_col:
-            # ❌ 이모지로 변경하고 버튼의 테두리/배경을 제거하는 클래스 적용
-            st.markdown('<div class="small-button">', unsafe_allow_html=True)
-            st.button("❌", key="btn_clear_num", on_click=clear_num_input)
-            st.markdown('</div>', unsafe_allow_html=True)
+            # ★ 입력창에 텍스트가 있을 때만 ❌ 버튼 표시 ★
+            if st.session_state.num_input:
+                st.markdown('<div class="small-button">', unsafe_allow_html=True)
+                st.button("❌", key="btn_clear_num", on_click=clear_num_input)
+                st.markdown('</div>', unsafe_allow_html=True)
        
     with col_num_result:
         if st.session_state.num_input:
