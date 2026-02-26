@@ -207,12 +207,28 @@ st.markdown("""
         z-index: 10 !important;
     }
 
-    /* 9. Num.ENG 레이아웃 */
-    div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
+    /* 9. Num.ENG 및 검색창 레이아웃 (공통 일렬 정렬) */
+    div[data-testid="stTextInput"]:has(label p) {
         display: flex !important;
         flex-direction: row !important;
         align-items: center !important;
         gap: 8px !important;
+    }
+    
+    /* 레이블(아이콘/텍스트) 여백 제거 */
+    div[data-testid="stTextInput"]:has(label p) label {
+        margin-bottom: 0 !important;
+        margin-top: 5px !important;
+        min-width: fit-content !important;
+    }
+
+    /* 검색창 전용 스타일 보정 */
+    div[data-testid="stTextInput"]:has(label p):not(:has(input[aria-label="Num.ENG :"])) {
+        width: 100% !important;
+    }
+
+    /* Num.ENG 전용 스타일 보정 */
+    div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
         max-width: 350px !important; 
     }
     
@@ -435,7 +451,7 @@ else:
         
         cb_cols = [1.5, 1.5, 1.4, 2.6, 1.5] if st.session_state.authenticated else [1.5, 1.4, 4.1]
         cb = st.columns(cb_cols)
-        # 검색창 플레이스홀더 텍스트 삭제
+        # 검색창 레이블로 🔍 아이콘 사용
         cb[0].text_input("🔍", key="search_input", on_change=handle_search)
         
         if st.session_state.authenticated and cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(unique_cats)
