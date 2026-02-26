@@ -167,22 +167,23 @@ st.markdown("""
     .mean-text { font-size: 1.3em; display: block; word-break: keep-all; }
     .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; }
    
-    /* ★ 9. Num.ENG 레이아웃 및 라벨 크기 축소 ★ */
+    /* 9. Num.ENG 레이아웃 최적화 및 줄바꿈 방지 */
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
         display: flex !important;
         flex-direction: row !important;
         align-items: center !important;
         gap: 8px !important;
+        width: 100% !important;
     }
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) label p {
         font-weight: 900 !important;
-        /* 라벨 글자 크기를 기존보다 작게 설정 */
         font-size: clamp(0.8rem, 1.1vw, 1.1rem) !important; 
         margin: 0 !important;
+        white-space: nowrap !important;
     }
     input[aria-label="Num.ENG :"] {
         font-size: clamp(1.0rem, 1.4vw, 1.5rem) !important;
-        min-width: 90px !important;
+        min-width: 80px !important;
     }
    
     .num-result { color: #FFD700; font-weight: bold; font-size: clamp(1.0rem, 1.4vw, 1.5rem); }
@@ -190,8 +191,7 @@ st.markdown("""
 
     /* 10. 모바일 레이아웃 강제 교정 */
     @media screen and (max-width: 768px) {
-        /* 타이틀 반응형 크기도 30% 가량 상향 */
-        h1 { font-size: clamp(1.4rem, 2.5vw, 2.5rem) !important; }
+        h1 { font-size: clamp(1.6rem, 2.5vw, 2.5rem) !important; }
         
         div[data-testid="stHorizontalBlock"]:has(.row-marker) {
             display: flex !important;
@@ -316,15 +316,18 @@ def num_to_eng(num):
 
 # --- [메인 로직] ---
 
-# ★ 1. 로그인 전용 화면 ★
+# ★ 1. 로그인 전용 화면 (엔터키 지원을 위해 st.form 사용) ★
 if not st.session_state.authenticated and st.session_state.logging_in:
     st.write("## 🔐 Security Login")
-    with st.container():
+    # st.form을 사용하여 엔터키 로그인 지원
+    with st.form("login_form", clear_on_submit=False):
         st.markdown("<div style='height: 100px;'></div>", unsafe_allow_html=True)
-        pwd = st.text_input("Enter Password", type="password", placeholder="비밀번호를 입력하세요...", key="login_input")
+        pwd = st.text_input("Enter Password", type="password", placeholder="비밀번호를 입력하세요...")
         
-        c1, c2 = st.columns(2)
-        if c1.button("✅ LOGIN", use_container_width=True, type="primary"):
+        # 폼 제출 버튼 (엔터 대응)
+        submit = st.form_submit_button("✅ LOGIN", use_container_width=True, type="primary")
+        
+        if submit:
             if pwd == LOGIN_PASSWORD:
                 st.session_state.authenticated = True
                 st.session_state.logging_in = False
@@ -332,16 +335,16 @@ if not st.session_state.authenticated and st.session_state.logging_in:
                 st.rerun()
             else:
                 st.error("❌ 비밀번호가 틀렸습니다.")
-        
-        if c2.button("🔙 CANCEL", use_container_width=True):
-            st.session_state.logging_in = False
-            st.rerun()
+    
+    # 취소 버튼은 폼 바깥에 배치 (엔터키에 반응하지 않도록)
+    if st.button("🔙 CANCEL", use_container_width=True):
+        st.session_state.logging_in = False
+        st.rerun()
 else:
     # ★ 2. 메인 앱 화면 ★
     
     # 2-1. [상단 줄] LOGIN/OUT + Spacer + Num.ENG 입력 + Num.ENG 결과
-    # Spacer(0.5)를 추가하여 로그인 버튼과 입력창 사이 간격 확보
-    col_auth, col_spacer, col_num_combined, col_num_result = st.columns([1.2, 0.5, 2.4, 5.9])
+    col_auth, col_spacer, col_num_combined, col_num_result = st.columns([1.4, 0.4, 3.2, 5.0])
     
     with col_auth:
         if not st.session_state.authenticated:
@@ -353,8 +356,6 @@ else:
                 st.session_state.authenticated = False
                 if "auth" in st.query_params: del st.query_params["auth"]
                 st.rerun()
-
-    # Spacer 컬럼은 비워둠
 
     with col_num_combined:
         st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
@@ -378,7 +379,6 @@ else:
     col_title, col_date = st.columns([4.0, 6.0])
 
     with col_title:
-        # 타이틀 글자 크기를 CSS clamp 수치를 높여 30% 가량 증대
         st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.6rem, 2.9vw, 2.9rem);'>TOmBOy94 English</h1>", unsafe_allow_html=True)
 
     with col_date:
