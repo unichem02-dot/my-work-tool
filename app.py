@@ -54,27 +54,34 @@ st.markdown("""
         display: none !important;
     }
 
-    /* ★ 4. 컨텐츠 행(Row) 호버 효과 - 구분선 통합 및 꽉 찬 배경 ★ */
+    /* ★ 4. 컨텐츠 행(Row) 호버 효과 - 배경 꽉 채우기 및 상하 여백 밸런스 ★ */
+    /* 부모 컨테이너부터 100% 꽉 채우도록 강제 */
+    div.element-container:has(.row-marker) {
+        width: 100% !important;
+        min-width: 100% !important;
+    }
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 6px 10px !important; /* 상하 공간 축소 및 균형 맞춤 */
-        border-radius: 0px !important; /* 점선과 모서리가 어긋나지 않게 직각 처리 */
+        padding: 12px 10px !important; /* 텍스트가 위아래 점선에 붙지 않도록 최적의 여백 제공 */
+        border-radius: 0px !important; 
         margin-bottom: 0px !important;
-        border-bottom: 1px dotted rgba(255, 255, 255, 0.2) !important; /* 테두리로 구분선 통합 */
+        border-bottom: 1px dotted rgba(255, 255, 255, 0.2) !important; 
         width: 100% !important; 
+        min-width: 100% !important; /* 호버 시 우측 끝까지 완벽하게 색상이 차도록 설정 */
+        flex: 1 1 100% !important;
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
-        align-items: center !important; /* 전체 행 수직 중앙 정렬 */
+        align-items: center !important; 
     }
     div[data-testid="stHorizontalBlock"]:has(.row-marker):hover {
         background-color: rgba(26, 47, 47, 0.9) !important;
     }
     
-    /* ★ 컨텐츠 내부 텍스트 완벽 수직 중앙 정렬 강제화 (쳐짐 현상 해결) ★ */
+    /* 컨텐츠 내부 텍스트 완벽 수직 중앙 정렬 및 쳐짐 현상 해결 */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) > div[data-testid="column"] {
         display: flex !important;
-        align-items: center !important; /* 컬럼 내용 수직 중앙 정렬 */
+        align-items: center !important; 
         padding: 0 !important;
         margin: 0 !important;
     }
@@ -82,10 +89,10 @@ st.markdown("""
     div[data-testid="stHorizontalBlock"]:has(.row-marker) div.stMarkdown,
     div[data-testid="stHorizontalBlock"]:has(.row-marker) p {
         display: flex !important;
-        align-items: center !important; /* 텍스트 수직 중앙 정렬 */
+        align-items: center !important; 
         margin: 0 !important;
         padding: 0 !important;
-        line-height: 1 !important; /* 숨겨진 위아래 줄간격 여백 제거 */
+        line-height: normal !important; /* 줄간격 1로 인한 텍스트 밑동 짤림/붙음 완전 해결 */
         width: 100% !important;
     }
 
@@ -180,7 +187,7 @@ st.markdown("""
         font-size: 1.6rem !important;
         margin: 0 !important;
         padding: 0 !important;
-        line-height: 1 !important;
+        line-height: normal !important;
         transition: transform 0.2s ease !important;
     }
     button[kind="tertiary"]:hover p {
@@ -195,9 +202,9 @@ st.markdown("""
         white-space: nowrap !important;
     }
    
-    .word-text { font-size: 1.8em; font-weight: bold; color: #FFD700 !important; word-break: keep-all; line-height: 1 !important; }
-    .mean-text { font-size: 1.3em; word-break: keep-all; line-height: 1 !important; }
-    .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; line-height: 1 !important; }
+    .word-text { font-size: 1.8em; font-weight: bold; color: #FFD700 !important; word-break: keep-all; }
+    .mean-text { font-size: 1.3em; word-break: keep-all; }
+    .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; }
    
     /* 9. Num.ENG 레이아웃 최적화 및 가로 크기 제한 */
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
@@ -289,7 +296,7 @@ st.markdown("""
         div[data-testid="stHorizontalBlock"]:has(.row-marker) {
             display: flex !important;
             flex-direction: row !important;
-            padding: 4px 8px !important;
+            padding: 8px 8px !important;
             width: 100% !important;
             gap: 8px !important;
         }
@@ -596,8 +603,6 @@ else:
                     st.rerun()
             else: h_cols[i].markdown(f"<span class='header-label'>{l}</span>", unsafe_allow_html=True)
        
-        st.markdown("<div style='border-bottom:2px solid rgba(255,255,255,0.4); margin-top:-20px; margin-bottom:5px;'></div>", unsafe_allow_html=True)
-
         for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
             cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
             cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold'>{row['분류']}</span>", unsafe_allow_html=True)
