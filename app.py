@@ -306,10 +306,9 @@ def load_dataframe(sheet):
         except: time.sleep(1)
     raise Exception("데이터 로드 실패")
 
-# --- [다이얼로그 설정] ---
+# --- [다이얼로그 설정 (NameError 해결: 파라미터 간소화)] ---
 @st.dialog("새 항목 추가")
-def add_dialog(sheet, full_df):
-    unique_cats = sorted([x for x in full_df['분류'].unique().tolist() if x != ''])
+def add_dialog(unique_cats):
     with st.form("add_form", clear_on_submit=True):
         c1, c2 = st.columns(2)
         selected_cat = c1.selectbox("기존 분류", ["(새로 입력)"] + unique_cats)
@@ -323,29 +322,40 @@ def add_dialog(sheet, full_df):
         if st.form_submit_button("저장하기", use_container_width=True, type="primary"):
             final_cat = new_cat.strip() if new_cat.strip() else (selected_cat if selected_cat != "(새로 입력)" else "")
             if word_sent:
+                # 데이터 충돌 방지를 위해 팝업창 내에서 시트를 재호출
+                sheet = get_sheet()
                 sheet.append_row([final_cat, word_sent, mean, pron, m1, m2])
-                st.success("저장 완료!"); time.sleep(1); st.rerun()
+                st.success("저장 완료!")
+                time.sleep(1)
+                st.rerun()
 
 @st.dialog("항목 수정 및 삭제")
-def edit_dialog(idx, row_data, sheet, full_df):
-    unique_cats = sorted([x for x in full_df['분류'].unique().tolist() if x != ''])
+def edit_dialog(idx, row_data, unique_cats):
+    # 안전한 카테고리 매핑
+    safe_cats = unique_cats if unique_cats else ["(없음)"]
+    cat_val = row_data.get('분류', '')
+    cat_index = safe_cats.index(cat_val) if cat_val in safe_cats else 0
+    
     with st.form(f"edit_{idx}"):
         c1, c2 = st.columns(2)
-        edit_cat = c1.selectbox("분류", unique_cats, index=unique_cats.index(row_data['분류']) if row_data['분류'] in unique_cats else 0)
+        edit_cat = c1.selectbox("분류", safe_cats, index=cat_index)
         new_cat = c2.text_input("분류 직접 수정")
-        word_sent = st.text_input("단어-문장", value=row_data['단어-문장'])
+        word_sent = st.text_input("단어-문장", value=row_data.get('단어-문장', ''))
         c3, c4 = st.columns(2)
-        mean = c3.text_input("해석", value=row_data['해석'])
-        pron = c4.text_input("발음", value=row_data['발음'])
-        m1 = st.text_input("메모1", value=row_data['메모1'])
-        m2 = st.text_input("메모2", value=row_data['메모2'])
+        mean = c3.text_input("해석", value=row_data.get('해석', ''))
+        pron = c4.text_input("발음", value=row_data.get('발음', ''))
+        m1 = st.text_input("메모1", value=row_data.get('메모1', ''))
+        m2 = st.text_input("메모2", value=row_data.get('메모2', ''))
         b1, b2 = st.columns(2)
         if b1.form_submit_button("💾 저장", use_container_width=True, type="primary"):
             final_cat = new_cat.strip() if new_cat.strip() else edit_cat
+            sheet = get_sheet()
             sheet.update(f"A{idx+2}:F{idx+2}", [[final_cat, word_sent, mean, pron, m1, m2]])
             st.rerun()
         if b2.form_submit_button("🗑️ 삭제", use_container_width=True):
-            sheet.delete_rows(idx + 2); st.rerun()
+            sheet = get_sheet()
+            sheet.delete_rows(idx + 2)
+            st.rerun()
 
 # --- [세션 상태 관리] ---
 if "authenticated" not in st.session_state:
@@ -412,7 +422,6 @@ if not st.session_state.authenticated and st.session_state.logging_in:
 else:
     # ★ 2. 메인 앱 화면 ★
     
-    # 2-1. [상단 줄] LOGIN/OUT + Spacer + Num.ENG 입력 (버튼 가로 영역 2.0으로 넓힘)
     col_auth, col_spacer, col_num_combined = st.columns([2.0, 0.2, 7.8])
     
     with col_auth:
@@ -429,7 +438,6 @@ else:
     with col_num_combined:
         st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
 
-    # 2-1-2. Num.ENG 결과물(노란색) + 지우기(❌) 버튼
     if st.session_state.num_input:
         clean_num = st.session_state.num_input.replace(",", "").strip()
         if clean_num.isdigit():
@@ -442,12 +450,10 @@ else:
         else:
             st.markdown("<p class='num-result' style='color:#FF9999!important; font-size:1.5rem!important;'>⚠️ 숫자만 입력 가능</p>", unsafe_allow_html=True)
 
-    # 오늘 날짜 정보
     kst = timezone(timedelta(hours=9))
     now_kst = datetime.now(kst)
     date_str = now_kst.strftime("%A, %B %d, %Y")
 
-    # 2-2. [타이틀 줄] 타이틀 + 날짜
     col_title, col_date = st.columns([4.0, 6.0])
 
     with col_title:
@@ -477,18 +483,18 @@ else:
 
     try:
         sheet = get_sheet(); df = load_dataframe(sheet)
-        unique_cats = sorted([x for x in full_df['분류'].unique().tolist() if x != ''])
+        unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
         sel_cat = st.radio("분류 필터", ["🔀 랜덤 10", "전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed", key="cat_radio", on_change=clear_search)
        
         st.divider()
        
-        # 컨트롤 바 디자인
         cb_cols = [1.5, 1.5, 1.4, 2.6, 1.5] if st.session_state.authenticated else [1.5, 1.4, 4.1]
         cb = st.columns(cb_cols)
-        # ★ 전체검색 창 라벨에 🔍 이모지를 넣고 보이도록 수정 ★
+        
+        # 전체검색 창 라벨에 🔍 이모지 추가
         cb[0].text_input("🔍", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...")
         
-        if st.session_state.authenticated and cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
+        if st.session_state.authenticated and cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(unique_cats)
         
         btn_idx = 2 if st.session_state.authenticated else 1
         btn_text = "🔄 전체모드" if st.session_state.is_simple else "✨ 심플모드"
@@ -514,7 +520,6 @@ else:
         total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
         curr_p = st.session_state.curr_p if 'curr_p' in st.session_state else 1
         
-        # ★ JS: 최신 React 지원 네이티브 Setter를 통한 완벽한 실시간 3자리 콤마 자동 입력 ★
         components.html(f"""
             <style>body {{ margin:0; padding:0; background:transparent!important; overflow:hidden; }}</style>
             <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:5px; font-family:sans-serif;">
@@ -524,7 +529,6 @@ else:
             <script>
             const doc = window.parent.document;
             if (!doc.liveCommaAdded) {{
-                // React 상태 우회를 위한 Native Setter 함수 정의
                 function setNativeValue(element, value) {{
                     const valueSetter = Object.getOwnPropertyDescriptor(element, 'value').set;
                     const prototype = Object.getPrototypeOf(element);
@@ -535,7 +539,6 @@ else:
                     }} else {{
                         valueSetter.call(element, value);
                     }}
-                    // React가 인지할 수 있도록 input 이벤트 강제 트리거
                     element.dispatchEvent(new Event('input', {{ bubbles: true }}));
                 }}
 
@@ -548,13 +551,11 @@ else:
                             let formatted = numStr ? Number(numStr).toLocaleString('en-US') : '';
                             
                             if (val !== formatted) {{
-                                // 커서 위치 유지를 위한 계산
                                 let cursorPosition = e.target.selectionStart;
                                 let oldLength = val.length;
                                 
                                 setNativeValue(e.target, formatted);
                                 
-                                // 커서 재정렬
                                 let newLength = formatted.length;
                                 let newCursorPos = cursorPosition + (newLength - oldLength);
                                 e.target.setSelectionRange(newCursorPos, newCursorPos);
@@ -587,8 +588,8 @@ else:
             cols[2].markdown(f"<span class='mean-text'>{row['해석']}</span>", unsafe_allow_html=True)
             if not is_simple:
                 cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
-                if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(idx, row, sheet, df)
-            elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(idx, row, sheet, df)
+                if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(idx, row.to_dict(), unique_cats)
+            elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(idx, row.to_dict(), unique_cats)
             st.markdown("<div class='row-divider'></div>", unsafe_allow_html=True)
 
         if pages > 1:
