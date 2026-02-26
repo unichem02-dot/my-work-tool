@@ -545,6 +545,15 @@ else:
         elif st.session_state.sort_order == 'desc': d_df = d_df.sort_values(by='단어-문장', ascending=False)
         else: d_df = d_df.iloc[::-1]
 
+        # ★ CSV 다운로드 버튼 복구 (로그인 상태일 때 컨트롤 바 맨 우측 cb[4] 영역에 표시) ★
+        if st.session_state.authenticated:
+            cb[4].download_button(
+                "📥 CSV", 
+                d_df.to_csv(index=False).encode('utf-8-sig'), 
+                f"Data_{time.strftime('%Y%m%d')}.csv", 
+                use_container_width=True
+            )
+
         total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
         curr_p = st.session_state.curr_p if 'curr_p' in st.session_state else 1
         
@@ -603,6 +612,8 @@ else:
                     st.rerun()
             else: h_cols[i].markdown(f"<span class='header-label'>{l}</span>", unsafe_allow_html=True)
        
+        st.markdown("<div style='border-bottom:2px solid rgba(255,255,255,0.4); margin-top:-20px; margin-bottom:5px;'></div>", unsafe_allow_html=True)
+
         for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
             cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
             cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold'>{row['분류']}</span>", unsafe_allow_html=True)
