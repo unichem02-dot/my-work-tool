@@ -34,6 +34,10 @@ st.markdown("""
         border-left: 5px solid #4e8cff;
         box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         text-align: center;
+        height: 110px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
     
     div.stButton > button {
@@ -205,48 +209,13 @@ try:
         if search_item:
             f_df = f_df[f_df['initem'].str.contains(search_item, case=False) | f_df['outitem'].str.contains(search_item, case=False)]
 
-        # --- 요약 대시보드 ---
+        # --- 요약 대시보드 (4컬럼 레이아웃) ---
         st.markdown("<br>", unsafe_allow_html=True)
         total_in_amt = f_df['in_total'].sum()
         total_out_amt = f_df['out_total'].sum()
+        data_count = len(f_df) # 총 행의 갯수 (데이터 줄 수)
         
-        m1, m2, m3 = st.columns(3)
-        with m1:
-            st.markdown(f"""<div class='metric-card' style='border-left-color: #00c853;'>
-                <p style='margin:0; font-size: 0.9rem; color: #aeb9cc;'>TOTAL IN AMT (매입금액)</p>
-                <h2 style='margin:0; color: #00c853 !important;'>₩ {total_in_amt:,.0f}</h2>
-            </div>""", unsafe_allow_html=True)
-        with m2:
-            st.markdown(f"""<div class='metric-card' style='border-left-color: #ff5252;'>
-                <p style='margin:0; font-size: 0.9rem; color: #aeb9cc;'>TOTAL OUT AMT (매출금액)</p>
-                <h2 style='margin:0; color: #ff5252 !important;'>₩ {total_out_amt:,.0f}</h2>
-            </div>""", unsafe_allow_html=True)
-        with m3:
-            st.markdown(f"""<div class='metric-card' style='border-left-color: #4e8cff;'>
-                <p style='margin:0; font-size: 0.9rem; color: #aeb9cc;'>DATA COUNT</p>
-                <h2 style='margin:0; color: #4e8cff !important;'>{len(f_df)}건</h2>
-            </div>""", unsafe_allow_html=True)
-
-        # --- 📈 거래처 실적 그래프 섹션 ---
-        if search_company and not f_df.empty:
-            st.markdown(f"### 📈 '{search_company}' 월별 실적 분석")
-            
-            # 전체 데이터에서 해당 거래처 데이터만 다시 필터링 (조회 기간에 상관없이 흐름을 보기 위함)
-            chart_df = df[df['incom'].str.contains(search_company, case=False) | df['outcom'].str.contains(search_company, case=False)].copy()
-            
-            if not chart_df.empty:
-                # 월별 그룹화
-                monthly_stats = chart_df.groupby('year_month')[['in_total', 'out_total']].sum().sort_index()
-                
-                # 컬럼명 변경 (그래프 범례용)
-                monthly_stats.columns = ['매입금액(IN)', '매출금액(OUT)']
-                
-                # 막대 그래프 표시
-                st.bar_chart(monthly_stats)
-            else:
-                st.info("그래프를 표시할 데이터가 부족합니다.")
-
-        # --- 결과 테이블 ---
+        # 표시용 데이터프레임 생성
         display_df = f_df.drop(columns=['year', 'month', 'year_month', 'inq_val', 'inprice_val', 'outq_val', 'outprice_val', 'in_total', 'out_total']).sort_values(by=date_col, ascending=False)
         
         rename_dict = {
@@ -258,6 +227,42 @@ try:
         }
         display_df = display_df.rename(columns=rename_dict)
 
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
+            st.markdown(f"""<div class='metric-card' style='border-left-color: #00c853;'>
+                <p style='margin:0; font-size: 0.9rem; color: #aeb9cc;'>TOTAL IN AMT</p>
+                <h2 style='margin:0; color: #00c853 !important;'>₩ {total_in_amt:,.0f}</h2>
+            </div>""", unsafe_allow_html=True)
+        with m2:
+            st.markdown(f"""<div class='metric-card' style='border-left-color: #ff5252;'>
+                <p style='margin:0; font-size: 0.9rem; color: #aeb9cc;'>TOTAL OUT AMT</p>
+                <h2 style='margin:0; color: #ff5252 !important;'>₩ {total_out_amt:,.0f}</h2>
+            </div>""", unsafe_allow_html=True)
+        with m3:
+            st.markdown(f"""<div class='metric-card' style='border-left-color: #4e8cff;'>
+                <p style='margin:0; font-size: 0.9rem; color: #aeb9cc;'>DATA COUNT</p>
+                <h2 style='margin:0; color: #4e8cff !important;'>{data_count}건</h2>
+            </div>""", unsafe_allow_html=True)
+        with m4:
+            # 💡 행의 갯수로 수정 완료
+            st.markdown(f"""<div class='metric-card' style='border-left-color: #9c27b0;'>
+                <p style='margin:0; font-size: 0.9rem; color: #aeb9cc;'>ROW COUNT (행 수)</p>
+                <h2 style='margin:0; color: #9c27b0 !important;'>{data_count}줄</h2>
+            </div>""", unsafe_allow_html=True)
+
+        # --- 📈 거래처 실적 그래프 섹션 ---
+        if search_company and not f_df.empty:
+            st.markdown(f"### 📈 '{search_company}' 월별 실적 분석")
+            chart_df = df[df['incom'].str.contains(search_company, case=False) | df['outcom'].str.contains(search_company, case=False)].copy()
+            
+            if not chart_df.empty:
+                monthly_stats = chart_df.groupby('year_month')[['in_total', 'out_total']].sum().sort_index()
+                monthly_stats.columns = ['매입금액(IN)', '매출금액(OUT)']
+                st.bar_chart(monthly_stats)
+            else:
+                st.info("그래프를 표시할 데이터가 부족합니다.")
+
+        # --- 결과 테이블 ---
         st.markdown("<br>", unsafe_allow_html=True)
         st.dataframe(display_df, use_container_width=True, hide_index=True)
 
