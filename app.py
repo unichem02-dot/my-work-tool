@@ -318,13 +318,13 @@ st.markdown("""
         button { padding: 0.5rem 0.8rem !important; }
     }
 
-    /* ★ 12. 컨텐츠(행) 마우스 오버 시 '단어-문장' 열만 30% 확대 (스무스 효과) ★ */
+    /* ★ 12. 컨텐츠(행) 마우스 오버 시 '단어-문장' 열만 10% 확대 (스무스 효과) ★ */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) .word-text {
         transition: transform 0.2s ease !important;
         transform-origin: left center !important; /* 좌측 기준 확대 (글자가 왼쪽으로 넘어가지 않음) */
     }
     div[data-testid="stHorizontalBlock"]:has(.row-marker):hover .word-text {
-        transform: scale(1.3) !important; /* 30% 확대 */
+        transform: scale(1.1) !important; /* 10% 확대 */
         z-index: 10 !important; /* 커진 글씨가 다른 요소를 가리지 않도록 최상단 배치 */
     }
     </style>
