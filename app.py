@@ -59,6 +59,11 @@ st.markdown("""
         background-color: #FFFFFF !important;
         color: #000000 !important;
     }
+    
+    /* ★ 비밀번호 입력창 눈알 아이콘(비밀번호 보기 버튼) 제거 ★ */
+    div[data-testid="stTextInput"] button {
+        display: none !important;
+    }
 
     /* 3. 컨텐츠 행(Row) 호버 효과 */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
@@ -332,7 +337,6 @@ col_auth, col_title, col_date, col_num_combined, col_num_result = st.columns([1.
 with col_auth:
     if not st.session_state.authenticated:
         with st.expander("🔐 LOGIN"):
-            # f-string 중괄호 오류 수정을 위해 JS 코드 내 중괄호를 {{ }}로 처리
             if st.text_input("Password", type="password", key="login_pass") == LOGIN_PASSWORD:
                 st.session_state.authenticated = True
                 st.query_params["auth"] = "true"
@@ -344,7 +348,6 @@ with col_auth:
             st.rerun()
 
 with col_title:
-    # TOmBOy94 English로 변경
     st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.2rem, 2.2vw, 2.2rem);'>TOmBOy94 English</h1>", unsafe_allow_html=True)
 
 with col_date:
@@ -427,7 +430,7 @@ try:
     if 'curr_p' not in st.session_state: st.session_state.curr_p = 1
     curr_p = st.session_state.curr_p
 
-    # JS 숫자 포맷터 연동 (중괄호 이스케이프 수정)
+    # JS 숫자 포맷터 연동
     components.html(f"""
         <style>body {{ margin:0; padding:0; background:transparent!important; overflow:hidden; }}</style>
         <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:5px; font-family:sans-serif;">
