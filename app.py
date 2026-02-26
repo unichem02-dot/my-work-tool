@@ -54,10 +54,10 @@ st.markdown("""
         display: none !important;
     }
 
-    /* 4. 컨텐츠 행(Row) 호버 효과 및 간격 좁게 조정 ★ */
+    /* 4. 컨텐츠 행(Row) 호버 효과 및 내부 여백 0으로 조정 ★ */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 6px 12px !important; /* 상하 간격 대폭 축소 */
+        padding: 0px !important; /* 내부 여백 0으로 설정 */
         border-radius: 8px;
         margin-bottom: 0px !important;
         display: flex !important;
@@ -115,7 +115,7 @@ st.markdown("""
         color: #224343 !important;
     }
 
-    /* 6. 버튼 스타일 */
+    /* 6. 버튼 스타일 (모바일 글자 넘침 방지를 위해 폰트 하한선 조정) */
     button, div.stDownloadButton > button {
         border-radius: 50px !important;
         padding: 0.5rem 1.2rem !important;
@@ -223,11 +223,11 @@ st.markdown("""
         flex: 0 1 auto !important;
     }
     
-    /* ★ 결과물 텍스트 스타일 (크기 20% 축소) ★ */
+    /* 결과물 텍스트 스타일 (크기 20% 축소) */
     .num-result { 
         color: #FFD700 !important; 
         font-weight: bold; 
-        font-size: clamp(1.6rem, 2.2vw, 2.4rem) !important; /* 기존 clamp(2.0rem, 2.8vw, 3.0rem) 에서 축소 */
+        font-size: clamp(1.6rem, 2.2vw, 2.4rem) !important; 
         margin: 0 !important;
         line-height: 1.1;
         white-space: nowrap !important;
@@ -246,7 +246,7 @@ st.markdown("""
         margin-top: 5px !important; 
     }
     div[data-testid="stHorizontalBlock"]:has(.num-result) button p {
-        font-size: 1.2rem !important; /* 결과물 텍스트 축소에 맞춰 크기 축소 */
+        font-size: 1.2rem !important; 
         margin: 0 !important;
         color: rgba(255, 255, 255, 0.6) !important;
         transition: transform 0.2s ease, color 0.2s ease !important;
@@ -266,7 +266,7 @@ st.markdown("""
         div[data-testid="stHorizontalBlock"]:has(.row-marker) {
             display: flex !important;
             flex-direction: row !important;
-            padding: 4px 8px !important; /* 모바일에서도 상하 패딩 대폭 축소 */
+            padding: 0px !important; /* 모바일에서도 내부 여백 0으로 설정 */
             gap: 8px !important;
         }
 
@@ -307,7 +307,7 @@ def load_dataframe(sheet):
         except: time.sleep(1)
     raise Exception("데이터 로드 실패")
 
-# --- [다이얼로그 설정] ---
+# --- [다이얼로그 설정 (NameError 해결: 파라미터 간소화)] ---
 @st.dialog("새 항목 추가")
 def add_dialog(unique_cats):
     with st.form("add_form", clear_on_submit=True):
@@ -492,7 +492,6 @@ else:
         cb_cols = [1.5, 1.5, 1.4, 2.6, 1.5] if st.session_state.authenticated else [1.5, 1.4, 4.1]
         cb = st.columns(cb_cols)
         
-        # 전체검색 창 라벨에 🔍 이모지 추가
         cb[0].text_input("🔍", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...")
         
         if st.session_state.authenticated and cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(unique_cats)
@@ -521,7 +520,6 @@ else:
         total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
         curr_p = st.session_state.curr_p if 'curr_p' in st.session_state else 1
         
-        # JS: setInterval을 활용하여 Streamlit 렌더링 중에도 영구적으로 이벤트가 바인딩되도록 개선된 실시간 콤마 로직
         components.html(f"""
             <style>body {{ margin:0; padding:0; background:transparent!important; overflow:hidden; }}</style>
             <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:5px; font-family:sans-serif;">
