@@ -194,20 +194,27 @@ st.markdown("""
     }
     .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -25px; margin-bottom: 5px; }
 
-    /* ★ 숫자 지우기(x) 버튼 전용 초소형 스타일 ★ */
+    /* ★ 숫자 지우기(❌) 버튼: 테두리와 배경을 없애 이모지만 보이게 설정 ★ */
     .small-button div.stButton > button {
-        width: 24px !important;
-        height: 24px !important;
-        min-width: 24px !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
         padding: 0 !important;
-        font-size: 0.7rem !important;
-        border-radius: 4px !important;
-        margin-top: 32px !important; /* 입력창 라벨 높이와 맞춤 */
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        width: auto !important;
+        height: auto !important;
+        min-width: unset !important;
+        margin-top: 38px !important; /* 입력창 높이와 정렬 */
+    }
+    .small-button div.stButton > button:hover, 
+    .small-button div.stButton > button:active, 
+    .small-button div.stButton > button:focus {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
     }
     .small-button div.stButton > button p {
-        font-size: 0.8rem !important;
-        color: rgba(255, 255, 255, 0.8) !important;
+        font-size: 1.1rem !important; /* 이모지 크기 조절 */
+        margin: 0 !important;
     }
 
     /* 10. 모바일 레이아웃 강제 교정 */
@@ -385,9 +392,9 @@ else:
         with num_in_col:
             st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
         with num_clear_col:
-            # 커스텀 CSS 클래스를 적용하여 버튼 크기 축소 및 도움말 창 제거
+            # ❌ 이모지로 변경하고 버튼의 테두리/배경을 제거하는 클래스 적용
             st.markdown('<div class="small-button">', unsafe_allow_html=True)
-            st.button("×", key="btn_clear_num", on_click=clear_num_input)
+            st.button("❌", key="btn_clear_num", on_click=clear_num_input)
             st.markdown('</div>', unsafe_allow_html=True)
        
     with col_num_result:
