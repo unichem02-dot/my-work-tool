@@ -57,38 +57,36 @@ st.markdown("""
     /* ★ 4. 컨텐츠 행(Row) 호버 효과 - 구분선 통합 및 꽉 찬 배경 ★ */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 10px 10px !important; /* 호버 시 위아래 공간이 꽉 차보이도록 최적의 패딩 복구 */
+        padding: 6px 10px !important; /* 상하 공간 축소 및 균형 맞춤 */
         border-radius: 0px !important; /* 점선과 모서리가 어긋나지 않게 직각 처리 */
         margin-bottom: 0px !important;
-        border-bottom: 1px dotted rgba(255, 255, 255, 0.2) !important; /* 별도 점선 요소 대신 테두리로 통합! */
+        border-bottom: 1px dotted rgba(255, 255, 255, 0.2) !important; /* 테두리로 구분선 통합 */
         width: 100% !important; 
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
-        align-items: center !important;
+        align-items: center !important; /* 전체 행 수직 중앙 정렬 */
     }
     div[data-testid="stHorizontalBlock"]:has(.row-marker):hover {
         background-color: rgba(26, 47, 47, 0.9) !important;
     }
     
-    /* ★ 컨텐츠 내부 텍스트 완벽 수직 중앙 정렬 강제화 ★ */
+    /* ★ 컨텐츠 내부 텍스트 완벽 수직 중앙 정렬 강제화 (쳐짐 현상 해결) ★ */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) > div[data-testid="column"] {
         display: flex !important;
-        flex-direction: column !important;
-        justify-content: center !important; /* 컬럼 내부 요소를 수직 중앙으로 */
+        align-items: center !important; /* 컬럼 내용 수직 중앙 정렬 */
+        padding: 0 !important;
+        margin: 0 !important;
     }
-    div[data-testid="stHorizontalBlock"]:has(.row-marker) div[data-testid="stMarkdownContainer"],
+    div[data-testid="stHorizontalBlock"]:has(.row-marker) div.element-container,
+    div[data-testid="stHorizontalBlock"]:has(.row-marker) div.stMarkdown,
     div[data-testid="stHorizontalBlock"]:has(.row-marker) p {
         display: flex !important;
-        align-items: center !important; /* p태그 및 마크다운 컨테이너 텍스트 중앙 정렬 */
+        align-items: center !important; /* 텍스트 수직 중앙 정렬 */
         margin: 0 !important;
         padding: 0 !important;
-        line-height: normal !important; /* 줄간격으로 인한 쳐짐 현상 제거 */
-    }
-    div[data-testid="stHorizontalBlock"]:has(.row-marker) div.element-container {
-        margin-bottom: 0 !important;
-        display: flex !important;
-        align-items: center !important;
+        line-height: 1 !important; /* 숨겨진 위아래 줄간격 여백 제거 */
+        width: 100% !important;
     }
 
     /* 5. 상단 분류 리스트(Radio) 알약 형태 */
@@ -171,19 +169,25 @@ st.markdown("""
         background-color: transparent !important;
         border: none !important;
         padding: 0 !important;
+        margin: 0 !important;
+        min-height: 0 !important;
         min-width: 40px !important;
         box-shadow: none !important;
+        display: flex !important;
+        align-items: center !important;
     }
     button[kind="tertiary"] p {
         font-size: 1.6rem !important;
         margin: 0 !important;
+        padding: 0 !important;
+        line-height: 1 !important;
         transition: transform 0.2s ease !important;
     }
     button[kind="tertiary"]:hover p {
         transform: scale(1.2) !important;
     }
 
-    /* 8. 헤더 라벨 및 텍스트 시인성 (인라인 플렉스로 중앙정렬 최적화) */
+    /* 8. 헤더 라벨 및 텍스트 시인성 */
     .header-label { 
         font-size: clamp(1.0rem, 1.4vw, 1.5rem) !important; 
         font-weight: 800 !important; 
@@ -191,9 +195,9 @@ st.markdown("""
         white-space: nowrap !important;
     }
    
-    .word-text { font-size: 1.8em; font-weight: bold; display: inline-flex !important; align-items: center !important; color: #FFD700 !important; word-break: keep-all; }
-    .mean-text { font-size: 1.3em; display: inline-flex !important; align-items: center !important; word-break: keep-all; }
-    .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; display: inline-flex !important; align-items: center !important; }
+    .word-text { font-size: 1.8em; font-weight: bold; color: #FFD700 !important; word-break: keep-all; line-height: 1 !important; }
+    .mean-text { font-size: 1.3em; word-break: keep-all; line-height: 1 !important; }
+    .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; line-height: 1 !important; }
    
     /* 9. Num.ENG 레이아웃 최적화 및 가로 크기 제한 */
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
@@ -285,7 +289,7 @@ st.markdown("""
         div[data-testid="stHorizontalBlock"]:has(.row-marker) {
             display: flex !important;
             flex-direction: row !important;
-            padding: 8px 8px !important;
+            padding: 4px 8px !important;
             width: 100% !important;
             gap: 8px !important;
         }
