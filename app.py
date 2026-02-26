@@ -286,6 +286,10 @@ st.markdown("""
         div[data-testid="stRadio"] label p {
             font-size: 1.2rem !important;
         }
+        /* ★ 추가: 모바일 제어 버튼 텍스트 40% 확대 ★ */
+        button p, div.stDownloadButton > button p {
+            font-size: 1.4rem !important;
+        }
     }
     </style>
     """, unsafe_allow_html=True)
