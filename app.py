@@ -186,35 +186,56 @@ st.markdown("""
         min-width: 80px !important;
     }
    
-    /* ★ Num.ENG 결과물 텍스트: 노란색 강조 및 2배 확대 적용 ★ */
+    /* ★ 10. Num.ENG 결과물과 X 버튼 한 줄 배치 (Flexbox) ★ */
+    div[data-testid="stHorizontalBlock"]:has(.num-result) {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 15px !important; /* 텍스트와 버튼 사이 간격 */
+        padding-top: 5px !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.num-result) > div {
+        width: auto !important; /* 컬럼 너비를 글자 길이에 맞춤 */
+        flex: 0 1 auto !important;
+    }
+    
+    /* 결과물 텍스트 스타일 (노란색) */
     .num-result { 
-        color: #FFD700 !important; /* 노란색 강제 적용 */
+        color: #FFD700 !important; 
         font-weight: bold; 
         font-size: clamp(2.0rem, 2.8vw, 3.0rem) !important; 
         margin: 0 !important;
         line-height: 1.1;
-        display: inline-block;
+        white-space: nowrap !important;
     }
-    .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -25px; margin-bottom: 5px; }
-
-    /* 숫자 지우기(❌) 버튼 전용 스타일 */
-    .small-button div.stButton > button {
+    
+    /* ❌ 버튼 전용 스타일 */
+    div[data-testid="stHorizontalBlock"]:has(.num-result) button {
         background: transparent !important;
         border: none !important;
         box-shadow: none !important;
         padding: 0 !important;
+        margin: 0 !important;
         width: auto !important;
         height: auto !important;
         min-width: unset !important;
-        margin-left: 10px !important; /* 텍스트와 버튼 사이 간격 */
-        margin-top: 5px !important; /* 높이 미세 조정 */
+        margin-top: 5px !important; /* 수직 높이 미세 조정 */
     }
-    .small-button div.stButton > button p {
-        font-size: 1.3rem !important; 
+    div[data-testid="stHorizontalBlock"]:has(.num-result) button p {
+        font-size: 1.5rem !important; 
         margin: 0 !important;
+        color: rgba(255, 255, 255, 0.6) !important;
+        transition: transform 0.2s ease, color 0.2s ease !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.num-result) button:hover p {
+        color: rgba(255, 255, 255, 1.0) !important;
+        transform: scale(1.2) !important;
     }
 
-    /* 10. 모바일 레이아웃 강제 교정 */
+    .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -25px; margin-bottom: 5px; }
+
+    /* 11. 모바일 레이아웃 강제 교정 */
     @media screen and (max-width: 768px) {
         h1 { font-size: clamp(1.6rem, 2.5vw, 2.5rem) !important; }
         
@@ -383,20 +404,17 @@ else:
     with col_num_combined:
         st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
 
-    # ★ 2-1-2. Num.ENG 결과물(노란색) + 지우기(❌) 버튼 ★
+    # ★ 2-1-2. Num.ENG 결과물(노란색) + 지우기(❌) 버튼 (바로 옆에 밀착) ★
     if st.session_state.num_input:
         clean_num = st.session_state.num_input.replace(",", "").strip()
         if clean_num.isdigit():
             eng_text = num_to_eng(int(clean_num)).capitalize()
-            # 결과물 텍스트와 ❌ 버튼을 자연스럽게 한 줄로 배치
-            res_row = st.columns([0.9, 0.1])
-            with res_row[0]:
-                st.markdown(f"<div><span class='num-result'>{eng_text}</span>", unsafe_allow_html=True)
-                # ❌ 버튼을 텍스트 바로 뒤에 배치하기 위해 컨테이너 내부에서 처리
-                st.markdown('<span class="small-button" style="display:inline-block; vertical-align:middle;">', unsafe_allow_html=True)
-                if st.button("❌", key="btn_clear_res_inline", on_click=clear_num_input):
-                    pass
-                st.markdown('</span></div>', unsafe_allow_html=True)
+            # 컨테이너를 생성하여 내부 요소들을 flexbox(CSS)로 제어
+            res_col1, res_col2 = st.columns([1, 1])
+            with res_col1:
+                st.markdown(f"<p class='num-result'>{eng_text}</p>", unsafe_allow_html=True)
+            with res_col2:
+                st.button("❌", key="btn_clear_res_inline", on_click=clear_num_input, help="")
         else:
             st.markdown("<p class='num-result' style='color:#FF9999!important; font-size:1.5rem!important;'>⚠️ 숫자만 입력 가능</p>", unsafe_allow_html=True)
 
@@ -469,6 +487,7 @@ else:
         total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
         curr_p = st.session_state.curr_p if 'curr_p' in st.session_state else 1
         
+        # ★ JS: 실시간 3자리 콤마 자동 입력 기능 강화 ★
         components.html(f"""
             <style>body {{ margin:0; padding:0; background:transparent!important; overflow:hidden; }}</style>
             <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:5px; font-family:sans-serif;">
@@ -477,14 +496,29 @@ else:
             </div>
             <script>
             const doc = window.parent.document;
-            if (!doc.formatListenerAdded) {{
+            if (!doc.liveCommaAdded) {{
                 doc.body.addEventListener('input', function(e) {{
-                    if (e.target && e.target.getAttribute('aria-label') === 'Num.ENG :') {{
-                        let rawVal = e.target.value.replace(/[^0-9]/g, '');
-                        if (rawVal) e.target.value = Number(rawVal).toLocaleString('en-US'); else e.target.value = '';
+                    let label = e.target.getAttribute('aria-label');
+                    if (label && label.includes('Num.ENG')) {{
+                        let val = e.target.value;
+                        let numStr = val.replace(/[^0-9]/g, '');
+                        if (numStr) {{
+                            let formatted = Number(numStr).toLocaleString('en-US');
+                            if (val !== formatted) {{
+                                e.target.value = formatted;
+                                let tracker = e.target._valueTracker;
+                                if (tracker) tracker.setValue(formatted);
+                                e.target.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                            }}
+                        }} else if (val !== '') {{
+                            e.target.value = '';
+                            let tracker = e.target._valueTracker;
+                            if (tracker) tracker.setValue('');
+                            e.target.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                        }}
                     }}
-                }});
-                doc.formatListenerAdded = true;
+                }}, true);
+                doc.liveCommaAdded = true;
             }}
             </script>
         """, height=35)
