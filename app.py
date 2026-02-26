@@ -186,11 +186,13 @@ st.markdown("""
         min-width: 80px !important;
     }
    
-    /* ★ Num.ENG 결과물 텍스트 크기 2배 확대 적용 ★ */
+    /* ★ Num.ENG 결과물 텍스트 크기 2배 확대 및 정렬 최적화 ★ */
     .num-result { 
         color: #FFD700; 
         font-weight: bold; 
         font-size: clamp(2.0rem, 2.8vw, 3.0rem) !important; 
+        margin: 0 !important;
+        line-height: 1.2;
     }
     .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -25px; margin-bottom: 5px; }
 
@@ -203,17 +205,10 @@ st.markdown("""
         width: auto !important;
         height: auto !important;
         min-width: unset !important;
-        margin-top: 38px !important; /* 입력창 높이와 정렬 */
-    }
-    .small-button div.stButton > button:hover, 
-    .small-button div.stButton > button:active, 
-    .small-button div.stButton > button:focus {
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
+        margin-top: 38px !important; 
     }
     .small-button div.stButton > button p {
-        font-size: 1.1rem !important; /* 이모지 크기 조절 */
+        font-size: 1.1rem !important; 
         margin: 0 !important;
     }
 
@@ -322,7 +317,7 @@ def format_num_input():
     st.session_state.num_input = f"{int(cleaned):,}" if cleaned else ""
 
 def clear_num_input():
-    """숫자 입력창을 초기화하는 콜백 함수 (Exception 방지용)"""
+    """숫자 입력창을 초기화하는 콜백 함수"""
     st.session_state.num_input = ""
 
 def handle_search():
@@ -348,15 +343,13 @@ def num_to_eng(num):
 
 # --- [메인 로직] ---
 
-# ★ 1. 로그인 전용 화면 (엔터키 지원을 위해 st.form 사용) ★
+# ★ 1. 로그인 전용 화면 ★
 if not st.session_state.authenticated and st.session_state.logging_in:
     st.write("## 🔐 Security Login")
     with st.form("login_form", clear_on_submit=False):
         st.markdown("<div style='height: 100px;'></div>", unsafe_allow_html=True)
         pwd = st.text_input("Enter Password", type="password", placeholder="비밀번호를 입력하세요...")
-        
         submit = st.form_submit_button("✅ LOGIN", use_container_width=True, type="primary")
-        
         if submit:
             if pwd == LOGIN_PASSWORD:
                 st.session_state.authenticated = True
@@ -365,15 +358,14 @@ if not st.session_state.authenticated and st.session_state.logging_in:
                 st.rerun()
             else:
                 st.error("❌ 비밀번호가 틀렸습니다.")
-    
     if st.button("🔙 CANCEL", use_container_width=True):
         st.session_state.logging_in = False
         st.rerun()
 else:
     # ★ 2. 메인 앱 화면 ★
     
-    # 2-1. [상단 줄] LOGIN/OUT + Spacer + Num.ENG 입력 + Num.ENG 결과
-    col_auth, col_spacer, col_num_combined, col_num_result = st.columns([1.4, 0.4, 3.2, 5.0])
+    # 2-1. [상단 줄] LOGIN/OUT + Spacer + Num.ENG 입력
+    col_auth, col_spacer, col_num_combined = st.columns([1.4, 0.4, 8.2])
     
     with col_auth:
         if not st.session_state.authenticated:
@@ -387,25 +379,25 @@ else:
                 st.rerun()
 
     with col_num_combined:
-        # 입력창과 지우기 버튼을 위한 내부 컬럼 분할
-        num_in_col, num_clear_col = st.columns([0.85, 0.15])
+        # 입력창과 지우기 버튼 내부 분할
+        num_in_col, num_clear_col = st.columns([0.9, 0.1])
         with num_in_col:
             st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
         with num_clear_col:
-            # ★ 입력창에 텍스트가 있을 때만 ❌ 버튼 표시 ★
             if st.session_state.num_input:
                 st.markdown('<div class="small-button">', unsafe_allow_html=True)
                 st.button("❌", key="btn_clear_num", on_click=clear_num_input)
                 st.markdown('</div>', unsafe_allow_html=True)
-       
-    with col_num_result:
-        if st.session_state.num_input:
-            clean_num = st.session_state.num_input.replace(",", "").strip()
-            if clean_num.isdigit():
-                eng_text = num_to_eng(int(clean_num)).capitalize()
-                st.markdown(f"<div style='padding-top:2px;'><p class='num-result'>📝 {eng_text}</p></div>", unsafe_allow_html=True)
-            else:
-                st.markdown("<div style='padding-top:2px;'><p class='num-result' style='color:#FF9999;'>⚠️ 숫자만</p></div>", unsafe_allow_html=True)
+
+    # ★ Num.ENG 결과물 전용 행 (다음 칸 표시 및 이모지 삭제) ★
+    if st.session_state.num_input:
+        clean_num = st.session_state.num_input.replace(",", "").strip()
+        if clean_num.isdigit():
+            eng_text = num_to_eng(int(clean_num)).capitalize()
+            # 이모지 삭제 후 다음 행에 단독 표시
+            st.markdown(f"<p class='num-result'>{eng_text}</p>", unsafe_allow_html=True)
+        else:
+            st.markdown("<p class='num-result' style='color:#FF9999; font-size:1.5rem!important;'>⚠️ 숫자만 입력 가능</p>", unsafe_allow_html=True)
 
     # 오늘 날짜 정보
     kst = timezone(timedelta(hours=9))
@@ -451,21 +443,18 @@ else:
         cb_cols = [1.5, 1.5, 1.4, 2.6, 1.5] if st.session_state.authenticated else [1.5, 1.4, 4.1]
         cb = st.columns(cb_cols)
         cb[0].text_input("검색", key="search_input", on_change=handle_search, placeholder="전체 검색 후 엔터...", label_visibility="collapsed")
-        
         if st.session_state.authenticated and cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(sheet, df)
         
         btn_idx = 2 if st.session_state.authenticated else 1
         btn_text = "🔄 전체모드" if st.session_state.is_simple else "✨ 심플모드"
-        btn_type = "secondary" if st.session_state.is_simple else "primary"
-        if cb[btn_idx].button(btn_text, type=btn_type, use_container_width=True):
+        if cb[btn_idx].button(btn_text, type="primary" if not st.session_state.is_simple else "secondary", use_container_width=True):
             st.session_state.is_simple = not st.session_state.is_simple; st.rerun()
 
+        # 데이터 필터링 및 정렬
         is_simple = st.session_state.is_simple
         search = st.session_state.active_search
         d_df = df.copy()
-       
-        if search:
-            d_df = d_df[d_df['단어-문장'].str.contains(search, case=False, na=False)]
+        if search: d_df = d_df[d_df['단어-문장'].str.contains(search, case=False, na=False)]
         else:
             if sel_cat == "🔀 랜덤 10":
                 if st.session_state.current_cat != "🔀 랜덤 10" or 'random_df' not in st.session_state:
@@ -478,14 +467,10 @@ else:
         elif st.session_state.sort_order == 'desc': d_df = d_df.sort_values(by='단어-문장', ascending=False)
         else: d_df = d_df.iloc[::-1]
 
-        if st.session_state.authenticated:
-            cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
-
+        # 정보 표시 및 실시간 콤마 JS
         total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
-        if 'curr_p' not in st.session_state: st.session_state.curr_p = 1
-        curr_p = st.session_state.curr_p
-
-        # JS 숫자 포맷터 연동
+        curr_p = st.session_state.curr_p if 'curr_p' in st.session_state else 1
+        
         components.html(f"""
             <style>body {{ margin:0; padding:0; background:transparent!important; overflow:hidden; }}</style>
             <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:5px; font-family:sans-serif;">
@@ -506,7 +491,7 @@ else:
             </script>
         """, height=35)
        
-        # 리스트 헤더 및 본문 출력
+        # 리스트 출력
         ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
         labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
         h_cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
@@ -531,16 +516,14 @@ else:
             elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(idx, row, sheet, df)
             st.markdown("<div class='row-divider'></div>", unsafe_allow_html=True)
 
-        # 페이지네이션
         if pages > 1:
             p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
-            if p_cols[1].button("◀ 이전", disabled=(curr_p == 1), use_container_width=True): st.session_state.curr_p -= 1; st.rerun()
+            if p_cols[1].button("◀ 이전", disabled=(curr_p == 1)): st.session_state.curr_p -= 1; st.rerun()
             p_cols[2].markdown(f"<div style='text-align:center; padding:10px; color:#FFD700; font-weight:bold;'>Page {curr_p} / {pages}</div>", unsafe_allow_html=True)
-            if p_cols[3].button("다음 ▶", disabled=(curr_p == pages), use_container_width=True): st.session_state.curr_p += 1; st.rerun()
+            if p_cols[3].button("다음 ▶", disabled=(curr_p == pages)): st.session_state.curr_p += 1; st.rerun()
 
     except Exception as e: st.error(f"오류 발생: {e}")
 
-    # --- [푸터] ---
     current_year = datetime.now(timezone(timedelta(hours=9))).year
     st.markdown(f"""
         <div style='text-align: center; margin-top: 30px; margin-bottom: 20px; padding-top: 15px; border-top: 1px dotted rgba(255, 255, 255, 0.2);'>
