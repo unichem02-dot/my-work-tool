@@ -37,9 +37,13 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 2. 글자색 화이트 강제화 */
+    /* 2. 글자색 화이트 강제화 및 타이틀 하단 여백 제거 */
     h1, h2, h3, h4, h5, h6, p, span, label, summary, b, strong {
         color: #FFFFFF !important;
+    }
+    h1 {
+        margin-bottom: 0px !important;
+        padding-bottom: 0px !important;
     }
     
     /* 팝업창(Dialog) 제목 */
@@ -109,12 +113,12 @@ st.markdown("""
         width: 100% !important;
     }
 
-    /* 5. 상단 분류 리스트(Radio) 알약 형태 */
+    /* 5. 상단 분류 리스트(Radio) 알약 형태 및 상단 간격 제거 */
     div[data-testid="stRadio"] > div[role="radiogroup"] {
         flex-direction: row !important;
         flex-wrap: wrap !important;
         gap: 10px 12px !important;
-        padding-top: 10px !important;
+        padding-top: 0px !important; /* 상단 여백 제거 */
         padding-bottom: 5px !important;
     }
    
@@ -219,7 +223,7 @@ st.markdown("""
         z-index: 10 !important;
     }
 
-    /* 9. Num.ENG 및 검색창 레이아웃 (공통 일렬 정렬) */
+    /* 9. Num.ENG 및 검색창 레이아웃 */
     div[data-testid="stTextInput"]:has(label p) {
         display: flex !important;
         flex-direction: row !important;
@@ -227,19 +231,16 @@ st.markdown("""
         gap: 8px !important;
     }
     
-    /* 레이블(아이콘/텍스트) 여백 제거 */
     div[data-testid="stTextInput"]:has(label p) label {
         margin-bottom: 0 !important;
         margin-top: 5px !important;
         min-width: fit-content !important;
     }
 
-    /* 검색창 전용 스타일 보정 */
     div[data-testid="stTextInput"]:has(label p):not(:has(input[aria-label="Num.ENG :"])) {
         width: 100% !important;
     }
 
-    /* Num.ENG 전용 스타일 보정 */
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
         max-width: 350px !important; 
     }
@@ -269,7 +270,6 @@ st.markdown("""
         white-space: nowrap !important;
     }
 
-    /* ❌ 버튼 위치 및 크기 세부 조정 */
     div[data-testid="stHorizontalBlock"]:has(.num-result) button {
         background: transparent !important;
         border: none !important;
@@ -286,12 +286,11 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# ★ [심플모드 + 모바일 전용 40% 확대 CSS 추가] ★
+# [심플모드 + 모바일 전용 40% 확대 CSS 추가]
 if st.session_state.is_simple:
     st.markdown("""
         <style>
         @media screen and (max-width: 768px) {
-            /* 기존 대비 약 40% 확대 계산값 적용 */
             .word-text { 
                 font-size: 1.7rem !important; 
                 line-height: 1.3 !important;
@@ -468,7 +467,7 @@ else:
         components.html(f"""
             <style>
                 body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: visible; }}
-                .date-wrapper {{ display: flex; flex-wrap: wrap; align-items: center; gap: clamp(5px, 1.5vw, 15px); padding-top: 15px; font-family: sans-serif; width: 100%; }}
+                .date-wrapper {{ display: flex; flex-wrap: wrap; align-items: center; gap: clamp(5px, 1.5vw, 15px); padding-top: 5px; font-family: sans-serif; width: 100%; }}
                 .date-text {{ color: #FFFFFF; font-weight: bold; font-size: clamp(1.1rem, 2.6vw, 2.6rem); white-space: nowrap; }}
                 .copy-btn {{ background-color: transparent; border: 1px solid rgba(255,255,255,0.5); color: #FFF; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: clamp(0.7rem, 1vw, 1.1rem); font-weight:bold; transition: 0.3s; white-space: nowrap; }}
                 .copy-btn:hover {{ background-color: rgba(255,255,255,0.2) !important; }}
@@ -484,7 +483,7 @@ else:
                 setTimeout(function(){{ btn.innerHTML = "📋 복사"; }}, 1500);
             }}
             </script>
-        """, height=130)
+        """, height=90) # 높이 130 -> 90 축소
 
     try:
         sheet = get_sheet(); df = load_dataframe(sheet)
