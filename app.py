@@ -72,6 +72,7 @@ st.markdown("""
         flex-direction: row !important;
         flex-wrap: nowrap !important;
         align-items: center !important; 
+        overflow: visible !important; /* 글자 확대 시 잘림 방지 */
     }
     div[data-testid="stHorizontalBlock"]:has(.row-marker):hover {
         background-color: rgba(26, 47, 47, 0.9) !important;
@@ -84,6 +85,7 @@ st.markdown("""
         justify-content: center !important; 
         padding: 0 !important;
         margin: 0 !important;
+        overflow: visible !important;
     }
     
     /* p 태그에 강제 부여되었던 flex 해제, 블록 단위로 정상 줄간격 확보 */
@@ -312,6 +314,16 @@ st.markdown("""
         .mean-text { font-size: 0.9rem !important; }
         
         button { padding: 0.5rem 0.8rem !important; }
+    }
+
+    /* ★ 12. 컨텐츠(행) 마우스 오버 시 글자 30% 확대 (스무스 효과) ★ */
+    div[data-testid="stHorizontalBlock"]:has(.row-marker) div[data-testid="stMarkdownContainer"] {
+        transition: transform 0.2s ease !important;
+        transform-origin: left center !important; /* 좌측 기준 확대 (글자가 왼쪽으로 넘어가지 않음) */
+    }
+    div[data-testid="stHorizontalBlock"]:has(.row-marker):hover div[data-testid="stMarkdownContainer"] {
+        transform: scale(1.3) !important; /* 30% 확대 */
+        z-index: 10 !important; /* 커진 글씨가 다른 요소를 가리지 않도록 최상단 배치 */
     }
     </style>
     """, unsafe_allow_html=True)
