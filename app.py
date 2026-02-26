@@ -308,7 +308,7 @@ if st.session_state.is_simple:
     """, unsafe_allow_html=True)
 
 # --- [보안 설정 및 Google Sheets 연결] ---
-LOGIN_PASSWORD = "0315"
+LOGIN_PASSWORD = st.secrets["tom_password"]
 
 @st.cache_resource
 def init_connection():
