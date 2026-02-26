@@ -54,7 +54,7 @@ st.markdown("""
         display: none !important;
     }
 
-    /* 4. 컨텐츠 행(Row) 호버 효과 및 내부 여백 0으로 조정 ★ */
+    /* 4. 컨텐츠 행(Row) 호버 효과 및 내부 여백 0으로 조정 */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
         padding: 0px !important; /* 내부 여백 0으로 설정 */
@@ -115,7 +115,7 @@ st.markdown("""
         color: #224343 !important;
     }
 
-    /* 6. 버튼 스타일 (모바일 글자 넘침 방지를 위해 폰트 하한선 조정) */
+    /* 6. 버튼 스타일 */
     button, div.stDownloadButton > button {
         border-radius: 50px !important;
         padding: 0.5rem 1.2rem !important;
@@ -223,7 +223,7 @@ st.markdown("""
         flex: 0 1 auto !important;
     }
     
-    /* 결과물 텍스트 스타일 (크기 20% 축소) */
+    /* 결과물 텍스트 스타일 (크기 축소 유지) */
     .num-result { 
         color: #FFD700 !important; 
         font-weight: bold; 
@@ -307,7 +307,7 @@ def load_dataframe(sheet):
         except: time.sleep(1)
     raise Exception("데이터 로드 실패")
 
-# --- [다이얼로그 설정 (NameError 해결: 파라미터 간소화)] ---
+# --- [다이얼로그 설정] ---
 @st.dialog("새 항목 추가")
 def add_dialog(unique_cats):
     with st.form("add_form", clear_on_submit=True):
@@ -323,7 +323,6 @@ def add_dialog(unique_cats):
         if st.form_submit_button("저장하기", use_container_width=True, type="primary"):
             final_cat = new_cat.strip() if new_cat.strip() else (selected_cat if selected_cat != "(새로 입력)" else "")
             if word_sent:
-                # 데이터 충돌 방지를 위해 팝업창 내에서 시트를 재호출
                 sheet = get_sheet()
                 sheet.append_row([final_cat, word_sent, mean, pron, m1, m2])
                 st.success("저장 완료!")
@@ -332,7 +331,6 @@ def add_dialog(unique_cats):
 
 @st.dialog("항목 수정 및 삭제")
 def edit_dialog(idx, row_data, unique_cats):
-    # 안전한 카테고리 매핑
     safe_cats = unique_cats if unique_cats else ["(없음)"]
     cat_val = row_data.get('분류', '')
     cat_index = safe_cats.index(cat_val) if cat_val in safe_cats else 0
@@ -376,7 +374,6 @@ def format_num_input():
     st.session_state.num_input = f"{int(cleaned):,}" if cleaned else ""
 
 def clear_num_input():
-    """숫자 입력창을 초기화하는 콜백 함수"""
     st.session_state.num_input = ""
 
 def handle_search():
@@ -520,6 +517,7 @@ else:
         total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
         curr_p = st.session_state.curr_p if 'curr_p' in st.session_state else 1
         
+        # ★ 안정성을 극대화한 실시간 콤마(,) 자동 입력 로직 ★
         components.html(f"""
             <style>body {{ margin:0; padding:0; background:transparent!important; overflow:hidden; }}</style>
             <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:5px; font-family:sans-serif;">
@@ -529,37 +527,45 @@ else:
             <script>
             const doc = window.parent.document;
             
-            function applyLiveComma() {{
-                const inputs = doc.querySelectorAll('input[aria-label*="Num.ENG"]');
-                inputs.forEach(input => {{
-                    if (!input.hasAttribute('data-live-comma')) {{
-                        input.setAttribute('data-live-comma', 'true');
-                        
-                        input.addEventListener('input', function(e) {{
-                            let val = e.target.value;
-                            let numStr = val.replace(/[^0-9]/g, '');
-                            let formatted = numStr ? Number(numStr).toLocaleString('en-US') : '';
-                            
-                            if (val !== formatted) {{
-                                let cursorPosition = e.target.selectionStart;
-                                let oldLength = val.length;
-                                
-                                let nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                                nativeSetter.call(e.target, formatted);
-                                e.target.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                                
-                                let newLength = formatted.length;
-                                let newCursorPos = cursorPosition + (newLength - oldLength);
-                                e.target.setSelectionRange(newCursorPos, newCursorPos);
-                            }}
-                        }});
-                    }}
-                }});
+            // 기존 중복된 리스너가 있다면 제거 (메모리 릭 및 중복 동작 완벽 방지)
+            if (doc.liveCommaHandler) {{
+                doc.removeEventListener('input', doc.liveCommaHandler, true);
             }}
             
-            if (!window.liveCommaInterval) {{
-                window.liveCommaInterval = setInterval(applyLiveComma, 300);
-            }}
+            // Document Level Event Delegation 방식 (요소가 다시 그려져도 이벤트 유지됨)
+            doc.liveCommaHandler = function(e) {{
+                if (e.target && e.target.tagName === 'INPUT') {{
+                    let label = e.target.getAttribute('aria-label');
+                    if (label && label.includes('Num.ENG')) {{
+                        let val = e.target.value;
+                        let numStr = val.replace(/[^0-9]/g, '');
+                        let formatted = numStr ? Number(numStr).toLocaleString('en-US') : '';
+                        
+                        if (val !== formatted) {{
+                            // 커서 위치 추적
+                            let cursorPosition = e.target.selectionStart;
+                            let oldLength = val.length;
+                            
+                            // React 가상 DOM 상태 우회를 위한 Native Setter
+                            let nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                            nativeSetter.call(e.target, formatted);
+                            e.target.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                            
+                            // 콤마 길이 변화에 따른 커서 위치 재조정
+                            let newLength = formatted.length;
+                            let newCursorPos = cursorPosition + (newLength - oldLength);
+                            
+                            // 렌더링 주기 후 안전하게 커서 고정 (글자가 튀는 현상 방지)
+                            setTimeout(() => {{
+                                e.target.setSelectionRange(newCursorPos, newCursorPos);
+                            }}, 0);
+                        }}
+                    }}
+                }}
+            }};
+            
+            // 캡처링 모드(true)로 이벤트를 등록해 무조건 가로챔
+            doc.addEventListener('input', doc.liveCommaHandler, true);
             </script>
         """, height=35)
        
