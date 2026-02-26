@@ -56,8 +56,8 @@ st.title("📂 입출력 내역 조회 시스템")
 try:
     df = load_data()
     
-    # 알려주신 날짜 열 이름 'iddate'를 사용합니다.
-    date_col = 'iddate'
+    # 올려주신 이미지에 맞게 날짜 열 이름을 'date'로 수정했습니다!
+    date_col = 'date'
     
     if date_col in df.columns:
         # 1. 날짜 데이터 형식 변환 (에러 발생 시 NaT로 처리)
@@ -94,6 +94,28 @@ try:
         
         # 보기 좋게 날짜순으로 정렬 (최신 날짜가 위로)
         display_df = display_df.sort_values(by=date_col, ascending=False)
+        
+        # 💡 영어로 된 헤더 이름을 화면 표시용으로 보기 좋게 한글로 변경합니다 (원하시는 대로 수정 가능합니다)
+        rename_dict = {
+            'id': '순번',
+            'date': '날짜',
+            'incom': '입고처',
+            'initem': '입고품목',
+            'inq': '입고수량',
+            'inprice': '입고단가',
+            'outcom': '출고처',
+            'outitem': '출고품목',
+            'outq': '출고수량',
+            'outprice': '출고단가',
+            'etc': '비고',
+            's': '상태',
+            'carno': '차량번호',
+            'carprice': '운임',
+            'memoin': '입고메모',
+            'memoout': '출고메모',
+            'memocar': '차량메모'
+        }
+        display_df = display_df.rename(columns=rename_dict)
 
         st.divider()
         st.subheader(f"📊 {selected_year}년 {selected_month}월 상세 내역 (총 {len(display_df)}건)")
