@@ -54,12 +54,13 @@ st.markdown("""
         display: none !important;
     }
 
-    /* 4. 컨텐츠 행(Row) 호버 효과 및 상단 여백 완벽 제거 ★ */
+    /* 4. 컨텐츠 행(Row) 호버 효과 (행 전체를 꽉 채우도록 개선) ★ */
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 0px !important; 
+        padding: 8px 15px !important; /* 글자에 너무 붙지 않도록 최소한의 여백 제공 */
         border-radius: 8px;
         margin-bottom: 0px !important;
+        width: 100% !important; /* 가로 영역 100% 꽉 채우기 */
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: nowrap !important;
@@ -128,7 +129,7 @@ st.markdown("""
         color: #224343 !important;
     }
 
-    /* 6. 버튼 스타일 */
+    /* 6. 버튼 스타일 (모바일 글자 넘침 방지를 위해 폰트 하한선 조정) */
     button, div.stDownloadButton > button {
         border-radius: 50px !important;
         padding: 0.5rem 1.2rem !important;
@@ -236,7 +237,7 @@ st.markdown("""
         flex: 0 1 auto !important;
     }
     
-    /* 결과물 텍스트 스타일 */
+    /* 결과물 텍스트 스타일 (크기 20% 축소) */
     .num-result { 
         color: #FFD700 !important; 
         font-weight: bold; 
@@ -269,7 +270,7 @@ st.markdown("""
         transform: scale(1.2) !important;
     }
 
-    /* 구분선 간격 조밀하게 변경 (내부 여백이 줄었으므로 margin-top 완화) */
+    /* 구분선 간격 조밀하게 변경 */
     .row-divider { border-bottom: 1px dotted rgba(255,255,255,0.2); margin-top: -5px; margin-bottom: 2px; }
 
     /* 11. 모바일 레이아웃 강제 교정 */
@@ -279,7 +280,8 @@ st.markdown("""
         div[data-testid="stHorizontalBlock"]:has(.row-marker) {
             display: flex !important;
             flex-direction: row !important;
-            padding: 0px !important;
+            padding: 6px 8px !important; /* 모바일 전용 호버 여백 복구 */
+            width: 100% !important;
             gap: 8px !important;
         }
 
@@ -530,7 +532,6 @@ else:
         total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
         curr_p = st.session_state.curr_p if 'curr_p' in st.session_state else 1
         
-        # JS: setInterval을 활용하여 Streamlit 렌더링 중에도 영구적으로 이벤트가 바인딩되도록 개선된 실시간 콤마 로직
         components.html(f"""
             <style>body {{ margin:0; padding:0; background:transparent!important; overflow:hidden; }}</style>
             <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:5px; font-family:sans-serif;">
