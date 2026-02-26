@@ -113,7 +113,7 @@ st.markdown("""
         width: 100% !important;
     }
 
-    /* 5. 상단 분류 리스트(Radio) 알약 형태 */
+    /* 5. 상단 분류 리스트(Radio) 알약 형태 및 상단 간격 제거 */
     div[data-testid="stRadio"] > div[role="radiogroup"] {
         flex-direction: row !important;
         flex-wrap: wrap !important;
@@ -159,13 +159,15 @@ st.markdown("""
         color: #224343 !important;
     }
 
-    /* 6. 버튼 기본 스타일 */
+    /* 6. 버튼 스타일 */
     button, div.stDownloadButton > button {
         border-radius: 50px !important;
         padding: 0.5rem 1.2rem !important;
         font-weight: 900 !important;
         transition: all 0.3s ease !important;
         white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
     }
     button[kind="primary"] {
         background-color: #FFFFFF !important;
@@ -277,43 +279,12 @@ st.markdown("""
         margin-top: 2px !important; 
     }
 
-    /* 모바일 전용 스타일 최적화 */
     @media screen and (max-width: 768px) {
         .word-text { font-size: 1.21rem !important; }
         .mean-text { font-size: 0.9rem !important; }
-        
         /* 분류 필터 텍스트 30% 확대 */
         div[data-testid="stRadio"] label p {
             font-size: 1.2rem !important;
-        }
-
-        /* ★ [핵심수정] 모바일 제어 버튼들이 가로로 정렬되도록 레이아웃 강제 ★ */
-        div[data-testid="stHorizontalBlock"]:has(button) {
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: wrap !important;
-            gap: 15px 12px !important;
-            justify-content: flex-start !important;
-            width: 100% !important;
-        }
-
-        div[data-testid="stHorizontalBlock"]:has(button) > div {
-            flex: 0 0 auto !important;
-            width: auto !important;
-        }
-
-        /* 새 항목 추가 및 학습모드 버튼 40% 확대 및 일자 유지 */
-        div[data-testid="stHorizontalBlock"] button {
-            height: auto !important;
-            min-height: 52px !important; 
-            padding: 8px 18px !important;
-            width: max-content !important;
-        }
-        
-        div[data-testid="stHorizontalBlock"] button p {
-            font-size: 1.6rem !important; 
-            white-space: nowrap !important; 
-            line-height: 1.1 !important;
         }
     }
     </style>
@@ -521,31 +492,20 @@ else:
     try:
         sheet = get_sheet(); df = load_dataframe(sheet)
         unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
-        
-        # ★ [통합 필터 라인] 분류(Radio) + 검색창 배치 ★
-        filter_col, search_col = st.columns([7.5, 2.5])
-        with filter_col:
-            sel_cat = st.radio("분류 필터", ["🔀 랜덤 10", "전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed", key="cat_radio", on_change=clear_search)
-        with search_col:
-            st.text_input("🔍", key="search_input", on_change=handle_search, label_visibility="collapsed")
+        sel_cat = st.radio("분류 필터", ["🔀 랜덤 10", "전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed", key="cat_radio", on_change=clear_search)
         
         st.divider()
         
-        # ★ [제어 버튼 라인] 새 항목 추가, 모드 전환, CSV 배치 ★
-        cb_cols = [2, 2, 4.5, 1.5] if st.session_state.authenticated else [2, 8]
+        cb_cols = [1.5, 1.5, 1.4, 2.6, 1.5] if st.session_state.authenticated else [1.5, 1.4, 4.1]
         cb = st.columns(cb_cols)
+        cb[0].text_input("🔍", key="search_input", on_change=handle_search)
         
-        btn_idx = 0
-        if st.session_state.authenticated:
-            if cb[0].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(unique_cats)
-            btn_idx = 1
+        if st.session_state.authenticated and cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(unique_cats)
         
+        btn_idx = 2 if st.session_state.authenticated else 1
         btn_text = "🔄 전체모드" if st.session_state.is_simple else "✨ 심플모드"
         if cb[btn_idx].button(btn_text, type="primary" if not st.session_state.is_simple else "secondary", use_container_width=True):
             st.session_state.is_simple = not st.session_state.is_simple; st.rerun()
-
-        if st.session_state.authenticated:
-            cb[3].download_button("📥 CSV", df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
 
         is_simple = st.session_state.is_simple
         search = st.session_state.active_search
@@ -562,6 +522,9 @@ else:
         if st.session_state.sort_order == 'asc': d_df = d_df.sort_values(by='단어-문장', ascending=True)
         elif st.session_state.sort_order == 'desc': d_df = d_df.sort_values(by='단어-문장', ascending=False)
         else: d_df = d_df.iloc[::-1]
+
+        if st.session_state.authenticated:
+            cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
 
         total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
         curr_p = st.session_state.curr_p if 'curr_p' in st.session_state else 1
