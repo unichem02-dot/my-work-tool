@@ -70,18 +70,25 @@ st.markdown("""
     div[data-testid="stHorizontalBlock"]:has(.row-marker):hover {
         background-color: rgba(26, 47, 47, 0.9) !important;
     }
-    /* 컨텐츠 내부 기본 여백 0 강제 */
-    div[data-testid="stHorizontalBlock"]:has(.row-marker) > div {
-        padding-top: 0 !important;
-        padding-bottom: 0 !important;
+    
+    /* ★ 컨텐츠 내부 텍스트 완벽 수직 중앙 정렬 강제화 ★ */
+    div[data-testid="stHorizontalBlock"]:has(.row-marker) > div[data-testid="column"] {
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important; /* 컬럼 내부 요소를 수직 중앙으로 */
+    }
+    div[data-testid="stHorizontalBlock"]:has(.row-marker) div[data-testid="stMarkdownContainer"],
+    div[data-testid="stHorizontalBlock"]:has(.row-marker) p {
+        display: flex !important;
+        align-items: center !important; /* p태그 및 마크다운 컨테이너 텍스트 중앙 정렬 */
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: normal !important; /* 줄간격으로 인한 쳐짐 현상 제거 */
     }
     div[data-testid="stHorizontalBlock"]:has(.row-marker) div.element-container {
         margin-bottom: 0 !important;
-    }
-    div[data-testid="stHorizontalBlock"]:has(.row-marker) p {
-        margin: 0 !important;
-        padding: 0 !important;
-        line-height: 1.2 !important;
+        display: flex !important;
+        align-items: center !important;
     }
 
     /* 5. 상단 분류 리스트(Radio) 알약 형태 */
@@ -176,7 +183,7 @@ st.markdown("""
         transform: scale(1.2) !important;
     }
 
-    /* 8. 헤더 라벨 및 텍스트 시인성 */
+    /* 8. 헤더 라벨 및 텍스트 시인성 (인라인 플렉스로 중앙정렬 최적화) */
     .header-label { 
         font-size: clamp(1.0rem, 1.4vw, 1.5rem) !important; 
         font-weight: 800 !important; 
@@ -184,9 +191,9 @@ st.markdown("""
         white-space: nowrap !important;
     }
    
-    .word-text { font-size: 1.8em; font-weight: bold; display: block; color: #FFD700 !important; word-break: keep-all; }
-    .mean-text { font-size: 1.3em; display: block; word-break: keep-all; }
-    .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; }
+    .word-text { font-size: 1.8em; font-weight: bold; display: inline-flex !important; align-items: center !important; color: #FFD700 !important; word-break: keep-all; }
+    .mean-text { font-size: 1.3em; display: inline-flex !important; align-items: center !important; word-break: keep-all; }
+    .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; display: inline-flex !important; align-items: center !important; }
    
     /* 9. Num.ENG 레이아웃 최적화 및 가로 크기 제한 */
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
@@ -589,14 +596,13 @@ else:
 
         for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
             cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
-            cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold' style='font-weight:bold; font-size:0.95rem;'>{row['분류']}</span>", unsafe_allow_html=True)
+            cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold'>{row['분류']}</span>", unsafe_allow_html=True)
             cols[1].markdown(f"<span class='word-text'>{row['단어-문장']}</span>", unsafe_allow_html=True)
             cols[2].markdown(f"<span class='mean-text'>{row['해석']}</span>", unsafe_allow_html=True)
             if not is_simple:
                 cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
                 if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(idx, row.to_dict(), unique_cats)
             elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(idx, row.to_dict(), unique_cats)
-            # 파이썬 루프 안의 점선 생성 코드(<div class='row-divider'>)는 완전히 삭제됨! (CSS 테두리로 통합)
 
         if pages > 1:
             p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
