@@ -287,18 +287,30 @@ st.markdown("""
             font-size: 1.2rem !important;
         }
 
-        /* ★ [특정 버튼만 확대] 검색창 옆 '새 항목 추가' 및 '학습모드' 버튼만 정밀 타겟팅 ★ */
+        /* ★ [정밀 수정] 새 항목 추가 및 학습모드 버튼 - 일자로 길게 표시 ★ */
         div[data-testid="stHorizontalBlock"]:has(input[aria-label="🔍"]) button {
             height: auto !important;
-            min-height: 58px !important; 
+            min-height: 55px !important; 
+            width: max-content !important; /* 글자 길이에 맞춰 자동 확장 */
+            min-width: max-content !important;
+            padding: 8px 15px !important;
             overflow: visible !important;
-            padding: 10px 20px !important;
+            border-radius: 50px !important;
         }
+        
         div[data-testid="stHorizontalBlock"]:has(input[aria-label="🔍"]) button p {
             font-size: 1.6rem !important; /* 약 40% 확대 */
-            white-space: normal !important;
+            white-space: nowrap !important; /* 줄바꿈 절대 방지 (일자로 표시) */
             overflow: visible !important;
-            line-height: 1.1 !important;
+            line-height: 1.0 !important;
+            margin: 0 !important;
+        }
+
+        /* 모바일에서 버튼들이 나란히 배치되도록 컬럼 너비 제한 해제 */
+        div[data-testid="stHorizontalBlock"]:has(input[aria-label="🔍"]) div[data-testid="column"] {
+            width: auto !important;
+            flex: 0 0 auto !important;
+            min-width: fit-content !important;
         }
     }
     </style>
