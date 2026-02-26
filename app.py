@@ -298,6 +298,10 @@ def format_num_input():
     cleaned = re.sub(r'[^0-9]', '', str(st.session_state.num_input))
     st.session_state.num_input = f"{int(cleaned):,}" if cleaned else ""
 
+def clear_num_input():
+    """숫자 입력창을 초기화하는 콜백 함수 (Exception 방지용)"""
+    st.session_state.num_input = ""
+
 def handle_search():
     st.session_state.active_search = st.session_state.search_input.strip()
     st.session_state.search_input = ""
@@ -324,12 +328,10 @@ def num_to_eng(num):
 # ★ 1. 로그인 전용 화면 (엔터키 지원을 위해 st.form 사용) ★
 if not st.session_state.authenticated and st.session_state.logging_in:
     st.write("## 🔐 Security Login")
-    # st.form을 사용하여 엔터키 로그인 지원
     with st.form("login_form", clear_on_submit=False):
         st.markdown("<div style='height: 100px;'></div>", unsafe_allow_html=True)
         pwd = st.text_input("Enter Password", type="password", placeholder="비밀번호를 입력하세요...")
         
-        # 폼 제출 버튼 (엔터 대응)
         submit = st.form_submit_button("✅ LOGIN", use_container_width=True, type="primary")
         
         if submit:
@@ -341,7 +343,6 @@ if not st.session_state.authenticated and st.session_state.logging_in:
             else:
                 st.error("❌ 비밀번호가 틀렸습니다.")
     
-    # 취소 버튼은 폼 바깥에 배치 (엔터키에 반응하지 않도록)
     if st.button("🔙 CANCEL", use_container_width=True):
         st.session_state.logging_in = False
         st.rerun()
@@ -362,18 +363,15 @@ else:
                 if "auth" in st.query_params: del st.query_params["auth"]
                 st.rerun()
 
-    # Spacer 컬럼은 비워둠
-
     with col_num_combined:
         # 입력창과 지우기 버튼을 위한 내부 컬럼 분할
         num_in_col, num_clear_col = st.columns([0.85, 0.15])
         with num_in_col:
             st.text_input("Num.ENG :", key="num_input", on_change=format_num_input)
         with num_clear_col:
-            st.markdown("<div style='height:30px;'></div>", unsafe_allow_html=True) # 라벨 높이 맞춤
-            if st.button("❌", key="btn_clear_num", help="숫자 지우기"):
-                st.session_state.num_input = ""
-                st.rerun()
+            st.markdown("<div style='height:30px;'></div>", unsafe_allow_html=True) 
+            # Exception 방지를 위해 on_click 콜백 사용
+            st.button("❌", key="btn_clear_num", on_click=clear_num_input, help="숫자 지우기")
        
     with col_num_result:
         if st.session_state.num_input:
