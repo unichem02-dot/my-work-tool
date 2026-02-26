@@ -8,6 +8,28 @@ from datetime import datetime
 # 레이아웃을 넓게 설정하고 웹 브라우저 탭 제목을 지정합니다.
 st.set_page_config(layout="wide", page_title="입출력 관리 시스템 (inout)")
 
+# --- [보안: 비밀번호 로그인 로직] ---
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.title("🔒 시스템 접속")
+    st.info("데이터를 열람하려면 비밀번호를 입력해 주세요.")
+    
+    with st.form("login_form"):
+        pwd = st.text_input("비밀번호", type="password", placeholder="비밀번호 입력")
+        submit_btn = st.form_submit_button("확인", type="primary", use_container_width=True)
+        
+        if submit_btn:
+            if pwd == "3709":
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("❌ 비밀번호가 일치하지 않습니다.")
+    
+    # 🚨 로그인이 안 되었을 경우 여기서 코드 실행을 멈춤 (데이터 유출 완벽 차단)
+    st.stop()
+
 # --- [2. 구글 시트 연결 및 데이터 로드] ---
 
 @st.cache_resource
