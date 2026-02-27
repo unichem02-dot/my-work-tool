@@ -23,6 +23,24 @@ if 'num_input' not in st.session_state: st.session_state.num_input = ""
 if 'active_search' not in st.session_state: st.session_state.active_search = ""
 if 'search_input' not in st.session_state: st.session_state.search_input = ""
 if 'is_simple' not in st.session_state: st.session_state.is_simple = False
+if 'curr_p' not in st.session_state: st.session_state.curr_p = 1  # ★ 오류 해결: 초기값 설정 ★
+
+# --- [보안 설정 및 Google Sheets 연결] ---
+# Streamlit Secrets에서 비밀번호 로드
+LOGIN_PASSWORD = st.secrets["tom_password"]
+
+# 콜백 함수들
+def handle_search():
+    st.session_state.active_search = st.session_state.search_input.strip()
+    st.session_state.search_input = ""
+    st.session_state.curr_p = 1 # 검색 시 1페이지로 리셋
+
+def clear_search():
+    st.session_state.active_search = ""
+    st.session_state.curr_p = 1
+
+def reset_page():
+    st.session_state.curr_p = 1
 
 # --- [사용자 정의 디자인 (CSS)] ---
 st.markdown("""
@@ -37,9 +55,13 @@ st.markdown("""
         background-color: transparent !important;
     }
 
-    /* 2. 글자색 화이트 강제화 */
+    /* 2. 글자색 화이트 강제화 및 타이틀 하단 여백 제거 */
     h1, h2, h3, h4, h5, h6, p, span, label, summary, b, strong {
         color: #FFFFFF !important;
+    }
+    h1 {
+        margin-bottom: 0px !important;
+        padding-bottom: 0px !important;
     }
     
     /* 팝업창(Dialog) 제목 */
@@ -109,12 +131,12 @@ st.markdown("""
         width: 100% !important;
     }
 
-    /* 5. 상단 분류 리스트(Radio) 알약 형태 */
+    /* 5. 상단 분류 리스트(Radio) 알약 형태 및 상단 간격 제거 */
     div[data-testid="stRadio"] > div[role="radiogroup"] {
         flex-direction: row !important;
         flex-wrap: wrap !important;
         gap: 10px 12px !important;
-        padding-top: 10px !important;
+        padding-top: 0px !important; 
         padding-bottom: 5px !important;
     }
    
@@ -219,7 +241,7 @@ st.markdown("""
         z-index: 10 !important;
     }
 
-    /* 9. Num.ENG 및 검색창 레이아웃 (공통 일렬 정렬) */
+    /* 9. Num.ENG 및 검색창 레이아웃 */
     div[data-testid="stTextInput"]:has(label p) {
         display: flex !important;
         flex-direction: row !important;
@@ -227,19 +249,16 @@ st.markdown("""
         gap: 8px !important;
     }
     
-    /* 레이블(아이콘/텍스트) 여백 제거 */
     div[data-testid="stTextInput"]:has(label p) label {
         margin-bottom: 0 !important;
         margin-top: 5px !important;
         min-width: fit-content !important;
     }
 
-    /* 검색창 전용 스타일 보정 */
     div[data-testid="stTextInput"]:has(label p):not(:has(input[aria-label="Num.ENG :"])) {
         width: 100% !important;
     }
 
-    /* Num.ENG 전용 스타일 보정 */
     div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
         max-width: 350px !important; 
     }
@@ -269,7 +288,6 @@ st.markdown("""
         white-space: nowrap !important;
     }
 
-    /* ❌ 버튼 위치 및 크기 세부 조정 */
     div[data-testid="stHorizontalBlock"]:has(.num-result) button {
         background: transparent !important;
         border: none !important;
@@ -282,16 +300,19 @@ st.markdown("""
     @media screen and (max-width: 768px) {
         .word-text { font-size: 1.21rem !important; }
         .mean-text { font-size: 0.9rem !important; }
+        /* 분류 필터 텍스트 30% 확대 */
+        div[data-testid="stRadio"] label p {
+            font-size: 1.2rem !important;
+        }
     }
     </style>
     """, unsafe_allow_html=True)
 
-# ★ [심플모드 + 모바일 전용 40% 확대 CSS 추가] ★
+# [심플모드 + 모바일 전용 40% 확대 CSS 추가]
 if st.session_state.is_simple:
     st.markdown("""
         <style>
         @media screen and (max-width: 768px) {
-            /* 기존 대비 약 40% 확대 계산값 적용 */
             .word-text { 
                 font-size: 1.7rem !important; 
                 line-height: 1.3 !important;
@@ -303,9 +324,6 @@ if st.session_state.is_simple:
         }
         </style>
     """, unsafe_allow_html=True)
-
-# --- [보안 설정 및 Google Sheets 연결] ---
-LOGIN_PASSWORD = "0315"
 
 @st.cache_resource
 def init_connection():
@@ -385,13 +403,6 @@ def format_num_input():
 def clear_num_input():
     st.session_state.num_input = ""
 
-def handle_search():
-    st.session_state.active_search = st.session_state.search_input.strip()
-    st.session_state.search_input = ""
-
-def clear_search():
-    st.session_state.active_search = ""
-
 def num_to_eng(num):
     if num == 0: return "zero"
     ones = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"]
@@ -468,7 +479,7 @@ else:
         components.html(f"""
             <style>
                 body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: visible; }}
-                .date-wrapper {{ display: flex; flex-wrap: wrap; align-items: center; gap: clamp(5px, 1.5vw, 15px); padding-top: 15px; font-family: sans-serif; width: 100%; }}
+                .date-wrapper {{ display: flex; flex-wrap: wrap; align-items: center; gap: clamp(5px, 1.5vw, 15px); padding-top: 5px; font-family: sans-serif; width: 100%; }}
                 .date-text {{ color: #FFFFFF; font-weight: bold; font-size: clamp(1.1rem, 2.6vw, 2.6rem); white-space: nowrap; }}
                 .copy-btn {{ background-color: transparent; border: 1px solid rgba(255,255,255,0.5); color: #FFF; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: clamp(0.7rem, 1vw, 1.1rem); font-weight:bold; transition: 0.3s; white-space: nowrap; }}
                 .copy-btn:hover {{ background-color: rgba(255,255,255,0.2) !important; }}
@@ -484,7 +495,7 @@ else:
                 setTimeout(function(){{ btn.innerHTML = "📋 복사"; }}, 1500);
             }}
             </script>
-        """, height=130)
+        """, height=90) 
 
     try:
         sheet = get_sheet(); df = load_dataframe(sheet)
@@ -524,7 +535,7 @@ else:
             cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
 
         total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
-        curr_p = st.session_state.curr_p if 'curr_p' in st.session_state else 1
+        curr_p = st.session_state.curr_p
         
         components.html(f"""
             <style>body {{ margin:0; padding:0; background:transparent!important; overflow:hidden; }}</style>
@@ -579,9 +590,13 @@ else:
 
         if pages > 1:
             p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
-            if p_cols[1].button("◀ 이전", disabled=(curr_p == 1)): st.session_state.curr_p -= 1; st.rerun()
-            p_cols[2].markdown(f"<div style='text-align:center; padding:10px; color:#FFD700; font-weight:bold;'>Page {curr_p} / {pages}</div>", unsafe_allow_html=True)
-            if p_cols[3].button("다음 ▶", disabled=(curr_p == pages)): st.session_state.curr_p += 1; st.rerun()
+            if p_cols[1].button("◀ 이전", disabled=(st.session_state.curr_p == 1)): 
+                st.session_state.curr_p -= 1
+                st.rerun()
+            p_cols[2].markdown(f"<div style='text-align:center; padding:10px; color:#FFD700; font-weight:bold;'>Page {st.session_state.curr_p} / {pages}</div>", unsafe_allow_html=True)
+            if p_cols[3].button("다음 ▶", disabled=(st.session_state.curr_p == pages)): 
+                st.session_state.curr_p += 1
+                st.rerun()
 
     except Exception as e: st.error(f"오류 발생: {e}")
 
