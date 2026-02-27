@@ -23,6 +23,24 @@ if 'num_input' not in st.session_state: st.session_state.num_input = ""
 if 'active_search' not in st.session_state: st.session_state.active_search = ""
 if 'search_input' not in st.session_state: st.session_state.search_input = ""
 if 'is_simple' not in st.session_state: st.session_state.is_simple = False
+if 'curr_p' not in st.session_state: st.session_state.curr_p = 1  # ★ 오류 해결: 초기값 설정 ★
+
+# --- [보안 설정 및 Google Sheets 연결] ---
+# Streamlit Secrets에서 비밀번호 로드
+LOGIN_PASSWORD = st.secrets["tom_password"]
+
+# 콜백 함수들
+def handle_search():
+    st.session_state.active_search = st.session_state.search_input.strip()
+    st.session_state.search_input = ""
+    st.session_state.curr_p = 1 # 검색 시 1페이지로 리셋
+
+def clear_search():
+    st.session_state.active_search = ""
+    st.session_state.curr_p = 1
+
+def reset_page():
+    st.session_state.curr_p = 1
 
 # --- [사용자 정의 디자인 (CSS)] ---
 st.markdown("""
@@ -307,9 +325,6 @@ if st.session_state.is_simple:
         </style>
     """, unsafe_allow_html=True)
 
-# --- [보안 설정 및 Google Sheets 연결] ---
-LOGIN_PASSWORD = st.secrets["tom_password"]
-
 @st.cache_resource
 def init_connection():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
@@ -387,13 +402,6 @@ def format_num_input():
 
 def clear_num_input():
     st.session_state.num_input = ""
-
-def handle_search():
-    st.session_state.active_search = st.session_state.search_input.strip()
-    st.session_state.search_input = ""
-
-def clear_search():
-    st.session_state.active_search = ""
 
 def num_to_eng(num):
     if num == 0: return "zero"
@@ -527,7 +535,7 @@ else:
             cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
 
         total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
-        curr_p = st.session_state.curr_p if 'curr_p' in st.session_state else 1
+        curr_p = st.session_state.curr_p
         
         components.html(f"""
             <style>body {{ margin:0; padding:0; background:transparent!important; overflow:hidden; }}</style>
@@ -582,9 +590,13 @@ else:
 
         if pages > 1:
             p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
-            if p_cols[1].button("◀ 이전", disabled=(curr_p == 1)): st.session_state.curr_p -= 1; st.rerun()
-            p_cols[2].markdown(f"<div style='text-align:center; padding:10px; color:#FFD700; font-weight:bold;'>Page {curr_p} / {pages}</div>", unsafe_allow_html=True)
-            if p_cols[3].button("다음 ▶", disabled=(curr_p == pages)): st.session_state.curr_p += 1; st.rerun()
+            if p_cols[1].button("◀ 이전", disabled=(st.session_state.curr_p == 1)): 
+                st.session_state.curr_p -= 1
+                st.rerun()
+            p_cols[2].markdown(f"<div style='text-align:center; padding:10px; color:#FFD700; font-weight:bold;'>Page {st.session_state.curr_p} / {pages}</div>", unsafe_allow_html=True)
+            if p_cols[3].button("다음 ▶", disabled=(st.session_state.curr_p == pages)): 
+                st.session_state.curr_p += 1
+                st.rerun()
 
     except Exception as e: st.error(f"오류 발생: {e}")
 
