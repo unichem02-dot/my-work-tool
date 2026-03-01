@@ -23,17 +23,18 @@ if 'num_input' not in st.session_state: st.session_state.num_input = ""
 if 'active_search' not in st.session_state: st.session_state.active_search = ""
 if 'search_input' not in st.session_state: st.session_state.search_input = ""
 if 'is_simple' not in st.session_state: st.session_state.is_simple = False
-if 'curr_p' not in st.session_state: st.session_state.curr_p = 1  # ★ 오류 해결: 초기값 설정 ★
+if 'curr_p' not in st.session_state: st.session_state.curr_p = 1
+# ★ 새 페이지 전환용 상태 추가 ★
+if 'app_mode' not in st.session_state: st.session_state.app_mode = 'English' 
 
 # --- [보안 설정 및 Google Sheets 연결] ---
-# Streamlit Secrets에서 비밀번호 로드
 LOGIN_PASSWORD = st.secrets["tom_password"]
 
 # 콜백 함수들
 def handle_search():
     st.session_state.active_search = st.session_state.search_input.strip()
     st.session_state.search_input = ""
-    st.session_state.curr_p = 1 # 검색 시 1페이지로 리셋
+    st.session_state.curr_p = 1
 
 def clear_search():
     st.session_state.active_search = ""
@@ -65,8 +66,7 @@ st.markdown("""
     }
     
     /* 팝업창(Dialog) 제목 */
-    #새-항목-추가,
-    #항목-수정-및-삭제,
+    #새-항목-추가, #항목-수정-및-삭제,
     div[data-testid="stDialog"] h2,
     div[role="dialog"] h2,
     section[role="dialog"] h2 {
@@ -82,245 +82,113 @@ st.markdown("""
         color: #000000 !important;
         border-radius: 10px !important;
     }
-    
-    /* 비밀번호 입력창 눈알 아이콘 제거 */
-    div[data-testid="stTextInput"] button {
-        display: none !important;
-    }
+    div[data-testid="stTextInput"] button { display: none !important; }
 
     /* 4. 컨텐츠 행(Row) 호버 효과 및 레이아웃 보정 */
-    div.element-container:has(.row-marker) {
-        width: 100% !important;
-        min-width: 100% !important;
-    }
+    div.element-container:has(.row-marker) { width: 100% !important; min-width: 100% !important; }
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 16px 10px !important;
-        border-radius: 0px !important; 
-        margin-bottom: 0px !important;
-        border-bottom: 1px dotted rgba(255, 255, 255, 0.2) !important; 
-        width: 100% !important; 
-        min-width: 100% !important; 
-        flex: 1 1 100% !important;
-        display: flex !important;
-        flex-direction: row !important;
-        flex-wrap: nowrap !important;
-        align-items: center !important; 
-        overflow: visible !important;
+        padding: 16px 10px !important; border-radius: 0px !important; 
+        margin-bottom: 0px !important; border-bottom: 1px dotted rgba(255, 255, 255, 0.2) !important; 
+        width: 100% !important; min-width: 100% !important; flex: 1 1 100% !important;
+        display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important;
+        align-items: center !important; overflow: visible !important;
     }
-    div[data-testid="stHorizontalBlock"]:has(.row-marker):hover {
-        background-color: rgba(26, 47, 47, 0.9) !important;
-    }
-    
+    div[data-testid="stHorizontalBlock"]:has(.row-marker):hover { background-color: rgba(26, 47, 47, 0.9) !important; }
     div[data-testid="stHorizontalBlock"]:has(.row-marker) > div[data-testid="column"] {
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: center !important; 
-        padding: 0 !important;
-        margin: 0 !important;
-        overflow: visible !important;
+        display: flex !important; flex-direction: column !important; justify-content: center !important; 
+        padding: 0 !important; margin: 0 !important; overflow: visible !important;
     }
-    
     div[data-testid="stHorizontalBlock"]:has(.row-marker) div.element-container,
     div[data-testid="stHorizontalBlock"]:has(.row-marker) div.stMarkdown,
     div[data-testid="stHorizontalBlock"]:has(.row-marker) p {
-        display: block !important; 
-        margin: 0 !important;
-        padding: 0 !important;
-        line-height: 1.5 !important;
-        width: 100% !important;
+        display: block !important; margin: 0 !important; padding: 0 !important;
+        line-height: 1.5 !important; width: 100% !important;
     }
 
-    /* 5. 상단 분류 리스트(Radio) 알약 형태 및 상단 간격 제거 */
+    /* 5. 상단 분류 리스트(Radio) 알약 형태 */
     div[data-testid="stRadio"] > div[role="radiogroup"] {
-        flex-direction: row !important;
-        flex-wrap: wrap !important;
-        gap: 10px 12px !important;
-        padding-top: 0px !important; 
-        padding-bottom: 5px !important;
+        flex-direction: row !important; flex-wrap: wrap !important; gap: 10px 12px !important;
+        padding-top: 0px !important; padding-bottom: 5px !important;
     }
-   
-    div[data-testid="stRadio"] label > div:first-of-type {
-        display: none !important;
-    }
-   
+    div[data-testid="stRadio"] label > div:first-of-type { display: none !important; }
     div[data-testid="stRadio"] label {
-        cursor: pointer !important;
-        margin: 0 !important;
-        background-color: rgba(255, 255, 255, 0.1) !important;
-        padding: 6px 18px !important;
-        border-radius: 50px !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        cursor: pointer !important; margin: 0 !important; background-color: rgba(255, 255, 255, 0.1) !important;
+        padding: 6px 18px !important; border-radius: 50px !important; border: 1px solid rgba(255, 255, 255, 0.2) !important;
         transition: all 0.3s ease !important;
     }
-   
-    div[data-testid="stRadio"] label:hover {
-        background-color: rgba(255, 255, 255, 0.2) !important;
-        border-color: #FFD700 !important;
-    }
-   
+    div[data-testid="stRadio"] label:hover { background-color: rgba(255, 255, 255, 0.2) !important; border-color: #FFD700 !important; }
     div[data-testid="stRadio"] label p {
-        color: #FFFFFF !important;
-        font-size: clamp(0.9rem, 1.2vw, 1.3rem) !important;
-        font-weight: 800 !important;
-        white-space: nowrap !important;
+        color: #FFFFFF !important; font-size: clamp(0.9rem, 1.2vw, 1.3rem) !important;
+        font-weight: 800 !important; white-space: nowrap !important;
     }
-   
-    div[data-testid="stRadio"] label:has(input:checked),
-    div[data-testid="stRadio"] label:has(div[aria-checked="true"]) {
-        background-color: #FFD700 !important;
-        border-color: #FFD700 !important;
+    div[data-testid="stRadio"] label:has(input:checked), div[data-testid="stRadio"] label:has(div[aria-checked="true"]) {
+        background-color: #FFD700 !important; border-color: #FFD700 !important;
     }
-   
-    div[data-testid="stRadio"] label:has(input:checked) p,
-    div[data-testid="stRadio"] label:has(div[aria-checked="true"]) p {
+    div[data-testid="stRadio"] label:has(input:checked) p, div[data-testid="stRadio"] label:has(div[aria-checked="true"]) p {
         color: #224343 !important;
     }
 
     /* 6. 버튼 스타일 */
     button, div.stDownloadButton > button {
-        border-radius: 50px !important;
-        padding: 0.5rem 1.2rem !important;
-        font-weight: 900 !important;
-        transition: all 0.3s ease !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
+        border-radius: 50px !important; padding: 0.5rem 1.2rem !important; font-weight: 900 !important;
+        transition: all 0.3s ease !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;
     }
-    button[kind="primary"] {
-        background-color: #FFFFFF !important;
-        border-color: #FFFFFF !important;
-    }
-    button[kind="primary"] p {
-        color: #224343 !important;
-        font-size: clamp(0.75rem, 1.1vw, 1.15rem) !important;
-        font-weight: 900 !important;
-    }
-    button[kind="secondary"], div.stDownloadButton > button {
-        background-color: transparent !important;
-        border: 2px solid #FFFFFF !important;
-        color: #FFFFFF !important;
-    }
+    button[kind="primary"] { background-color: #FFFFFF !important; border-color: #FFFFFF !important; }
+    button[kind="primary"] p { color: #224343 !important; font-size: clamp(0.75rem, 1.1vw, 1.15rem) !important; font-weight: 900 !important; }
+    button[kind="secondary"], div.stDownloadButton > button { background-color: transparent !important; border: 2px solid #FFFFFF !important; color: #FFFFFF !important; }
 
     /* 7. 수정 버튼: 투명 연필 아이콘 */
     button[kind="tertiary"] {
-        background-color: transparent !important;
-        border: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        min-height: 0 !important;
-        min-width: 40px !important;
-        box-shadow: none !important;
-        display: flex !important;
-        align-items: center !important;
+        background-color: transparent !important; border: none !important; padding: 0 !important; margin: 0 !important;
+        min-height: 0 !important; min-width: 40px !important; box-shadow: none !important;
+        display: flex !important; align-items: center !important;
     }
-    button[kind="tertiary"] p {
-        font-size: 1.6rem !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        transition: transform 0.2s ease !important;
-    }
-    button[kind="tertiary"]:hover p {
-        transform: scale(1.2) !important;
-    }
+    button[kind="tertiary"] p { font-size: 1.6rem !important; margin: 0 !important; padding: 0 !important; transition: transform 0.2s ease !important; }
+    button[kind="tertiary"]:hover p { transform: scale(1.2) !important; }
 
     /* 8. 텍스트 스타일 */
-    .header-label { 
-        font-size: clamp(1.0rem, 1.4vw, 1.5rem) !important; 
-        font-weight: 800 !important; 
-        color: #FFFFFF !important; 
-        white-space: nowrap !important;
-    }
-   
+    .header-label { font-size: clamp(1.0rem, 1.4vw, 1.5rem) !important; font-weight: 800 !important; color: #FFFFFF !important; white-space: nowrap !important; }
     .word-text { font-size: 1.98em; font-weight: bold; color: #FFD700 !important; word-break: keep-all; display: inline-block !important; margin-bottom: 2px !important; transition: transform 0.2s ease !important; transform-origin: left center !important; }
     .mean-text { font-size: 1.3em; word-break: keep-all; display: inline-block !important; margin-bottom: 2px !important; }
     .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; display: inline-block !important; margin-bottom: 2px !important; }
-   
-    div[data-testid="stHorizontalBlock"]:has(.row-marker):hover .word-text {
-        transform: scale(1.1) !important;
-        z-index: 10 !important;
-    }
+    div[data-testid="stHorizontalBlock"]:has(.row-marker):hover .word-text { transform: scale(1.1) !important; z-index: 10 !important; }
 
     /* 9. Num.ENG 및 검색창 레이아웃 */
-    div[data-testid="stTextInput"]:has(label p) {
-        display: flex !important;
-        flex-direction: row !important;
-        align-items: center !important;
-        gap: 8px !important;
-    }
+    div[data-testid="stTextInput"]:has(label p) { display: flex !important; flex-direction: row !important; align-items: center !important; gap: 8px !important; }
+    div[data-testid="stTextInput"]:has(label p) label { margin-bottom: 0 !important; margin-top: 5px !important; min-width: fit-content !important; }
+    div[data-testid="stTextInput"]:has(label p):not(:has(input[aria-label="Num.ENG :"])) { width: 100% !important; }
+    div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) { max-width: 350px !important; }
     
-    div[data-testid="stTextInput"]:has(label p) label {
-        margin-bottom: 0 !important;
-        margin-top: 5px !important;
-        min-width: fit-content !important;
-    }
+    /* 10. Num.ENG 결과물 */
+    div[data-testid="stHorizontalBlock"]:has(.num-result) { display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 12px !important; width: 100% !important; }
+    div[data-testid="stHorizontalBlock"]:has(.num-result) > div { width: fit-content !important; flex: 0 1 auto !important; min-width: unset !important; }
+    .num-result { color: #FFD700 !important; font-weight: bold; font-size: clamp(1.6rem, 2.2vw, 2.4rem) !important; margin: 0 !important; line-height: 1.1; white-space: nowrap !important; }
+    div[data-testid="stHorizontalBlock"]:has(.num-result) button { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; margin-top: 2px !important; }
 
-    div[data-testid="stTextInput"]:has(label p):not(:has(input[aria-label="Num.ENG :"])) {
-        width: 100% !important;
-    }
-
-    div[data-testid="stTextInput"]:has(input[aria-label="Num.ENG :"]) {
-        max-width: 350px !important; 
-    }
-    
-    /* 10. Num.ENG 결과물과 ❌ 버튼 가로 밀착 배치 */
-    div[data-testid="stHorizontalBlock"]:has(.num-result) {
-        display: flex !important;
-        flex-direction: row !important;
-        align-items: center !important;
-        justify-content: flex-start !important;
-        gap: 12px !important; 
-        width: 100% !important;
-    }
-    
-    div[data-testid="stHorizontalBlock"]:has(.num-result) > div {
-        width: fit-content !important; 
-        flex: 0 1 auto !important;
-        min-width: unset !important;
-    }
-
-    .num-result { 
-        color: #FFD700 !important; 
-        font-weight: bold; 
-        font-size: clamp(1.6rem, 2.2vw, 2.4rem) !important; 
-        margin: 0 !important;
-        line-height: 1.1;
-        white-space: nowrap !important;
-    }
-
-    div[data-testid="stHorizontalBlock"]:has(.num-result) button {
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        margin-top: 2px !important; 
-    }
+    /* 링크 모음 전용 아이템 스타일 */
+    .link-item { padding: 12px 10px; border-bottom: 1px dotted rgba(255, 255, 255, 0.2); transition: background-color 0.2s; border-radius: 8px;}
+    .link-item:hover { background-color: rgba(255,255,255,0.05); }
+    .link-cat { font-size: 0.85em; color: #A3B8B8; font-weight: bold; margin-bottom: 3px; display: block;}
+    .link-title { font-size: 1.3em; font-weight: bold; color: #FFD700 !important; text-decoration: none; margin-right: 10px; }
+    .link-title:hover { text-decoration: underline; }
+    .link-memo { font-size: 0.95em; color: #FFFFFF; opacity: 0.8; }
 
     @media screen and (max-width: 768px) {
         .word-text { font-size: 1.21rem !important; }
         .mean-text { font-size: 0.9rem !important; }
-        /* 분류 필터 텍스트 30% 확대 */
-        div[data-testid="stRadio"] label p {
-            font-size: 1.2rem !important;
-        }
+        div[data-testid="stRadio"] label p { font-size: 1.2rem !important; }
     }
     </style>
     """, unsafe_allow_html=True)
 
-# [심플모드 + 모바일 전용 40% 확대 CSS 추가]
+# [심플모드 CSS]
 if st.session_state.is_simple:
     st.markdown("""
         <style>
         @media screen and (max-width: 768px) {
-            .word-text { 
-                font-size: 1.7rem !important; 
-                line-height: 1.3 !important;
-            }
-            .mean-text { 
-                font-size: 1.26rem !important; 
-                line-height: 1.3 !important;
-            }
+            .word-text { font-size: 1.7rem !important; line-height: 1.3 !important; }
+            .mean-text { font-size: 1.26rem !important; line-height: 1.3 !important; }
         }
         </style>
     """, unsafe_allow_html=True)
@@ -334,6 +202,10 @@ def init_connection():
 def get_sheet():
     return init_connection().open("English_Sentences").sheet1
 
+# ★ 링크 모음 전용 시트 (시트2) 가져오기
+def get_links_sheet():
+    return init_connection().open("English_Sentences").get_worksheet(1) # 인덱스 1 (시트2)
+
 def load_dataframe(sheet):
     for _ in range(3):
         try:
@@ -345,6 +217,19 @@ def load_dataframe(sheet):
             return df
         except: time.sleep(1)
     raise Exception("데이터 로드 실패")
+
+# ★ 링크 모음 전용 데이터프레임 로드
+def load_links_dataframe(sheet):
+    for _ in range(3):
+        try:
+            data = sheet.get_all_values()
+            if not data: return pd.DataFrame(columns=['분류1', '분류2', '제목', '링크', '메모'])
+            rows = [row + [""] * (5 - len(row)) for row in data[1:]]
+            df = pd.DataFrame(rows, columns=['분류1', '분류2', '제목', '링크', '메모'])
+            for col in df.columns: df[col] = df[col].astype(str).str.strip()
+            return df
+        except: time.sleep(1)
+    raise Exception("링크 데이터 로드 실패")
 
 # --- [다이얼로그 설정] ---
 @st.dialog("새 항목 추가")
@@ -471,9 +356,21 @@ else:
     now_kst = datetime.now(kst)
     date_str = now_kst.strftime("%A, %B %d, %Y")
 
-    col_title, col_date = st.columns([4.0, 6.0])
+    # 타이틀과 링크 모음 전환 버튼 추가 영역
+    col_title, col_link_btn, col_date = st.columns([2.5, 1.5, 6.0])
     with col_title:
-        st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.6rem, 2.9vw, 2.9rem);'>TOmBOy94 English</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.6rem, 2.9vw, 2.9rem);'>TOmBOy94</h1>", unsafe_allow_html=True)
+
+    with col_link_btn:
+        st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True) # 줄 맞춤용 여백
+        if st.session_state.app_mode == 'English':
+            if st.button("🔗 링크 모음", use_container_width=True, type="secondary"):
+                st.session_state.app_mode = 'Links'
+                st.rerun()
+        else:
+            if st.button("🇬🇧 영어 모음", use_container_width=True, type="secondary"):
+                st.session_state.app_mode = 'English'
+                st.rerun()
 
     with col_date:
         components.html(f"""
@@ -497,109 +394,146 @@ else:
             </script>
         """, height=90) 
 
-    try:
-        sheet = get_sheet(); df = load_dataframe(sheet)
-        unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
-        sel_cat = st.radio("분류 필터", ["🔀 랜덤 10", "전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed", key="cat_radio", on_change=clear_search)
-        
-        st.divider()
-        
-        cb_cols = [1.5, 1.5, 1.4, 2.6, 1.5] if st.session_state.authenticated else [1.5, 1.4, 4.1]
-        cb = st.columns(cb_cols)
-        cb[0].text_input("🔍", key="search_input", on_change=handle_search)
-        
-        if st.session_state.authenticated and cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(unique_cats)
-        
-        btn_idx = 2 if st.session_state.authenticated else 1
-        btn_text = "🔄 전체모드" if st.session_state.is_simple else "✨ 심플모드"
-        if cb[btn_idx].button(btn_text, type="primary" if not st.session_state.is_simple else "secondary", use_container_width=True):
-            st.session_state.is_simple = not st.session_state.is_simple; st.rerun()
+    # ==============================================================
+    # 🇬🇧 영어 단어장 모드
+    # ==============================================================
+    if st.session_state.app_mode == 'English':
+        try:
+            sheet = get_sheet(); df = load_dataframe(sheet)
+            unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
+            sel_cat = st.radio("분류 필터", ["🔀 랜덤 10", "전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed", key="cat_radio", on_change=clear_search)
+            
+            st.divider()
+            
+            cb_cols = [1.5, 1.5, 1.4, 2.6, 1.5] if st.session_state.authenticated else [1.5, 1.4, 4.1]
+            cb = st.columns(cb_cols)
+            cb[0].text_input("🔍", key="search_input", on_change=handle_search)
+            
+            if st.session_state.authenticated and cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(unique_cats)
+            
+            btn_idx = 2 if st.session_state.authenticated else 1
+            btn_text = "🔄 전체모드" if st.session_state.is_simple else "✨ 심플모드"
+            if cb[btn_idx].button(btn_text, type="primary" if not st.session_state.is_simple else "secondary", use_container_width=True):
+                st.session_state.is_simple = not st.session_state.is_simple; st.rerun()
 
-        is_simple = st.session_state.is_simple
-        search = st.session_state.active_search
-        d_df = df.copy()
-        if search: d_df = d_df[d_df['단어-문장'].str.contains(search, case=False, na=False)]
-        else:
-            if sel_cat == "🔀 랜덤 10":
-                if st.session_state.current_cat != "🔀 랜덤 10" or 'random_df' not in st.session_state:
-                    st.session_state.random_df = df.sample(n=min(10, len(df)))
-                d_df = st.session_state.random_df.copy()
-            elif sel_cat != "전체 분류": d_df = d_df[d_df['분류'] == sel_cat]
-            st.session_state.current_cat = sel_cat
+            is_simple = st.session_state.is_simple
+            search = st.session_state.active_search
+            d_df = df.copy()
+            if search: d_df = d_df[d_df['단어-문장'].str.contains(search, case=False, na=False)]
+            else:
+                if sel_cat == "🔀 랜덤 10":
+                    if st.session_state.current_cat != "🔀 랜덤 10" or 'random_df' not in st.session_state:
+                        st.session_state.random_df = df.sample(n=min(10, len(df)))
+                    d_df = st.session_state.random_df.copy()
+                elif sel_cat != "전체 분류": d_df = d_df[d_df['분류'] == sel_cat]
+                st.session_state.current_cat = sel_cat
 
-        if st.session_state.sort_order == 'asc': d_df = d_df.sort_values(by='단어-문장', ascending=True)
-        elif st.session_state.sort_order == 'desc': d_df = d_df.sort_values(by='단어-문장', ascending=False)
-        else: d_df = d_df.iloc[::-1]
+            if st.session_state.sort_order == 'asc': d_df = d_df.sort_values(by='단어-문장', ascending=True)
+            elif st.session_state.sort_order == 'desc': d_df = d_df.sort_values(by='단어-문장', ascending=False)
+            else: d_df = d_df.iloc[::-1]
 
-        if st.session_state.authenticated:
-            cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
+            if st.session_state.authenticated:
+                cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
 
-        total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
-        curr_p = st.session_state.curr_p
-        
-        components.html(f"""
-            <style>body {{ margin:0; padding:0; background:transparent!important; overflow:hidden; }}</style>
-            <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:5px; font-family:sans-serif;">
-                <span style="color:#FF9999; font-weight:bold; font-size:0.9rem; margin-right:15px;">{'🔍 ' + search if search else ''}</span>
-                <span style="color:#FFF; font-weight:bold; font-size:0.95rem;">총 {total}개 (페이지: {curr_p}/{pages})</span>
-            </div>
-            <script>
-            const doc = window.parent.document;
-            if (doc.liveCommaHandler) {{ doc.removeEventListener('input', doc.liveCommaHandler, true); }}
-            doc.liveCommaHandler = function(e) {{
-                if (e.target && e.target.tagName === 'INPUT') {{
-                    let label = e.target.getAttribute('aria-label');
-                    if (label && label.includes('Num.ENG')) {{
-                        let val = e.target.value;
-                        let numStr = val.replace(/[^0-9]/g, '');
-                        let formatted = numStr ? Number(numStr).toLocaleString('en-US') : '';
-                        if (val !== formatted) {{
-                            let nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-                            nativeSetter.call(e.target, formatted);
-                            e.target.dispatchEvent(new Event('input', {{ bubbles: true }}));
+            total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
+            curr_p = st.session_state.curr_p
+            
+            components.html(f"""
+                <style>body {{ margin:0; padding:0; background:transparent!important; overflow:hidden; }}</style>
+                <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:5px; font-family:sans-serif;">
+                    <span style="color:#FF9999; font-weight:bold; font-size:0.9rem; margin-right:15px;">{'🔍 ' + search if search else ''}</span>
+                    <span style="color:#FFF; font-weight:bold; font-size:0.95rem;">총 {total}개 (페이지: {curr_p}/{pages})</span>
+                </div>
+                <script>
+                const doc = window.parent.document;
+                if (doc.liveCommaHandler) {{ doc.removeEventListener('input', doc.liveCommaHandler, true); }}
+                doc.liveCommaHandler = function(e) {{
+                    if (e.target && e.target.tagName === 'INPUT') {{
+                        let label = e.target.getAttribute('aria-label');
+                        if (label && label.includes('Num.ENG')) {{
+                            let val = e.target.value;
+                            let numStr = val.replace(/[^0-9]/g, '');
+                            let formatted = numStr ? Number(numStr).toLocaleString('en-US') : '';
+                            if (val !== formatted) {{
+                                let nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                                nativeSetter.call(e.target, formatted);
+                                e.target.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                            }}
                         }}
                     }}
-                }}
-            }};
-            doc.addEventListener('input', doc.liveCommaHandler, true);
-            </script>
-        """, height=35)
-        
-        ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
-        labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
-        h_cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
-        for i, l in enumerate(labels if st.session_state.authenticated else labels[:-1]):
-            if l == "단어-문장":
-                sort_icon = " ↑" if st.session_state.sort_order == 'asc' else (" ↓" if st.session_state.sort_order == 'desc' else "")
-                if h_cols[i].button(f"{l}{sort_icon}", key="sort_btn"):
-                    st.session_state.sort_order = 'asc' if st.session_state.sort_order == 'None' else ('desc' if st.session_state.sort_order == 'asc' else 'None')
+                }};
+                doc.addEventListener('input', doc.liveCommaHandler, true);
+                </script>
+            """, height=35)
+            
+            ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
+            labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
+            h_cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
+            for i, l in enumerate(labels if st.session_state.authenticated else labels[:-1]):
+                if l == "단어-문장":
+                    sort_icon = " ↑" if st.session_state.sort_order == 'asc' else (" ↓" if st.session_state.sort_order == 'desc' else "")
+                    if h_cols[i].button(f"{l}{sort_icon}", key="sort_btn"):
+                        st.session_state.sort_order = 'asc' if st.session_state.sort_order == 'None' else ('desc' if st.session_state.sort_order == 'asc' else 'None')
+                        st.rerun()
+                else: h_cols[i].markdown(f"<span class='header-label'>{l}</span>", unsafe_allow_html=True)
+            
+            st.markdown("<div style='border-bottom:2px solid rgba(255,255,255,0.4); margin-top:-20px; margin-bottom:5px;'></div>", unsafe_allow_html=True)
+
+            for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
+                cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
+                cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold'>{row['분류']}</span>", unsafe_allow_html=True)
+                cols[1].markdown(f"<span class='word-text'>{row['단어-문장']}</span>", unsafe_allow_html=True)
+                cols[2].markdown(f"<span class='mean-text'>{row['해석']}</span>", unsafe_allow_html=True)
+                if not is_simple:
+                    cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
+                    if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(idx, row.to_dict(), unique_cats)
+                elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(idx, row.to_dict(), unique_cats)
+
+            if pages > 1:
+                p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
+                if p_cols[1].button("◀ 이전", disabled=(st.session_state.curr_p == 1)): 
+                    st.session_state.curr_p -= 1
                     st.rerun()
-            else: h_cols[i].markdown(f"<span class='header-label'>{l}</span>", unsafe_allow_html=True)
-        
-        st.markdown("<div style='border-bottom:2px solid rgba(255,255,255,0.4); margin-top:-20px; margin-bottom:5px;'></div>", unsafe_allow_html=True)
+                p_cols[2].markdown(f"<div style='text-align:center; padding:10px; color:#FFD700; font-weight:bold;'>Page {st.session_state.curr_p} / {pages}</div>", unsafe_allow_html=True)
+                if p_cols[3].button("다음 ▶", disabled=(st.session_state.curr_p == pages)): 
+                    st.session_state.curr_p += 1
+                    st.rerun()
 
-        for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
-            cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
-            cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold'>{row['분류']}</span>", unsafe_allow_html=True)
-            cols[1].markdown(f"<span class='word-text'>{row['단어-문장']}</span>", unsafe_allow_html=True)
-            cols[2].markdown(f"<span class='mean-text'>{row['해석']}</span>", unsafe_allow_html=True)
-            if not is_simple:
-                cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
-                if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(idx, row.to_dict(), unique_cats)
-            elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(idx, row.to_dict(), unique_cats)
+        except Exception as e: st.error(f"오류 발생: {e}")
 
-        if pages > 1:
-            p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
-            if p_cols[1].button("◀ 이전", disabled=(st.session_state.curr_p == 1)): 
-                st.session_state.curr_p -= 1
-                st.rerun()
-            p_cols[2].markdown(f"<div style='text-align:center; padding:10px; color:#FFD700; font-weight:bold;'>Page {st.session_state.curr_p} / {pages}</div>", unsafe_allow_html=True)
-            if p_cols[3].button("다음 ▶", disabled=(st.session_state.curr_p == pages)): 
-                st.session_state.curr_p += 1
-                st.rerun()
+    # ==============================================================
+    # 🔗 링크 모음 모드 (시트2 연동)
+    # ==============================================================
+    elif st.session_state.app_mode == 'Links':
+        try:
+            sheet2 = get_links_sheet()
+            df_links = load_links_dataframe(sheet2)
+            
+            # 분류1을 기준으로 상단 필터 생성
+            unique_links_cats = sorted([x for x in df_links['분류1'].unique().tolist() if x != ''])
+            sel_link_cat = st.radio("분류 필터", ["전체 링크"] + unique_links_cats, horizontal=True, label_visibility="collapsed")
+            
+            st.divider()
+            
+            if sel_link_cat != "전체 링크":
+                df_links = df_links[df_links['분류1'] == sel_link_cat]
 
-    except Exception as e: st.error(f"오류 발생: {e}")
+            if df_links.empty:
+                st.info("등록된 링크가 없습니다.")
+            else:
+                for idx, row in df_links.iterrows():
+                    cat_display = f"[{row['분류1']}]" if not row['분류2'] else f"[{row['분류1']} > {row['분류2']}]"
+                    st.markdown(f"""
+                        <div class="link-item">
+                            <span class="link-cat">{cat_display}</span>
+                            <a href="{row['링크']}" target="_blank" class="link-title">{row['제목']}</a>
+                            <span class="link-memo">{row['메모']}</span>
+                        </div>
+                    """, unsafe_allow_html=True)
 
+        except Exception as e: st.error(f"링크 데이터 오류 발생: {e}")
+
+    # --- 공통 푸터 ---
     current_year = datetime.now(timezone(timedelta(hours=9))).year
     st.markdown(f"""
         <div style='text-align: center; margin-top: 30px; margin-bottom: 20px; padding-top: 15px; border-top: 1px dotted rgba(255, 255, 255, 0.2);'>
