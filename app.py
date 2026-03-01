@@ -223,9 +223,9 @@ def load_links_dataframe(sheet):
     for _ in range(3):
         try:
             data = sheet.get_all_values()
-            if not data: return pd.DataFrame(columns=['분류1', '분류2', '제목', '링크', '메모'])
-            rows = [row + [""] * (5 - len(row)) for row in data[1:]]
-            df = pd.DataFrame(rows, columns=['분류1', '분류2', '제목', '링크', '메모'])
+            if not data: return pd.DataFrame(columns=['분류1', '분류2', '제목', '링크', '메모모', '분류메모'])
+            rows = [row + [""] * (6 - len(row)) for row in data[1:]]
+            df = pd.DataFrame(rows, columns=['분류1', '분류2', '제목', '링크', '메모모', '분류메모'])
             for col in df.columns: df[col] = df[col].astype(str).str.strip()
             return df
         except: time.sleep(1)
@@ -527,7 +527,7 @@ else:
                         <div class="link-item">
                             <span class="link-cat">{cat_display}</span>
                             <a href="{row['링크']}" target="_blank" class="link-title">{row['제목']}</a>
-                            <span class="link-memo">{row['메모']}</span>
+                            <span class="link-memo">{row['메모모']}</span>
                         </div>
                     """, unsafe_allow_html=True)
 
