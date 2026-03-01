@@ -388,6 +388,7 @@ else:
         else:
             if st.button("🔓 LOGOUT", use_container_width=True, type="secondary"):
                 st.session_state.authenticated = False
+                st.session_state.app_mode = 'English'  # ★ 로그아웃 시 영어모드로 강제 초기화
                 if "auth" in st.query_params: del st.query_params["auth"]
                 st.rerun()
 
@@ -417,14 +418,16 @@ else:
 
     with col_link_btn:
         st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True) # 줄 맞춤용 여백
-        if st.session_state.app_mode == 'English':
-            if st.button("🔗 링크 모음", use_container_width=True, type="secondary"):
-                st.session_state.app_mode = 'Links'
-                st.rerun()
-        else:
-            if st.button("🇬🇧 영어 모음", use_container_width=True, type="secondary"):
-                st.session_state.app_mode = 'English'
-                st.rerun()
+        # ★ 로그인 상태일 때만 전환 버튼 렌더링
+        if st.session_state.authenticated:
+            if st.session_state.app_mode == 'English':
+                if st.button("🔗 링크 모음", use_container_width=True, type="secondary"):
+                    st.session_state.app_mode = 'Links'
+                    st.rerun()
+            else:
+                if st.button("🇬🇧 영어 모음", use_container_width=True, type="secondary"):
+                    st.session_state.app_mode = 'English'
+                    st.rerun()
 
     with col_date:
         components.html(f"""
