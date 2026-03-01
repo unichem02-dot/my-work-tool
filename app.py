@@ -66,7 +66,7 @@ st.markdown("""
     }
     
     /* 팝업창(Dialog) 제목 */
-    #새-항목-추가, #항목-수정-및-삭제,
+    #새-항목-추가, #항목-수정-및-삭제, #새-링크-추가, #링크-수정-및-삭제,
     div[data-testid="stDialog"] h2,
     div[role="dialog"] h2,
     section[role="dialog"] h2 {
@@ -167,12 +167,13 @@ st.markdown("""
     div[data-testid="stHorizontalBlock"]:has(.num-result) button { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; margin-top: 2px !important; }
 
     /* 링크 모음 전용 아이템 스타일 */
-    .link-item { padding: 12px 10px; border-bottom: 1px dotted rgba(255, 255, 255, 0.2); transition: background-color 0.2s; border-radius: 8px;}
+    .link-item { padding: 12px 10px; border-bottom: 1px dotted rgba(255, 255, 255, 0.2); transition: background-color 0.2s; border-radius: 8px; width: 100%;}
     .link-item:hover { background-color: rgba(255,255,255,0.05); }
     .link-cat { font-size: 0.85em; color: #A3B8B8; font-weight: bold; margin-bottom: 3px; display: block;}
-    .link-title { font-size: 1.3em; font-weight: bold; color: #FFD700 !important; text-decoration: none; margin-right: 10px; }
+    .link-title { font-size: 1.3em; font-weight: bold; color: #FFD700 !important; text-decoration: none; margin-right: 10px; display: inline-block; margin-bottom: 2px;}
     .link-title:hover { text-decoration: underline; }
-    .link-memo { font-size: 0.95em; color: #FFFFFF; opacity: 0.8; }
+    .link-url { font-size: 0.85rem; color: #7BC8A4; margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; display: block;}
+    .link-memo { font-size: 0.95em; color: #FFFFFF; opacity: 0.8; display: block;}
 
     @media screen and (max-width: 768px) {
         .word-text { font-size: 1.21rem !important; }
@@ -231,7 +232,7 @@ def load_links_dataframe(sheet):
         except: time.sleep(1)
     raise Exception("링크 데이터 로드 실패")
 
-# --- [다이얼로그 설정] ---
+# --- [다이얼로그 설정 (영어 단어장)] ---
 @st.dialog("새 항목 추가")
 def add_dialog(unique_cats):
     with st.form("add_form", clear_on_submit=True):
@@ -278,6 +279,59 @@ def edit_dialog(idx, row_data, unique_cats):
         if b2.form_submit_button("🗑️ 삭제", use_container_width=True):
             sheet = get_sheet()
             sheet.delete_rows(idx + 2)
+            st.rerun()
+
+# --- [다이얼로그 설정 (링크 모음)] ---
+@st.dialog("새 링크 추가")
+def add_link_dialog(unique_cats1):
+    with st.form("add_link_form", clear_on_submit=True):
+        c1, c2 = st.columns(2)
+        selected_cat1 = c1.selectbox("기존 분류1(대분류)", ["(새로 입력)"] + unique_cats1)
+        new_cat1 = c2.text_input("새 분류1 입력")
+        
+        cat2 = st.text_input("분류2 (소분류)")
+        title = st.text_input("제목 (필수)")
+        link_url = st.text_input("링크 주소 (URL) (필수)")
+        memo1 = st.text_input("메모모")
+        memo2 = st.text_input("분류메모")
+        
+        if st.form_submit_button("저장하기", use_container_width=True, type="primary"):
+            final_cat1 = new_cat1.strip() if new_cat1.strip() else (selected_cat1 if selected_cat1 != "(새로 입력)" else "")
+            if title and link_url:
+                sheet2 = get_links_sheet()
+                sheet2.append_row([final_cat1, cat2, title, link_url, memo1, memo2])
+                st.success("새 링크 저장 완료!")
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error("제목과 링크 주소는 필수입니다.")
+
+@st.dialog("링크 수정 및 삭제")
+def edit_link_dialog(idx, row_data, unique_cats1):
+    safe_cats1 = unique_cats1 if unique_cats1 else ["(없음)"]
+    cat1_val = row_data.get('분류1', '')
+    cat1_index = safe_cats1.index(cat1_val) if cat1_val in safe_cats1 else 0
+    
+    with st.form(f"edit_link_{idx}"):
+        c1, c2 = st.columns(2)
+        edit_cat1 = c1.selectbox("분류1(대분류)", safe_cats1, index=cat1_index)
+        new_cat1 = c2.text_input("분류1 직접 수정")
+        
+        cat2 = st.text_input("분류2(소분류)", value=row_data.get('분류2', ''))
+        title = st.text_input("제목", value=row_data.get('제목', ''))
+        link_url = st.text_input("링크 주소(URL)", value=row_data.get('링크', ''))
+        memo1 = st.text_input("메모모", value=row_data.get('메모모', ''))
+        memo2 = st.text_input("분류메모", value=row_data.get('분류메모', ''))
+        
+        b1, b2 = st.columns(2)
+        if b1.form_submit_button("💾 저장", use_container_width=True, type="primary"):
+            final_cat1 = new_cat1.strip() if new_cat1.strip() else edit_cat1
+            sheet2 = get_links_sheet()
+            sheet2.update(f"A{idx+2}:F{idx+2}", [[final_cat1, cat2, title, link_url, memo1, memo2]])
+            st.rerun()
+        if b2.form_submit_button("🗑️ 삭제", use_container_width=True):
+            sheet2 = get_links_sheet()
+            sheet2.delete_rows(idx + 2)
             st.rerun()
 
 # --- [비즈니스 로직 함수] ---
@@ -509,9 +563,16 @@ else:
             sheet2 = get_links_sheet()
             df_links = load_links_dataframe(sheet2)
             
-            # 분류1을 기준으로 상단 필터 생성
             unique_links_cats = sorted([x for x in df_links['분류1'].unique().tolist() if x != ''])
-            sel_link_cat = st.radio("분류 필터", ["전체 링크"] + unique_links_cats, horizontal=True, label_visibility="collapsed")
+            
+            # 상단 필터 및 추가 버튼 레이아웃
+            l_col1, l_col2 = st.columns([8.5, 1.5]) if st.session_state.authenticated else st.columns([10, 0.1])
+            with l_col1:
+                sel_link_cat = st.radio("분류 필터", ["전체 링크"] + unique_links_cats, horizontal=True, label_visibility="collapsed")
+            with l_col2:
+                if st.session_state.authenticated:
+                    if st.button("➕ 새 링크 추가", type="primary", use_container_width=True):
+                        add_link_dialog(unique_links_cats)
             
             st.divider()
             
@@ -523,13 +584,28 @@ else:
             else:
                 for idx, row in df_links.iterrows():
                     cat_display = f"[{row['분류1']}]" if not row['분류2'] else f"[{row['분류1']} > {row['분류2']}]"
-                    st.markdown(f"""
+                    
+                    # 제목, 링크(URL), 메모를 함께 표현하는 HTML 템플릿
+                    html_content = f"""
                         <div class="link-item">
                             <span class="link-cat">{cat_display}</span>
                             <a href="{row['링크']}" target="_blank" class="link-title">{row['제목']}</a>
+                            <span class="link-url">🔗 {row['링크']}</span>
                             <span class="link-memo">{row['메모모']}</span>
                         </div>
-                    """, unsafe_allow_html=True)
+                    """
+                    
+                    # 로그인 시 오른쪽에 수정/삭제 연필 아이콘 띄우기
+                    if st.session_state.authenticated:
+                        item_col, btn_col = st.columns([11, 1])
+                        item_col.markdown(html_content, unsafe_allow_html=True)
+                        with btn_col:
+                            st.write("") # 버튼 수직 여백 보정
+                            st.write("")
+                            if st.button("✏️", key=f"el_{idx}", type="tertiary"):
+                                edit_link_dialog(idx, row.to_dict(), unique_links_cats)
+                    else:
+                        st.markdown(html_content, unsafe_allow_html=True)
 
         except Exception as e: st.error(f"링크 데이터 오류 발생: {e}")
 
