@@ -3,11 +3,12 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime, timedelta
+import re
 
 # --- [1. 페이지 기본 설정 및 테마 스타일] ---
 st.set_page_config(layout="wide", page_title="입출력 관리 시스템 (inout)")
 
-# 커스텀 CSS 주입 (다크 테마 및 컴팩트한 레이아웃)
+# 커스텀 CSS 주입 (다크 테마 및 컴팩트한 레이아웃, 버튼/테이블 색상 커스텀)
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
@@ -30,33 +31,92 @@ st.markdown("""
         margin-bottom: 20px;
     }
     
-    /* 요약 카드 스타일 */
-    .metric-card {
-        background: linear-gradient(135deg, #2b3648 0%, #1e2530 100%);
-        border-radius: 12px;
-        padding: 20px;
-        border-left: 5px solid #4e8cff;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        text-align: center;
-        height: 110px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        margin-bottom: 10px;
-    }
-    
     /* 버튼 둥글기 및 컴팩트화 */
     div.stButton > button {
-        border-radius: 5px !important;
+        border-radius: 4px !important;
         font-weight: bold !important;
         padding: 0px 10px !important;
     }
     
-    /* 데이터프레임 배경 */
-    [data-testid="stDataFrame"] {
-        background-color: #ffffff;
-        border-radius: 5px;
-        overflow: hidden;
+    /* 특정 버튼 색상 강제 지정용 클래스 */
+    div.btn-green > div > button {
+        background-color: #8bc34a !important;
+        color: white !important;
+        border: 1px solid #7cb342 !important;
+    }
+    div.btn-pink > div > button {
+        background-color: #e57373 !important;
+        color: white !important;
+        border: 1px solid #e53935 !important;
+    }
+
+    /* 커스텀 데이터 테이블 스타일 */
+    .custom-table-container {
+        width: 100%;
+        margin-top: 10px;
+        font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+    }
+    .table-title {
+        background-color: #2b323c;
+        color: white;
+        padding: 10px 15px;
+        font-size: 13px;
+        border-top: 2px solid #555;
+    }
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        background-color: white;
+        color: #333;
+    }
+    .custom-table th {
+        border: 1px solid #d0d0d0;
+        padding: 8px 4px;
+        text-align: center;
+        color: white;
+        font-weight: bold;
+    }
+    .custom-table td {
+        border: 1px solid #d0d0d0;
+        padding: 6px 8px;
+    }
+    .custom-table tr:nth-child(even) {
+        background-color: #f8f9fa;
+    }
+    .custom-table tr:hover {
+        background-color: #e2e6ea;
+    }
+    
+    /* 테이블 헤더 컬러 */
+    .th-base { background-color: #353b48; }
+    .th-in { background-color: #3b5b88; } /* 매입 파란색 */
+    .th-out { background-color: #b8860b; } /* 매출 오렌지/브라운 */
+    
+    /* 셀 정렬 */
+    .tc { text-align: center; }
+    .tl { text-align: left; }
+    .tr { text-align: right; }
+    
+    /* 하단 요약 패널 스타일 */
+    .summary-row {
+        display: flex;
+        font-weight: bold;
+        color: white;
+        font-size: 13px;
+        margin-top: 0;
+    }
+    .sum-base { background-color: #353b48; padding: 10px 15px; flex: 1; text-align: left;}
+    .sum-in { background-color: #3b5b88; padding: 10px 15px; flex: 2; text-align: center;}
+    .sum-out { background-color: #b8860b; padding: 10px 15px; flex: 2.5; text-align: center;}
+    .sum-profit { 
+        background-color: #2b323c; 
+        color: white;
+        padding: 10px 20px; 
+        text-align: right; 
+        font-weight: bold;
+        font-size: 14px;
+        border-top: 1px solid #444;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -148,6 +208,14 @@ def load_data():
     df = pd.DataFrame(raw_data[1:], columns=new_header)
     return df
 
+# 숫자 클렌징 함수 (콤마 등 제거)
+def clean_numeric(val):
+    if pd.isna(val) or val == '': return 0
+    try:
+        return float(re.sub(r'[^\d.-]', '', str(val)))
+    except:
+        return 0
+
 # --- [6. 메인 화면 구성 및 복합 검색 UI] ---
 try:
     df = load_data()
@@ -159,13 +227,15 @@ try:
         df = df.dropna(subset=[date_col])
         df['year'] = df[date_col].dt.year.astype(int)
         df['month'] = df[date_col].dt.month.astype(int)
-        df['year_month'] = df[date_col].dt.strftime('%Y-%m')
-
-        df['inq_val'] = pd.to_numeric(df['inq'], errors='coerce').fillna(0)
-        df['inprice_val'] = pd.to_numeric(df['inprice'], errors='coerce').fillna(0)
-        df['outq_val'] = pd.to_numeric(df['outq'], errors='coerce').fillna(0)
-        df['outprice_val'] = pd.to_numeric(df['outprice'], errors='coerce').fillna(0)
         
+        # 숫자형 데이터 변환 (콤마 제거)
+        df['inq_val'] = df['inq'].apply(clean_numeric)
+        df['inprice_val'] = df['inprice'].apply(clean_numeric)
+        df['outq_val'] = df['outq'].apply(clean_numeric)
+        df['outprice_val'] = df['outprice'].apply(clean_numeric)
+        df['carprice_val'] = df['carprice'].apply(clean_numeric)
+        
+        # 금액 계산
         df['in_total'] = df['inq_val'] * df['inprice_val']
         df['out_total'] = df['outq_val'] * df['outprice_val']
 
@@ -205,16 +275,22 @@ try:
             # [Row 3] 하단 멀티 컨트롤 패널
             c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14 = st.columns([0.8, 1.2, 1, 1,   1.2,   1, 1,   1.5, 1,   1.2,   0.8, 1.2, 1, 1.2])
             
-            # 결산 그룹
+            # 결산 (녹색 버튼 적용)
             with c1: st.selectbox("s3", ["ALL"], label_visibility="collapsed")
             with c2: y_3 = st.selectbox("y3", years, label_visibility="collapsed")
             with c3: m_3 = st.selectbox("m3", months, index=datetime.now().month-1, label_visibility="collapsed", format_func=lambda x: f"{x}월")
-            with c4: btn_3 = st.button("결산", use_container_width=True)
+            with c4: 
+                st.markdown('<div class="btn-green">', unsafe_allow_html=True)
+                btn_3 = st.button("결산", use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
 
-            # 신규입력
-            with c5: btn_4 = st.button("신규입력", use_container_width=True)
+            # 신규입력 (핑크 버튼 적용)
+            with c5: 
+                st.markdown('<div class="btn-pink">', unsafe_allow_html=True)
+                btn_4 = st.button("신규입력", use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
 
-            # 💡 수정사항: 최근입력 그룹 (20개를 기본값으로 고정)
+            # 최근입력 그룹
             with c6: limit_val = st.selectbox("s4", ["20개", "50개", "100개", "ALL"], index=0, label_visibility="collapsed")
             with c7: btn_5 = st.button("최근입력", use_container_width=True, type="primary")
 
@@ -238,29 +314,29 @@ try:
         # ---------------------------------------------------------
         if btn_1:
             st.session_state.search_params = {
-                "mode": "기간", "type": type_1, "company": com_1, "item": item_1, "limit": "ALL",
+                "mode": "기간", "title": "기간검색순서", "type": type_1, "company": com_1, "item": item_1, "limit": "ALL",
                 "start": date_range[0], "end": date_range[1] if len(date_range)>1 else date_range[0]
             }
         elif btn_2:
             st.session_state.search_params = {
-                "mode": "월별", "type": type_2, "company": com_2, "item": item_2, "limit": "ALL",
+                "mode": "월별", "title": f"{year_2}년 {month_2}월 검색순서", "type": type_2, "company": com_2, "item": item_2, "limit": "ALL",
                 "year": year_2, "month": month_2
             }
         elif btn_3: # 결산
-            st.session_state.search_params = {"mode": "월별단순", "year": y_3, "month": m_3, "type": "ALL", "company": "", "item": "", "limit": "ALL"}
+            st.session_state.search_params = {"mode": "월별단순", "title": "결산조회", "year": y_3, "month": m_3, "type": "ALL", "company": "", "item": "", "limit": "ALL"}
         elif btn_4: # 신규입력 (임시)
             st.info("신규입력 기능은 아직 구현되지 않았습니다.")
         elif btn_5: # 최근입력
-            st.session_state.search_params = {"mode": "최근", "type": "ALL", "company": "", "item": "", "limit": limit_val}
+            st.session_state.search_params = {"mode": "최근", "title": "최근입력순서", "type": "ALL", "company": "", "item": "", "limit": limit_val}
         elif btn_6: # 일검색
-            st.session_state.search_params = {"mode": "일", "date": d_day, "type": "ALL", "company": "", "item": "", "limit": "ALL"}
+            st.session_state.search_params = {"mode": "일", "title": f"{d_day} 검색순서", "date": d_day, "type": "ALL", "company": "", "item": "", "limit": "ALL"}
         elif btn_7: # 어제오늘내일
             st.session_state.search_params = {
-                "mode": "기간", "type": "ALL", "company": "", "item": "", "limit": "ALL",
+                "mode": "기간", "title": "어제/오늘/내일 검색순서", "type": "ALL", "company": "", "item": "", "limit": "ALL",
                 "start": datetime.now().date() - timedelta(days=1), "end": datetime.now().date() + timedelta(days=1)
             }
         elif btn_8: # 월별검색
-            st.session_state.search_params = {"mode": "월별단순", "year": y_4, "month": m_4, "type": "ALL", "company": "", "item": "", "limit": "ALL"}
+            st.session_state.search_params = {"mode": "월별단순", "title": "월별검색순서", "year": y_4, "month": m_4, "type": "ALL", "company": "", "item": "", "limit": "ALL"}
         
         # ---------------------------------------------------------
         # 💡 데이터 필터링 실행
@@ -269,7 +345,6 @@ try:
         params = st.session_state.search_params
         
         if params["mode"] != "init":
-            # 1. 날짜 조건 필터
             if params["mode"] == "기간":
                 f_df = f_df[(f_df[date_col].dt.date >= params["start"]) & (f_df[date_col].dt.date <= params["end"])]
             elif params["mode"] in ["월별", "월별단순"]:
@@ -277,16 +352,14 @@ try:
             elif params["mode"] == "일":
                 f_df = f_df[f_df[date_col].dt.date == params["date"]]
             elif params["mode"] == "최근":
-                f_df = f_df.sort_values(by=date_col, ascending=False) # 날짜 역순 정렬 우선
+                f_df = f_df.sort_values(by=date_col, ascending=False)
 
-            # 2. 매입/매출 구분 필터
             target_type = params.get("type", "ALL")
             if target_type == "매입":
                 f_df = f_df[f_df['incom'].astype(str).str.strip() != '']
             elif target_type == "매출":
                 f_df = f_df[f_df['outcom'].astype(str).str.strip() != '']
 
-            # 3. 키워드 검색 (거래처/품목)
             com_kw = params.get("company", "")
             item_kw = params.get("item", "")
             if com_kw:
@@ -294,64 +367,112 @@ try:
             if item_kw:
                 f_df = f_df[f_df['initem'].str.contains(item_kw, case=False, na=False) | f_df['outitem'].str.contains(item_kw, case=False, na=False)]
                 
-            # 4. 개수 제한 필터 (limit)
             limit_str = params.get("limit", "ALL")
             if limit_str != "ALL" and "개" in limit_str:
                 num = int(limit_str.replace("개", ""))
                 f_df = f_df.head(num)
 
         # ---------------------------------------------------------
-        # 📊 대시보드 및 결과 출력
+        # 📊 커스텀 HTML 데이터 테이블 렌더링 (스크린샷 100% 동일)
         # ---------------------------------------------------------
-        total_in_amt = f_df['in_total'].sum()
-        total_out_amt = f_df['out_total'].sum()
         data_count = len(f_df)
+        total_in_q = f_df['inq_val'].sum()
+        total_in_amt = f_df['in_total'].sum()
+        total_out_q = f_df['out_total'].sum() if 'out_total' in f_df.columns else 0 # 안전장치
+        total_out_q = f_df['outq_val'].sum()
+        total_out_amt = f_df['out_total'].sum()
+        total_carprice = f_df['carprice_val'].sum()
         
-        # 내부 계산용 컬럼 제거 (원본 컬럼 17개는 모두 살림)
-        display_df = f_df.drop(columns=['year', 'month', 'year_month', 'inq_val', 'inprice_val', 'outq_val', 'outprice_val', 'in_total', 'out_total'])
-        
-        # 날짜 최신순 정렬 및 문자열 변환
-        display_df = display_df.sort_values(by=date_col, ascending=False)
-        display_df['date'] = display_df['date'].dt.strftime('%Y-%m-%d')
-        
-        # 보기 좋은 한글 이름으로 전체 변경
-        rename_dict = {
-            'id': '순번', 'date': '날짜', 'incom': '입고처', 'initem': '입고품목',
-            'inq': '수량(入)', 'inprice': '단가(入)', 'outcom': '출고처', 'outitem': '출고품목',
-            'outq': '수량(出)', 'outprice': '단가(出)', 'etc': '비고', 's': '상태',
-            'carno': '차량번호', 'carprice': '운임', 'memoin': '메모(入)', 'memoout': '메모(出)',
-            'memocar': '메모(차)'
-        }
-        display_df = display_df.rename(columns=rename_dict)
+        # 총 수익 = 매출금액 - 매입금액 - 운송비(스크린샷 기준)
+        total_profit = total_out_amt - total_in_amt - total_carprice
 
-        m1, m2, m3, m4 = st.columns(4)
-        with m1:
-            st.markdown(f"<div class='metric-card' style='border-left-color: #00c853;'><p style='margin:0; font-size: 0.9rem; color: #aeb9cc;'>TOTAL IN AMT</p><h2 style='margin:0; color: #00c853 !important;'>₩ {total_in_amt:,.0f}</h2></div>", unsafe_allow_html=True)
-        with m2:
-            st.markdown(f"<div class='metric-card' style='border-left-color: #ff5252;'><p style='margin:0; font-size: 0.9rem; color: #aeb9cc;'>TOTAL OUT AMT</p><h2 style='margin:0; color: #ff5252 !important;'>₩ {total_out_amt:,.0f}</h2></div>", unsafe_allow_html=True)
-        with m3:
-            st.markdown(f"<div class='metric-card' style='border-left-color: #4e8cff;'><p style='margin:0; font-size: 0.9rem; color: #aeb9cc;'>DATA COUNT</p><h2 style='margin:0; color: #4e8cff !important;'>{data_count}건</h2></div>", unsafe_allow_html=True)
-        with m4:
-            st.markdown(f"<div class='metric-card' style='border-left-color: #9c27b0;'><p style='margin:0; font-size: 0.9rem; color: #aeb9cc;'>ROW COUNT (행 수)</p><h2 style='margin:0; color: #9c27b0 !important;'>{data_count}줄</h2></div>", unsafe_allow_html=True)
+        f_df = f_df.sort_values(by=date_col, ascending=False)
+        table_title_text = params.get("title", "데이터 검색 결과")
 
-        # 📈 거래처 실적 그래프 섹션 (검색 시에만)
-        com_kw = params.get("company", "")
-        if com_kw and not f_df.empty:
-            st.markdown(f"### 📈 '{com_kw}' 전체 월별 실적 흐름")
-            chart_df = df[df['incom'].str.contains(com_kw, case=False, na=False) | df['outcom'].str.contains(com_kw, case=False, na=False)].copy()
-            if not chart_df.empty:
-                monthly_stats = chart_df.groupby('year_month')[['in_total', 'out_total']].sum().sort_index()
-                monthly_stats.columns = ['매입금액(IN)', '매출금액(OUT)']
-                st.bar_chart(monthly_stats)
+        # HTML 구성 시작
+        html_str = f"""
+        <div class="custom-table-container">
+            <div class="table-title">
+                <b>{table_title_text}</b> | 출력된 자료 갯수 : {data_count} 개 (고유번호가 제일 큰 것부터 출력) 오로지 검색 조건순으로만 정렬되었습니다
+            </div>
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th class="th-base">Vat</th>
+                        <th class="th-base">날짜</th>
+                        <th class="th-in">매입거래처</th>
+                        <th class="th-in">매입품목 (MEMO)</th>
+                        <th class="th-in">수량</th>
+                        <th class="th-in">단가</th>
+                        <th class="th-out">매출거래처</th>
+                        <th class="th-out">매출품목 (MEMO)</th>
+                        <th class="th-out">수량</th>
+                        <th class="th-out">단가</th>
+                        <th class="th-base">NO</th>
+                        <th class="th-base">배송</th>
+                        <th class="th-base">운송비</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
 
-        # 결과 테이블 (잘림 없이 전체 데이터 표시 및 스크롤바 제거를 위한 동적 높이 설정)
-        st.markdown("<br>", unsafe_allow_html=True)
+        for _, row in f_df.iterrows():
+            # 날짜 포맷
+            dt_str = row[date_col].strftime('%Y-%m-%d') if pd.notnull(row[date_col]) else ''
+            
+            # 숫자 콤마 포맷 (0이면 0으로)
+            in_q_str = f"{row['inq_val']:,.0f}" if row['inq_val'] else "0"
+            in_p_str = f"{row['inprice_val']:,.0f}" if row['inprice_val'] else "0"
+            out_q_str = f"{row['outq_val']:,.0f}" if row['outq_val'] else "0"
+            out_p_str = f"{row['outprice_val']:,.0f}" if row['outprice_val'] else "0"
+            car_p_str = f"{row['carprice_val']:,.0f}" if row['carprice_val'] else "0"
+            
+            # 품목명 + 메모 결합 (스크린샷 스타일 반영)
+            in_item_full = str(row['initem'])
+            out_item_full = str(row['outitem'])
+
+            html_str += f"""
+                <tr>
+                    <td class="tc">{row.get('s', '')}</td>
+                    <td class="tc">{dt_str}</td>
+                    <td class="tl">{row.get('incom', '')}</td>
+                    <td class="tl">{in_item_full}</td>
+                    <td class="tr">{in_q_str}</td>
+                    <td class="tr">{in_p_str}</td>
+                    <td class="tl">{row.get('outcom', '')}</td>
+                    <td class="tl">{out_item_full}</td>
+                    <td class="tr">{out_q_str}</td>
+                    <td class="tr">{out_p_str}</td>
+                    <td class="tc">{row.get('id', '')}</td>
+                    <td class="tc">{row.get('carno', '')}</td>
+                    <td class="tr">{car_p_str}</td>
+                </tr>
+            """
+            
+        html_str += "</tbody></table>"
         
-        # 💡 수정사항: 데이터 갯수에 비례해서 높이를 계산하여 내부에 스크롤바가 안 생기도록 처리
-        # (데이터 줄 수 + 헤더 1줄) * 36px 기본 높이에 약간의 여유(10px) 추가
-        dynamic_height = (len(display_df) + 1) * 36 + 10 
-        
-        st.dataframe(display_df, use_container_width=True, hide_index=True, height=dynamic_height)
+        # 하단 요약 (Summary) 추가
+        html_str += f"""
+            <div class="summary-row">
+                <div class="sum-base">자료수 : {data_count} 개</div>
+                <div class="sum-in">
+                    매입수량 : {total_in_q:,.0f} &nbsp;&nbsp;&nbsp;&nbsp; 
+                    매입금액 : {total_in_amt:,.0f}원
+                </div>
+                <div class="sum-out">
+                    매출수량 : {total_out_q:,.0f} &nbsp;&nbsp;&nbsp;&nbsp; 
+                    매출금액 : {total_out_amt:,.0f}원 &nbsp;&nbsp;&nbsp;&nbsp; 
+                    운송비 : {total_carprice:,.0f}원
+                </div>
+            </div>
+            <div class="sum-profit">
+                검색내 총수익 &nbsp;&nbsp; {total_profit:,.0f}원
+            </div>
+        </div>
+        """
+
+        # HTML 렌더링 (전체 높이가 자동으로 잡혀 내부 스크롤이 사라짐)
+        st.markdown(html_str, unsafe_allow_html=True)
 
     else:
         st.error("❌ 'date' 열을 찾을 수 없습니다.")
