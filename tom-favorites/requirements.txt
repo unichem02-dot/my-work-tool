@@ -1,5 +1,0 @@
-streamlit
-pandas
-xlsxwriter
-gspread
-google-auth
