@@ -88,7 +88,7 @@ st.markdown("""
     div.element-container:has(.row-marker) { width: 100% !important; min-width: 100% !important; }
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 4px 10px !important; /* 상하 여백을 16px에서 4px로 줄여 간격을 최소화 */
+        padding: 4px 10px !important; 
         border-radius: 0px !important; 
         margin-bottom: 0px !important; border-bottom: 1px dotted rgba(255, 255, 255, 0.2) !important; 
         width: 100% !important; min-width: 100% !important; flex: 1 1 100% !important;
@@ -130,13 +130,13 @@ st.markdown("""
         color: #224343 !important;
     }
 
-    /* ★ 소분류(분류2) 전용 라디오 버튼 스타일 (주황색, 크기 축소) ★ */
+    /* ★ 소분류 전용 라디오 버튼 스타일 */
     div[data-testid="stRadio"]:has(div[aria-label="소분류 필터"]) label {
         padding: 4px 14px !important;
     }
     div[data-testid="stRadio"]:has(div[aria-label="소분류 필터"]) label p {
-        color: #FFA500 !important; /* 주황색 텍스트 */
-        font-size: clamp(0.7rem, 0.9vw, 1.0rem) !important; /* 크기 축소 */
+        color: #FFA500 !important; 
+        font-size: clamp(0.7rem, 0.9vw, 1.0rem) !important; 
     }
     div[data-testid="stRadio"]:has(div[aria-label="소분류 필터"]) label:hover {
         border-color: #FFA500 !important;
@@ -165,16 +165,16 @@ st.markdown("""
     button[kind="tertiary"] {
         background-color: transparent !important; border: none !important; padding: 0 !important; margin: 0 !important;
         min-height: 0 !important; min-width: 40px !important; box-shadow: none !important;
-        display: flex !important; align-items: center !important;
+        display: flex !important; align-items: center !important; justify-content: center !important;
     }
     button[kind="tertiary"] p { font-size: 1.6rem !important; margin: 0 !important; padding: 0 !important; transition: transform 0.2s ease !important; }
     button[kind="tertiary"]:hover p { transform: scale(1.2) !important; }
 
     /* 8. 텍스트 스타일 */
     .header-label { font-size: clamp(1.0rem, 1.4vw, 1.5rem) !important; font-weight: 800 !important; color: #FFFFFF !important; white-space: nowrap !important; }
-    .word-text { font-size: 1.98em; font-weight: bold; color: #FFD700 !important; word-break: keep-all; display: inline-block !important; margin-bottom: 2px !important; transition: transform 0.2s ease !important; transform-origin: left center !important; }
-    .mean-text { font-size: 1.3em; word-break: keep-all; display: inline-block !important; margin-bottom: 2px !important; }
-    .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; display: inline-block !important; margin-bottom: 2px !important; }
+    .word-text { font-size: 1.98em; font-weight: bold; color: #FFD700 !important; word-break: keep-all; display: inline-block !important; margin-bottom: 0px !important; transition: transform 0.2s ease !important; transform-origin: left center !important; }
+    .mean-text { font-size: 1.3em; word-break: keep-all; display: inline-block !important; margin-bottom: 0px !important; }
+    .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; display: inline-block !important; margin-bottom: 0px !important; }
     div[data-testid="stHorizontalBlock"]:has(.row-marker):hover .word-text { transform: scale(1.1) !important; z-index: 10 !important; }
 
     /* 9. Num.ENG 및 검색창 레이아웃 */
@@ -189,25 +189,20 @@ st.markdown("""
     .num-result { color: #FFD700 !important; font-weight: bold; font-size: clamp(1.6rem, 2.2vw, 2.4rem) !important; margin: 0 !important; line-height: 1.1; white-space: nowrap !important; }
     div[data-testid="stHorizontalBlock"]:has(.num-result) button { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; margin-top: 2px !important; }
 
-    /* ★ 링크 모음 전용 아이템 스타일 (표 형식 적용) ★ */
-    /* 대분류(분류1) 텍스트 노란색 */
-    .link-table-cat1 { font-size: 1.8rem !important; color: #FFD700 !important; font-weight: bold; display: inline-block; margin-bottom: 2px; }
-    /* 소분류(분류2) 텍스트 주황색 */
-    .link-table-cat2 { font-size: 1.2rem !important; color: #FFA500 !important; font-weight: bold; display: inline-block; margin-bottom: 2px; }
+    /* ★ 링크 모음 전용 아이템 스타일 */
+    .link-table-cat1 { font-size: 1.8rem !important; color: #FFD700 !important; font-weight: bold; display: inline-block; margin-bottom: 0px; }
+    .link-table-cat2 { font-size: 1.2rem !important; color: #FFA500 !important; font-weight: bold; display: inline-block; margin-bottom: 0px; }
     
-    /* 링크 밑줄(테두리) 완벽 제거 및 색상 강제 적용 */
-    /* 제목: 2.0 크기 & 노란색 적용 */
-    a.link-table-title { font-size: 2.0em !important; font-weight: bold; color: #FFD700 !important; text-decoration: none !important; border-bottom: none !important; background-image: none !important; display: inline-block; margin-bottom: 2px; transition: opacity 0.2s; }
+    a.link-table-title { font-size: 2.0em !important; font-weight: bold; color: #FFD700 !important; text-decoration: none !important; border-bottom: none !important; background-image: none !important; display: inline-block; margin-bottom: 0px; transition: opacity 0.2s; }
     a.link-table-title:hover { opacity: 0.8; text-decoration: none !important; border-bottom: none !important; }
     
-    a.link-table-url { font-size: 0.85rem; color: #FFFFFF !important; text-decoration: none !important; border-bottom: none !important; background-image: none !important; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; transition: opacity 0.2s; }
-    a.link-table-url:hover { opacity: 0.8; text-decoration: none !important; border-bottom: none !important; }
+    /* 복사 가능한 링크 스타일 (클릭 유도) */
+    span.link-table-url { cursor: pointer; font-size: 0.85rem; color: #FFFFFF !important; text-decoration: none !important; border-bottom: none !important; background-image: none !important; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; transition: all 0.2s; }
+    span.link-table-url:hover { opacity: 0.8; color: #FFD700 !important; }
     
-    /* Streamlit 전역 a 태그 강제 속성 초기화 */
     div[data-testid="stMarkdownContainer"] a, div[data-testid="stMarkdownContainer"] a:hover { border-bottom: 0px !important; text-decoration: none !important; background-image: none !important; }
     
-    /* 메모: 텍스트 크기 1.3 적용 */
-    .link-table-memo { font-size: 1.3em !important; color: #FFFFFF; opacity: 0.9; word-break: keep-all; }
+    .link-table-memo { font-size: 1.3em !important; color: #FFFFFF; opacity: 0.9; word-break: keep-all; margin-bottom: 0px; }
 
     @media screen and (max-width: 768px) {
         .word-text { font-size: 1.21rem !important; }
@@ -240,7 +235,6 @@ def init_connection():
 def get_sheet():
     return init_connection().open("English_Sentences").sheet1
 
-# ★ 링크 모음 전용 시트 (시트2) 가져오기
 def get_links_sheet():
     return init_connection().open("English_Sentences").get_worksheet(1) # 인덱스 1 (시트2)
 
@@ -256,14 +250,13 @@ def load_dataframe(sheet):
         except: time.sleep(1)
     raise Exception("데이터 로드 실패")
 
-# ★ 링크 모음 전용 데이터프레임 로드
 def load_links_dataframe(sheet):
     for _ in range(3):
         try:
             data = sheet.get_all_values()
-            if not data: return pd.DataFrame(columns=['분류1', '분류2', '제목', '메모', '링크'])
+            if not data: return pd.DataFrame(columns=['대분류', '소분류', '제목', '메모', '링크'])
             rows = [row + [""] * (5 - len(row)) for row in data[1:]]
-            df = pd.DataFrame(rows, columns=['분류1', '분류2', '제목', '메모', '링크'])
+            df = pd.DataFrame(rows, columns=['대분류', '소분류', '제목', '메모', '링크'])
             for col in df.columns: df[col] = df[col].astype(str).str.strip()
             return df
         except: time.sleep(1)
@@ -323,10 +316,10 @@ def edit_dialog(idx, row_data, unique_cats):
 def add_link_dialog(unique_cats1):
     with st.form("add_link_form", clear_on_submit=True):
         c1, c2 = st.columns(2)
-        selected_cat1 = c1.selectbox("기존 분류1(대분류)", ["(새로 입력)"] + unique_cats1)
-        new_cat1 = c2.text_input("새 분류1 입력")
+        selected_cat1 = c1.selectbox("기존 대분류", ["(새로 입력)"] + unique_cats1)
+        new_cat1 = c2.text_input("새 대분류 입력")
         
-        cat2 = st.text_input("분류2 (소분류)")
+        cat2 = st.text_input("소분류")
         title = st.text_input("제목 (필수)")
         memo = st.text_input("메모")
         link_url = st.text_input("링크 주소 (URL) (필수)")
@@ -345,15 +338,15 @@ def add_link_dialog(unique_cats1):
 @st.dialog("링크 수정 및 삭제")
 def edit_link_dialog(idx, row_data, unique_cats1):
     safe_cats1 = unique_cats1 if unique_cats1 else ["(없음)"]
-    cat1_val = row_data.get('분류1', '')
+    cat1_val = row_data.get('대분류', '')
     cat1_index = safe_cats1.index(cat1_val) if cat1_val in safe_cats1 else 0
     
     with st.form(f"edit_link_{idx}"):
         c1, c2 = st.columns(2)
-        edit_cat1 = c1.selectbox("분류1(대분류)", safe_cats1, index=cat1_index)
-        new_cat1 = c2.text_input("분류1 직접 수정")
+        edit_cat1 = c1.selectbox("대분류", safe_cats1, index=cat1_index)
+        new_cat1 = c2.text_input("대분류 직접 수정")
         
-        cat2 = st.text_input("분류2(소분류)", value=row_data.get('분류2', ''))
+        cat2 = st.text_input("소분류", value=row_data.get('소분류', ''))
         title = st.text_input("제목", value=row_data.get('제목', ''))
         memo = st.text_input("메모", value=row_data.get('메모', ''))
         link_url = st.text_input("링크 주소(URL)", value=row_data.get('링크', ''))
@@ -413,7 +406,7 @@ if not st.session_state.authenticated and st.session_state.logging_in:
         st.rerun()
 else:
     # 2. 메인 앱 화면
-    col_auth, col_spacer, col_num_combined = st.columns([2.0, 0.2, 7.8])
+    col_auth, col_spacer, col_num_combined = st.columns([2.0, 0.2, 7.8], vertical_alignment="center")
     
     with col_auth:
         if not st.session_state.authenticated:
@@ -434,7 +427,7 @@ else:
         clean_num = st.session_state.num_input.replace(",", "").strip()
         if clean_num.isdigit():
             eng_text = num_to_eng(int(clean_num)).capitalize()
-            res_col1, res_col2 = st.columns([1, 1])
+            res_col1, res_col2 = st.columns([1, 1], vertical_alignment="center")
             with res_col1:
                 st.markdown(f"<p class='num-result'>{eng_text}</p>", unsafe_allow_html=True)
             with res_col2:
@@ -447,12 +440,11 @@ else:
     date_str = now_kst.strftime("%A, %B %d, %Y")
 
     # 타이틀과 링크 모음 전환 버튼 추가 영역
-    col_title, col_link_btn, col_date = st.columns([2.5, 1.5, 6.0])
+    col_title, col_link_btn, col_date = st.columns([2.5, 1.5, 6.0], vertical_alignment="center")
     with col_title:
         st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.6rem, 2.9vw, 2.9rem);'>TOmBOy94</h1>", unsafe_allow_html=True)
 
     with col_link_btn:
-        st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True) # 줄 맞춤용 여백
         # ★ 로그인 상태일 때만 전환 버튼 렌더링
         if st.session_state.authenticated:
             if st.session_state.app_mode == 'English':
@@ -483,6 +475,34 @@ else:
                 var btn = document.querySelector(".copy-btn"); btn.innerHTML = "✅"; 
                 setTimeout(function(){{ btn.innerHTML = "📋 복사"; }}, 1500);
             }}
+            
+            // ★ 링크 클릭 시 클립보드 복사 이벤트 글로벌 등록
+            const doc = window.parent.document;
+            if (!doc.copyLinkHandler) {{
+                doc.copyLinkHandler = function(e) {{
+                    let target = e.target.closest('.copyable-link');
+                    if (target) {{
+                        e.preventDefault();
+                        let url = target.getAttribute('data-url');
+                        if (url) {{
+                            let temp = doc.createElement("textarea");
+                            temp.value = url;
+                            doc.body.appendChild(temp);
+                            temp.select();
+                            doc.execCommand("copy");
+                            doc.body.removeChild(temp);
+                            let originalText = target.innerHTML;
+                            target.innerHTML = "✅ 복사완료!";
+                            target.style.color = "#FFD700";
+                            setTimeout(function(){{ 
+                                target.innerHTML = originalText; 
+                                target.style.color = ""; 
+                            }}, 1500);
+                        }}
+                    }}
+                }};
+                doc.addEventListener('click', doc.copyLinkHandler, true);
+            }}
             </script>
         """, height=90) 
 
@@ -498,7 +518,7 @@ else:
             st.divider()
             
             cb_cols = [1.5, 1.5, 1.4, 2.6, 1.5] if st.session_state.authenticated else [1.5, 1.4, 4.1]
-            cb = st.columns(cb_cols)
+            cb = st.columns(cb_cols, vertical_alignment="center")
             cb[0].text_input("🔍", key="search_input", on_change=handle_search)
             
             if st.session_state.authenticated and cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(unique_cats)
@@ -560,7 +580,7 @@ else:
             
             ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
             labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
-            h_cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
+            h_cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1], vertical_alignment="center")
             for i, l in enumerate(labels if st.session_state.authenticated else labels[:-1]):
                 if l == "단어-문장":
                     sort_icon = " ↑" if st.session_state.sort_order == 'asc' else (" ↓" if st.session_state.sort_order == 'desc' else "")
@@ -572,7 +592,7 @@ else:
             st.markdown("<div style='border-bottom:2px solid rgba(255,255,255,0.4); margin-top:-20px; margin-bottom:5px;'></div>", unsafe_allow_html=True)
 
             for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
-                cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1])
+                cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1], vertical_alignment="center")
                 cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold'>{row['분류']}</span>", unsafe_allow_html=True)
                 cols[1].markdown(f"<span class='word-text'>{row['단어-문장']}</span>", unsafe_allow_html=True)
                 cols[2].markdown(f"<span class='mean-text'>{row['해석']}</span>", unsafe_allow_html=True)
@@ -582,7 +602,7 @@ else:
                 elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(idx, row.to_dict(), unique_cats)
 
             if pages > 1:
-                p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5])
+                p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5], vertical_alignment="center")
                 if p_cols[1].button("◀ 이전", disabled=(st.session_state.curr_p == 1)): 
                     st.session_state.curr_p -= 1
                     st.rerun()
@@ -601,7 +621,7 @@ else:
             sheet2 = get_links_sheet()
             df_links = load_links_dataframe(sheet2)
             
-            unique_links_cats1 = sorted([x for x in df_links['분류1'].unique().tolist() if x != ''])
+            unique_links_cats1 = sorted([x for x in df_links['대분류'].unique().tolist() if x != ''])
             
             # 1. 대분류 라디오 버튼
             sel_link_cat1 = st.radio("대분류 필터", ["전체 링크"] + unique_links_cats1, horizontal=True, label_visibility="collapsed")
@@ -609,7 +629,7 @@ else:
             # 2. 대분류 선택 시, 바로 밑에 소분류 라디오 버튼 렌더링
             sel_link_cat2 = "전체"
             if sel_link_cat1 != "전체 링크":
-                subset_cat2 = sorted([x for x in df_links[df_links['분류1'] == sel_link_cat1]['분류2'].unique().tolist() if x != ''])
+                subset_cat2 = sorted([x for x in df_links[df_links['대분류'] == sel_link_cat1]['소분류'].unique().tolist() if x != ''])
                 if subset_cat2:
                     display_cat2 = ["전체"] + subset_cat2
                     sel_link_cat2 = st.radio("소분류 필터", display_cat2, horizontal=True, label_visibility="collapsed", key="cat2_radio")
@@ -618,7 +638,7 @@ else:
             
             # ★ 검색, 추가, 다운로드 컨트롤 바
             cb_cols = [1.5, 1.5, 5.5, 1.5] if st.session_state.authenticated else [1.5, 7.0, 1.5]
-            cb = st.columns(cb_cols)
+            cb = st.columns(cb_cols, vertical_alignment="center")
             cb[0].text_input("🔍", key="search_input", on_change=handle_search)
             
             if st.session_state.authenticated:
@@ -631,9 +651,9 @@ else:
                 df_links = df_links[df_links['제목'].str.contains(search, case=False, na=False) | df_links['메모'].str.contains(search, case=False, na=False) | df_links['링크'].str.contains(search, case=False, na=False)]
             else:
                 if sel_link_cat1 != "전체 링크":
-                    df_links = df_links[df_links['분류1'] == sel_link_cat1]
+                    df_links = df_links[df_links['대분류'] == sel_link_cat1]
                     if sel_link_cat2 != "전체":
-                        df_links = df_links[df_links['분류2'] == sel_link_cat2]
+                        df_links = df_links[df_links['소분류'] == sel_link_cat2]
 
             # CSV 다운로드 버튼
             if st.session_state.authenticated:
@@ -641,11 +661,11 @@ else:
             else:
                 cb[2].download_button("📥 CSV", df_links.to_csv(index=False).encode('utf-8-sig'), f"Links_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
 
-            # --- 표 형식 헤더 (메모와 링크 위치 변경) ---
+            # --- 표 형식 헤더 ---
             l_ratio = [1.2, 1.2, 2.5, 2.0, 2.5, 1.0] if st.session_state.authenticated else [1.2, 1.2, 2.5, 2.0, 2.5]
-            l_labels = ["분류1", "분류2", "제목", "메모", "링크", "수정"] if st.session_state.authenticated else ["분류1", "분류2", "제목", "메모", "링크"]
+            l_labels = ["대분류", "소분류", "제목", "메모", "링크", "수정"] if st.session_state.authenticated else ["대분류", "소분류", "제목", "메모", "링크"]
             
-            h_cols = st.columns(l_ratio)
+            h_cols = st.columns(l_ratio, vertical_alignment="center")
             for i, l in enumerate(l_labels):
                 h_cols[i].markdown(f"<span class='header-label'>{l}</span>", unsafe_allow_html=True)
             
@@ -656,13 +676,14 @@ else:
                 st.info("등록된 링크가 없습니다.")
             else:
                 for idx, row in df_links.iterrows():
-                    cols = st.columns(l_ratio)
+                    # ★ 컨텐츠 행 수직 중앙 정렬 (vertical_alignment="center" 적용)
+                    cols = st.columns(l_ratio, vertical_alignment="center")
                     
-                    # 1. 분류1
-                    cols[0].markdown(f"<span class='row-marker'></span><span class='link-table-cat1'>{row['분류1']}</span>", unsafe_allow_html=True)
+                    # 1. 대분류
+                    cols[0].markdown(f"<span class='row-marker'></span><span class='link-table-cat1'>{row['대분류']}</span>", unsafe_allow_html=True)
                     
-                    # 2. 분류2
-                    cols[1].markdown(f"<span class='link-table-cat2'>{row['분류2']}</span>", unsafe_allow_html=True)
+                    # 2. 소분류
+                    cols[1].markdown(f"<span class='link-table-cat2'>{row['소분류']}</span>", unsafe_allow_html=True)
                     
                     # 3. 제목
                     title_html = f"<a href='{row['링크']}' target='_blank' class='link-table-title'>{row['제목']}</a>"
@@ -671,8 +692,8 @@ else:
                     # 4. 메모
                     cols[3].markdown(f"<span class='link-table-memo'>{row['메모']}</span>", unsafe_allow_html=True)
                     
-                    # 5. 링크
-                    link_html = f"<a href='{row['링크']}' target='_blank' class='link-table-url'>{row['링크']}</a>"
+                    # 5. 링크 (★ 클릭 시 복사 기능 적용: span + copyable-link 클래스)
+                    link_html = f"<span class='link-table-url copyable-link' data-url='{row['링크']}'>{row['링크']}</span>"
                     cols[4].markdown(link_html, unsafe_allow_html=True)
                     
                     # 6. 수정 버튼
