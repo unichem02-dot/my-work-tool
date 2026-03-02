@@ -166,14 +166,11 @@ st.markdown("""
     .num-result { color: #FFD700 !important; font-weight: bold; font-size: clamp(1.6rem, 2.2vw, 2.4rem) !important; margin: 0 !important; line-height: 1.1; white-space: nowrap !important; }
     div[data-testid="stHorizontalBlock"]:has(.num-result) button { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; margin-top: 2px !important; }
 
-    /* 링크 모음 전용 아이템 스타일 */
-    .link-item { padding: 12px 10px; border-bottom: 1px dotted rgba(255, 255, 255, 0.2); transition: background-color 0.2s; border-radius: 8px; width: 100%;}
-    .link-item:hover { background-color: rgba(255,255,255,0.05); }
-    .link-cat { font-size: 0.85em; color: #A3B8B8; font-weight: bold; margin-bottom: 3px; display: block;}
-    .link-title { font-size: 1.3em; font-weight: bold; color: #FFD700 !important; text-decoration: none; margin-right: 10px; display: inline-block; margin-bottom: 2px;}
-    .link-title:hover { text-decoration: underline; }
-    .link-url { font-size: 0.85rem; color: #7BC8A4; margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; display: block;}
-    .link-memo { font-size: 0.95em; color: #FFFFFF; opacity: 0.8; display: block;}
+    /* 링크 모음 전용 아이템 스타일 (표 형식 적용) */
+    .link-table-title { font-size: 1.3em; font-weight: bold; color: #FFD700 !important; text-decoration: none; display: inline-block; margin-bottom: 2px; }
+    .link-table-title:hover { text-decoration: underline; }
+    .link-table-url { font-size: 0.85rem; color: #7BC8A4; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+    .link-table-memo { font-size: 1em; color: #FFFFFF; opacity: 0.9; word-break: keep-all; }
 
     @media screen and (max-width: 768px) {
         .word-text { font-size: 1.21rem !important; }
@@ -582,33 +579,38 @@ else:
             if sel_link_cat != "전체 링크":
                 df_links = df_links[df_links['분류1'] == sel_link_cat]
 
+            # --- 표 형식 헤더 ---
+            l_ratio = [2.0, 5.0, 4.0, 1.0] if st.session_state.authenticated else [2.0, 6.0, 4.0]
+            l_labels = ["분류", "제목 및 링크", "메모모", "수정"] if st.session_state.authenticated else ["분류", "제목 및 링크", "메모모"]
+            
+            h_cols = st.columns(l_ratio)
+            for i, l in enumerate(l_labels):
+                h_cols[i].markdown(f"<span class='header-label'>{l}</span>", unsafe_allow_html=True)
+            
+            st.markdown("<div style='border-bottom:2px solid rgba(255,255,255,0.4); margin-top:-20px; margin-bottom:5px;'></div>", unsafe_allow_html=True)
+
+            # --- 표 내용 출력 ---
             if df_links.empty:
                 st.info("등록된 링크가 없습니다.")
             else:
                 for idx, row in df_links.iterrows():
-                    cat_display = f"[{row['분류1']}]" if not row['분류2'] else f"[{row['분류1']} > {row['분류2']}]"
+                    cols = st.columns(l_ratio)
+                    cat_display = f"{row['분류1']}" if not row['분류2'] else f"{row['분류1']} > {row['분류2']}"
                     
-                    # 제목, 링크(URL), 메모를 함께 표현하는 HTML 템플릿
-                    html_content = f"""
-                        <div class="link-item">
-                            <span class="link-cat">{cat_display}</span>
-                            <a href="{row['링크']}" target="_blank" class="link-title">{row['제목']}</a>
-                            <span class="link-url">🔗 {row['링크']}</span>
-                            <span class="link-memo">{row['메모모']}</span>
-                        </div>
-                    """
+                    # 1. 분류 (row-marker를 넣어 영어 단어장과 동일한 호버 효과 적용)
+                    cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold'>[{cat_display}]</span>", unsafe_allow_html=True)
                     
-                    # 로그인 시 오른쪽에 수정/삭제 연필 아이콘 띄우기
+                    # 2. 제목 및 링크 (클릭 가능)
+                    link_html = f"<a href='{row['링크']}' target='_blank' class='link-table-title'>{row['제목']}</a><span class='link-table-url'>🔗 {row['링크']}</span>"
+                    cols[1].markdown(link_html, unsafe_allow_html=True)
+                    
+                    # 3. 메모모
+                    cols[2].markdown(f"<span class='link-table-memo'>{row['메모모']}</span>", unsafe_allow_html=True)
+                    
+                    # 4. 수정 버튼
                     if st.session_state.authenticated:
-                        item_col, btn_col = st.columns([11, 1])
-                        item_col.markdown(html_content, unsafe_allow_html=True)
-                        with btn_col:
-                            st.write("") # 버튼 수직 여백 보정
-                            st.write("")
-                            if st.button("✏️", key=f"el_{idx}", type="tertiary"):
-                                edit_link_dialog(idx, row.to_dict(), unique_links_cats)
-                    else:
-                        st.markdown(html_content, unsafe_allow_html=True)
+                        if cols[3].button("✏️", key=f"el_{idx}", type="tertiary"):
+                            edit_link_dialog(idx, row.to_dict(), unique_links_cats)
 
         except Exception as e: st.error(f"링크 데이터 오류 발생: {e}")
 
