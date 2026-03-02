@@ -603,36 +603,47 @@ else:
             
             unique_links_cats1 = sorted([x for x in df_links['분류1'].unique().tolist() if x != ''])
             
-            # ★ 2단 필터 (대분류 선택 -> 하단 소분류 전개 방식)
-            l_col1, l_col2 = st.columns([8.5, 1.5]) if st.session_state.authenticated else st.columns([10, 0.1])
-            with l_col1:
-                # 1. 대분류 라디오 버튼
-                sel_link_cat1 = st.radio("대분류 필터", ["전체 링크"] + unique_links_cats1, horizontal=True, label_visibility="collapsed")
-                
-                # 2. 대분류 선택 시, 바로 밑에 소분류 라디오 버튼 렌더링 (기호 제거 및 스타일 분리)
-                sel_link_cat2 = "전체"
-                if sel_link_cat1 != "전체 링크":
-                    subset_cat2 = sorted([x for x in df_links[df_links['분류1'] == sel_link_cat1]['분류2'].unique().tolist() if x != ''])
-                    if subset_cat2:
-                        display_cat2 = ["전체"] + subset_cat2
-                        sel_link_cat2 = st.radio("소분류 필터", display_cat2, horizontal=True, label_visibility="collapsed", key="cat2_radio")
-
-            with l_col2:
-                if st.session_state.authenticated:
-                    if st.button("➕ 새 링크 추가", type="primary", use_container_width=True):
-                        add_link_dialog(unique_links_cats1)
+            # 1. 대분류 라디오 버튼
+            sel_link_cat1 = st.radio("대분류 필터", ["전체 링크"] + unique_links_cats1, horizontal=True, label_visibility="collapsed")
             
+            # 2. 대분류 선택 시, 바로 밑에 소분류 라디오 버튼 렌더링
+            sel_link_cat2 = "전체"
+            if sel_link_cat1 != "전체 링크":
+                subset_cat2 = sorted([x for x in df_links[df_links['분류1'] == sel_link_cat1]['분류2'].unique().tolist() if x != ''])
+                if subset_cat2:
+                    display_cat2 = ["전체"] + subset_cat2
+                    sel_link_cat2 = st.radio("소분류 필터", display_cat2, horizontal=True, label_visibility="collapsed", key="cat2_radio")
+
             st.divider()
             
+            # ★ 검색, 추가, 다운로드 컨트롤 바
+            cb_cols = [1.5, 1.5, 5.5, 1.5] if st.session_state.authenticated else [1.5, 7.0, 1.5]
+            cb = st.columns(cb_cols)
+            cb[0].text_input("🔍", key="search_input", on_change=handle_search)
+            
+            if st.session_state.authenticated:
+                if cb[1].button("➕ 새 링크 추가", type="primary", use_container_width=True):
+                    add_link_dialog(unique_links_cats1)
+            
             # 데이터 필터링 로직
-            if sel_link_cat1 != "전체 링크":
-                df_links = df_links[df_links['분류1'] == sel_link_cat1]
-                if sel_link_cat2 != "전체":
-                    df_links = df_links[df_links['분류2'] == sel_link_cat2]
+            search = st.session_state.active_search
+            if search:
+                df_links = df_links[df_links['제목'].str.contains(search, case=False, na=False) | df_links['메모'].str.contains(search, case=False, na=False) | df_links['링크'].str.contains(search, case=False, na=False)]
+            else:
+                if sel_link_cat1 != "전체 링크":
+                    df_links = df_links[df_links['분류1'] == sel_link_cat1]
+                    if sel_link_cat2 != "전체":
+                        df_links = df_links[df_links['분류2'] == sel_link_cat2]
 
-            # --- 표 형식 헤더 ---
-            l_ratio = [1.2, 1.2, 2.5, 2.5, 2.0, 1.0] if st.session_state.authenticated else [1.2, 1.2, 2.5, 2.5, 2.0]
-            l_labels = ["분류1", "분류2", "제목", "링크", "메모", "수정"] if st.session_state.authenticated else ["분류1", "분류2", "제목", "링크", "메모"]
+            # CSV 다운로드 버튼
+            if st.session_state.authenticated:
+                cb[3].download_button("📥 CSV", df_links.to_csv(index=False).encode('utf-8-sig'), f"Links_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
+            else:
+                cb[2].download_button("📥 CSV", df_links.to_csv(index=False).encode('utf-8-sig'), f"Links_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
+
+            # --- 표 형식 헤더 (메모와 링크 위치 변경) ---
+            l_ratio = [1.2, 1.2, 2.5, 2.0, 2.5, 1.0] if st.session_state.authenticated else [1.2, 1.2, 2.5, 2.0, 2.5]
+            l_labels = ["분류1", "분류2", "제목", "메모", "링크", "수정"] if st.session_state.authenticated else ["분류1", "분류2", "제목", "메모", "링크"]
             
             h_cols = st.columns(l_ratio)
             for i, l in enumerate(l_labels):
@@ -647,22 +658,22 @@ else:
                 for idx, row in df_links.iterrows():
                     cols = st.columns(l_ratio)
                     
-                    # 1. 분류1 (호버 마커 추가, 텍스트 노란색)
+                    # 1. 분류1
                     cols[0].markdown(f"<span class='row-marker'></span><span class='link-table-cat1'>{row['분류1']}</span>", unsafe_allow_html=True)
                     
-                    # 2. 분류2 (텍스트 주황색 지정)
+                    # 2. 분류2
                     cols[1].markdown(f"<span class='link-table-cat2'>{row['분류2']}</span>", unsafe_allow_html=True)
                     
-                    # 3. 제목 (제목 2.0 크기/노란색, 밑줄 제거)
+                    # 3. 제목
                     title_html = f"<a href='{row['링크']}' target='_blank' class='link-table-title'>{row['제목']}</a>"
                     cols[2].markdown(title_html, unsafe_allow_html=True)
                     
-                    # 4. 링크 (URL 화이트, 밑줄 제거)
-                    link_html = f"<a href='{row['링크']}' target='_blank' class='link-table-url'>{row['링크']}</a>"
-                    cols[3].markdown(link_html, unsafe_allow_html=True)
+                    # 4. 메모 (위치 변경)
+                    cols[3].markdown(f"<span class='link-table-memo'>{row['메모']}</span>", unsafe_allow_html=True)
                     
-                    # 5. 메모 (1.3 크기 적용)
-                    cols[4].markdown(f"<span class='link-table-memo'>{row['메모']}</span>", unsafe_allow_html=True)
+                    # 5. 링크 (위치 변경)
+                    link_html = f"<a href='{row['링크']}' target='_blank' class='link-table-url'>{row['링크']}</a>"
+                    cols[4].markdown(link_html, unsafe_allow_html=True)
                     
                     # 6. 수정 버튼
                     if st.session_state.authenticated:
