@@ -373,105 +373,71 @@ try:
                 f_df = f_df.head(num)
 
         # ---------------------------------------------------------
-        # 📊 커스텀 HTML 데이터 테이블 렌더링 (스크린샷 100% 동일)
+        # 📊 커스텀 HTML 데이터 테이블 렌더링 (스크린샷 100% 동일, 소스코드 노출 버그 수정)
         # ---------------------------------------------------------
         data_count = len(f_df)
         total_in_q = f_df['inq_val'].sum()
         total_in_amt = f_df['in_total'].sum()
-        total_out_q = f_df['out_total'].sum() if 'out_total' in f_df.columns else 0 # 안전장치
+        total_out_q = f_df['out_total'].sum() if 'out_total' in f_df.columns else 0
         total_out_q = f_df['outq_val'].sum()
         total_out_amt = f_df['out_total'].sum()
         total_carprice = f_df['carprice_val'].sum()
         
-        # 총 수익 = 매출금액 - 매입금액 - 운송비(스크린샷 기준)
         total_profit = total_out_amt - total_in_amt - total_carprice
-
         f_df = f_df.sort_values(by=date_col, ascending=False)
         table_title_text = params.get("title", "데이터 검색 결과")
 
-        # HTML 구성 시작
-        html_str = f"""
-        <div class="custom-table-container">
-            <div class="table-title">
-                <b>{table_title_text}</b> | 출력된 자료 갯수 : {data_count} 개 (고유번호가 제일 큰 것부터 출력) 오로지 검색 조건순으로만 정렬되었습니다
-            </div>
-            <table class="custom-table">
-                <thead>
-                    <tr>
-                        <th class="th-base">Vat</th>
-                        <th class="th-base">날짜</th>
-                        <th class="th-in">매입거래처</th>
-                        <th class="th-in">매입품목 (MEMO)</th>
-                        <th class="th-in">수량</th>
-                        <th class="th-in">단가</th>
-                        <th class="th-out">매출거래처</th>
-                        <th class="th-out">매출품목 (MEMO)</th>
-                        <th class="th-out">수량</th>
-                        <th class="th-out">단가</th>
-                        <th class="th-base">NO</th>
-                        <th class="th-base">배송</th>
-                        <th class="th-base">운송비</th>
-                    </tr>
-                </thead>
-                <tbody>
-        """
+        # 💡 들여쓰기를 없애서 마크다운 코드블럭으로 오인받지 않게 일렬로 문자열 합치기
+        html_str = '<div class="custom-table-container">'
+        html_str += f'<div class="table-title"><b>{table_title_text}</b> | 출력된 자료 갯수 : {data_count} 개 (고유번호가 제일 큰 것부터 출력) 오로지 검색 조건순으로만 정렬되었습니다</div>'
+        html_str += '<table class="custom-table">'
+        html_str += '<thead><tr>'
+        html_str += '<th class="th-base">Vat</th><th class="th-base">날짜</th>'
+        html_str += '<th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th>'
+        html_str += '<th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th>'
+        html_str += '<th class="th-base">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th>'
+        html_str += '</tr></thead><tbody>'
 
         for _, row in f_df.iterrows():
-            # 날짜 포맷
             dt_str = row[date_col].strftime('%Y-%m-%d') if pd.notnull(row[date_col]) else ''
-            
-            # 숫자 콤마 포맷 (0이면 0으로)
             in_q_str = f"{row['inq_val']:,.0f}" if row['inq_val'] else "0"
             in_p_str = f"{row['inprice_val']:,.0f}" if row['inprice_val'] else "0"
             out_q_str = f"{row['outq_val']:,.0f}" if row['outq_val'] else "0"
             out_p_str = f"{row['outprice_val']:,.0f}" if row['outprice_val'] else "0"
             car_p_str = f"{row['carprice_val']:,.0f}" if row['carprice_val'] else "0"
             
-            # 품목명 + 메모 결합 (스크린샷 스타일 반영)
             in_item_full = str(row['initem'])
             out_item_full = str(row['outitem'])
 
-            html_str += f"""
-                <tr>
-                    <td class="tc">{row.get('s', '')}</td>
-                    <td class="tc">{dt_str}</td>
-                    <td class="tl">{row.get('incom', '')}</td>
-                    <td class="tl">{in_item_full}</td>
-                    <td class="tr">{in_q_str}</td>
-                    <td class="tr">{in_p_str}</td>
-                    <td class="tl">{row.get('outcom', '')}</td>
-                    <td class="tl">{out_item_full}</td>
-                    <td class="tr">{out_q_str}</td>
-                    <td class="tr">{out_p_str}</td>
-                    <td class="tc">{row.get('id', '')}</td>
-                    <td class="tc">{row.get('carno', '')}</td>
-                    <td class="tr">{car_p_str}</td>
-                </tr>
-            """
+            # 각 줄도 여백 없이 추가
+            html_str += '<tr>'
+            html_str += f'<td class="tc">{row.get("s", "")}</td>'
+            html_str += f'<td class="tc">{dt_str}</td>'
+            html_str += f'<td class="tl">{row.get("incom", "")}</td>'
+            html_str += f'<td class="tl">{in_item_full}</td>'
+            html_str += f'<td class="tr">{in_q_str}</td>'
+            html_str += f'<td class="tr">{in_p_str}</td>'
+            html_str += f'<td class="tl">{row.get("outcom", "")}</td>'
+            html_str += f'<td class="tl">{out_item_full}</td>'
+            html_str += f'<td class="tr">{out_q_str}</td>'
+            html_str += f'<td class="tr">{out_p_str}</td>'
+            html_str += f'<td class="tc">{row.get("id", "")}</td>'
+            html_str += f'<td class="tc">{row.get("carno", "")}</td>'
+            html_str += f'<td class="tr">{car_p_str}</td>'
+            html_str += '</tr>'
             
-        html_str += "</tbody></table>"
+        html_str += '</tbody></table>'
         
-        # 하단 요약 (Summary) 추가
-        html_str += f"""
-            <div class="summary-row">
-                <div class="sum-base">자료수 : {data_count} 개</div>
-                <div class="sum-in">
-                    매입수량 : {total_in_q:,.0f} &nbsp;&nbsp;&nbsp;&nbsp; 
-                    매입금액 : {total_in_amt:,.0f}원
-                </div>
-                <div class="sum-out">
-                    매출수량 : {total_out_q:,.0f} &nbsp;&nbsp;&nbsp;&nbsp; 
-                    매출금액 : {total_out_amt:,.0f}원 &nbsp;&nbsp;&nbsp;&nbsp; 
-                    운송비 : {total_carprice:,.0f}원
-                </div>
-            </div>
-            <div class="sum-profit">
-                검색내 총수익 &nbsp;&nbsp; {total_profit:,.0f}원
-            </div>
-        </div>
-        """
+        # 하단 요약
+        html_str += '<div class="summary-row">'
+        html_str += f'<div class="sum-base">자료수 : {data_count} 개</div>'
+        html_str += f'<div class="sum-in">매입수량 : {total_in_q:,.0f} &nbsp;&nbsp;&nbsp;&nbsp; 매입금액 : {total_in_amt:,.0f}원</div>'
+        html_str += f'<div class="sum-out">매출수량 : {total_out_q:,.0f} &nbsp;&nbsp;&nbsp;&nbsp; 매출금액 : {total_out_amt:,.0f}원 &nbsp;&nbsp;&nbsp;&nbsp; 운송비 : {total_carprice:,.0f}원</div>'
+        html_str += '</div>'
+        html_str += f'<div class="sum-profit">검색내 총수익 &nbsp;&nbsp; {total_profit:,.0f}원</div>'
+        html_str += '</div>'
 
-        # HTML 렌더링 (전체 높이가 자동으로 잡혀 내부 스크롤이 사라짐)
+        # HTML 렌더링
         st.markdown(html_str, unsafe_allow_html=True)
 
     else:
