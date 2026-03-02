@@ -167,9 +167,11 @@ st.markdown("""
     div[data-testid="stHorizontalBlock"]:has(.num-result) button { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; margin-top: 2px !important; }
 
     /* 링크 모음 전용 아이템 스타일 (표 형식 적용) */
+    .link-table-cat1 { font-size: 1.8rem !important; color: #FFA500 !important; font-weight: bold; display: inline-block; margin-bottom: 2px; }
     .link-table-title { font-size: 1.3em; font-weight: bold; color: #FFD700 !important; text-decoration: none !important; display: inline-block; margin-bottom: 2px; transition: opacity 0.2s; }
     .link-table-title:hover { text-decoration: none !important; opacity: 0.8; }
-    .link-table-url { font-size: 0.85rem; color: #7BC8A4; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; text-decoration: none !important; transition: opacity 0.2s; }
+    /* 링크 색상을 연두색(YellowGreen)으로 변경 */
+    .link-table-url { font-size: 0.85rem; color: #9ACD32; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; text-decoration: none !important; transition: opacity 0.2s; }
     .link-table-url:hover { text-decoration: none !important; opacity: 0.8; }
     .link-table-memo { font-size: 1em; color: #FFFFFF; opacity: 0.9; word-break: keep-all; }
 
@@ -177,6 +179,7 @@ st.markdown("""
         .word-text { font-size: 1.21rem !important; }
         .mean-text { font-size: 0.9rem !important; }
         div[data-testid="stRadio"] label p { font-size: 1.2rem !important; }
+        .link-table-cat1 { font-size: 1.4rem !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -564,7 +567,10 @@ else:
             sheet2 = get_links_sheet()
             df_links = load_links_dataframe(sheet2)
             
-            unique_links_cats = sorted([x for x in df_links['분류1'].unique().tolist() if x != ''])
+            # ★ 필터용으로 분류1과 분류2를 결합하여 새로운 열 생성 (분류1 > 분류2)
+            df_links['필터분류'] = df_links.apply(lambda r: f"{r['분류1']} > {r['분류2']}" if r['분류2'].strip() else r['분류1'], axis=1)
+            
+            unique_links_cats = sorted([x for x in df_links['필터분류'].unique().tolist() if x != ''])
             
             # 상단 필터 및 추가 버튼 레이아웃
             l_col1, l_col2 = st.columns([8.5, 1.5]) if st.session_state.authenticated else st.columns([10, 0.1])
@@ -573,12 +579,14 @@ else:
             with l_col2:
                 if st.session_state.authenticated:
                     if st.button("➕ 새 링크 추가", type="primary", use_container_width=True):
-                        add_link_dialog(unique_links_cats)
+                        # 새 링크 추가 다이얼로그용으로는 분류1 목록만 추출
+                        unique_cats1_only = sorted([x for x in df_links['분류1'].unique().tolist() if x != ''])
+                        add_link_dialog(unique_cats1_only)
             
             st.divider()
             
             if sel_link_cat != "전체 링크":
-                df_links = df_links[df_links['분류1'] == sel_link_cat]
+                df_links = df_links[df_links['필터분류'] == sel_link_cat]
 
             # --- 표 형식 헤더 ---
             l_ratio = [1.2, 1.2, 3.5, 2.0, 2.0, 1.0] if st.session_state.authenticated else [1.2, 1.2, 3.5, 2.0, 2.0]
@@ -597,14 +605,14 @@ else:
                 for idx, row in df_links.iterrows():
                     cols = st.columns(l_ratio)
                     
-                    # 1. 분류1 (row-marker를 넣어 영어 단어장과 동일한 호버 효과 적용)
-                    cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold'>[{row['분류1']}]</span>", unsafe_allow_html=True)
+                    # 1. 분류1 (호버 마커 추가, 괄호 제거, 주황색 강조 스타일 적용)
+                    cols[0].markdown(f"<span class='row-marker'></span><span class='link-table-cat1'>{row['분류1']}</span>", unsafe_allow_html=True)
                     
                     # 2. 분류2
                     cols[1].markdown(f"<span class='cat-text-bold'>{row['분류2']}</span>", unsafe_allow_html=True)
                     
-                    # 3. 제목 및 링크 (클릭 가능, 밑줄 없음)
-                    link_html = f"<a href='{row['링크']}' target='_blank' class='link-table-title'>{row['제목']}</a><a href='{row['링크']}' target='_blank' class='link-table-url'>🔗 {row['링크']}</a>"
+                    # 3. 제목 및 링크 (클릭 가능, 이모티콘 제거, 밑줄 없음)
+                    link_html = f"<a href='{row['링크']}' target='_blank' class='link-table-title'>{row['제목']}</a><a href='{row['링크']}' target='_blank' class='link-table-url'>{row['링크']}</a>"
                     cols[2].markdown(link_html, unsafe_allow_html=True)
                     
                     # 4. 메모
@@ -616,7 +624,8 @@ else:
                     # 6. 수정 버튼
                     if st.session_state.authenticated:
                         if cols[5].button("✏️", key=f"el_{idx}", type="tertiary"):
-                            edit_link_dialog(idx, row.to_dict(), unique_links_cats)
+                            unique_cats1_only = sorted([x for x in df_links['분류1'].unique().tolist() if x != ''])
+                            edit_link_dialog(idx, row.to_dict(), unique_cats1_only)
 
         except Exception as e: st.error(f"링크 데이터 오류 발생: {e}")
 
