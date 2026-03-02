@@ -58,17 +58,14 @@ st.markdown("""
     }
     .table-title {
         background-color: #2b323c;
-        color: white;
         padding: 10px 15px;
-        font-size: 13px;
         border-top: 2px solid #555;
     }
     .custom-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 12px;
+        font-size: 13px;
         background-color: white;
-        color: #333;
     }
     .custom-table th {
         border: 1px solid #d0d0d0;
@@ -92,6 +89,16 @@ st.markdown("""
     .th-base { background-color: #353b48; }
     .th-in { background-color: #3b5b88; } /* 매입 파란색 */
     .th-out { background-color: #b8860b; } /* 매출 오렌지/브라운 */
+    
+    /* 💡 본문 텍스트 색상 및 굵기 커스텀 */
+    .txt-in-bold { color: #1e3a8a !important; font-weight: bold; }
+    .txt-in { color: #1e3a8a !important; }
+    .txt-out-bold { color: #9a3412 !important; font-weight: bold; }
+    .txt-out { color: #9a3412 !important; }
+    .txt-green { color: #059669 !important; font-weight: bold; }
+    .txt-purple { color: #7e22ce !important; font-weight: bold; }
+    .txt-gray { color: #475569 !important; }
+    .txt-black { color: #1e293b !important; }
     
     /* 셀 정렬 */
     .tc { text-align: center; }
@@ -208,7 +215,7 @@ def load_data():
     df = pd.DataFrame(raw_data[1:], columns=new_header)
     return df
 
-# 숫자 클렌징 함수 (콤마 등 제거)
+# 숫자 클렌징 함수
 def clean_numeric(val):
     if pd.isna(val) or val == '': return 0
     try:
@@ -275,7 +282,6 @@ try:
             # [Row 3] 하단 멀티 컨트롤 패널
             c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14 = st.columns([0.8, 1.2, 1, 1,   1.2,   1, 1,   1.5, 1,   1.2,   0.8, 1.2, 1, 1.2])
             
-            # 결산 (녹색 버튼 적용)
             with c1: st.selectbox("s3", ["ALL"], label_visibility="collapsed")
             with c2: y_3 = st.selectbox("y3", years, label_visibility="collapsed")
             with c3: m_3 = st.selectbox("m3", months, index=datetime.now().month-1, label_visibility="collapsed", format_func=lambda x: f"{x}월")
@@ -284,24 +290,19 @@ try:
                 btn_3 = st.button("결산", use_container_width=True)
                 st.markdown('</div>', unsafe_allow_html=True)
 
-            # 신규입력 (핑크 버튼 적용)
             with c5: 
                 st.markdown('<div class="btn-pink">', unsafe_allow_html=True)
                 btn_4 = st.button("신규입력", use_container_width=True)
                 st.markdown('</div>', unsafe_allow_html=True)
 
-            # 최근입력 그룹
             with c6: limit_val = st.selectbox("s4", ["20개", "50개", "100개", "ALL"], index=0, label_visibility="collapsed")
             with c7: btn_5 = st.button("최근입력", use_container_width=True, type="primary")
 
-            # 일검색 그룹
             with c8: d_day = st.date_input("d2", datetime.now().date(), label_visibility="collapsed")
             with c9: btn_6 = st.button("일검색", use_container_width=True, type="primary")
 
-            # 어제오늘내일
             with c10: btn_7 = st.button("어제오늘내일", use_container_width=True, type="primary")
 
-            # 월별검색 그룹
             with c11: st.selectbox("s5", ["ALL"], label_visibility="collapsed")
             with c12: y_4 = st.selectbox("y4", years, label_visibility="collapsed")
             with c13: m_4 = st.selectbox("m4", months, index=datetime.now().month-1, label_visibility="collapsed", format_func=lambda x: f"{x}월")
@@ -373,23 +374,22 @@ try:
                 f_df = f_df.head(num)
 
         # ---------------------------------------------------------
-        # 📊 커스텀 HTML 데이터 테이블 렌더링 (스크린샷 100% 동일, 소스코드 노출 버그 수정)
+        # 📊 커스텀 HTML 데이터 테이블 렌더링 (글자 색상 및 굵기 완벽 동기화)
         # ---------------------------------------------------------
         data_count = len(f_df)
         total_in_q = f_df['inq_val'].sum()
         total_in_amt = f_df['in_total'].sum()
-        total_out_q = f_df['out_total'].sum() if 'out_total' in f_df.columns else 0
         total_out_q = f_df['outq_val'].sum()
         total_out_amt = f_df['out_total'].sum()
         total_carprice = f_df['carprice_val'].sum()
-        
         total_profit = total_out_amt - total_in_amt - total_carprice
+        
         f_df = f_df.sort_values(by=date_col, ascending=False)
         table_title_text = params.get("title", "데이터 검색 결과")
 
-        # 💡 들여쓰기를 없애서 마크다운 코드블럭으로 오인받지 않게 일렬로 문자열 합치기
         html_str = '<div class="custom-table-container">'
-        html_str += f'<div class="table-title"><b>{table_title_text}</b> | 출력된 자료 갯수 : {data_count} 개 (고유번호가 제일 큰 것부터 출력) 오로지 검색 조건순으로만 정렬되었습니다</div>'
+        # 제목 굵기 및 디자인
+        html_str += f'<div class="table-title"><span style="font-size: 14px; font-weight: bold; color: #f8fafc;">{table_title_text}</span> <span style="font-size: 11px; color: #cbd5e1;">| 출력된 자료 갯수 : {data_count} 개 (고유번호가 제일 큰 것부터 출력) 오로지 검색 조건순으로만 정렬되었습니다</span></div>'
         html_str += '<table class="custom-table">'
         html_str += '<thead><tr>'
         html_str += '<th class="th-base">Vat</th><th class="th-base">날짜</th>'
@@ -408,36 +408,41 @@ try:
             
             in_item_full = str(row['initem'])
             out_item_full = str(row['outitem'])
+            
+            # Vat 조건에 따른 색상 변경 클래스 지정 (제일=초록, 중부=보라)
+            s_val = str(row.get("s", ""))
+            if "제일" in s_val: s_cls = "txt-green"
+            elif "중부" in s_val: s_cls = "txt-purple"
+            else: s_cls = "txt-gray"
 
-            # 각 줄도 여백 없이 추가
+            # 각 줄 렌더링 (CSS 클래스로 글자색 및 Bold 처리)
             html_str += '<tr>'
-            html_str += f'<td class="tc">{row.get("s", "")}</td>'
-            html_str += f'<td class="tc">{dt_str}</td>'
-            html_str += f'<td class="tl">{row.get("incom", "")}</td>'
-            html_str += f'<td class="tl">{in_item_full}</td>'
-            html_str += f'<td class="tr">{in_q_str}</td>'
-            html_str += f'<td class="tr">{in_p_str}</td>'
-            html_str += f'<td class="tl">{row.get("outcom", "")}</td>'
-            html_str += f'<td class="tl">{out_item_full}</td>'
-            html_str += f'<td class="tr">{out_q_str}</td>'
-            html_str += f'<td class="tr">{out_p_str}</td>'
-            html_str += f'<td class="tc">{row.get("id", "")}</td>'
-            html_str += f'<td class="tc">{row.get("carno", "")}</td>'
-            html_str += f'<td class="tr">{car_p_str}</td>'
+            html_str += f'<td class="tc"><span class="{s_cls}">{s_val}</span></td>'
+            html_str += f'<td class="tc txt-black">{dt_str}</td>'
+            html_str += f'<td class="tl txt-in-bold">{row.get("incom", "")}</td>'
+            html_str += f'<td class="tl txt-in">{in_item_full}</td>'
+            html_str += f'<td class="tr txt-in">{in_q_str}</td>'
+            html_str += f'<td class="tr txt-in">{in_p_str}</td>'
+            html_str += f'<td class="tl txt-out-bold">{row.get("outcom", "")}</td>'
+            html_str += f'<td class="tl txt-out">{out_item_full}</td>'
+            html_str += f'<td class="tr txt-out">{out_q_str}</td>'
+            html_str += f'<td class="tr txt-out">{out_p_str}</td>'
+            html_str += f'<td class="tc txt-gray">{row.get("id", "")}</td>'
+            html_str += f'<td class="tc txt-gray">{row.get("carno", "")}</td>'
+            html_str += f'<td class="tr txt-black">{car_p_str}</td>'
             html_str += '</tr>'
             
         html_str += '</tbody></table>'
         
         # 하단 요약
         html_str += '<div class="summary-row">'
-        html_str += f'<div class="sum-base">자료수 : {data_count} 개</div>'
+        html_str += f'<div class="sum-base">자료수 : <span style="color:#ffeb3b;">{data_count}</span> 개</div>'
         html_str += f'<div class="sum-in">매입수량 : {total_in_q:,.0f} &nbsp;&nbsp;&nbsp;&nbsp; 매입금액 : {total_in_amt:,.0f}원</div>'
         html_str += f'<div class="sum-out">매출수량 : {total_out_q:,.0f} &nbsp;&nbsp;&nbsp;&nbsp; 매출금액 : {total_out_amt:,.0f}원 &nbsp;&nbsp;&nbsp;&nbsp; 운송비 : {total_carprice:,.0f}원</div>'
         html_str += '</div>'
         html_str += f'<div class="sum-profit">검색내 총수익 &nbsp;&nbsp; {total_profit:,.0f}원</div>'
         html_str += '</div>'
 
-        # HTML 렌더링
         st.markdown(html_str, unsafe_allow_html=True)
 
     else:
