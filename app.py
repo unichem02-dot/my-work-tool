@@ -169,15 +169,15 @@ st.markdown("""
     /* 링크 모음 전용 아이템 스타일 (표 형식 적용) */
     .link-table-cat1 { font-size: 1.8rem !important; color: #FFA500 !important; font-weight: bold; display: inline-block; margin-bottom: 2px; }
     
-    /* 링크 밑줄(테두리) 완벽 제거 및 색상 적용 */
-    a.link-table-title, a.link-table-title:visited { font-size: 1.3em; font-weight: bold; color: #FFD700 !important; text-decoration: none !important; border-bottom: none !important; display: inline-block; margin-bottom: 2px; transition: opacity 0.2s; }
-    a.link-table-title:hover, a.link-table-title:active { text-decoration: none !important; border-bottom: none !important; opacity: 0.8; }
+    /* 링크 밑줄(테두리) 완벽 제거 및 색상 강제 적용 */
+    a.link-table-title { font-size: 1.3em; font-weight: bold; color: #FFD700 !important; text-decoration: none !important; border-bottom: none !important; background-image: none !important; display: inline-block; margin-bottom: 2px; transition: opacity 0.2s; }
+    a.link-table-title:hover { opacity: 0.8; text-decoration: none !important; border-bottom: none !important; }
     
-    a.link-table-url, a.link-table-url:visited { font-size: 0.85rem; color: #FFFFFF !important; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; text-decoration: none !important; border-bottom: none !important; transition: opacity 0.2s; }
-    a.link-table-url:hover, a.link-table-url:active { text-decoration: none !important; border-bottom: none !important; opacity: 0.8; }
+    a.link-table-url { font-size: 0.85rem; color: #FFFFFF !important; text-decoration: none !important; border-bottom: none !important; background-image: none !important; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; transition: opacity 0.2s; }
+    a.link-table-url:hover { opacity: 0.8; text-decoration: none !important; border-bottom: none !important; }
     
-    /* Streamlit 강제 링크 밑줄 무효화 */
-    .stMarkdown a { border-bottom: none !important; text-decoration: none !important; }
+    /* Streamlit 전역 a 태그 강제 속성 초기화 */
+    div[data-testid="stMarkdownContainer"] a, div[data-testid="stMarkdownContainer"] a:hover { border-bottom: 0px !important; text-decoration: none !important; background-image: none !important; }
     
     .link-table-memo { font-size: 1em; color: #FFFFFF; opacity: 0.9; word-break: keep-all; }
 
@@ -573,26 +573,36 @@ else:
             sheet2 = get_links_sheet()
             df_links = load_links_dataframe(sheet2)
             
-            # ★ 필터용으로 분류1과 분류2를 위아래로 결합 (\n 줄바꿈 적용)
-            df_links['필터분류'] = df_links.apply(lambda r: f"{r['분류1']}\n└ {r['분류2']}" if r['분류2'].strip() else r['분류1'], axis=1)
+            unique_links_cats1 = sorted([x for x in df_links['분류1'].unique().tolist() if x != ''])
             
-            unique_links_cats = sorted([x for x in df_links['필터분류'].unique().tolist() if x != ''])
-            
-            # 상단 필터 및 추가 버튼 레이아웃
+            # ★ 2단 필터 (대분류 선택 -> 하단 소분류 전개 방식)
             l_col1, l_col2 = st.columns([8.5, 1.5]) if st.session_state.authenticated else st.columns([10, 0.1])
             with l_col1:
-                sel_link_cat = st.radio("분류 필터", ["전체 링크"] + unique_links_cats, horizontal=True, label_visibility="collapsed")
+                # 1. 대분류 라디오 버튼
+                sel_link_cat1 = st.radio("대분류 필터", ["전체 링크"] + unique_links_cats1, horizontal=True, label_visibility="collapsed")
+                
+                # 2. 대분류 선택 시, 바로 밑에 나뭇가지 스타일의 소분류 라디오 버튼 렌더링
+                sel_link_cat2 = "전체"
+                if sel_link_cat1 != "전체 링크":
+                    subset_cat2 = sorted([x for x in df_links[df_links['분류1'] == sel_link_cat1]['분류2'].unique().tolist() if x != ''])
+                    if subset_cat2:
+                        # 소분류 항목들에 나뭇가지(└) 텍스트 추가
+                        display_cat2 = ["└ 전체"] + [f"└ {x}" for x in subset_cat2]
+                        sel_link_cat2_display = st.radio("소분류 필터", display_cat2, horizontal=True, label_visibility="collapsed", key="cat2_radio")
+                        sel_link_cat2 = sel_link_cat2_display.replace("└ ", "") if sel_link_cat2_display != "└ 전체" else "전체"
+
             with l_col2:
                 if st.session_state.authenticated:
                     if st.button("➕ 새 링크 추가", type="primary", use_container_width=True):
-                        # 새 링크 추가 다이얼로그용으로는 분류1 목록만 추출
-                        unique_cats1_only = sorted([x for x in df_links['분류1'].unique().tolist() if x != ''])
-                        add_link_dialog(unique_cats1_only)
+                        add_link_dialog(unique_links_cats1)
             
             st.divider()
             
-            if sel_link_cat != "전체 링크":
-                df_links = df_links[df_links['필터분류'] == sel_link_cat]
+            # 데이터 필터링 로직
+            if sel_link_cat1 != "전체 링크":
+                df_links = df_links[df_links['분류1'] == sel_link_cat1]
+                if sel_link_cat2 != "전체":
+                    df_links = df_links[df_links['분류2'] == sel_link_cat2]
 
             # --- 표 형식 헤더 ---
             l_ratio = [1.2, 1.2, 3.5, 2.0, 2.0, 1.0] if st.session_state.authenticated else [1.2, 1.2, 3.5, 2.0, 2.0]
@@ -617,8 +627,8 @@ else:
                     # 2. 분류2
                     cols[1].markdown(f"<span class='cat-text-bold'>{row['분류2']}</span>", unsafe_allow_html=True)
                     
-                    # 3. 제목 및 링크 (클릭 가능, 이모티콘 제거, 밑줄 없음, URL 텍스트 화이트 강제 적용)
-                    link_html = f"<a href='{row['링크']}' target='_blank' class='link-table-title'>{row['제목']}</a><a href='{row['링크']}' target='_blank' class='link-table-url'>{row['링크']}</a>"
+                    # 3. 제목 및 링크 (이모티콘 제거, 인라인 스타일로 화이트 색상 및 밑줄 제거 강제 적용)
+                    link_html = f"<a href='{row['링크']}' target='_blank' style='font-size: 1.3em; font-weight: bold; color: #FFD700 !important; text-decoration: none !important; border-bottom: 0px !important; display: inline-block; margin-bottom: 2px;'>{row['제목']}</a><a href='{row['링크']}' target='_blank' style='font-size: 0.85rem; color: #FFFFFF !important; text-decoration: none !important; border-bottom: 0px !important; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;'>{row['링크']}</a>"
                     cols[2].markdown(link_html, unsafe_allow_html=True)
                     
                     # 4. 메모
@@ -630,8 +640,7 @@ else:
                     # 6. 수정 버튼
                     if st.session_state.authenticated:
                         if cols[5].button("✏️", key=f"el_{idx}", type="tertiary"):
-                            unique_cats1_only = sorted([x for x in df_links['분류1'].unique().tolist() if x != ''])
-                            edit_link_dialog(idx, row.to_dict(), unique_cats1_only)
+                            edit_link_dialog(idx, row.to_dict(), unique_links_cats1)
 
         except Exception as e: st.error(f"링크 데이터 오류 발생: {e}")
 
