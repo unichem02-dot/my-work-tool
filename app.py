@@ -88,7 +88,8 @@ st.markdown("""
     div.element-container:has(.row-marker) { width: 100% !important; min-width: 100% !important; }
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 16px 10px !important; border-radius: 0px !important; 
+        padding: 4px 10px !important; /* 상하 여백을 16px에서 4px로 줄여 간격을 최소화 */
+        border-radius: 0px !important; 
         margin-bottom: 0px !important; border-bottom: 1px dotted rgba(255, 255, 255, 0.2) !important; 
         width: 100% !important; min-width: 100% !important; flex: 1 1 100% !important;
         display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important;
@@ -129,6 +130,28 @@ st.markdown("""
         color: #224343 !important;
     }
 
+    /* ★ 소분류(분류2) 전용 라디오 버튼 스타일 (주황색, 크기 축소) ★ */
+    div[data-testid="stRadio"]:has(div[aria-label="소분류 필터"]) label {
+        padding: 4px 14px !important;
+    }
+    div[data-testid="stRadio"]:has(div[aria-label="소분류 필터"]) label p {
+        color: #FFA500 !important; /* 주황색 텍스트 */
+        font-size: clamp(0.7rem, 0.9vw, 1.0rem) !important; /* 크기 축소 */
+    }
+    div[data-testid="stRadio"]:has(div[aria-label="소분류 필터"]) label:hover {
+        border-color: #FFA500 !important;
+        background-color: rgba(255, 165, 0, 0.15) !important;
+    }
+    div[data-testid="stRadio"]:has(div[aria-label="소분류 필터"]) label:has(input:checked), 
+    div[data-testid="stRadio"]:has(div[aria-label="소분류 필터"]) label:has(div[aria-checked="true"]) {
+        background-color: #FFA500 !important;
+        border-color: #FFA500 !important;
+    }
+    div[data-testid="stRadio"]:has(div[aria-label="소분류 필터"]) label:has(input:checked) p, 
+    div[data-testid="stRadio"]:has(div[aria-label="소분류 필터"]) label:has(div[aria-checked="true"]) p {
+        color: #224343 !important;
+    }
+
     /* 6. 버튼 스타일 */
     button, div.stDownloadButton > button {
         border-radius: 50px !important; padding: 0.5rem 1.2rem !important; font-weight: 900 !important;
@@ -166,11 +189,15 @@ st.markdown("""
     .num-result { color: #FFD700 !important; font-weight: bold; font-size: clamp(1.6rem, 2.2vw, 2.4rem) !important; margin: 0 !important; line-height: 1.1; white-space: nowrap !important; }
     div[data-testid="stHorizontalBlock"]:has(.num-result) button { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; margin-top: 2px !important; }
 
-    /* 링크 모음 전용 아이템 스타일 (표 형식 적용) */
-    .link-table-cat1 { font-size: 1.8rem !important; color: #FFA500 !important; font-weight: bold; display: inline-block; margin-bottom: 2px; }
+    /* ★ 링크 모음 전용 아이템 스타일 (표 형식 적용) ★ */
+    /* 대분류(분류1) 텍스트 노란색 */
+    .link-table-cat1 { font-size: 1.8rem !important; color: #FFD700 !important; font-weight: bold; display: inline-block; margin-bottom: 2px; }
+    /* 소분류(분류2) 텍스트 주황색 */
+    .link-table-cat2 { font-size: 1.2rem !important; color: #FFA500 !important; font-weight: bold; display: inline-block; margin-bottom: 2px; }
     
     /* 링크 밑줄(테두리) 완벽 제거 및 색상 강제 적용 */
-    a.link-table-title { font-size: 1.3em; font-weight: bold; color: #FFD700 !important; text-decoration: none !important; border-bottom: none !important; background-image: none !important; display: inline-block; margin-bottom: 2px; transition: opacity 0.2s; }
+    /* 제목: 2.0 크기 & 노란색 적용 */
+    a.link-table-title { font-size: 2.0em !important; font-weight: bold; color: #FFD700 !important; text-decoration: none !important; border-bottom: none !important; background-image: none !important; display: inline-block; margin-bottom: 2px; transition: opacity 0.2s; }
     a.link-table-title:hover { opacity: 0.8; text-decoration: none !important; border-bottom: none !important; }
     
     a.link-table-url { font-size: 0.85rem; color: #FFFFFF !important; text-decoration: none !important; border-bottom: none !important; background-image: none !important; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; transition: opacity 0.2s; }
@@ -179,13 +206,16 @@ st.markdown("""
     /* Streamlit 전역 a 태그 강제 속성 초기화 */
     div[data-testid="stMarkdownContainer"] a, div[data-testid="stMarkdownContainer"] a:hover { border-bottom: 0px !important; text-decoration: none !important; background-image: none !important; }
     
-    .link-table-memo { font-size: 1em; color: #FFFFFF; opacity: 0.9; word-break: keep-all; }
+    /* 메모: 텍스트 크기 1.3 적용 */
+    .link-table-memo { font-size: 1.3em !important; color: #FFFFFF; opacity: 0.9; word-break: keep-all; }
 
     @media screen and (max-width: 768px) {
         .word-text { font-size: 1.21rem !important; }
         .mean-text { font-size: 0.9rem !important; }
         div[data-testid="stRadio"] label p { font-size: 1.2rem !important; }
         .link-table-cat1 { font-size: 1.4rem !important; }
+        a.link-table-title { font-size: 1.5rem !important; }
+        .link-table-memo { font-size: 1.1rem !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -581,15 +611,13 @@ else:
                 # 1. 대분류 라디오 버튼
                 sel_link_cat1 = st.radio("대분류 필터", ["전체 링크"] + unique_links_cats1, horizontal=True, label_visibility="collapsed")
                 
-                # 2. 대분류 선택 시, 바로 밑에 나뭇가지 스타일의 소분류 라디오 버튼 렌더링
+                # 2. 대분류 선택 시, 바로 밑에 소분류 라디오 버튼 렌더링 (기호 제거 및 스타일 분리)
                 sel_link_cat2 = "전체"
                 if sel_link_cat1 != "전체 링크":
                     subset_cat2 = sorted([x for x in df_links[df_links['분류1'] == sel_link_cat1]['분류2'].unique().tolist() if x != ''])
                     if subset_cat2:
-                        # 소분류 항목들에 나뭇가지(└) 텍스트 추가
-                        display_cat2 = ["└ 전체"] + [f"└ {x}" for x in subset_cat2]
-                        sel_link_cat2_display = st.radio("소분류 필터", display_cat2, horizontal=True, label_visibility="collapsed", key="cat2_radio")
-                        sel_link_cat2 = sel_link_cat2_display.replace("└ ", "") if sel_link_cat2_display != "└ 전체" else "전체"
+                        display_cat2 = ["전체"] + subset_cat2
+                        sel_link_cat2 = st.radio("소분류 필터", display_cat2, horizontal=True, label_visibility="collapsed", key="cat2_radio")
 
             with l_col2:
                 if st.session_state.authenticated:
@@ -621,20 +649,20 @@ else:
                 for idx, row in df_links.iterrows():
                     cols = st.columns(l_ratio)
                     
-                    # 1. 분류1 (호버 마커 추가, 괄호 제거, 주황색 강조 스타일 적용)
+                    # 1. 분류1 (호버 마커 추가, 텍스트 노란색)
                     cols[0].markdown(f"<span class='row-marker'></span><span class='link-table-cat1'>{row['분류1']}</span>", unsafe_allow_html=True)
                     
-                    # 2. 분류2
-                    cols[1].markdown(f"<span class='cat-text-bold'>{row['분류2']}</span>", unsafe_allow_html=True)
+                    # 2. 분류2 (텍스트 주황색 지정)
+                    cols[1].markdown(f"<span class='link-table-cat2'>{row['분류2']}</span>", unsafe_allow_html=True)
                     
-                    # 3. 제목 및 링크 (이모티콘 제거, 인라인 스타일로 화이트 색상 및 밑줄 제거 강제 적용)
-                    link_html = f"<a href='{row['링크']}' target='_blank' style='font-size: 1.3em; font-weight: bold; color: #FFD700 !important; text-decoration: none !important; border-bottom: 0px !important; display: inline-block; margin-bottom: 2px;'>{row['제목']}</a><a href='{row['링크']}' target='_blank' style='font-size: 0.85rem; color: #FFFFFF !important; text-decoration: none !important; border-bottom: 0px !important; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;'>{row['링크']}</a>"
+                    # 3. 제목 및 링크 (제목 2.0 크기/노란색, URL 화이트, 밑줄 모두 제거)
+                    link_html = f"<a href='{row['링크']}' target='_blank' class='link-table-title'>{row['제목']}</a><a href='{row['링크']}' target='_blank' class='link-table-url'>{row['링크']}</a>"
                     cols[2].markdown(link_html, unsafe_allow_html=True)
                     
-                    # 4. 메모
+                    # 4. 메모 (1.3 크기 적용)
                     cols[3].markdown(f"<span class='link-table-memo'>{row['메모']}</span>", unsafe_allow_html=True)
                     
-                    # 5. 분류메모
+                    # 5. 분류메모 (1.3 크기 적용)
                     cols[4].markdown(f"<span class='link-table-memo'>{row['분류메모']}</span>", unsafe_allow_html=True)
                     
                     # 6. 수정 버튼
