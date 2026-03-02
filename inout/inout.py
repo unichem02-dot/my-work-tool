@@ -8,7 +8,7 @@ import re
 # --- [1. 페이지 기본 설정 및 테마 스타일] ---
 st.set_page_config(layout="wide", page_title="입출력 관리 시스템 (inout)")
 
-# 커스텀 CSS 주입 (다크 테마 및 컴팩트한 레이아웃, 버튼/테이블/결산 색상 커스텀)
+# 커스텀 CSS 주입 (다크 테마 및 컴팩트한 레이아웃, 테이블/결산 색상 커스텀)
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
@@ -37,12 +37,6 @@ st.markdown("""
         font-weight: bold !important;
         padding: 0px 10px !important;
     }
-    div.btn-green > div > button {
-        background-color: #8bc34a !important; color: white !important; border: 1px solid #7cb342 !important;
-    }
-    div.btn-pink > div > button {
-        background-color: #e57373 !important; color: white !important; border: 1px solid #e53935 !important;
-    }
 
     /* -------------------------------------
        메인 데이터 테이블 스타일 (글자크기 UP)
@@ -55,14 +49,14 @@ st.markdown("""
     }
     .custom-table {
         width: 100%; border-collapse: collapse; 
-        font-size: 15px; /* 💡 글자 크기 13px -> 15px 로 확대 */
+        font-size: 15px;
         background-color: white;
     }
     .custom-table th {
         border: 1px solid #d0d0d0; padding: 10px 6px; text-align: center; color: white; font-weight: bold;
     }
     .custom-table td {
-        border: 1px solid #d0d0d0; padding: 8px 10px; /* 💡 여백 확대 */
+        border: 1px solid #d0d0d0; padding: 8px 10px;
     }
     .custom-table tr:nth-child(even) { background-color: #f8f9fa; }
     .custom-table tr:hover { background-color: #e2e6ea; }
@@ -111,11 +105,11 @@ st.markdown("""
     }
     .settle-col:last-child { border-right: none; }
     .sh-title { text-align: center; color: white; padding: 8px; font-weight: bold; border-bottom: 1px solid #ccc; font-size: 14px;}
-    .sh-1 { background-color: #8385b2; } /* 매입거래처 */
-    .sh-2 { background-color: #7b9cbf; } /* 매입품목 */
-    .sh-3 { background-color: #c99f5e; } /* 매출거래처 */
-    .sh-4 { background-color: #d1b15c; } /* 매출품목 */
-    .sh-5 { background-color: #8ba966; } /* 차량NO */
+    .sh-1 { background-color: #8385b2; }
+    .sh-2 { background-color: #7b9cbf; }
+    .sh-3 { background-color: #c99f5e; }
+    .sh-4 { background-color: #d1b15c; }
+    .sh-5 { background-color: #8ba966; }
     
     .ul-list { list-style: none; padding: 0; margin: 0; }
     .ul-list li { padding: 6px 10px; border-bottom: 1px solid #eee; display: flex; align-items: flex-start; font-size: 14px;}
@@ -146,7 +140,7 @@ if "failed_attempts" not in st.session_state: st.session_state.failed_attempts =
 if "lockout_until" not in st.session_state: st.session_state.lockout_until = None
 if "last_activity" not in st.session_state: st.session_state.last_activity = None
 if "search_params" not in st.session_state: 
-    st.session_state.search_params = {"mode": "init"} # 초기 상태
+    st.session_state.search_params = {"mode": "init"}
 
 now = datetime.now()
 
@@ -300,15 +294,14 @@ try:
             with c1: st.selectbox("s3", ["ALL"], label_visibility="collapsed")
             with c2: y_3 = st.selectbox("y3", years, label_visibility="collapsed")
             with c3: m_3 = st.selectbox("m3", months, index=datetime.now().month-1, label_visibility="collapsed", format_func=lambda x: f"{x}월")
+            
+            # 💡 [버튼 색상 통일] 결산 버튼 (기본 primary 테마 적용)
             with c4: 
-                st.markdown('<div class="btn-green">', unsafe_allow_html=True)
-                btn_3 = st.button("결산", use_container_width=True) # 💡 결산버튼
-                st.markdown('</div>', unsafe_allow_html=True)
+                btn_3 = st.button("결산", use_container_width=True, type="primary")
 
+            # 💡 [버튼 색상 통일] 신규입력 버튼 (기본 primary 테마 적용)
             with c5: 
-                st.markdown('<div class="btn-pink">', unsafe_allow_html=True)
-                btn_4 = st.button("신규입력", use_container_width=True)
-                st.markdown('</div>', unsafe_allow_html=True)
+                btn_4 = st.button("신규입력", use_container_width=True, type="primary")
 
             with c6: limit_val = st.selectbox("s4", ["20개", "50개", "100개", "ALL"], index=0, label_visibility="collapsed")
             with c7: btn_5 = st.button("최근입력", use_container_width=True, type="primary")
@@ -332,7 +325,7 @@ try:
             st.session_state.search_params = { "mode": "기간", "title": "기간검색순서", "type": type_1, "company": com_1, "item": item_1, "limit": "ALL", "start": date_range[0], "end": date_range[1] if len(date_range)>1 else date_range[0] }
         elif btn_2:
             st.session_state.search_params = { "mode": "월별", "title": f"{year_2}년 {month_2}월 검색순서", "type": type_2, "company": com_2, "item": item_2, "limit": "ALL", "year": year_2, "month": month_2 }
-        elif btn_3: # 💡 결산 모드로 전환
+        elif btn_3:
             st.session_state.search_params = { "mode": "결산", "year": y_3, "month": m_3 }
         elif btn_4:
             st.info("신규입력 기능은 아직 구현되지 않았습니다.")
@@ -356,14 +349,12 @@ try:
             s_month = params["month"]
             f_df = df[(df['year'] == s_year) & (df['month'] == s_month)].copy()
             
-            # 항목별 고유 리스트 추출
             incom_list = sorted([str(x) for x in f_df['incom'].unique() if str(x).strip() != ''])
             initem_list = sorted([str(x) for x in f_df['initem'].unique() if str(x).strip() != ''])
             outcom_list = sorted([str(x) for x in f_df['outcom'].unique() if str(x).strip() != ''])
             outitem_list = sorted([str(x) for x in f_df['outitem'].unique() if str(x).strip() != ''])
             carno_list = sorted([str(x) for x in f_df['carno'].unique() if str(x).strip() != ''])
             
-            # 수치 계산
             in_q = f_df['inq_val'].sum()
             in_amt = f_df['in_total'].sum()
             in_tax = in_amt * 0.1
@@ -375,51 +366,52 @@ try:
             out_amt_total = out_amt + out_tax
             
             car_amt = f_df['carprice_val'].sum()
-            profit = out_amt - in_amt # 스크린샷 기준: 총이익(운송비미포함)
+            profit = out_amt - in_amt
             
-            # 결산 HTML 렌더링
-            settle_html = f"""
-            <div class="settle-header-top">
-                <div style="font-size: 16px;">▶ {s_year}년 {s_month:02d}월 전체리스트 / 결산 종류: ALL</div>
-                <div style="font-size: 26px;">{s_year}년 {s_month:02d}월</div>
-            </div>
-            <div class="settle-container">
-                <div class="settle-lists">
-                    <div class="settle-col"><div class="sh-title sh-1">매입거래처</div>{make_ul_list(incom_list)}</div>
-                    <div class="settle-col"><div class="sh-title sh-2">매입품목</div>{make_ul_list(initem_list)}</div>
-                    <div class="settle-col"><div class="sh-title sh-3">매출거래처</div>{make_ul_list(outcom_list)}</div>
-                    <div class="settle-col"><div class="sh-title sh-4">매출품목</div>{make_ul_list(outitem_list)}</div>
-                    <div class="settle-col"><div class="sh-title sh-5">차량NO</div>{make_ul_list(carno_list)}</div>
-                </div>
-                
-                <div class="settle-summary">
-                    <div class="sum-subhead">[ALL] 총결산 내역</div>
-                    <table class="sum-table">
-                        <tr><td class="bg-blue">매입수량</td><td class="bg-blue tr-right">{in_q:,.0f}</td></tr>
-                        <tr><td class="bg-blue">매입액</td><td class="bg-blue tr-right">\{in_amt:,.0f}</td></tr>
-                        <tr><td class="bg-blue">매입세액</td><td class="bg-blue tr-right">\{in_tax:,.0f}</td></tr>
-                        <tr><td class="bg-blue" style="border-bottom: 2px solid white;">매입금액(세액포함)</td><td class="bg-blue tr-right" style="border-bottom: 2px solid white;">\{in_amt_total:,.0f}</td></tr>
-                        
-                        <tr><td class="bg-orange">매출수량</td><td class="bg-orange tr-right">{out_q:,.0f}</td></tr>
-                        <tr><td class="bg-orange">매출액</td><td class="bg-orange tr-right">\{out_amt:,.0f}</td></tr>
-                        <tr><td class="bg-orange">매출세액</td><td class="bg-orange tr-right">\{out_tax:,.0f}</td></tr>
-                        <tr><td class="bg-orange" style="border-bottom: 2px solid white;">매출금액(세액포함)</td><td class="bg-orange tr-right" style="border-bottom: 2px solid white;">\{out_amt_total:,.0f}</td></tr>
-                        
-                        <tr><td class="bg-olive" style="border-bottom: 2px solid white;">운송비</td><td class="bg-olive tr-right" style="border-bottom: 2px solid white;">\{car_amt:,.0f}</td></tr>
-                        
-                        <tr><td class="bg-dark">총이익 <span style="font-size:11px">(운송비미포함)</span></td><td class="bg-dark tr-right">\{profit:,.0f}</td></tr>
-                    </table>
-                    
-                    <div class="alert-box">
-                        <div class="alert-title">전자시스템 알림사항</div>
-                        <ul class="alert-ul">
-                            <li>오타확인은 전체리스트를 보시면 쉽게 확인/수정 가능 합니다.</li>
-                            <li>자료입력후 꼭 자료일관성 확인을 해주시기 바랍니다.</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            """
+            # 💡 [버그수정] 결산 HTML 문자열 렌더링 방식 수정 (들여쓰기 코드 인식 방지)
+            settle_html = '<div class="settle-header-top">'
+            settle_html += f'<div style="font-size: 16px;">▶ {s_year}년 {s_month:02d}월 전체리스트 / 결산 종류: ALL</div>'
+            settle_html += f'<div style="font-size: 26px;">{s_year}년 {s_month:02d}월</div>'
+            settle_html += '</div>'
+            
+            settle_html += '<div class="settle-container">'
+            settle_html += '<div class="settle-lists">'
+            settle_html += f'<div class="settle-col"><div class="sh-title sh-1">매입거래처</div>{make_ul_list(incom_list)}</div>'
+            settle_html += f'<div class="settle-col"><div class="sh-title sh-2">매입품목</div>{make_ul_list(initem_list)}</div>'
+            settle_html += f'<div class="settle-col"><div class="sh-title sh-3">매출거래처</div>{make_ul_list(outcom_list)}</div>'
+            settle_html += f'<div class="settle-col"><div class="sh-title sh-4">매출품목</div>{make_ul_list(outitem_list)}</div>'
+            settle_html += f'<div class="settle-col"><div class="sh-title sh-5">차량NO</div>{make_ul_list(carno_list)}</div>'
+            settle_html += '</div>'
+            
+            settle_html += '<div class="settle-summary">'
+            settle_html += '<div class="sum-subhead">[ALL] 총결산 내역</div>'
+            settle_html += '<table class="sum-table">'
+            settle_html += f'<tr><td class="bg-blue">매입수량</td><td class="bg-blue tr-right">{in_q:,.0f}</td></tr>'
+            settle_html += f'<tr><td class="bg-blue">매입액</td><td class="bg-blue tr-right">\{in_amt:,.0f}</td></tr>'
+            settle_html += f'<tr><td class="bg-blue">매입세액</td><td class="bg-blue tr-right">\{in_tax:,.0f}</td></tr>'
+            settle_html += f'<tr><td class="bg-blue" style="border-bottom: 2px solid white;">매입금액(세액포함)</td><td class="bg-blue tr-right" style="border-bottom: 2px solid white;">\{in_amt_total:,.0f}</td></tr>'
+            
+            settle_html += f'<tr><td class="bg-orange">매출수량</td><td class="bg-orange tr-right">{out_q:,.0f}</td></tr>'
+            settle_html += f'<tr><td class="bg-orange">매출액</td><td class="bg-orange tr-right">\{out_amt:,.0f}</td></tr>'
+            settle_html += f'<tr><td class="bg-orange">매출세액</td><td class="bg-orange tr-right">\{out_tax:,.0f}</td></tr>'
+            settle_html += f'<tr><td class="bg-orange" style="border-bottom: 2px solid white;">매출금액(세액포함)</td><td class="bg-orange tr-right" style="border-bottom: 2px solid white;">\{out_amt_total:,.0f}</td></tr>'
+            
+            settle_html += f'<tr><td class="bg-olive" style="border-bottom: 2px solid white;">운송비</td><td class="bg-olive tr-right" style="border-bottom: 2px solid white;">\{car_amt:,.0f}</td></tr>'
+            
+            settle_html += f'<tr><td class="bg-dark">총이익 <span style="font-size:11px">(운송비미포함)</span></td><td class="bg-dark tr-right">\{profit:,.0f}</td></tr>'
+            settle_html += '</table>'
+            
+            settle_html += '<div class="alert-box">'
+            settle_html += '<div class="alert-title">전자시스템 알림사항</div>'
+            settle_html += '<ul class="alert-ul">'
+            settle_html += '<li>오타확인은 전체리스트를 보시면 쉽게 확인/수정 가능 합니다.</li>'
+            settle_html += '<li>자료입력후 꼭 자료일관성 확인을 해주시기 바랍니다.</li>'
+            settle_html += '</ul>'
+            settle_html += '</div>'
+            
+            settle_html += '</div>'
+            settle_html += '</div>'
+            
             st.markdown(settle_html, unsafe_allow_html=True)
 
         elif params["mode"] != "init":
