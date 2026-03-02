@@ -8,7 +8,7 @@ import re
 # --- [1. 페이지 기본 설정 및 테마 스타일] ---
 st.set_page_config(layout="wide", page_title="입출력 관리 시스템 (inout)")
 
-# 커스텀 CSS 주입 (다크 테마 및 컴팩트한 레이아웃, 테이블/결산 색상 커스텀)
+# 커스텀 CSS 주입
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
@@ -61,7 +61,7 @@ st.markdown("""
     .custom-table tr:nth-child(even) { background-color: #f8f9fa; }
     .custom-table tr:hover { background-color: #e2e6ea; }
     
-    /* 💡 테이블 헤더 및 푸터 컬러 (위아래 라인 일치용) */
+    /* 테이블 헤더 및 푸터 컬러 */
     .th-base { background-color: #353b48; color: white; }
     .th-in { background-color: #3b5b88; color: white; } 
     .th-out { background-color: #b8860b; color: white; }
@@ -135,8 +135,6 @@ if "failed_attempts" not in st.session_state: st.session_state.failed_attempts =
 if "lockout_until" not in st.session_state: st.session_state.lockout_until = None
 if "last_activity" not in st.session_state: st.session_state.last_activity = None
 if "search_params" not in st.session_state: st.session_state.search_params = {"mode": "init"}
-# 💡 정렬 상태 변수 추가
-if "sort_desc" not in st.session_state: st.session_state.sort_desc = True
 
 now = datetime.now()
 
@@ -261,7 +259,6 @@ try:
         with st.container():
             st.markdown("<div class='search-panel-container'>", unsafe_allow_html=True)
             
-            # [Row 1]
             r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
             with r1_1: type_1 = st.radio("r1", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
             with r1_2: date_range = st.date_input("d1", [datetime(2014,1,1).date(), datetime.now().date()], label_visibility="collapsed")
@@ -272,7 +269,6 @@ try:
 
             st.markdown("<hr style='margin: 10px 0; border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
-            # [Row 2]
             r2_1, r2_2, r2_3, r2_4, r2_5, r2_6, r2_7 = st.columns([1.5, 1.2, 1.3, 1, 2, 2, 2.5])
             with r2_1: type_2 = st.radio("r2", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
             with r2_2: year_2 = st.selectbox("y2", years, label_visibility="collapsed")
@@ -284,7 +280,6 @@ try:
 
             st.markdown("<hr style='margin: 10px 0; border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
-            # [Row 3]
             c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14 = st.columns([0.8, 1.2, 1, 1,   1.2,   1, 1,   1.5, 1,   1.2,   0.8, 1.2, 1, 1.2])
             
             with c1: st.selectbox("s3", ["ALL"], label_visibility="collapsed")
@@ -321,7 +316,7 @@ try:
         elif btn_8: st.session_state.search_params = { "mode": "월별단순", "title": "월별검색순서", "year": y_4, "month": m_4, "type": "ALL", "company": "", "item": "", "limit": "ALL" }
         
         # ---------------------------------------------------------
-        # 💡 데이터 렌더링 (결산 뷰 vs 일반 뷰 분기)
+        # 💡 데이터 렌더링
         # ---------------------------------------------------------
         params = st.session_state.search_params
         
@@ -414,16 +409,13 @@ try:
             if com_kw: f_df = f_df[f_df['incom'].str.contains(com_kw, case=False, na=False) | f_df['outcom'].str.contains(com_kw, case=False, na=False)]
             if item_kw: f_df = f_df[f_df['initem'].str.contains(item_kw, case=False, na=False) | f_df['outitem'].str.contains(item_kw, case=False, na=False)]
             
-            # 💡 [기능 1] 날짜 정렬 버튼 기능 반영 (최신순 / 과거순)
-            f_df = f_df.sort_values(by=[date_col, 'id'], ascending=[not st.session_state.sort_desc, not st.session_state.sort_desc])
+            # 기본적으로 항상 최신순으로 가져옴 (프론트엔드 자바스크립트로 직접 제어)
+            f_df = f_df.sort_values(by=[date_col, 'id'], ascending=[False, False])
                 
             limit_str = params.get("limit", "ALL")
             if limit_str != "ALL" and "개" in limit_str:
                 num = int(limit_str.replace("개", ""))
-                if st.session_state.sort_desc: 
-                    f_df = f_df.head(num) # 최신순일 때는 위에서 자름
-                else:
-                    f_df = f_df.tail(num) # 과거순일 때는 아래서 자름
+                f_df = f_df.head(num)
 
             data_count = len(f_df)
             total_in_q = f_df['inq_val'].sum()
@@ -435,21 +427,17 @@ try:
             
             table_title_text = params.get("title", "데이터 검색 결과")
 
-            # 💡 우측 상단에 "날짜 정렬 버튼" 배치
-            col_t1, col_t2 = st.columns([8.5, 1.5])
-            with col_t1:
-                st.markdown(f'<div class="table-title" style="margin-bottom:0px; border-bottom:0px;"><span style="font-size: 16px; font-weight: bold; color: #f8fafc;">{table_title_text}</span> <span style="font-size: 13px; color: #cbd5e1; margin-left:10px;">| 출력된 자료 갯수 : {data_count} 개 (오로지 검색 조건순으로만 정렬되었습니다)</span></div>', unsafe_allow_html=True)
-            with col_t2:
-                sort_btn_text = "🔽 날짜 최신순 정렬 (현재)" if st.session_state.sort_desc else "🔼 날짜 과거순 정렬 (현재)"
-                if st.button(sort_btn_text, use_container_width=True):
-                    st.session_state.sort_desc = not st.session_state.sort_desc
-                    st.rerun()
+            # 💡 [기능 2] 기존의 파이썬 정렬 버튼 완전 삭제 -> 깔끔한 헤더 유지
+            st.markdown(f'<div class="table-title" style="margin-bottom:0px; border-bottom:0px;"><span style="font-size: 16px; font-weight: bold; color: #f8fafc;">{table_title_text}</span> <span style="font-size: 13px; color: #cbd5e1; margin-left:10px;">| 출력된 자료 갯수 : {data_count} 개 (오로지 검색 조건순으로만 정렬되었습니다)</span></div>', unsafe_allow_html=True)
 
-            # HTML 테이블 렌더링 시작
             html_str = '<div class="custom-table-container" style="margin-top:0px;">'
             html_str += '<table class="custom-table">'
             html_str += '<thead><tr>'
-            html_str += '<th class="th-base">Vat</th><th class="th-base">날짜</th>'
+            html_str += '<th class="th-base">Vat</th>'
+            
+            # 💡 [기능 2] "날짜" 헤더를 클릭하면 표 전체를 오름차순/내림차순으로 뒤집는 자바스크립트 내장
+            html_str += '<th class="th-base" style="cursor:pointer; user-select:none; text-decoration:underline;" data-dir="desc" onclick="var tb=this.closest(\'table\').querySelector(\'tbody\');var rs=Array.from(tb.querySelectorAll(\'tr\'));var d=this.getAttribute(\'data-dir\')===\'desc\';rs.sort((a,b)=>{var ca=a.children[1].innerText,cb=b.children[1].innerText;var c=ca.localeCompare(cb);if(c===0){var ia=parseInt(a.children[10].innerText)||0,ib=parseInt(b.children[10].innerText)||0;return d?ia-ib:ib-ia;}return d?c:-c;});this.setAttribute(\'data-dir\',d?\'asc\':\'desc\');this.innerHTML=\'날짜 \'+(d?\'▲\':\'▼\');rs.forEach(r=>tb.appendChild(r));" title="클릭하면 정렬 순서가 바뀝니다.">날짜 ▼</th>'
+            
             html_str += '<th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th>'
             html_str += '<th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th>'
             html_str += '<th class="th-base">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th>'
@@ -489,17 +477,19 @@ try:
                 
             html_str += '</tbody>'
             
-            # 💡 [기능 2] 요약 패널을 tfoot(표 하단)에 병합하여 100% 색상 및 라인 일치
+            # 💡 [기능 1] 요약 패널을 tfoot에 삽입하여 스크린샷처럼 13개 열의 폭과 색상을 완벽하게 1:1 매칭
             html_str += '<tfoot>'
             
-            # 요약 첫 번째 줄 (자료수, 매입합계, 매출합계)
+            # 첫 번째 요약 줄 (Vat/날짜 2칸 | 매입 4칸 | 매출 4칸 | NO/배송/운송비 3칸)
             html_str += '<tr>'
             html_str += f'<td colspan="2" class="th-base" style="text-align:left; font-weight:bold; padding:12px 15px; color:white;">자료수 : <span style="color:#ffeb3b;">{data_count}</span> 개</td>'
             html_str += f'<td colspan="4" class="th-in" style="text-align:center; font-weight:bold; padding:12px 15px; color:white;">매입수량 : {total_in_q:,.0f} &nbsp;&nbsp;&nbsp;&nbsp; 매입금액 : {total_in_amt:,.0f}원</td>'
-            html_str += f'<td colspan="7" class="th-out" style="text-align:center; font-weight:bold; padding:12px 15px; color:white;">매출수량 : {total_out_q:,.0f} &nbsp;&nbsp;&nbsp;&nbsp; 매출금액 : {total_out_amt:,.0f}원 &nbsp;&nbsp;&nbsp;&nbsp; 운송비 : {total_carprice:,.0f}원</td>'
+            html_str += f'<td colspan="4" class="th-out" style="text-align:center; font-weight:bold; padding:12px 15px; color:white;">매출수량 : {total_out_q:,.0f} &nbsp;&nbsp;&nbsp;&nbsp; 매출금액 : {total_out_amt:,.0f}원</td>'
+            # 운송비 전용 박스 생성 (배경색 지정)
+            html_str += f'<td colspan="3" class="th-base" style="background-color:#5d607e; text-align:center; font-weight:bold; padding:12px 15px; color:white;">운송비 : {total_carprice:,.0f}원</td>'
             html_str += '</tr>'
             
-            # 요약 두 번째 줄 (총 수익)
+            # 두 번째 요약 줄 (총 수익 - 13칸 전체 차지)
             html_str += '<tr>'
             html_str += f'<td colspan="13" class="sum-profit">검색내 총수익 &nbsp;&nbsp; {total_profit:,.0f}원</td>'
             html_str += '</tr>'
