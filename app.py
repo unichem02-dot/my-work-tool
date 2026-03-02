@@ -120,7 +120,7 @@ st.markdown("""
     div[data-testid="stRadio"] label:hover { background-color: rgba(255, 255, 255, 0.2) !important; border-color: #FFD700 !important; }
     div[data-testid="stRadio"] label p {
         color: #FFFFFF !important; font-size: clamp(0.9rem, 1.2vw, 1.3rem) !important;
-        font-weight: 800 !important; white-space: nowrap !important;
+        font-weight: 800 !important; white-space: pre-wrap !important; text-align: center !important; line-height: 1.2 !important;
     }
     div[data-testid="stRadio"] label:has(input:checked), div[data-testid="stRadio"] label:has(div[aria-checked="true"]) {
         background-color: #FFD700 !important; border-color: #FFD700 !important;
@@ -170,11 +170,14 @@ st.markdown("""
     .link-table-cat1 { font-size: 1.8rem !important; color: #FFA500 !important; font-weight: bold; display: inline-block; margin-bottom: 2px; }
     
     /* 링크 밑줄(테두리) 완벽 제거 및 색상 적용 */
-    .link-table-title { font-size: 1.3em; font-weight: bold; color: #FFD700 !important; text-decoration: none !important; border-bottom: none !important; display: inline-block; margin-bottom: 2px; transition: opacity 0.2s; }
-    .link-table-title:hover { text-decoration: none !important; border-bottom: none !important; opacity: 0.8; }
+    a.link-table-title, a.link-table-title:visited { font-size: 1.3em; font-weight: bold; color: #FFD700 !important; text-decoration: none !important; border-bottom: none !important; display: inline-block; margin-bottom: 2px; transition: opacity 0.2s; }
+    a.link-table-title:hover, a.link-table-title:active { text-decoration: none !important; border-bottom: none !important; opacity: 0.8; }
     
-    .link-table-url { font-size: 0.85rem; color: #FFFFFF !important; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; text-decoration: none !important; border-bottom: none !important; transition: opacity 0.2s; }
-    .link-table-url:hover { text-decoration: none !important; border-bottom: none !important; opacity: 0.8; }
+    a.link-table-url, a.link-table-url:visited { font-size: 0.85rem; color: #FFFFFF !important; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; text-decoration: none !important; border-bottom: none !important; transition: opacity 0.2s; }
+    a.link-table-url:hover, a.link-table-url:active { text-decoration: none !important; border-bottom: none !important; opacity: 0.8; }
+    
+    /* Streamlit 강제 링크 밑줄 무효화 */
+    .stMarkdown a { border-bottom: none !important; text-decoration: none !important; }
     
     .link-table-memo { font-size: 1em; color: #FFFFFF; opacity: 0.9; word-break: keep-all; }
 
@@ -570,8 +573,8 @@ else:
             sheet2 = get_links_sheet()
             df_links = load_links_dataframe(sheet2)
             
-            # ★ 필터용으로 분류1과 분류2를 결합하여 나뭇가지(└) 스타일 적용
-            df_links['필터분류'] = df_links.apply(lambda r: f"{r['분류1']} └ {r['분류2']}" if r['분류2'].strip() else r['분류1'], axis=1)
+            # ★ 필터용으로 분류1과 분류2를 위아래로 결합 (\n 줄바꿈 적용)
+            df_links['필터분류'] = df_links.apply(lambda r: f"{r['분류1']}\n└ {r['분류2']}" if r['분류2'].strip() else r['분류1'], axis=1)
             
             unique_links_cats = sorted([x for x in df_links['필터분류'].unique().tolist() if x != ''])
             
@@ -614,7 +617,7 @@ else:
                     # 2. 분류2
                     cols[1].markdown(f"<span class='cat-text-bold'>{row['분류2']}</span>", unsafe_allow_html=True)
                     
-                    # 3. 제목 및 링크 (클릭 가능, 이모티콘 제거, 밑줄 없음, URL 텍스트 화이트 적용)
+                    # 3. 제목 및 링크 (클릭 가능, 이모티콘 제거, 밑줄 없음, URL 텍스트 화이트 강제 적용)
                     link_html = f"<a href='{row['링크']}' target='_blank' class='link-table-title'>{row['제목']}</a><a href='{row['링크']}' target='_blank' class='link-table-url'>{row['링크']}</a>"
                     cols[2].markdown(link_html, unsafe_allow_html=True)
                     
