@@ -326,22 +326,27 @@ def edit_dialog(idx, row_data, unique_cats):
 
 # --- [다이얼로그 설정 (링크 모음)] ---
 @st.dialog("새 링크 추가")
-def add_link_dialog(unique_cats1):
+def add_link_dialog(unique_cats1, unique_cats2):
     with st.form("add_link_form", clear_on_submit=True):
         c1, c2 = st.columns(2)
         selected_cat1 = c1.selectbox("기존 대분류", ["(새로 입력)"] + unique_cats1)
         new_cat1 = c2.text_input("새 대분류 입력")
         
-        cat2 = st.text_input("소분류")
+        c3, c4 = st.columns(2)
+        selected_cat2 = c3.selectbox("기존 소분류", ["(새로 입력)"] + unique_cats2)
+        new_cat2 = c4.text_input("새 소분류 입력")
+        
         title = st.text_input("제목 (필수)")
         memo = st.text_input("메모")
         link_url = st.text_input("링크 주소 (URL) (필수)")
         
         if st.form_submit_button("저장하기", use_container_width=True, type="primary"):
             final_cat1 = new_cat1.strip() if new_cat1.strip() else (selected_cat1 if selected_cat1 != "(새로 입력)" else "")
+            final_cat2 = new_cat2.strip() if new_cat2.strip() else (selected_cat2 if selected_cat2 != "(새로 입력)" else "")
+            
             if title and link_url:
                 sheet2 = get_links_sheet()
-                sheet2.append_row([final_cat1, cat2, title, memo, link_url])
+                sheet2.append_row([final_cat1, final_cat2, title, memo, link_url])
                 st.success("새 링크 저장 완료!")
                 time.sleep(1)
                 st.rerun()
@@ -349,17 +354,24 @@ def add_link_dialog(unique_cats1):
                 st.error("제목과 링크 주소는 필수입니다.")
 
 @st.dialog("링크 수정 및 삭제")
-def edit_link_dialog(idx, row_data, unique_cats1):
+def edit_link_dialog(idx, row_data, unique_cats1, unique_cats2):
     safe_cats1 = unique_cats1 if unique_cats1 else ["(없음)"]
     cat1_val = row_data.get('대분류', '')
     cat1_index = safe_cats1.index(cat1_val) if cat1_val in safe_cats1 else 0
+    
+    safe_cats2 = unique_cats2 if unique_cats2 else ["(없음)"]
+    cat2_val = row_data.get('소분류', '')
+    cat2_index = safe_cats2.index(cat2_val) if cat2_val in safe_cats2 else 0
     
     with st.form(f"edit_link_{idx}"):
         c1, c2 = st.columns(2)
         edit_cat1 = c1.selectbox("대분류", safe_cats1, index=cat1_index)
         new_cat1 = c2.text_input("대분류 직접 수정")
         
-        cat2 = st.text_input("소분류", value=row_data.get('소분류', ''))
+        c3, c4 = st.columns(2)
+        edit_cat2 = c3.selectbox("소분류", safe_cats2, index=cat2_index)
+        new_cat2 = c4.text_input("소분류 직접 수정")
+        
         title = st.text_input("제목", value=row_data.get('제목', ''))
         memo = st.text_input("메모", value=row_data.get('메모', ''))
         link_url = st.text_input("링크 주소(URL)", value=row_data.get('링크', ''))
@@ -367,8 +379,9 @@ def edit_link_dialog(idx, row_data, unique_cats1):
         b1, b2 = st.columns(2)
         if b1.form_submit_button("💾 저장", use_container_width=True, type="primary"):
             final_cat1 = new_cat1.strip() if new_cat1.strip() else edit_cat1
+            final_cat2 = new_cat2.strip() if new_cat2.strip() else edit_cat2
             sheet2 = get_links_sheet()
-            sheet2.update(f"A{idx+2}:E{idx+2}", [[final_cat1, cat2, title, memo, link_url]])
+            sheet2.update(f"A{idx+2}:E{idx+2}", [[final_cat1, final_cat2, title, memo, link_url]])
             st.rerun()
         if b2.form_submit_button("🗑️ 삭제", use_container_width=True):
             sheet2 = get_links_sheet()
@@ -642,13 +655,14 @@ else:
             df_links = load_links_dataframe(sheet2)
             
             unique_links_cats1 = sorted([x for x in df_links['대분류'].unique().tolist() if x != ''])
+            unique_links_cats2 = sorted([x for x in df_links['소분류'].unique().tolist() if x != ''])
             
-            # 1. 대분류 라디오 버튼
-            sel_link_cat1 = st.radio("대분류 필터", ["전체 링크"] + unique_links_cats1, horizontal=True, label_visibility="collapsed")
+            # 1. 대분류 라디오 버튼 (✨ 최근 5개를 기본으로 추가)
+            sel_link_cat1 = st.radio("대분류 필터", ["✨ 최근 5개", "전체 링크"] + unique_links_cats1, horizontal=True, label_visibility="collapsed")
             
             # 2. 대분류 선택 시, 바로 밑에 소분류 라디오 버튼 렌더링
             sel_link_cat2 = "전체"
-            if sel_link_cat1 != "전체 링크":
+            if sel_link_cat1 not in ["✨ 최근 5개", "전체 링크"]:
                 subset_cat2 = sorted([x for x in df_links[df_links['대분류'] == sel_link_cat1]['소분류'].unique().tolist() if x != ''])
                 if subset_cat2:
                     display_cat2 = ["전체"] + subset_cat2
@@ -663,14 +677,16 @@ else:
             
             if st.session_state.authenticated:
                 if cb[1].button("➕ 새 링크 추가", type="primary", use_container_width=True):
-                    add_link_dialog(unique_links_cats1)
+                    add_link_dialog(unique_links_cats1, unique_links_cats2)
             
             # 데이터 필터링 로직
             search = st.session_state.active_search
             if search:
                 df_links = df_links[df_links['제목'].str.contains(search, case=False, na=False) | df_links['메모'].str.contains(search, case=False, na=False) | df_links['링크'].str.contains(search, case=False, na=False)]
             else:
-                if sel_link_cat1 != "전체 링크":
+                if sel_link_cat1 == "✨ 최근 5개":
+                    df_links = df_links.iloc[::-1].head(5) # 최신 역순으로 5개만 추출
+                elif sel_link_cat1 != "전체 링크":
                     df_links = df_links[df_links['대분류'] == sel_link_cat1]
                     if sel_link_cat2 != "전체":
                         df_links = df_links[df_links['소분류'] == sel_link_cat2]
@@ -720,7 +736,7 @@ else:
                     # 6. 수정 버튼
                     if st.session_state.authenticated:
                         if len(cols) > 5 and cols[5].button("✏️", key=f"el_{idx}", type="tertiary"):
-                            edit_link_dialog(idx, row.to_dict(), unique_links_cats1)
+                            edit_link_dialog(idx, row.to_dict(), unique_links_cats1, unique_links_cats2)
 
         except Exception as e: st.error(f"링크 데이터 오류 발생: {e}")
 
