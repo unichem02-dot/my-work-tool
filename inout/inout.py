@@ -37,33 +37,34 @@ st.markdown("""
         font-weight: bold !important;
         padding: 0px 10px !important;
     }
+    div.btn-green > div > button { background-color: #8bc34a !important; color: white !important; border: 1px solid #7cb342 !important; }
+    div.btn-pink > div > button { background-color: #e57373 !important; color: white !important; border: 1px solid #e53935 !important; }
 
     /* -------------------------------------
-       메인 데이터 테이블 스타일 (글자크기 UP)
+       메인 데이터 테이블 스타일
        ------------------------------------- */
     .custom-table-container {
         width: 100%; margin-top: 10px; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
     }
     .table-title {
-        background-color: #2b323c; padding: 10px 15px; border-top: 2px solid #555;
+        background-color: #2b323c; padding: 10px 15px; border-top: 2px solid #555; display: flex; align-items: center; justify-content: space-between;
     }
     .custom-table {
-        width: 100%; border-collapse: collapse; 
-        font-size: 15px;
-        background-color: white;
+        width: 100%; border-collapse: collapse; font-size: 15px; background-color: white;
+    }
+    .custom-table th, .custom-table td {
+        border: 1px solid #d0d0d0; padding: 8px 10px;
     }
     .custom-table th {
-        border: 1px solid #d0d0d0; padding: 10px 6px; text-align: center; color: white; font-weight: bold;
-    }
-    .custom-table td {
-        border: 1px solid #d0d0d0; padding: 8px 10px;
+        text-align: center; color: white; font-weight: bold; padding: 10px 6px;
     }
     .custom-table tr:nth-child(even) { background-color: #f8f9fa; }
     .custom-table tr:hover { background-color: #e2e6ea; }
     
-    .th-base { background-color: #353b48; }
-    .th-in { background-color: #3b5b88; } 
-    .th-out { background-color: #b8860b; }
+    /* 💡 테이블 헤더 및 푸터 컬러 (위아래 라인 일치용) */
+    .th-base { background-color: #353b48; color: white; }
+    .th-in { background-color: #3b5b88; color: white; } 
+    .th-out { background-color: #b8860b; color: white; }
     
     .txt-in-bold { color: #1e3a8a !important; font-weight: bold; }
     .txt-in { color: #1e3a8a !important; }
@@ -78,12 +79,6 @@ st.markdown("""
     .tl { text-align: left; }
     .tr { text-align: right; }
     
-    .summary-row {
-        display: flex; font-weight: bold; color: white; font-size: 15px; margin-top: 0;
-    }
-    .sum-base { background-color: #353b48; padding: 12px 15px; flex: 1; text-align: left;}
-    .sum-in { background-color: #3b5b88; padding: 12px 15px; flex: 2; text-align: center;}
-    .sum-out { background-color: #b8860b; padding: 12px 15px; flex: 2.5; text-align: center;}
     .sum-profit { 
         background-color: #2b323c; color: white; padding: 12px 20px; text-align: right; font-weight: bold; font-size: 16px; border-top: 1px solid #444;
     }
@@ -120,7 +115,7 @@ st.markdown("""
     .settle-summary { width: 350px; border: 1px solid #777; margin-left: 10px; background-color: #5d607e; color: white; display: flex; flex-direction: column;}
     .sum-subhead { background-color: #3b3d56; text-align: center; padding: 8px; font-size: 14px; font-weight: bold;}
     .sum-table { width: 100%; border-collapse: collapse; }
-    .sum-table td { padding: 10px 12px; border-bottom: 1px solid #888; font-size: 14px; }
+    .sum-table td { padding: 10px 12px; border-bottom: 1px solid #888; font-size: 14px; color: white; }
     .bg-blue { background-color: #707b9e; }
     .bg-orange { background-color: #c58f55; }
     .bg-olive { background-color: #757c43; }
@@ -139,8 +134,9 @@ if "authenticated" not in st.session_state: st.session_state.authenticated = Fal
 if "failed_attempts" not in st.session_state: st.session_state.failed_attempts = 0
 if "lockout_until" not in st.session_state: st.session_state.lockout_until = None
 if "last_activity" not in st.session_state: st.session_state.last_activity = None
-if "search_params" not in st.session_state: 
-    st.session_state.search_params = {"mode": "init"}
+if "search_params" not in st.session_state: st.session_state.search_params = {"mode": "init"}
+# 💡 정렬 상태 변수 추가
+if "sort_desc" not in st.session_state: st.session_state.sort_desc = True
 
 now = datetime.now()
 
@@ -260,7 +256,7 @@ try:
         if not years: years = [datetime.now().year]
 
         # ---------------------------------------------------------
-        # 💡 스크린샷과 동일한 복합 검색 UI
+        # 💡 복합 검색 UI
         # ---------------------------------------------------------
         with st.container():
             st.markdown("<div class='search-panel-container'>", unsafe_allow_html=True)
@@ -294,14 +290,8 @@ try:
             with c1: st.selectbox("s3", ["ALL"], label_visibility="collapsed")
             with c2: y_3 = st.selectbox("y3", years, label_visibility="collapsed")
             with c3: m_3 = st.selectbox("m3", months, index=datetime.now().month-1, label_visibility="collapsed", format_func=lambda x: f"{x}월")
-            
-            # 💡 [버튼 색상 통일] 결산 버튼 (기본 primary 테마 적용)
-            with c4: 
-                btn_3 = st.button("결산", use_container_width=True, type="primary")
-
-            # 💡 [버튼 색상 통일] 신규입력 버튼 (기본 primary 테마 적용)
-            with c5: 
-                btn_4 = st.button("신규입력", use_container_width=True, type="primary")
+            with c4: btn_3 = st.button("결산", use_container_width=True, type="primary")
+            with c5: btn_4 = st.button("신규입력", use_container_width=True, type="primary")
 
             with c6: limit_val = st.selectbox("s4", ["20개", "50개", "100개", "ALL"], index=0, label_visibility="collapsed")
             with c7: btn_5 = st.button("최근입력", use_container_width=True, type="primary")
@@ -321,22 +311,14 @@ try:
         # ---------------------------------------------------------
         # 💡 액션 라우팅
         # ---------------------------------------------------------
-        if btn_1:
-            st.session_state.search_params = { "mode": "기간", "title": "기간검색순서", "type": type_1, "company": com_1, "item": item_1, "limit": "ALL", "start": date_range[0], "end": date_range[1] if len(date_range)>1 else date_range[0] }
-        elif btn_2:
-            st.session_state.search_params = { "mode": "월별", "title": f"{year_2}년 {month_2}월 검색순서", "type": type_2, "company": com_2, "item": item_2, "limit": "ALL", "year": year_2, "month": month_2 }
-        elif btn_3:
-            st.session_state.search_params = { "mode": "결산", "year": y_3, "month": m_3 }
-        elif btn_4:
-            st.info("신규입력 기능은 아직 구현되지 않았습니다.")
-        elif btn_5:
-            st.session_state.search_params = { "mode": "최근", "title": "최근입력순서", "type": "ALL", "company": "", "item": "", "limit": limit_val }
-        elif btn_6:
-            st.session_state.search_params = { "mode": "일", "title": f"{d_day} 검색순서", "date": d_day, "type": "ALL", "company": "", "item": "", "limit": "ALL" }
-        elif btn_7:
-            st.session_state.search_params = { "mode": "기간", "title": "어제/오늘/내일 검색순서", "type": "ALL", "company": "", "item": "", "limit": "ALL", "start": datetime.now().date() - timedelta(days=1), "end": datetime.now().date() + timedelta(days=1) }
-        elif btn_8:
-            st.session_state.search_params = { "mode": "월별단순", "title": "월별검색순서", "year": y_4, "month": m_4, "type": "ALL", "company": "", "item": "", "limit": "ALL" }
+        if btn_1: st.session_state.search_params = { "mode": "기간", "title": "기간검색순서", "type": type_1, "company": com_1, "item": item_1, "limit": "ALL", "start": date_range[0], "end": date_range[1] if len(date_range)>1 else date_range[0] }
+        elif btn_2: st.session_state.search_params = { "mode": "월별", "title": f"{year_2}년 {month_2}월 검색순서", "type": type_2, "company": com_2, "item": item_2, "limit": "ALL", "year": year_2, "month": month_2 }
+        elif btn_3: st.session_state.search_params = { "mode": "결산", "year": y_3, "month": m_3 }
+        elif btn_4: st.info("신규입력 기능은 아직 구현되지 않았습니다.")
+        elif btn_5: st.session_state.search_params = { "mode": "최근", "title": "최근입력순서", "type": "ALL", "company": "", "item": "", "limit": limit_val }
+        elif btn_6: st.session_state.search_params = { "mode": "일", "title": f"{d_day} 검색순서", "date": d_day, "type": "ALL", "company": "", "item": "", "limit": "ALL" }
+        elif btn_7: st.session_state.search_params = { "mode": "기간", "title": "어제/오늘/내일 검색순서", "type": "ALL", "company": "", "item": "", "limit": "ALL", "start": datetime.now().date() - timedelta(days=1), "end": datetime.now().date() + timedelta(days=1) }
+        elif btn_8: st.session_state.search_params = { "mode": "월별단순", "title": "월별검색순서", "year": y_4, "month": m_4, "type": "ALL", "company": "", "item": "", "limit": "ALL" }
         
         # ---------------------------------------------------------
         # 💡 데이터 렌더링 (결산 뷰 vs 일반 뷰 분기)
@@ -368,7 +350,6 @@ try:
             car_amt = f_df['carprice_val'].sum()
             profit = out_amt - in_amt
             
-            # 💡 [버그수정] 결산 HTML 문자열 렌더링 방식 수정 (들여쓰기 코드 인식 방지)
             settle_html = '<div class="settle-header-top">'
             settle_html += f'<div style="font-size: 16px;">▶ {s_year}년 {s_month:02d}월 전체리스트 / 결산 종류: ALL</div>'
             settle_html += f'<div style="font-size: 26px;">{s_year}년 {s_month:02d}월</div>'
@@ -423,8 +404,6 @@ try:
                 f_df = f_df[(f_df['year'] == params["year"]) & (f_df['month'] == params["month"])]
             elif params["mode"] == "일":
                 f_df = f_df[f_df[date_col].dt.date == params["date"]]
-            elif params["mode"] == "최근":
-                f_df = f_df.sort_values(by=date_col, ascending=False)
 
             target_type = params.get("type", "ALL")
             if target_type == "매입": f_df = f_df[f_df['incom'].astype(str).str.strip() != '']
@@ -434,11 +413,17 @@ try:
             item_kw = params.get("item", "")
             if com_kw: f_df = f_df[f_df['incom'].str.contains(com_kw, case=False, na=False) | f_df['outcom'].str.contains(com_kw, case=False, na=False)]
             if item_kw: f_df = f_df[f_df['initem'].str.contains(item_kw, case=False, na=False) | f_df['outitem'].str.contains(item_kw, case=False, na=False)]
+            
+            # 💡 [기능 1] 날짜 정렬 버튼 기능 반영 (최신순 / 과거순)
+            f_df = f_df.sort_values(by=[date_col, 'id'], ascending=[not st.session_state.sort_desc, not st.session_state.sort_desc])
                 
             limit_str = params.get("limit", "ALL")
             if limit_str != "ALL" and "개" in limit_str:
                 num = int(limit_str.replace("개", ""))
-                f_df = f_df.head(num)
+                if st.session_state.sort_desc: 
+                    f_df = f_df.head(num) # 최신순일 때는 위에서 자름
+                else:
+                    f_df = f_df.tail(num) # 과거순일 때는 아래서 자름
 
             data_count = len(f_df)
             total_in_q = f_df['inq_val'].sum()
@@ -448,11 +433,20 @@ try:
             total_carprice = f_df['carprice_val'].sum()
             total_profit = total_out_amt - total_in_amt - total_carprice
             
-            f_df = f_df.sort_values(by=date_col, ascending=False)
             table_title_text = params.get("title", "데이터 검색 결과")
 
-            html_str = '<div class="custom-table-container">'
-            html_str += f'<div class="table-title"><span style="font-size: 16px; font-weight: bold; color: #f8fafc;">{table_title_text}</span> <span style="font-size: 13px; color: #cbd5e1; margin-left:10px;">| 출력된 자료 갯수 : {data_count} 개 (고유번호가 제일 큰 것부터 출력) 오로지 검색 조건순으로만 정렬되었습니다</span></div>'
+            # 💡 우측 상단에 "날짜 정렬 버튼" 배치
+            col_t1, col_t2 = st.columns([8.5, 1.5])
+            with col_t1:
+                st.markdown(f'<div class="table-title" style="margin-bottom:0px; border-bottom:0px;"><span style="font-size: 16px; font-weight: bold; color: #f8fafc;">{table_title_text}</span> <span style="font-size: 13px; color: #cbd5e1; margin-left:10px;">| 출력된 자료 갯수 : {data_count} 개 (오로지 검색 조건순으로만 정렬되었습니다)</span></div>', unsafe_allow_html=True)
+            with col_t2:
+                sort_btn_text = "🔽 날짜 최신순 정렬 (현재)" if st.session_state.sort_desc else "🔼 날짜 과거순 정렬 (현재)"
+                if st.button(sort_btn_text, use_container_width=True):
+                    st.session_state.sort_desc = not st.session_state.sort_desc
+                    st.rerun()
+
+            # HTML 테이블 렌더링 시작
+            html_str = '<div class="custom-table-container" style="margin-top:0px;">'
             html_str += '<table class="custom-table">'
             html_str += '<thead><tr>'
             html_str += '<th class="th-base">Vat</th><th class="th-base">날짜</th>'
@@ -493,15 +487,25 @@ try:
                 html_str += f'<td class="tr txt-black">{car_p_str}</td>'
                 html_str += '</tr>'
                 
-            html_str += '</tbody></table>'
+            html_str += '</tbody>'
             
-            html_str += '<div class="summary-row">'
-            html_str += f'<div class="sum-base">자료수 : <span style="color:#ffeb3b;">{data_count}</span> 개</div>'
-            html_str += f'<div class="sum-in">매입수량 : {total_in_q:,.0f} &nbsp;&nbsp;&nbsp;&nbsp; 매입금액 : {total_in_amt:,.0f}원</div>'
-            html_str += f'<div class="sum-out">매출수량 : {total_out_q:,.0f} &nbsp;&nbsp;&nbsp;&nbsp; 매출금액 : {total_out_amt:,.0f}원 &nbsp;&nbsp;&nbsp;&nbsp; 운송비 : {total_carprice:,.0f}원</div>'
-            html_str += '</div>'
-            html_str += f'<div class="sum-profit">검색내 총수익 &nbsp;&nbsp; {total_profit:,.0f}원</div>'
-            html_str += '</div>'
+            # 💡 [기능 2] 요약 패널을 tfoot(표 하단)에 병합하여 100% 색상 및 라인 일치
+            html_str += '<tfoot>'
+            
+            # 요약 첫 번째 줄 (자료수, 매입합계, 매출합계)
+            html_str += '<tr>'
+            html_str += f'<td colspan="2" class="th-base" style="text-align:left; font-weight:bold; padding:12px 15px; color:white;">자료수 : <span style="color:#ffeb3b;">{data_count}</span> 개</td>'
+            html_str += f'<td colspan="4" class="th-in" style="text-align:center; font-weight:bold; padding:12px 15px; color:white;">매입수량 : {total_in_q:,.0f} &nbsp;&nbsp;&nbsp;&nbsp; 매입금액 : {total_in_amt:,.0f}원</td>'
+            html_str += f'<td colspan="7" class="th-out" style="text-align:center; font-weight:bold; padding:12px 15px; color:white;">매출수량 : {total_out_q:,.0f} &nbsp;&nbsp;&nbsp;&nbsp; 매출금액 : {total_out_amt:,.0f}원 &nbsp;&nbsp;&nbsp;&nbsp; 운송비 : {total_carprice:,.0f}원</td>'
+            html_str += '</tr>'
+            
+            # 요약 두 번째 줄 (총 수익)
+            html_str += '<tr>'
+            html_str += f'<td colspan="13" class="sum-profit">검색내 총수익 &nbsp;&nbsp; {total_profit:,.0f}원</td>'
+            html_str += '</tr>'
+            
+            html_str += '</tfoot>'
+            html_str += '</table></div>'
 
             st.markdown(html_str, unsafe_allow_html=True)
 
