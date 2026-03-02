@@ -167,9 +167,10 @@ st.markdown("""
     div[data-testid="stHorizontalBlock"]:has(.num-result) button { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; margin-top: 2px !important; }
 
     /* 링크 모음 전용 아이템 스타일 (표 형식 적용) */
-    .link-table-title { font-size: 1.3em; font-weight: bold; color: #FFD700 !important; text-decoration: none; display: inline-block; margin-bottom: 2px; }
-    .link-table-title:hover { text-decoration: underline; }
-    .link-table-url { font-size: 0.85rem; color: #7BC8A4; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+    .link-table-title { font-size: 1.3em; font-weight: bold; color: #FFD700 !important; text-decoration: none !important; display: inline-block; margin-bottom: 2px; transition: opacity 0.2s; }
+    .link-table-title:hover { text-decoration: none !important; opacity: 0.8; }
+    .link-table-url { font-size: 0.85rem; color: #7BC8A4; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; text-decoration: none !important; transition: opacity 0.2s; }
+    .link-table-url:hover { text-decoration: none !important; opacity: 0.8; }
     .link-table-memo { font-size: 1em; color: #FFFFFF; opacity: 0.9; word-break: keep-all; }
 
     @media screen and (max-width: 768px) {
@@ -221,9 +222,9 @@ def load_links_dataframe(sheet):
     for _ in range(3):
         try:
             data = sheet.get_all_values()
-            if not data: return pd.DataFrame(columns=['분류1', '분류2', '제목', '링크', '메모모', '분류메모'])
+            if not data: return pd.DataFrame(columns=['분류1', '분류2', '제목', '링크', '메모', '분류메모'])
             rows = [row + [""] * (6 - len(row)) for row in data[1:]]
-            df = pd.DataFrame(rows, columns=['분류1', '분류2', '제목', '링크', '메모모', '분류메모'])
+            df = pd.DataFrame(rows, columns=['분류1', '분류2', '제목', '링크', '메모', '분류메모'])
             for col in df.columns: df[col] = df[col].astype(str).str.strip()
             return df
         except: time.sleep(1)
@@ -289,14 +290,14 @@ def add_link_dialog(unique_cats1):
         cat2 = st.text_input("분류2 (소분류)")
         title = st.text_input("제목 (필수)")
         link_url = st.text_input("링크 주소 (URL) (필수)")
-        memo1 = st.text_input("메모모")
+        memo = st.text_input("메모")
         memo2 = st.text_input("분류메모")
         
         if st.form_submit_button("저장하기", use_container_width=True, type="primary"):
             final_cat1 = new_cat1.strip() if new_cat1.strip() else (selected_cat1 if selected_cat1 != "(새로 입력)" else "")
             if title and link_url:
                 sheet2 = get_links_sheet()
-                sheet2.append_row([final_cat1, cat2, title, link_url, memo1, memo2])
+                sheet2.append_row([final_cat1, cat2, title, link_url, memo, memo2])
                 st.success("새 링크 저장 완료!")
                 time.sleep(1)
                 st.rerun()
@@ -317,14 +318,14 @@ def edit_link_dialog(idx, row_data, unique_cats1):
         cat2 = st.text_input("분류2(소분류)", value=row_data.get('분류2', ''))
         title = st.text_input("제목", value=row_data.get('제목', ''))
         link_url = st.text_input("링크 주소(URL)", value=row_data.get('링크', ''))
-        memo1 = st.text_input("메모모", value=row_data.get('메모모', ''))
+        memo = st.text_input("메모", value=row_data.get('메모', ''))
         memo2 = st.text_input("분류메모", value=row_data.get('분류메모', ''))
         
         b1, b2 = st.columns(2)
         if b1.form_submit_button("💾 저장", use_container_width=True, type="primary"):
             final_cat1 = new_cat1.strip() if new_cat1.strip() else edit_cat1
             sheet2 = get_links_sheet()
-            sheet2.update(f"A{idx+2}:F{idx+2}", [[final_cat1, cat2, title, link_url, memo1, memo2]])
+            sheet2.update(f"A{idx+2}:F{idx+2}", [[final_cat1, cat2, title, link_url, memo, memo2]])
             st.rerun()
         if b2.form_submit_button("🗑️ 삭제", use_container_width=True):
             sheet2 = get_links_sheet()
@@ -580,8 +581,8 @@ else:
                 df_links = df_links[df_links['분류1'] == sel_link_cat]
 
             # --- 표 형식 헤더 ---
-            l_ratio = [2.0, 5.0, 4.0, 1.0] if st.session_state.authenticated else [2.0, 6.0, 4.0]
-            l_labels = ["분류", "제목 및 링크", "메모모", "수정"] if st.session_state.authenticated else ["분류", "제목 및 링크", "메모모"]
+            l_ratio = [1.2, 1.2, 3.5, 2.0, 2.0, 1.0] if st.session_state.authenticated else [1.2, 1.2, 3.5, 2.0, 2.0]
+            l_labels = ["분류1", "분류2", "제목 및 링크", "메모", "분류메모", "수정"] if st.session_state.authenticated else ["분류1", "분류2", "제목 및 링크", "메모", "분류메모"]
             
             h_cols = st.columns(l_ratio)
             for i, l in enumerate(l_labels):
@@ -595,21 +596,26 @@ else:
             else:
                 for idx, row in df_links.iterrows():
                     cols = st.columns(l_ratio)
-                    cat_display = f"{row['분류1']}" if not row['분류2'] else f"{row['분류1']} > {row['분류2']}"
                     
-                    # 1. 분류 (row-marker를 넣어 영어 단어장과 동일한 호버 효과 적용)
-                    cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold'>[{cat_display}]</span>", unsafe_allow_html=True)
+                    # 1. 분류1 (row-marker를 넣어 영어 단어장과 동일한 호버 효과 적용)
+                    cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold'>[{row['분류1']}]</span>", unsafe_allow_html=True)
                     
-                    # 2. 제목 및 링크 (클릭 가능)
-                    link_html = f"<a href='{row['링크']}' target='_blank' class='link-table-title'>{row['제목']}</a><span class='link-table-url'>🔗 {row['링크']}</span>"
-                    cols[1].markdown(link_html, unsafe_allow_html=True)
+                    # 2. 분류2
+                    cols[1].markdown(f"<span class='cat-text-bold'>{row['분류2']}</span>", unsafe_allow_html=True)
                     
-                    # 3. 메모모
-                    cols[2].markdown(f"<span class='link-table-memo'>{row['메모모']}</span>", unsafe_allow_html=True)
+                    # 3. 제목 및 링크 (클릭 가능, 밑줄 없음)
+                    link_html = f"<a href='{row['링크']}' target='_blank' class='link-table-title'>{row['제목']}</a><a href='{row['링크']}' target='_blank' class='link-table-url'>🔗 {row['링크']}</a>"
+                    cols[2].markdown(link_html, unsafe_allow_html=True)
                     
-                    # 4. 수정 버튼
+                    # 4. 메모
+                    cols[3].markdown(f"<span class='link-table-memo'>{row['메모']}</span>", unsafe_allow_html=True)
+                    
+                    # 5. 분류메모
+                    cols[4].markdown(f"<span class='link-table-memo'>{row['분류메모']}</span>", unsafe_allow_html=True)
+                    
+                    # 6. 수정 버튼
                     if st.session_state.authenticated:
-                        if cols[3].button("✏️", key=f"el_{idx}", type="tertiary"):
+                        if cols[5].button("✏️", key=f"el_{idx}", type="tertiary"):
                             edit_link_dialog(idx, row.to_dict(), unique_links_cats)
 
         except Exception as e: st.error(f"링크 데이터 오류 발생: {e}")
