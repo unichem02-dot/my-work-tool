@@ -264,6 +264,10 @@ try:
 
         # --- 결과 테이블 ---
         st.markdown("<br>", unsafe_allow_html=True)
+        
+        # 💡 [추가] 구글 시트에서 변경하신 YYYY-MM-DD 형식에 맞춰 표에서도 깔끔하게 날짜만 출력되도록 변환
+        display_df['날짜'] = display_df['날짜'].dt.strftime('%Y-%m-%d')
+        
         st.dataframe(display_df, use_container_width=True, hide_index=True)
 
     else:
