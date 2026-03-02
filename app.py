@@ -168,11 +168,14 @@ st.markdown("""
 
     /* 링크 모음 전용 아이템 스타일 (표 형식 적용) */
     .link-table-cat1 { font-size: 1.8rem !important; color: #FFA500 !important; font-weight: bold; display: inline-block; margin-bottom: 2px; }
-    .link-table-title { font-size: 1.3em; font-weight: bold; color: #FFD700 !important; text-decoration: none !important; display: inline-block; margin-bottom: 2px; transition: opacity 0.2s; }
-    .link-table-title:hover { text-decoration: none !important; opacity: 0.8; }
-    /* 링크 색상을 연두색(YellowGreen)으로 변경 */
-    .link-table-url { font-size: 0.85rem; color: #9ACD32; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; text-decoration: none !important; transition: opacity 0.2s; }
-    .link-table-url:hover { text-decoration: none !important; opacity: 0.8; }
+    
+    /* 링크 밑줄(테두리) 완벽 제거 및 색상 적용 */
+    .link-table-title { font-size: 1.3em; font-weight: bold; color: #FFD700 !important; text-decoration: none !important; border-bottom: none !important; display: inline-block; margin-bottom: 2px; transition: opacity 0.2s; }
+    .link-table-title:hover { text-decoration: none !important; border-bottom: none !important; opacity: 0.8; }
+    
+    .link-table-url { font-size: 0.85rem; color: #FFFFFF !important; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; text-decoration: none !important; border-bottom: none !important; transition: opacity 0.2s; }
+    .link-table-url:hover { text-decoration: none !important; border-bottom: none !important; opacity: 0.8; }
+    
     .link-table-memo { font-size: 1em; color: #FFFFFF; opacity: 0.9; word-break: keep-all; }
 
     @media screen and (max-width: 768px) {
@@ -567,8 +570,8 @@ else:
             sheet2 = get_links_sheet()
             df_links = load_links_dataframe(sheet2)
             
-            # ★ 필터용으로 분류1과 분류2를 결합하여 새로운 열 생성 (분류1 > 분류2)
-            df_links['필터분류'] = df_links.apply(lambda r: f"{r['분류1']} > {r['분류2']}" if r['분류2'].strip() else r['분류1'], axis=1)
+            # ★ 필터용으로 분류1과 분류2를 결합하여 나뭇가지(└) 스타일 적용
+            df_links['필터분류'] = df_links.apply(lambda r: f"{r['분류1']} └ {r['분류2']}" if r['분류2'].strip() else r['분류1'], axis=1)
             
             unique_links_cats = sorted([x for x in df_links['필터분류'].unique().tolist() if x != ''])
             
@@ -611,7 +614,7 @@ else:
                     # 2. 분류2
                     cols[1].markdown(f"<span class='cat-text-bold'>{row['분류2']}</span>", unsafe_allow_html=True)
                     
-                    # 3. 제목 및 링크 (클릭 가능, 이모티콘 제거, 밑줄 없음)
+                    # 3. 제목 및 링크 (클릭 가능, 이모티콘 제거, 밑줄 없음, URL 텍스트 화이트 적용)
                     link_html = f"<a href='{row['링크']}' target='_blank' class='link-table-title'>{row['제목']}</a><a href='{row['링크']}' target='_blank' class='link-table-url'>{row['링크']}</a>"
                     cols[2].markdown(link_html, unsafe_allow_html=True)
                     
