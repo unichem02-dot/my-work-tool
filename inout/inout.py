@@ -4,6 +4,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime, timedelta
 import re
+import io # 💡 엑셀 다운로드를 위한 모듈 추가
 
 # --- [1. 페이지 기본 설정 및 테마 스타일] ---
 st.set_page_config(layout="wide", page_title="입출력 관리 시스템 (inout)")
@@ -11,57 +12,24 @@ st.set_page_config(layout="wide", page_title="입출력 관리 시스템 (inout)
 # 커스텀 CSS 주입
 st.markdown("""
     <style>
-    [data-testid="stAppViewContainer"] {
-        background-color: #2b323c;
-    }
-    .main .block-container {
-        padding-top: 1rem;
-        max-width: 98%;
-    }
-    h1, h2, h3, p, span {
-        color: #ffffff !important;
-    }
+    [data-testid="stAppViewContainer"] { background-color: #2b323c; }
+    .main .block-container { padding-top: 1rem; max-width: 98%; }
+    h1, h2, h3, p, span { color: #ffffff !important; }
     
-    /* 검색 패널 전체 배경 */
-    .search-panel-container {
-        background-color: #353b48;
-        padding: 15px;
-        border-radius: 8px;
-        border: 1px solid #4a5568;
-        margin-bottom: 20px;
-    }
-    
-    /* 버튼 둥글기 및 컴팩트화 */
-    div.stButton > button {
-        border-radius: 4px !important;
-        font-weight: bold !important;
-        padding: 0px 10px !important;
-    }
+    .search-panel-container { background-color: #353b48; padding: 15px; border-radius: 8px; border: 1px solid #4a5568; margin-bottom: 20px; }
+    div.stButton > button { border-radius: 4px !important; font-weight: bold !important; padding: 0px 10px !important; }
     div.btn-green > div > button { background-color: #8bc34a !important; color: white !important; border: 1px solid #7cb342 !important; }
     div.btn-pink > div > button { background-color: #e57373 !important; color: white !important; border: 1px solid #e53935 !important; }
 
-    /* -------------------------------------
-       메인 데이터 테이블 스타일
-       ------------------------------------- */
-    .custom-table-container {
-        width: 100%; margin-top: 10px; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
-    }
-    .table-title {
-        background-color: #2b323c; padding: 10px 15px; border-top: 2px solid #555; display: flex; align-items: center; justify-content: space-between;
-    }
-    .custom-table {
-        width: 100%; border-collapse: collapse; font-size: 15px; background-color: white;
-    }
-    .custom-table th, .custom-table td {
-        border: 1px solid #d0d0d0; padding: 8px 10px;
-    }
-    .custom-table th {
-        text-align: center; color: white; font-weight: bold; padding: 10px 6px;
-    }
+    /* 데이터 테이블 스타일 */
+    .custom-table-container { width: 100%; margin-top: 5px; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
+    .table-title-box { background-color: #2b323c; padding: 10px 15px; border-top: 2px solid #555; border-bottom: none; display: flex; align-items: center; justify-content: space-between; }
+    .custom-table { width: 100%; border-collapse: collapse; font-size: 15px; background-color: white; }
+    .custom-table th, .custom-table td { border: 1px solid #d0d0d0; padding: 8px 10px; }
+    .custom-table th { text-align: center; color: white; font-weight: bold; padding: 10px 6px; }
     .custom-table tr:nth-child(even) { background-color: #f8f9fa; }
     .custom-table tr:hover { background-color: #e2e6ea; }
     
-    /* 테이블 헤더 및 푸터 컬러 */
     .th-base { background-color: #353b48; color: white; }
     .th-in { background-color: #3b5b88; color: white; } 
     .th-out { background-color: #b8860b; color: white; }
@@ -74,58 +42,32 @@ st.markdown("""
     .txt-purple { color: #7e22ce !important; font-weight: bold; }
     .txt-gray { color: #475569 !important; }
     .txt-black { color: #1e293b !important; }
+    .tc { text-align: center; } .tl { text-align: left; } .tr { text-align: right; }
     
-    .tc { text-align: center; }
-    .tl { text-align: left; }
-    .tr { text-align: right; }
-    
-    .sum-profit { 
-        background-color: #2b323c; color: white; padding: 12px 20px; text-align: right; font-weight: bold; font-size: 16px; border-top: 1px solid #444;
-    }
+    .sum-profit { background-color: #2b323c; color: white; padding: 12px 20px; text-align: right; font-weight: bold; font-size: 16px; border-top: 1px solid #444; }
 
-    /* -------------------------------------
-       새로운 [결산] 뷰 스타일
-       ------------------------------------- */
-    .settle-header-top {
-        background-color: #5d607e; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; border-bottom: 3px solid #b8b8b8;
-    }
-    .settle-container {
-        display: flex; width: 100%; font-family: 'Malgun Gothic', sans-serif; font-size: 14px; color: #333; margin-top: 5px;
-    }
-    .settle-lists {
-        display: flex; flex: 1; border: 1px solid #777; background: white;
-    }
-    .settle-col {
-        flex: 1; border-right: 1px solid #ccc; background: white;
-    }
+    /* 결산 뷰 스타일 */
+    .settle-header-top { background-color: #5d607e; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; border-bottom: 3px solid #b8b8b8; }
+    .settle-container { display: flex; width: 100%; font-family: 'Malgun Gothic', sans-serif; font-size: 14px; color: #333; margin-top: 5px; }
+    .settle-lists { display: flex; flex: 1; border: 1px solid #777; background: white; }
+    .settle-col { flex: 1; border-right: 1px solid #ccc; background: white; }
     .settle-col:last-child { border-right: none; }
     .sh-title { text-align: center; color: white; padding: 8px; font-weight: bold; border-bottom: 1px solid #ccc; font-size: 14px;}
-    .sh-1 { background-color: #8385b2; }
-    .sh-2 { background-color: #7b9cbf; }
-    .sh-3 { background-color: #c99f5e; }
-    .sh-4 { background-color: #d1b15c; }
-    .sh-5 { background-color: #8ba966; }
-    
+    .sh-1 { background-color: #8385b2; } .sh-2 { background-color: #7b9cbf; } .sh-3 { background-color: #c99f5e; } .sh-4 { background-color: #d1b15c; } .sh-5 { background-color: #8ba966; }
     .ul-list { list-style: none; padding: 0; margin: 0; }
     .ul-list li { padding: 6px 10px; border-bottom: 1px solid #eee; display: flex; align-items: flex-start; font-size: 14px;}
-    .li-num { width: 25px; color: #555; }
-    .li-name { flex: 1; word-break: break-all; }
-    .li-icon { color: #a1a1aa; font-size: 16px; }
+    .li-num { width: 25px; color: #555; } .li-name { flex: 1; word-break: break-all; } .li-icon { color: #a1a1aa; font-size: 16px; }
     
     .settle-summary { width: 350px; border: 1px solid #777; margin-left: 10px; background-color: #5d607e; color: white; display: flex; flex-direction: column;}
     .sum-subhead { background-color: #3b3d56; text-align: center; padding: 8px; font-size: 14px; font-weight: bold;}
     .sum-table { width: 100%; border-collapse: collapse; }
     .sum-table td { padding: 10px 12px; border-bottom: 1px solid #888; font-size: 14px; color: white; }
-    .bg-blue { background-color: #707b9e; }
-    .bg-orange { background-color: #c58f55; }
-    .bg-olive { background-color: #757c43; }
-    .bg-dark { background-color: #2b2b2b; }
+    .bg-blue { background-color: #707b9e; } .bg-orange { background-color: #c58f55; } .bg-olive { background-color: #757c43; } .bg-dark { background-color: #2b2b2b; }
     .tr-right { text-align: right; font-weight: bold;}
     
     .alert-box { background-color: white; color: black; margin: 10px; border: 1px solid #ccc; font-size: 13px; }
     .alert-title { background-color: #cc0000; color: white; text-align: center; padding: 6px; font-weight: bold; }
-    .alert-ul { padding-left: 20px; margin: 10px 10px 10px 0; }
-    .alert-ul li { margin-bottom: 5px; }
+    .alert-ul { padding-left: 20px; margin: 10px 10px 10px 0; } .alert-ul li { margin-bottom: 5px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -135,6 +77,8 @@ if "failed_attempts" not in st.session_state: st.session_state.failed_attempts =
 if "lockout_until" not in st.session_state: st.session_state.lockout_until = None
 if "last_activity" not in st.session_state: st.session_state.last_activity = None
 if "search_params" not in st.session_state: st.session_state.search_params = {"mode": "init"}
+# 정렬 방향 기억용 상태
+if "sort_desc" not in st.session_state: st.session_state.sort_desc = True 
 
 now = datetime.now()
 
@@ -203,7 +147,6 @@ def load_data():
     sheet = client.open('SQL백업260211-jeilinout').sheet1
     raw_data = sheet.get_all_values()
     if not raw_data: return pd.DataFrame()
-    
     header = raw_data[0]
     new_header = []
     for i, name in enumerate(header):
@@ -211,16 +154,12 @@ def load_data():
         if not n: new_header.append(f"col_{i}")
         elif n in new_header: new_header.append(f"{n}_{i}")
         else: new_header.append(n)
-            
-    df = pd.DataFrame(raw_data[1:], columns=new_header)
-    return df
+    return pd.DataFrame(raw_data[1:], columns=new_header)
 
 def clean_numeric(val):
     if pd.isna(val) or val == '': return 0
-    try:
-        return float(re.sub(r'[^\d.-]', '', str(val)))
-    except:
-        return 0
+    try: return float(re.sub(r'[^\d.-]', '', str(val)))
+    except: return 0
 
 def make_ul_list(items):
     html = '<ul class="ul-list">'
@@ -253,9 +192,6 @@ try:
         months = list(range(1, 13))
         if not years: years = [datetime.now().year]
 
-        # ---------------------------------------------------------
-        # 💡 복합 검색 UI
-        # ---------------------------------------------------------
         with st.container():
             st.markdown("<div class='search-panel-container'>", unsafe_allow_html=True)
             
@@ -280,22 +216,17 @@ try:
 
             st.markdown("<hr style='margin: 10px 0; border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
-            c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14 = st.columns([0.8, 1.2, 1, 1,   1.2,   1, 1,   1.5, 1,   1.2,   0.8, 1.2, 1, 1.2])
-            
+            c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14 = st.columns([0.8, 1.2, 1, 1, 1.2, 1, 1, 1.5, 1, 1.2, 0.8, 1.2, 1, 1.2])
             with c1: st.selectbox("s3", ["ALL"], label_visibility="collapsed")
             with c2: y_3 = st.selectbox("y3", years, label_visibility="collapsed")
             with c3: m_3 = st.selectbox("m3", months, index=datetime.now().month-1, label_visibility="collapsed", format_func=lambda x: f"{x}월")
             with c4: btn_3 = st.button("결산", use_container_width=True, type="primary")
             with c5: btn_4 = st.button("신규입력", use_container_width=True, type="primary")
-
             with c6: limit_val = st.selectbox("s4", ["20개", "50개", "100개", "ALL"], index=0, label_visibility="collapsed")
             with c7: btn_5 = st.button("최근입력", use_container_width=True, type="primary")
-
             with c8: d_day = st.date_input("d2", datetime.now().date(), label_visibility="collapsed")
             with c9: btn_6 = st.button("일검색", use_container_width=True, type="primary")
-
             with c10: btn_7 = st.button("어제오늘내일", use_container_width=True, type="primary")
-
             with c11: st.selectbox("s5", ["ALL"], label_visibility="collapsed")
             with c12: y_4 = st.selectbox("y4", years, label_visibility="collapsed")
             with c13: m_4 = st.selectbox("m4", months, index=datetime.now().month-1, label_visibility="collapsed", format_func=lambda x: f"{x}월")
@@ -303,9 +234,6 @@ try:
             
             st.markdown("</div>", unsafe_allow_html=True)
 
-        # ---------------------------------------------------------
-        # 💡 액션 라우팅
-        # ---------------------------------------------------------
         if btn_1: st.session_state.search_params = { "mode": "기간", "title": "기간검색순서", "type": type_1, "company": com_1, "item": item_1, "limit": "ALL", "start": date_range[0], "end": date_range[1] if len(date_range)>1 else date_range[0] }
         elif btn_2: st.session_state.search_params = { "mode": "월별", "title": f"{year_2}년 {month_2}월 검색순서", "type": type_2, "company": com_2, "item": item_2, "limit": "ALL", "year": year_2, "month": month_2 }
         elif btn_3: st.session_state.search_params = { "mode": "결산", "year": y_3, "month": m_3 }
@@ -315,13 +243,10 @@ try:
         elif btn_7: st.session_state.search_params = { "mode": "기간", "title": "어제/오늘/내일 검색순서", "type": "ALL", "company": "", "item": "", "limit": "ALL", "start": datetime.now().date() - timedelta(days=1), "end": datetime.now().date() + timedelta(days=1) }
         elif btn_8: st.session_state.search_params = { "mode": "월별단순", "title": "월별검색순서", "year": y_4, "month": m_4, "type": "ALL", "company": "", "item": "", "limit": "ALL" }
         
-        # ---------------------------------------------------------
-        # 💡 데이터 렌더링
-        # ---------------------------------------------------------
         params = st.session_state.search_params
         
         if params["mode"] == "결산":
-            # --- 결산 대시보드 화면 ---
+            # [결산 화면 렌더링 코드 유지]
             s_year = params["year"]
             s_month = params["month"]
             f_df = df[(df['year'] == s_year) & (df['month'] == s_month)].copy()
@@ -336,69 +261,24 @@ try:
             in_amt = f_df['in_total'].sum()
             in_tax = in_amt * 0.1
             in_amt_total = in_amt + in_tax
-            
             out_q = f_df['outq_val'].sum()
             out_amt = f_df['out_total'].sum()
             out_tax = out_amt * 0.1
             out_amt_total = out_amt + out_tax
-            
             car_amt = f_df['carprice_val'].sum()
             profit = out_amt - in_amt
             
-            settle_html = '<div class="settle-header-top">'
-            settle_html += f'<div style="font-size: 16px;">▶ {s_year}년 {s_month:02d}월 전체리스트 / 결산 종류: ALL</div>'
-            settle_html += f'<div style="font-size: 26px;">{s_year}년 {s_month:02d}월</div>'
-            settle_html += '</div>'
-            
-            settle_html += '<div class="settle-container">'
-            settle_html += '<div class="settle-lists">'
-            settle_html += f'<div class="settle-col"><div class="sh-title sh-1">매입거래처</div>{make_ul_list(incom_list)}</div>'
-            settle_html += f'<div class="settle-col"><div class="sh-title sh-2">매입품목</div>{make_ul_list(initem_list)}</div>'
-            settle_html += f'<div class="settle-col"><div class="sh-title sh-3">매출거래처</div>{make_ul_list(outcom_list)}</div>'
-            settle_html += f'<div class="settle-col"><div class="sh-title sh-4">매출품목</div>{make_ul_list(outitem_list)}</div>'
-            settle_html += f'<div class="settle-col"><div class="sh-title sh-5">차량NO</div>{make_ul_list(carno_list)}</div>'
-            settle_html += '</div>'
-            
-            settle_html += '<div class="settle-summary">'
-            settle_html += '<div class="sum-subhead">[ALL] 총결산 내역</div>'
-            settle_html += '<table class="sum-table">'
-            settle_html += f'<tr><td class="bg-blue">매입수량</td><td class="bg-blue tr-right">{in_q:,.0f}</td></tr>'
-            settle_html += f'<tr><td class="bg-blue">매입액</td><td class="bg-blue tr-right">\{in_amt:,.0f}</td></tr>'
-            settle_html += f'<tr><td class="bg-blue">매입세액</td><td class="bg-blue tr-right">\{in_tax:,.0f}</td></tr>'
-            settle_html += f'<tr><td class="bg-blue" style="border-bottom: 2px solid white;">매입금액(세액포함)</td><td class="bg-blue tr-right" style="border-bottom: 2px solid white;">\{in_amt_total:,.0f}</td></tr>'
-            
-            settle_html += f'<tr><td class="bg-orange">매출수량</td><td class="bg-orange tr-right">{out_q:,.0f}</td></tr>'
-            settle_html += f'<tr><td class="bg-orange">매출액</td><td class="bg-orange tr-right">\{out_amt:,.0f}</td></tr>'
-            settle_html += f'<tr><td class="bg-orange">매출세액</td><td class="bg-orange tr-right">\{out_tax:,.0f}</td></tr>'
-            settle_html += f'<tr><td class="bg-orange" style="border-bottom: 2px solid white;">매출금액(세액포함)</td><td class="bg-orange tr-right" style="border-bottom: 2px solid white;">\{out_amt_total:,.0f}</td></tr>'
-            
-            settle_html += f'<tr><td class="bg-olive" style="border-bottom: 2px solid white;">운송비</td><td class="bg-olive tr-right" style="border-bottom: 2px solid white;">\{car_amt:,.0f}</td></tr>'
-            
-            settle_html += f'<tr><td class="bg-dark">총이익 <span style="font-size:11px">(운송비미포함)</span></td><td class="bg-dark tr-right">\{profit:,.0f}</td></tr>'
-            settle_html += '</table>'
-            
-            settle_html += '<div class="alert-box">'
-            settle_html += '<div class="alert-title">전자시스템 알림사항</div>'
-            settle_html += '<ul class="alert-ul">'
-            settle_html += '<li>오타확인은 전체리스트를 보시면 쉽게 확인/수정 가능 합니다.</li>'
-            settle_html += '<li>자료입력후 꼭 자료일관성 확인을 해주시기 바랍니다.</li>'
-            settle_html += '</ul>'
-            settle_html += '</div>'
-            
-            settle_html += '</div>'
-            settle_html += '</div>'
-            
+            settle_html = f'<div class="settle-header-top"><div style="font-size: 16px;">▶ {s_year}년 {s_month:02d}월 전체리스트 / 결산 종류: ALL</div><div style="font-size: 26px;">{s_year}년 {s_month:02d}월</div></div>'
+            settle_html += f'<div class="settle-container"><div class="settle-lists"><div class="settle-col"><div class="sh-title sh-1">매입거래처</div>{make_ul_list(incom_list)}</div><div class="settle-col"><div class="sh-title sh-2">매입품목</div>{make_ul_list(initem_list)}</div><div class="settle-col"><div class="sh-title sh-3">매출거래처</div>{make_ul_list(outcom_list)}</div><div class="settle-col"><div class="sh-title sh-4">매출품목</div>{make_ul_list(outitem_list)}</div><div class="settle-col"><div class="sh-title sh-5">차량NO</div>{make_ul_list(carno_list)}</div></div>'
+            settle_html += f'<div class="settle-summary"><div class="sum-subhead">[ALL] 총결산 내역</div><table class="sum-table"><tr><td class="bg-blue">매입수량</td><td class="bg-blue tr-right">{in_q:,.0f}</td></tr><tr><td class="bg-blue">매입액</td><td class="bg-blue tr-right">\{in_amt:,.0f}</td></tr><tr><td class="bg-blue">매입세액</td><td class="bg-blue tr-right">\{in_tax:,.0f}</td></tr><tr><td class="bg-blue" style="border-bottom: 2px solid white;">매입금액(세액포함)</td><td class="bg-blue tr-right" style="border-bottom: 2px solid white;">\{in_amt_total:,.0f}</td></tr><tr><td class="bg-orange">매출수량</td><td class="bg-orange tr-right">{out_q:,.0f}</td></tr><tr><td class="bg-orange">매출액</td><td class="bg-orange tr-right">\{out_amt:,.0f}</td></tr><tr><td class="bg-orange">매출세액</td><td class="bg-orange tr-right">\{out_tax:,.0f}</td></tr><tr><td class="bg-orange" style="border-bottom: 2px solid white;">매출금액(세액포함)</td><td class="bg-orange tr-right" style="border-bottom: 2px solid white;">\{out_amt_total:,.0f}</td></tr><tr><td class="bg-olive" style="border-bottom: 2px solid white;">운송비</td><td class="bg-olive tr-right" style="border-bottom: 2px solid white;">\{car_amt:,.0f}</td></tr><tr><td class="bg-dark">총이익 <span style="font-size:11px">(운송비미포함)</span></td><td class="bg-dark tr-right">\{profit:,.0f}</td></tr></table><div class="alert-box"><div class="alert-title">전자시스템 알림사항</div><ul class="alert-ul"><li>오타확인은 전체리스트를 보시면 쉽게 확인/수정 가능 합니다.</li><li>자료입력후 꼭 자료일관성 확인을 해주시기 바랍니다.</li></ul></div></div></div>'
             st.markdown(settle_html, unsafe_allow_html=True)
 
         elif params["mode"] != "init":
-            # --- 일반 데이터 리스트 화면 ---
+            # --- 데이터 리스트 필터링 ---
             f_df = df.copy()
-            if params["mode"] == "기간":
-                f_df = f_df[(f_df[date_col].dt.date >= params["start"]) & (f_df[date_col].dt.date <= params["end"])]
-            elif params["mode"] in ["월별", "월별단순"]:
-                f_df = f_df[(f_df['year'] == params["year"]) & (f_df['month'] == params["month"])]
-            elif params["mode"] == "일":
-                f_df = f_df[f_df[date_col].dt.date == params["date"]]
+            if params["mode"] == "기간": f_df = f_df[(f_df[date_col].dt.date >= params["start"]) & (f_df[date_col].dt.date <= params["end"])]
+            elif params["mode"] in ["월별", "월별단순"]: f_df = f_df[(f_df['year'] == params["year"]) & (f_df['month'] == params["month"])]
+            elif params["mode"] == "일": f_df = f_df[f_df[date_col].dt.date == params["date"]]
 
             target_type = params.get("type", "ALL")
             if target_type == "매입": f_df = f_df[f_df['incom'].astype(str).str.strip() != '']
@@ -409,13 +289,14 @@ try:
             if com_kw: f_df = f_df[f_df['incom'].str.contains(com_kw, case=False, na=False) | f_df['outcom'].str.contains(com_kw, case=False, na=False)]
             if item_kw: f_df = f_df[f_df['initem'].str.contains(item_kw, case=False, na=False) | f_df['outitem'].str.contains(item_kw, case=False, na=False)]
             
-            # 기본적으로 항상 최신순으로 가져옴 (프론트엔드 자바스크립트로 직접 제어)
-            f_df = f_df.sort_values(by=[date_col, 'id'], ascending=[False, False])
+            # 파이썬 내부 정렬 실행 (클릭할 때마다 방향 전환됨)
+            f_df = f_df.sort_values(by=[date_col, 'id'], ascending=[not st.session_state.sort_desc, not st.session_state.sort_desc])
                 
             limit_str = params.get("limit", "ALL")
             if limit_str != "ALL" and "개" in limit_str:
                 num = int(limit_str.replace("개", ""))
-                f_df = f_df.head(num)
+                if st.session_state.sort_desc: f_df = f_df.head(num)
+                else: f_df = f_df.tail(num)
 
             data_count = len(f_df)
             total_in_q = f_df['inq_val'].sum()
@@ -427,17 +308,34 @@ try:
             
             table_title_text = params.get("title", "데이터 검색 결과")
 
-            # 💡 [기능 2] 기존의 파이썬 정렬 버튼 완전 삭제 -> 깔끔한 헤더 유지
-            st.markdown(f'<div class="table-title" style="margin-bottom:0px; border-bottom:0px;"><span style="font-size: 16px; font-weight: bold; color: #f8fafc;">{table_title_text}</span> <span style="font-size: 13px; color: #cbd5e1; margin-left:10px;">| 출력된 자료 갯수 : {data_count} 개 (오로지 검색 조건순으로만 정렬되었습니다)</span></div>', unsafe_allow_html=True)
+            # ---------------------------------------------------------
+            # 💡 [신규] 상단 타이틀 구역 + 정렬 버튼 + 엑셀 다운로드 버튼
+            # ---------------------------------------------------------
+            col_t1, col_t2, col_t3 = st.columns([6.5, 1.8, 1.7])
+            with col_t1:
+                st.markdown(f'<div class="table-title-box"><span style="font-size: 16px; font-weight: bold; color: #f8fafc;">{table_title_text}</span> <span style="font-size: 13px; color: #cbd5e1; margin-left:10px;">| 출력된 자료 갯수 : {data_count} 개 (오로지 검색 조건순으로만 정렬되었습니다)</span></div>', unsafe_allow_html=True)
+            with col_t2:
+                # 스트림릿 보안 우회를 위한 깔끔한 전용 정렬 버튼
+                sort_btn_text = "🔄 날짜 정렬 (현재:최신순)" if st.session_state.sort_desc else "🔄 날짜 정렬 (현재:과거순)"
+                if st.button(sort_btn_text, use_container_width=True):
+                    st.session_state.sort_desc = not st.session_state.sort_desc
+                    st.rerun()
+            with col_t3:
+                # 💡 엑셀 파일 생성 (openpyxl 사용)
+                export_df = f_df[['s', 'date', 'incom', 'initem', 'inq_val', 'inprice_val', 'outcom', 'outitem', 'outq_val', 'outprice_val', 'id', 'carno', 'carprice_val']].copy()
+                export_df['date'] = export_df['date'].dt.strftime('%Y-%m-%d')
+                export_df.columns = ['Vat(상태)', '날짜', '매입거래처', '매입품목', '매입수량', '매입단가', '매출거래처', '매출품목', '매출수량', '매출단가', 'NO', '차량배송', '운송비']
+                
+                excel_buffer = io.BytesIO()
+                export_df.to_excel(excel_buffer, index=False, engine='openpyxl')
+                st.download_button(label="💾 엑셀 다운로드", data=excel_buffer.getvalue(), file_name=f"검색결과_{datetime.now().strftime('%Y%m%d')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
 
-            html_str = '<div class="custom-table-container" style="margin-top:0px;">'
+            # HTML 테이블 렌더링
+            html_str = '<div class="custom-table-container">'
             html_str += '<table class="custom-table">'
             html_str += '<thead><tr>'
             html_str += '<th class="th-base">Vat</th>'
-            
-            # 💡 [기능 2] "날짜" 헤더를 클릭하면 표 전체를 오름차순/내림차순으로 뒤집는 자바스크립트 내장
-            html_str += '<th class="th-base" style="cursor:pointer; user-select:none; text-decoration:underline;" data-dir="desc" onclick="var tb=this.closest(\'table\').querySelector(\'tbody\');var rs=Array.from(tb.querySelectorAll(\'tr\'));var d=this.getAttribute(\'data-dir\')===\'desc\';rs.sort((a,b)=>{var ca=a.children[1].innerText,cb=b.children[1].innerText;var c=ca.localeCompare(cb);if(c===0){var ia=parseInt(a.children[10].innerText)||0,ib=parseInt(b.children[10].innerText)||0;return d?ia-ib:ib-ia;}return d?c:-c;});this.setAttribute(\'data-dir\',d?\'asc\':\'desc\');this.innerHTML=\'날짜 \'+(d?\'▲\':\'▼\');rs.forEach(r=>tb.appendChild(r));" title="클릭하면 정렬 순서가 바뀝니다.">날짜 ▼</th>'
-            
+            html_str += '<th class="th-base">날짜</th>' # 자바스크립트 버그 방지용 기본 텍스트 복구
             html_str += '<th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th>'
             html_str += '<th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th>'
             html_str += '<th class="th-base">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th>'
@@ -450,52 +348,24 @@ try:
                 out_q_str = f"{row['outq_val']:,.0f}" if row['outq_val'] else "0"
                 out_p_str = f"{row['outprice_val']:,.0f}" if row['outprice_val'] else "0"
                 car_p_str = f"{row['carprice_val']:,.0f}" if row['carprice_val'] else "0"
-                
                 in_item_full = str(row['initem'])
                 out_item_full = str(row['outitem'])
-                
                 s_val = str(row.get("s", ""))
                 if "제일" in s_val: s_cls = "txt-green"
                 elif "중부" in s_val: s_cls = "txt-purple"
                 else: s_cls = "txt-gray"
 
-                html_str += '<tr>'
-                html_str += f'<td class="tc"><span class="{s_cls}">{s_val}</span></td>'
-                html_str += f'<td class="tc txt-black">{dt_str}</td>'
-                html_str += f'<td class="tl txt-in-bold">{row.get("incom", "")}</td>'
-                html_str += f'<td class="tl txt-in">{in_item_full}</td>'
-                html_str += f'<td class="tr txt-in">{in_q_str}</td>'
-                html_str += f'<td class="tr txt-in">{in_p_str}</td>'
-                html_str += f'<td class="tl txt-out-bold">{row.get("outcom", "")}</td>'
-                html_str += f'<td class="tl txt-out">{out_item_full}</td>'
-                html_str += f'<td class="tr txt-out">{out_q_str}</td>'
-                html_str += f'<td class="tr txt-out">{out_p_str}</td>'
-                html_str += f'<td class="tc txt-gray">{row.get("id", "")}</td>'
-                html_str += f'<td class="tc txt-gray">{row.get("carno", "")}</td>'
-                html_str += f'<td class="tr txt-black">{car_p_str}</td>'
-                html_str += '</tr>'
+                html_str += f'<tr><td class="tc"><span class="{s_cls}">{s_val}</span></td><td class="tc txt-black">{dt_str}</td><td class="tl txt-in-bold">{row.get("incom", "")}</td><td class="tl txt-in">{in_item_full}</td><td class="tr txt-in">{in_q_str}</td><td class="tr txt-in">{in_p_str}</td><td class="tl txt-out-bold">{row.get("outcom", "")}</td><td class="tl txt-out">{out_item_full}</td><td class="tr txt-out">{out_q_str}</td><td class="tr txt-out">{out_p_str}</td><td class="tc txt-gray">{row.get("id", "")}</td><td class="tc txt-gray">{row.get("carno", "")}</td><td class="tr txt-black">{car_p_str}</td></tr>'
                 
             html_str += '</tbody>'
             
-            # 💡 [기능 1] 요약 패널을 tfoot에 삽입하여 스크린샷처럼 13개 열의 폭과 색상을 완벽하게 1:1 매칭
-            html_str += '<tfoot>'
-            
-            # 첫 번째 요약 줄 (Vat/날짜 2칸 | 매입 4칸 | 매출 4칸 | NO/배송/운송비 3칸)
-            html_str += '<tr>'
+            # 요약 푸터 (tfoot)
+            html_str += '<tfoot><tr>'
             html_str += f'<td colspan="2" class="th-base" style="text-align:left; font-weight:bold; padding:12px 15px; color:white;">자료수 : <span style="color:#ffeb3b;">{data_count}</span> 개</td>'
             html_str += f'<td colspan="4" class="th-in" style="text-align:center; font-weight:bold; padding:12px 15px; color:white;">매입수량 : {total_in_q:,.0f} &nbsp;&nbsp;&nbsp;&nbsp; 매입금액 : {total_in_amt:,.0f}원</td>'
             html_str += f'<td colspan="4" class="th-out" style="text-align:center; font-weight:bold; padding:12px 15px; color:white;">매출수량 : {total_out_q:,.0f} &nbsp;&nbsp;&nbsp;&nbsp; 매출금액 : {total_out_amt:,.0f}원</td>'
-            # 운송비 전용 박스 생성 (배경색 지정)
             html_str += f'<td colspan="3" class="th-base" style="background-color:#5d607e; text-align:center; font-weight:bold; padding:12px 15px; color:white;">운송비 : {total_carprice:,.0f}원</td>'
-            html_str += '</tr>'
-            
-            # 두 번째 요약 줄 (총 수익 - 13칸 전체 차지)
-            html_str += '<tr>'
-            html_str += f'<td colspan="13" class="sum-profit">검색내 총수익 &nbsp;&nbsp; {total_profit:,.0f}원</td>'
-            html_str += '</tr>'
-            
-            html_str += '</tfoot>'
-            html_str += '</table></div>'
+            html_str += f'</tr><tr><td colspan="13" class="sum-profit">검색내 총수익 &nbsp;&nbsp; {total_profit:,.0f}원</td></tr></tfoot></table></div>'
 
             st.markdown(html_str, unsafe_allow_html=True)
 
