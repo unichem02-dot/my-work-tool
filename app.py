@@ -261,9 +261,9 @@ def load_links_dataframe(sheet):
     for _ in range(3):
         try:
             data = sheet.get_all_values()
-            if not data: return pd.DataFrame(columns=['분류1', '분류2', '제목', '링크', '메모'])
+            if not data: return pd.DataFrame(columns=['분류1', '분류2', '제목', '메모', '링크'])
             rows = [row + [""] * (5 - len(row)) for row in data[1:]]
-            df = pd.DataFrame(rows, columns=['분류1', '분류2', '제목', '링크', '메모'])
+            df = pd.DataFrame(rows, columns=['분류1', '분류2', '제목', '메모', '링크'])
             for col in df.columns: df[col] = df[col].astype(str).str.strip()
             return df
         except: time.sleep(1)
@@ -328,14 +328,14 @@ def add_link_dialog(unique_cats1):
         
         cat2 = st.text_input("분류2 (소분류)")
         title = st.text_input("제목 (필수)")
-        link_url = st.text_input("링크 주소 (URL) (필수)")
         memo = st.text_input("메모")
+        link_url = st.text_input("링크 주소 (URL) (필수)")
         
         if st.form_submit_button("저장하기", use_container_width=True, type="primary"):
             final_cat1 = new_cat1.strip() if new_cat1.strip() else (selected_cat1 if selected_cat1 != "(새로 입력)" else "")
             if title and link_url:
                 sheet2 = get_links_sheet()
-                sheet2.append_row([final_cat1, cat2, title, link_url, memo])
+                sheet2.append_row([final_cat1, cat2, title, memo, link_url])
                 st.success("새 링크 저장 완료!")
                 time.sleep(1)
                 st.rerun()
@@ -355,14 +355,14 @@ def edit_link_dialog(idx, row_data, unique_cats1):
         
         cat2 = st.text_input("분류2(소분류)", value=row_data.get('분류2', ''))
         title = st.text_input("제목", value=row_data.get('제목', ''))
-        link_url = st.text_input("링크 주소(URL)", value=row_data.get('링크', ''))
         memo = st.text_input("메모", value=row_data.get('메모', ''))
+        link_url = st.text_input("링크 주소(URL)", value=row_data.get('링크', ''))
         
         b1, b2 = st.columns(2)
         if b1.form_submit_button("💾 저장", use_container_width=True, type="primary"):
             final_cat1 = new_cat1.strip() if new_cat1.strip() else edit_cat1
             sheet2 = get_links_sheet()
-            sheet2.update(f"A{idx+2}:E{idx+2}", [[final_cat1, cat2, title, link_url, memo]])
+            sheet2.update(f"A{idx+2}:E{idx+2}", [[final_cat1, cat2, title, memo, link_url]])
             st.rerun()
         if b2.form_submit_button("🗑️ 삭제", use_container_width=True):
             sheet2 = get_links_sheet()
@@ -668,10 +668,10 @@ else:
                     title_html = f"<a href='{row['링크']}' target='_blank' class='link-table-title'>{row['제목']}</a>"
                     cols[2].markdown(title_html, unsafe_allow_html=True)
                     
-                    # 4. 메모 (위치 변경)
+                    # 4. 메모
                     cols[3].markdown(f"<span class='link-table-memo'>{row['메모']}</span>", unsafe_allow_html=True)
                     
-                    # 5. 링크 (위치 변경)
+                    # 5. 링크
                     link_html = f"<a href='{row['링크']}' target='_blank' class='link-table-url'>{row['링크']}</a>"
                     cols[4].markdown(link_html, unsafe_allow_html=True)
                     
