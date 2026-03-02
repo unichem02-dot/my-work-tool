@@ -214,8 +214,8 @@ try:
             # 신규입력
             with c5: btn_4 = st.button("신규입력", use_container_width=True)
 
-            # 최근입력 그룹
-            with c6: limit_val = st.selectbox("s4", ["ALL", "20개", "50개"], index=0, label_visibility="collapsed")
+            # 💡 수정사항: 최근입력 그룹 (20개를 기본값으로 고정)
+            with c6: limit_val = st.selectbox("s4", ["20개", "50개", "100개", "ALL"], index=0, label_visibility="collapsed")
             with c7: btn_5 = st.button("최근입력", use_container_width=True, type="primary")
 
             # 일검색 그룹
@@ -344,9 +344,14 @@ try:
                 monthly_stats.columns = ['매입금액(IN)', '매출금액(OUT)']
                 st.bar_chart(monthly_stats)
 
-        # 결과 테이블 (잘림 없이 전체 데이터 표시)
+        # 결과 테이블 (잘림 없이 전체 데이터 표시 및 스크롤바 제거를 위한 동적 높이 설정)
         st.markdown("<br>", unsafe_allow_html=True)
-        st.dataframe(display_df, use_container_width=True, hide_index=True, height=600)
+        
+        # 💡 수정사항: 데이터 갯수에 비례해서 높이를 계산하여 내부에 스크롤바가 안 생기도록 처리
+        # (데이터 줄 수 + 헤더 1줄) * 36px 기본 높이에 약간의 여유(10px) 추가
+        dynamic_height = (len(display_df) + 1) * 36 + 10 
+        
+        st.dataframe(display_df, use_container_width=True, hide_index=True, height=dynamic_height)
 
     else:
         st.error("❌ 'date' 열을 찾을 수 없습니다.")
