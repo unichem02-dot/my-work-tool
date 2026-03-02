@@ -88,7 +88,7 @@ st.markdown("""
     div.element-container:has(.row-marker) { width: 100% !important; min-width: 100% !important; }
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 4px 10px !important; 
+        padding: 12px 10px !important; /* ★ 상하 여백을 늘려 텍스트가 하단 밑줄에 붙지 않고 중간에 위치하도록 수정 */
         border-radius: 0px !important; 
         margin-bottom: 0px !important; border-bottom: 1px dotted rgba(255, 255, 255, 0.2) !important; 
         width: 100% !important; min-width: 100% !important; flex: 1 1 100% !important;
@@ -196,9 +196,22 @@ st.markdown("""
     a.link-table-title { font-size: 2.0em !important; font-weight: bold; color: #FFD700 !important; text-decoration: none !important; border-bottom: none !important; background-image: none !important; display: inline-block; margin-bottom: 0px; transition: opacity 0.2s; }
     a.link-table-title:hover { opacity: 0.8; text-decoration: none !important; border-bottom: none !important; }
     
-    /* 복사 가능한 링크 스타일 (클릭 유도) */
-    span.link-table-url { cursor: pointer; font-size: 0.85rem; color: #FFFFFF !important; text-decoration: none !important; border-bottom: none !important; background-image: none !important; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; transition: all 0.2s; }
-    span.link-table-url:hover { opacity: 0.8; color: #FFD700 !important; }
+    /* ★ 복사 가능한 링크 스타일 (Streamlit a 태그 자동 변환 대응하여 연두색으로 강제 고정) */
+    span.link-table-url, span.link-table-url a { 
+        cursor: pointer; 
+        font-size: 0.85rem; 
+        color: #9ACD32 !important; /* 파란색 무시하고 연두색(YellowGreen) 강제 적용 */
+        text-decoration: none !important; 
+        border-bottom: none !important; 
+        background-image: none !important; 
+        display: block; 
+        overflow: hidden; 
+        text-overflow: ellipsis; 
+        white-space: nowrap; 
+        max-width: 100%; 
+        transition: all 0.2s; 
+    }
+    span.link-table-url:hover, span.link-table-url a:hover { opacity: 0.8; color: #FFD700 !important; }
     
     div[data-testid="stMarkdownContainer"] a, div[data-testid="stMarkdownContainer"] a:hover { border-bottom: 0px !important; text-decoration: none !important; background-image: none !important; }
     
