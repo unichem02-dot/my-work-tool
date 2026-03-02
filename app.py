@@ -489,33 +489,40 @@ else:
                 setTimeout(function(){{ btn.innerHTML = "📋 복사"; }}, 1500);
             }}
             
-            // ★ 링크 클릭 시 클립보드 복사 이벤트 글로벌 등록
+            // ★ 링크 클릭 시 클립보드 복사 이벤트 글로벌 등록 (재렌더링 시 끊김 완벽 방지)
             const doc = window.parent.document;
-            if (!doc.copyLinkHandler) {{
-                doc.copyLinkHandler = function(e) {{
-                    let target = e.target.closest('.copyable-link');
-                    if (target) {{
-                        e.preventDefault();
-                        let url = target.getAttribute('data-url');
-                        if (url) {{
-                            let temp = doc.createElement("textarea");
-                            temp.value = url;
-                            doc.body.appendChild(temp);
-                            temp.select();
-                            doc.execCommand("copy");
-                            doc.body.removeChild(temp);
-                            let originalText = target.innerHTML;
-                            target.innerHTML = "✅ 복사완료!";
-                            target.style.color = "#FFD700";
-                            setTimeout(function(){{ 
-                                target.innerHTML = originalText; 
-                                target.style.color = ""; 
-                            }}, 1500);
-                        }}
-                    }}
-                }};
-                doc.addEventListener('click', doc.copyLinkHandler, true);
+            if (doc.copyLinkHandler) {{
+                doc.removeEventListener('click', doc.copyLinkHandler, true); // 이전 리스너 찌꺼기 제거
             }}
+            
+            doc.copyLinkHandler = function(e) {{
+                let target = e.target.closest('.copyable-link');
+                if (target) {{
+                    e.preventDefault();
+                    e.stopPropagation(); // Streamlit 기본 a 태그 속성 발동(새창 열기) 완벽 차단
+                    
+                    let url = target.getAttribute('data-url');
+                    if (url) {{
+                        let temp = doc.createElement("textarea");
+                        temp.value = url;
+                        temp.style.position = "fixed"; 
+                        temp.style.opacity = "0"; 
+                        doc.body.appendChild(temp);
+                        temp.select();
+                        try {{ doc.execCommand("copy"); }} catch(err) {{}}
+                        doc.body.removeChild(temp);
+                        
+                        let originalText = target.innerHTML;
+                        target.innerHTML = "✅ 복사완료!";
+                        target.style.color = "#FFD700";
+                        setTimeout(function(){{ 
+                            target.innerHTML = originalText; 
+                            target.style.color = ""; 
+                        }}, 1500);
+                    }}
+                }}
+            }};
+            doc.addEventListener('click', doc.copyLinkHandler, true);
             </script>
         """, height=90) 
 
@@ -689,7 +696,7 @@ else:
                 st.info("등록된 링크가 없습니다.")
             else:
                 for idx, row in df_links.iterrows():
-                    # ★ 컨텐츠 행 수직 중앙 정렬 (vertical_alignment="center" 적용)
+                    # ★ 컨텐츠 행 수직 중앙 정렬
                     cols = st.columns(l_ratio, vertical_alignment="center")
                     
                     # 1. 대분류
@@ -705,8 +712,9 @@ else:
                     # 4. 메모
                     cols[3].markdown(f"<span class='link-table-memo'>{row['메모']}</span>", unsafe_allow_html=True)
                     
-                    # 5. 링크 (★ 클릭 시 복사 기능 적용: span + copyable-link 클래스)
-                    link_html = f"<span class='link-table-url copyable-link' data-url='{row['링크']}'>{row['링크']}</span>"
+                    # 5. 링크 (Streamlit 자동 링크 변환 꼼수 차단용: 텍스트 사이에 보이지 않는 공백 강제 삽입)
+                    safe_display_url = row['링크'].replace('http', 'http&#8203;').replace('www', 'www&#8203;')
+                    link_html = f"<span class='link-table-url copyable-link' data-url='{row['링크']}' title='클릭하여 복사'>{safe_display_url}</span>"
                     cols[4].markdown(link_html, unsafe_allow_html=True)
                     
                     # 6. 수정 버튼
