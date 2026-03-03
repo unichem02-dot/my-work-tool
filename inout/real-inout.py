@@ -1,85 +1,82 @@
 import streamlit as st
-import sqlite3
 import pandas as pd
+import requests
 from datetime import datetime
 
-# 1. 데이터베이스 초기화 및 샘플 데이터 생성
-def init_db():
-    conn = sqlite3.connect('my_data.db')
-    cursor = conn.cursor()
-    # 테이블 생성 (날짜, 항목, 금액)
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT NOT NULL,
-            item TEXT NOT NULL,
-            amount INTEGER NOT NULL
-        )
-    ''')
+# 1. API를 통한 데이터 조회 함수
+def get_api_data(year, month):
+    """
+    외부 api.php 서버에 데이터를 요청합니다.
+    """
+    # 실제 api.php의 URL 주소로 수정이 필요합니다.
+    # 예: http://yourserver.com/api.php
+    api_url = "http://your-domain.com/api.php" 
     
-    # 샘플 데이터가 없는 경우 삽입
-    cursor.execute("SELECT count(*) FROM records")
-    if cursor.fetchone()[0] == 0:
-        sample_data = [
-            ('2023-01-15', 'Office Supplies', 50000),
-            ('2023-01-20', 'Coffee', 5000),
-            ('2023-02-10', 'Internet Bill', 35000),
-            ('2024-01-05', 'New Monitor', 300000),
-            ('2024-03-12', 'Lunch', 12000),
-            ('2024-03-15', 'Keyboard', 85000)
-        ]
-        cursor.executemany("INSERT INTO records (date, item, amount) VALUES (?, ?, ?)", sample_data)
-        conn.commit()
-    conn.close()
+    params = {
+        "year": year,
+        "month": f"{month:02d}"
+    }
 
-# 2. 데이터 조회 함수
-def get_filtered_data(year, month):
-    conn = sqlite3.connect('my_data.db')
-    # SQL의 strftime을 사용하여 년/월 필터링
-    query = f"SELECT date, item, amount FROM records WHERE strftime('%Y', date) = '{year}' AND strftime('%m', date) = '{month:02d}'"
-    df = pd.read_sql_query(query, conn)
-    conn.close()
-    return df
+    try:
+        # API 호출 (GET 방식)
+        response = requests.get(api_url, params=params, timeout=10)
+        
+        # HTTP 상태 코드 확인
+        if response.status_code == 200:
+            data = response.json() # JSON 파싱
+            return pd.DataFrame(data)
+        else:
+            st.error(f"서버 응답 오류: {response.status_code}")
+            return pd.DataFrame()
+            
+    except Exception as e:
+        st.error(f"API 연결 실패: {e}")
+        return pd.DataFrame()
 
 def main():
-    st.set_page_config(page_title="DB Data Viewer", page_icon="📅", layout="wide")
+    st.set_page_config(page_title="API Data Viewer", page_icon="🌐", layout="wide")
     
-    # DB 초기화 실행
-    init_db()
-
-    st.title("📅 월별 데이터 조회 시스템")
-    st.markdown("데이터베이스에 연결하여 선택한 **년도와 월**에 해당하는 내역을 표시합니다.")
+    st.title("🌐 API 기반 월별 데이터 조회")
+    st.markdown("외부 `api.php` 서버와 통신하여 선택한 **년도와 월**의 데이터를 실시간으로 표시합니다.")
     st.divider()
 
-    # 3. 사이드바 검색 필터
+    # 2. 사이드바 검색 필터
     st.sidebar.header("🔍 조회 조건 설정")
     
     current_year = datetime.now().year
     selected_year = st.sidebar.selectbox("년도 선택", [str(y) for y in range(current_year, current_year - 5, -1)])
     selected_month = st.sidebar.slider("월 선택", 1, 12, datetime.now().month)
 
-    # 4. 데이터 로드 및 출력
-    data = get_filtered_data(selected_year, selected_month)
+    # 3. 데이터 로드 (API 호출)
+    with st.spinner('서버에서 데이터를 불러오는 중...'):
+        data = get_api_data(selected_year, selected_month)
 
+    # 4. 결과 출력
     if not data.empty:
         st.subheader(f"📊 {selected_year}년 {selected_month}월 조회 결과")
         
-        # 요약 지표
-        total_amount = data['amount'].sum()
-        count = len(data)
-        
-        col1, col2 = st.columns(2)
-        col1.metric("총 항목 수", f"{count} 건")
-        col2.metric("총 합계 금액", f"{total_amount:,} 원")
+        # 데이터에 필수 컬럼('date', 'item', 'amount')이 있다고 가정
+        if all(col in data.columns for col in ['date', 'item', 'amount']):
+            # 요약 지표
+            total_amount = pd.to_numeric(data['amount']).sum()
+            count = len(data)
+            
+            col1, col2 = st.columns(2)
+            col1.metric("총 항목 수", f"{count} 건")
+            col2.metric("총 합계 금액", f"{total_amount:,} 원")
 
-        # 데이터 테이블
-        st.dataframe(data, use_container_width=True)
-        
-        # 간단한 차트 시각화
-        st.bar_chart(data.set_index('item')['amount'])
+            # 데이터 테이블
+            st.dataframe(data, use_container_width=True)
+            
+            # 차트 시각화
+            st.bar_chart(data.set_index('item')['amount'])
+        else:
+            st.warning("데이터는 수신했으나 컬럼 구성이 맞지 않습니다.")
+            st.write("수신된 컬럼:", list(data.columns))
+            st.dataframe(data)
     else:
-        st.warning(f"⚠️ {selected_year}년 {selected_month}월에 해당하는 데이터가 없습니다.")
-        st.info("샘플 데이터 확인: 2023년 1월/2월 또는 2024년 1월/3월을 선택해보세요.")
+        st.info(f"💡 {selected_year}년 {selected_month}월에 조회된 데이터가 없습니다.")
+        st.caption("API URL이 정확한지, 서버에서 JSON 형식을 반환하는지 확인하세요.")
 
 if __name__ == "__main__":
     main()
