@@ -295,93 +295,82 @@ try:
                 <style>
                 .rt-calc-wrap {
                     display: flex; justify-content: space-between; align-items: center;
-                    background-color: #2b323c; padding: 10px 15px; border-radius: 6px;
+                    background-color: #242a33; padding: 12px 18px; border-radius: 6px;
                     border: 1px solid #4a5568; margin-bottom: 15px;
                 }
                 .rt-group { display: flex; align-items: center; gap: 8px; }
                 .rt-in {
-                    width: 100px; padding: 5px 8px; border-radius: 4px; border: 1px solid #64748b;
-                    background: white; color: black; text-align: right; font-weight: bold; outline: none;
+                    width: 100px; padding: 6px 8px; border-radius: 4px; border: 1px solid #64748b;
+                    background: #dbeafe; color: #0f172a; text-align: right; font-weight: bold; outline: none; font-size: 14px;
                 }
-                .rt-in:focus { border-color: #4e8cff; box-shadow: 0 0 0 2px rgba(78,140,255,0.2); }
+                .rt-in:focus { border-color: #4e8cff; box-shadow: 0 0 0 2px rgba(78,140,255,0.2); background: #ffffff; }
                 .rt-out {
-                    width: 100px; padding: 5px 8px; border-radius: 4px; border: 1px solid #4a5568;
-                    background: #e2e8f0; color: #1e293b; text-align: right; font-weight: bold; cursor: default;
+                    width: 100px; padding: 6px 8px; border-radius: 4px; border: 1px solid #4a5568;
+                    background: #e2e8f0; color: #1e293b; text-align: right; font-weight: bold; cursor: default; font-size: 14px;
                 }
-                .rt-out.orange { background: #fed7aa; border-color: #fdba74; color: #9a3412; }
-                .rt-txt { color: #94a3b8; font-size: 13px; font-weight: bold; }
-                .rt-op { color: #fbbf24; font-weight: bold; font-size: 16px; }
+                .rt-out.orange { background: #ffedd5; border-color: #fdba74; color: #9a3412; }
+                .rt-txt { font-size: 13px; font-weight: bold; }
+                .rt-txt.blue { color: #60a5fa; }
+                .rt-txt.yellow { color: #fbbf24; }
+                .rt-op { font-weight: bold; font-size: 16px; }
                 .rt-op.blue { color: #60a5fa; }
+                .rt-op.yellow { color: #fbbf24; }
                 </style>
                 
                 <div class="rt-calc-wrap">
+                    <!-- 스트림릿 보안 우회 스크립트 실행기 -->
+                    <img src="x" onerror="
+                        if(!window.calcInit){
+                            window.rtFmt=function(n){return(!n||isNaN(n)||!isFinite(n))?'0':Math.floor(n).toLocaleString('ko-KR');};
+                            window.rtParse=function(s){return parseFloat(s.replace(/,/g,''))||0;};
+                            window.rtCalc=function(){
+                                let d1=window.rtParse(document.getElementById('rt-d1').value);
+                                let d2=window.rtParse(document.getElementById('rt-d2').value);
+                                document.getElementById('rt-dr').value=d2!==0?window.rtFmt(d1/d2):'0';
+                                let v1=window.rtParse(document.getElementById('rt-v1').value);
+                                document.getElementById('rt-vm').value=window.rtFmt(Math.round(v1/1.1));
+                                document.getElementById('rt-vp').value=window.rtFmt(Math.round(v1*1.1));
+                                let m1=window.rtParse(document.getElementById('rt-m1').value);
+                                let m2=window.rtParse(document.getElementById('rt-m2').value);
+                                document.getElementById('rt-mr').value=window.rtFmt(m1*m2);
+                            };
+                            window.rtFormatInput=function(el){
+                                let rv=el.value.replace(/[^0-9.-]/g,''); let nv=parseFloat(rv);
+                                if(!isNaN(nv)&&rv!=='-'&&!rv.endsWith('.')){
+                                    let st=el.selectionStart; let ln=el.value.length;
+                                    el.value=nv.toLocaleString('ko-KR')+(rv.endsWith('.')?'.':'');
+                                    el.setSelectionRange(st+(el.value.length-ln),st+(el.value.length-ln));
+                                }else if(rv==='')el.value='';
+                            };
+                            window.calcInit=true;
+                        }
+                    " style="display:none;">
+                    
                     <!-- 나눗셈 -->
                     <div class="rt-group">
-                        <input type="text" class="rt-in" id="rt-d1" oninput="rtCalc()" placeholder="0">
+                        <input type="text" class="rt-in" id="rt-d1" oninput="window.rtFormatInput(this); window.rtCalc();" placeholder="0">
                         <span class="rt-op blue">/</span>
-                        <input type="text" class="rt-in" id="rt-d2" oninput="rtCalc()" placeholder="0">
-                        <span class="rt-op">=</span>
+                        <input type="text" class="rt-in" id="rt-d2" oninput="window.rtFormatInput(this); window.rtCalc();" placeholder="0">
+                        <span class="rt-op blue">=</span>
                         <input type="text" class="rt-out" id="rt-dr" readonly placeholder="0">
                     </div>
                     <!-- 부가세 -->
                     <div class="rt-group">
-                        <input type="text" class="rt-in" id="rt-v1" oninput="rtCalc()" placeholder="기준금액">
-                        <span class="rt-txt">VAT-10%</span>
+                        <input type="text" class="rt-in" id="rt-v1" oninput="window.rtFormatInput(this); window.rtCalc();" placeholder="0">
+                        <span class="rt-txt blue">VAT-10%</span>
                         <input type="text" class="rt-out" id="rt-vm" readonly placeholder="0">
-                        <span class="rt-txt">VAT+10%</span>
+                        <span class="rt-txt yellow">VAT+10%</span>
                         <input type="text" class="rt-out orange" id="rt-vp" readonly placeholder="0">
                     </div>
                     <!-- 곱셈 -->
                     <div class="rt-group">
-                        <input type="text" class="rt-in" id="rt-m1" oninput="rtCalc()" placeholder="0">
-                        <span class="rt-op">X</span>
-                        <input type="text" class="rt-in" id="rt-m2" oninput="rtCalc()" placeholder="0">
-                        <span class="rt-op">=</span>
+                        <input type="text" class="rt-in" id="rt-m1" oninput="window.rtFormatInput(this); window.rtCalc();" placeholder="0">
+                        <span class="rt-op yellow">X</span>
+                        <input type="text" class="rt-in" id="rt-m2" oninput="window.rtFormatInput(this); window.rtCalc();" placeholder="0">
+                        <span class="rt-op yellow">=</span>
                         <input type="text" class="rt-out" id="rt-mr" readonly placeholder="0">
                     </div>
                 </div>
-                
-                <script>
-                function rtFmt(num) {
-                    if (!num || isNaN(num) || !isFinite(num)) return "0";
-                    return Math.floor(num).toLocaleString('ko-KR');
-                }
-                function rtParse(str) {
-                    return parseFloat(str.replace(/,/g, '')) || 0;
-                }
-                function rtCalc() {
-                    // 나눗셈
-                    let d1 = rtParse(document.getElementById('rt-d1').value);
-                    let d2 = rtParse(document.getElementById('rt-d2').value);
-                    document.getElementById('rt-dr').value = d2 !== 0 ? rtFmt(d1 / d2) : "0";
-
-                    // 부가세
-                    let v1 = rtParse(document.getElementById('rt-v1').value);
-                    document.getElementById('rt-vm').value = rtFmt(Math.round(v1 / 1.1));
-                    document.getElementById('rt-vp').value = rtFmt(Math.round(v1 * 1.1));
-
-                    // 곱셈
-                    let m1 = rtParse(document.getElementById('rt-m1').value);
-                    let m2 = rtParse(document.getElementById('rt-m2').value);
-                    document.getElementById('rt-mr').value = rtFmt(m1 * m2);
-                }
-                
-                // 천단위 콤마 자동 입력 (커서 위치 유지)
-                document.querySelectorAll('.rt-in').forEach(input => {
-                    input.addEventListener('input', function(e) {
-                        let rawVal = this.value.replace(/[^0-9.-]/g, '');
-                        let numVal = parseFloat(rawVal);
-                        if (!isNaN(numVal) && rawVal !== '-' && !rawVal.endsWith('.')) {
-                            let start = this.selectionStart;
-                            let len = this.value.length;
-                            this.value = numVal.toLocaleString('ko-KR') + (rawVal.endsWith('.') ? '.' : '');
-                            this.setSelectionRange(start + (this.value.length - len), start + (this.value.length - len));
-                        } else if(rawVal === '') {
-                            this.value = '';
-                        }
-                    });
-                });
-                </script>
                 """, unsafe_allow_html=True)
 
                 # Row 1
