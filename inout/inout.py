@@ -103,7 +103,6 @@ if not st.session_state.authenticated:
     with col_c:
         with st.form("login_form"):
             pwd = st.text_input("PASSWORD", type="password", placeholder="••••")
-            # 💡 로그인 버튼은 기본적으로 primary 적용되어 있음
             submit_btn = st.form_submit_button("SYSTEM LOGIN", use_container_width=True, type="primary")
             if submit_btn:
                 if "tom_password" not in st.secrets:
@@ -125,11 +124,16 @@ if not st.session_state.authenticated:
 
 # --- [4. 상단 상태바] ---
 st.session_state.last_activity = datetime.now()
-col_title, col_status, col_logout = st.columns([5, 4.5, 1])
+# 💡 [변경] 수동 데이터 갱신 버튼을 상단에 추가하기 위해 컬럼 분할 조정
+col_title, col_empty, col_refresh, col_logout = st.columns([5, 3.5, 1.5, 1])
 with col_title:
     st.markdown("<h3 style='margin-bottom:0px; padding-bottom:0px;'>📦 입출력 통합 관리 시스템</h3>", unsafe_allow_html=True)
+with col_refresh:
+    # 💡 [핵심 추가] 구글시트에서 직접 삭제/수정한 내용을 즉시 반영시키는 버튼
+    if st.button("🔄 데이터 갱신", use_container_width=True):
+        st.cache_data.clear() # 캐시 데이터 완전 초기화
+        st.rerun()
 with col_logout:
-    # 💡 로그아웃 버튼도 primary (빨간색) 테마 적용 완료
     if st.button("🔓 LOGOUT", use_container_width=True, type="primary"):
         st.session_state.authenticated = False
         st.rerun()
@@ -143,7 +147,7 @@ def init_connection():
     creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
     return gspread.authorize(creds)
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=300) # 기본 5분마다 자동 갱신되지만, 새 데이터 입력시 강제 갱신됨
 def load_data():
     client = init_connection()
     sheet = client.open('SQL백업260211-jeilinout').sheet1
@@ -199,7 +203,8 @@ try:
             
             r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
             with r1_1: type_1 = st.radio("r1", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
-            with r1_2: date_range = st.date_input("d1", [datetime(2014,1,1).date(), datetime.now().date()], label_visibility="collapsed")
+            # 💡 [변경] 날짜 형식 명확화 및 깔끔한 출력 (YYYY-MM-DD)
+            with r1_2: date_range = st.date_input("d1", [datetime(2014,1,1).date(), datetime.now().date()], format="YYYY-MM-DD", label_visibility="collapsed")
             with r1_3: st.selectbox("s1", ["ALL"], label_visibility="collapsed")
             with r1_4: com_1 = st.text_input("t1", placeholder="거래처 검색", label_visibility="collapsed")
             with r1_5: item_1 = st.text_input("t2", placeholder="품목 검색", label_visibility="collapsed")
@@ -226,7 +231,8 @@ try:
             with c5: btn_4 = st.button("신규입력", use_container_width=True, type="primary")
             with c6: limit_val = st.selectbox("s4", ["20개", "50개", "100개", "ALL"], index=0, label_visibility="collapsed")
             with c7: btn_5 = st.button("최근입력", use_container_width=True, type="primary")
-            with c8: d_day = st.date_input("d2", datetime.now().date(), label_visibility="collapsed")
+            # 💡 [변경] 날짜 형식 명확화
+            with c8: d_day = st.date_input("d2", datetime.now().date(), format="YYYY-MM-DD", label_visibility="collapsed")
             with c9: btn_6 = st.button("일검색", use_container_width=True, type="primary")
             with c10: btn_7 = st.button("어제오늘내일", use_container_width=True, type="primary")
             with c11: st.selectbox("s5", ["ALL"], label_visibility="collapsed")
@@ -239,7 +245,7 @@ try:
         if btn_1: st.session_state.search_params = { "mode": "기간", "title": "기간검색순서", "type": type_1, "company": com_1, "item": item_1, "limit": "ALL", "start": date_range[0], "end": date_range[1] if len(date_range)>1 else date_range[0] }
         elif btn_2: st.session_state.search_params = { "mode": "월별", "title": f"{year_2}년 {month_2}월 검색순서", "type": type_2, "company": com_2, "item": item_2, "limit": "ALL", "year": year_2, "month": month_2 }
         elif btn_3: st.session_state.search_params = { "mode": "결산", "year": y_3, "month": m_3 }
-        elif btn_4: st.session_state.search_params = { "mode": "신규입력" } # 💡 신규입력 모드로 변경
+        elif btn_4: st.session_state.search_params = { "mode": "신규입력" }
         elif btn_5: st.session_state.search_params = { "mode": "최근", "title": "최근입력순서", "type": "ALL", "company": "", "item": "", "limit": limit_val }
         elif btn_6: st.session_state.search_params = { "mode": "일", "title": f"{d_day} 검색순서", "date": d_day, "type": "ALL", "company": "", "item": "", "limit": "ALL" }
         elif btn_7: st.session_state.search_params = { "mode": "기간", "title": "어제/오늘/내일 검색순서", "type": "ALL", "company": "", "item": "", "limit": "ALL", "start": datetime.now().date() - timedelta(days=1), "end": datetime.now().date() + timedelta(days=1) }
@@ -248,13 +254,12 @@ try:
         params = st.session_state.search_params
         
         # ---------------------------------------------------------
-        # 💡 [신규] '신규자료입력' 화면 렌더링
+        # 💡 '신규자료입력' 화면 렌더링
         # ---------------------------------------------------------
         if params["mode"] == "신규입력":
             st.markdown("<h3 style='text-align:center; color:white; margin-top:20px; font-weight:bold;'>신규자료입력 | New</h3>", unsafe_allow_html=True)
             
             with st.form("new_entry_form", clear_on_submit=True):
-                # 신규입력 폼 전용 CSS
                 st.markdown("""
                 <style>
                 .nh-box { padding: 10px 8px; text-align: center; color: white; font-weight: bold; border: 1px solid #555; margin-bottom: 5px; font-size: 14px;}
@@ -296,7 +301,8 @@ try:
                 
                 # --- 네 번째 줄 (입력칸) ---
                 ic7, ic8, ic9, ic10, ic11, ic12 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
-                new_date = ic7.date_input("날짜", datetime.now().date(), label_visibility="collapsed")
+                # 💡 [변경] 날짜 입력 포맷 고정
+                new_date = ic7.date_input("날짜", datetime.now().date(), format="YYYY-MM-DD", label_visibility="collapsed")
                 new_outcom = ic8.text_input("매출거래처", label_visibility="collapsed")
                 new_outitem = ic9.text_input("매출품목", label_visibility="collapsed")
                 new_outq = ic10.text_input("매출수량", "", label_visibility="collapsed")
@@ -307,7 +313,6 @@ try:
                 
                 # --- 하단 버튼 ---
                 bc1, bc2, bc3 = st.columns([8.2, 1.1, 0.7])
-                # 버튼도 동일하게 primary(빨간색) 적용
                 submitted = bc2.form_submit_button("신규자료입력", use_container_width=True, type="primary")
                 canceled = bc3.form_submit_button("취소", use_container_width=True)
                 
@@ -316,21 +321,21 @@ try:
                         client = init_connection()
                         sheet = client.open('SQL백업260211-jeilinout').sheet1
                         
-                        # 새로운 고유번호(ID) 부여를 위해 가장 큰 번호 찾기
                         all_ids = df['id'].dropna().apply(clean_numeric).tolist()
                         next_id = int(max(all_ids)) + 1 if all_ids else 1
                         dt_str = new_date.strftime('%Y-%m-%d')
                         
-                        # 시트 열 순서에 맞춰 데이터 배열 생성
                         new_row = [
                             next_id, dt_str, new_incom, new_initem, new_inq, new_inprice,
                             new_outcom, new_outitem, new_outq, new_outprice, "", new_s,
                             new_carno, new_carprice, "", "", ""
                         ]
                         sheet.append_row(new_row)
-                        st.success("✅ 신규 자료가 구글 시트에 완벽하게 저장되었습니다!")
                         
-                        # 저장 후 확인을 위해 '최근입력' 모드로 전환
+                        # 💡 [핵심] 캐시 강제 삭제 (신규입력 데이터가 즉시 검색되도록 함)
+                        load_data.clear()
+                        
+                        st.success("✅ 신규 자료가 구글 시트에 완벽하게 저장되었습니다!")
                         st.session_state.search_params = {"mode": "최근", "title": "최근입력순서", "type": "ALL", "company": "", "item": "", "limit": "20개"}
                         st.rerun()
                     except Exception as e:
@@ -341,7 +346,6 @@ try:
                     st.rerun()
 
         elif params["mode"] == "결산":
-            # --- 결산 대시보드 화면 ---
             s_year = params["year"]
             s_month = params["month"]
             f_df = df[(df['year'] == s_year) & (df['month'] == s_month)].copy()
@@ -369,7 +373,6 @@ try:
             st.markdown(settle_html, unsafe_allow_html=True)
 
         elif params["mode"] != "init":
-            # --- 데이터 리스트 필터링 ---
             f_df = df.copy()
             if params["mode"] == "기간": f_df = f_df[(f_df[date_col].dt.date >= params["start"]) & (f_df[date_col].dt.date <= params["end"])]
             elif params["mode"] in ["월별", "월별단순"]: f_df = f_df[(f_df['year'] == params["year"]) & (f_df['month'] == params["month"])]
@@ -384,7 +387,6 @@ try:
             if com_kw: f_df = f_df[f_df['incom'].str.contains(com_kw, case=False, na=False) | f_df['outcom'].str.contains(com_kw, case=False, na=False)]
             if item_kw: f_df = f_df[f_df['initem'].str.contains(item_kw, case=False, na=False) | f_df['outitem'].str.contains(item_kw, case=False, na=False)]
             
-            # 파이썬 내부 정렬 실행
             f_df = f_df.sort_values(by=[date_col, 'id'], ascending=[not st.session_state.sort_desc, not st.session_state.sort_desc])
                 
             limit_str = params.get("limit", "ALL")
@@ -403,20 +405,15 @@ try:
             
             table_title_text = params.get("title", "데이터 검색 결과")
 
-            # ---------------------------------------------------------
-            # 💡 상단 타이틀 구역 + 정렬 버튼 + 엑셀(CSV) 다운로드 버튼
-            # ---------------------------------------------------------
             col_t1, col_t2, col_t3 = st.columns([6.5, 1.8, 1.7])
             with col_t1:
                 st.markdown(f'<div class="table-title-box"><span style="font-size: 16px; font-weight: bold; color: #f8fafc;">{table_title_text}</span> <span style="font-size: 13px; color: #cbd5e1; margin-left:10px;">| 출력된 자료 갯수 : {data_count} 개 (오로지 검색 조건순으로만 정렬되었습니다)</span></div>', unsafe_allow_html=True)
             with col_t2:
-                # 💡 날짜정렬 버튼에 primary (빨간색) 속성 적용
                 sort_btn_text = "🔄 날짜 정렬 (현재:최신순)" if st.session_state.sort_desc else "🔄 날짜 정렬 (현재:과거순)"
                 if st.button(sort_btn_text, use_container_width=True, type="primary"):
                     st.session_state.sort_desc = not st.session_state.sort_desc
                     st.rerun()
             with col_t3:
-                # 💡 엑셀다운로드 버튼에 primary (빨간색) 속성 적용
                 export_df = f_df[['s', 'date', 'incom', 'initem', 'inq_val', 'inprice_val', 'outcom', 'outitem', 'outq_val', 'outprice_val', 'id', 'carno', 'carprice_val']].copy()
                 export_df['date'] = export_df['date'].dt.strftime('%Y-%m-%d')
                 export_df.columns = ['Vat(상태)', '날짜', '매입거래처', '매입품목', '매입수량', '매입단가', '매출거래처', '매출품목', '매출수량', '매출단가', 'NO', '차량배송', '운송비']
@@ -424,7 +421,6 @@ try:
                 csv_data = export_df.to_csv(index=False).encode('utf-8-sig')
                 st.download_button(label="💾 엑셀 다운로드", data=csv_data, file_name=f"검색결과_{datetime.now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
 
-            # HTML 테이블 렌더링
             html_str = '<div class="custom-table-container">'
             html_str += '<table class="custom-table">'
             html_str += '<thead><tr>'
@@ -453,7 +449,6 @@ try:
                 
             html_str += '</tbody>'
             
-            # 요약 푸터 (tfoot)
             html_str += '<tfoot><tr>'
             html_str += f'<td colspan="2" class="th-base" style="text-align:left; font-weight:bold; padding:12px 15px; color:white;">자료수 : <span style="color:#ffeb3b;">{data_count}</span> 개</td>'
             html_str += f'<td colspan="4" class="th-in" style="text-align:center; font-weight:bold; padding:12px 15px; color:white;">매입수량 : {total_in_q:,.0f} &nbsp;&nbsp;&nbsp;&nbsp; 매입금액 : {total_in_amt:,.0f}원</td>'
