@@ -18,6 +18,19 @@ st.markdown("""
     
     .search-panel-container { background-color: #353b48; padding: 15px; border-radius: 8px; border: 1px solid #4a5568; margin-bottom: 20px; }
     div.stButton > button { border-radius: 4px !important; font-weight: bold !important; padding: 0px 10px !important; }
+    
+    /* 💡 Primary 버튼 파란색 커스텀 (기본 빨간색 덮어쓰기) */
+    button[kind="primary"] {
+        background-color: #4e8cff !important;
+        border-color: #4e8cff !important;
+        color: white !important;
+    }
+    button[kind="primary"]:hover {
+        background-color: #3b76e5 !important;
+        border-color: #3b76e5 !important;
+        color: white !important;
+    }
+
     div.btn-green > div > button { background-color: #8bc34a !important; color: white !important; border: 1px solid #7cb342 !important; }
     div.btn-pink > div > button { background-color: #e57373 !important; color: white !important; border: 1px solid #e53935 !important; }
 
@@ -80,12 +93,14 @@ if "search_params" not in st.session_state: st.session_state.search_params = {"m
 if "sort_desc" not in st.session_state: st.session_state.sort_desc = True 
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
 if "copy_id" not in st.session_state: st.session_state.copy_id = None
+if "confirm_delete" not in st.session_state: st.session_state.confirm_delete = False
 
 # 💡 URL 파라미터 감지 및 자동 로그인 처리 (복사기능 & 수정기능 둘 다 지원)
 if "edit_id" in st.query_params or "copy_id" in st.query_params:
     if st.query_params.get("token") == str(st.secrets.get("tom_password", "")):
         st.session_state.authenticated = True
         st.session_state.last_activity = datetime.now()
+        st.session_state.confirm_delete = False  # 접근 시 삭제 상태 초기화
         
     if "edit_id" in st.query_params:
         st.session_state.edit_id = st.query_params["edit_id"]
@@ -144,12 +159,13 @@ col_title, col_empty, col_refresh, col_logout = st.columns([5, 3.5, 1.5, 1])
 with col_title:
     st.markdown("<h3 style='margin-bottom:0px; padding-bottom:0px;'>📦 입출력 통합 관리 시스템</h3>", unsafe_allow_html=True)
 with col_refresh:
-    if st.button("🔄 데이터 갱신", use_container_width=True):
+    if st.button("🔄 데이터 갱신", use_container_width=True, type="primary"):
         st.cache_data.clear()
         st.rerun()
 with col_logout:
     if st.button("🔓 LOGOUT", use_container_width=True, type="primary"):
         st.session_state.authenticated = False
+        st.session_state.confirm_delete = False
         st.rerun()
 
 st.markdown("<hr style='margin: 10px 0px 20px 0px; border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
@@ -278,7 +294,7 @@ try:
                     bc1, bc2, bc3, bc4 = st.columns([6, 1.5, 1.5, 1])
                     btn_update = bc2.form_submit_button("💾 수정 저장", use_container_width=True, type="primary")
                     btn_delete = bc3.form_submit_button("🗑️ 이 줄 삭제", use_container_width=True, type="primary")
-                    btn_cancel = bc4.form_submit_button("취소", use_container_width=True)
+                    btn_cancel = bc4.form_submit_button("취소", use_container_width=True, type="primary")
                     
                     if btn_update:
                         try:
@@ -295,32 +311,52 @@ try:
                                 
                                 st.cache_data.clear()
                                 st.session_state.edit_id = None
+                                st.session_state.confirm_delete = False
                                 st.success("✅ 자료가 성공적으로 수정되었습니다!")
                                 st.rerun()
                         except Exception as e:
                             st.error(f"⚠️ 저장 중 시스템 오류가 발생했습니다: {e}")
                             
                     elif btn_delete:
-                        try:
-                            client = init_connection()
-                            sheet = client.open('SQL백업260211-jeilinout').sheet1
-                            cell = sheet.find(str(st.session_state.edit_id), in_column=1)
-                            if cell:
-                                sheet.delete_rows(cell.row)
-                                st.cache_data.clear()
-                                st.session_state.edit_id = None
-                                st.success("✅ 해당 자료가 완전히 삭제되었습니다!")
-                                st.rerun()
-                        except Exception as e:
-                            st.error(f"⚠️ 삭제 중 오류가 발생했습니다: {e}")
+                        # 💡 바로 삭제하지 않고 확인 상태로 전환
+                        st.session_state.confirm_delete = True
+                        st.rerun()
 
                     elif btn_cancel:
                         st.session_state.edit_id = None
+                        st.session_state.confirm_delete = False
                         st.rerun()
+
+                # 💡 [안전장치] 삭제 확인용 2단계 컨테이너 (폼 제출 후 나타남)
+                if st.session_state.confirm_delete:
+                    st.error("⚠️ 정말로 이 자료를 삭제하시겠습니까? 한 번 삭제하면 복구할 수 없습니다.")
+                    c_del1, c_del2, _ = st.columns([2, 2, 6])
+                    
+                    with c_del1:
+                        if st.button("✅ 네, 완전히 삭제합니다", use_container_width=True, type="primary"):
+                            try:
+                                client = init_connection()
+                                sheet = client.open('SQL백업260211-jeilinout').sheet1
+                                cell = sheet.find(str(st.session_state.edit_id), in_column=1)
+                                if cell:
+                                    sheet.delete_rows(cell.row)
+                                    st.cache_data.clear()
+                                    st.session_state.edit_id = None
+                                    st.session_state.confirm_delete = False
+                                    st.success("✅ 해당 자료가 완전히 삭제되었습니다!")
+                                    st.rerun()
+                            except Exception as e:
+                                st.error(f"⚠️ 삭제 중 오류가 발생했습니다: {e}")
+                    with c_del2:
+                        if st.button("❌ 아니오, 취소합니다", use_container_width=True):
+                            st.session_state.confirm_delete = False
+                            st.rerun()
+                            
             else:
                 st.error("데이터를 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.")
                 if st.button("돌아가기"):
                     st.session_state.edit_id = None
+                    st.session_state.confirm_delete = False
                     st.rerun()
                     
         # ---------------------------------------------------------
@@ -454,7 +490,7 @@ try:
                     
                     bc1, bc2, bc3 = st.columns([8.2, 1.1, 0.7])
                     submitted = bc2.form_submit_button("신규자료입력", use_container_width=True, type="primary")
-                    canceled = bc3.form_submit_button("취소", use_container_width=True)
+                    canceled = bc3.form_submit_button("취소", use_container_width=True, type="primary")
                     
                     if submitted:
                         try:
@@ -586,7 +622,7 @@ try:
                     
                     row_id = safe_str(row.get("id"))
                     
-                    # 💡 [핵심 복구] Vat 링크(복사) 유지, NO 링크 해제, 날짜(dt_link)에 수정/삭제 기능 다시 부여 (밑줄 제거)
+                    # 💡 Vat 링크(복사) 유지, NO 링크 해제, 날짜(dt_link)에 수정/삭제 기능 다시 부여 (밑줄 제거)
                     vat_link = f'<a href="?copy_id={row_id}&token={secret_token}" target="_self" style="text-decoration:none; cursor:pointer;" title="클릭하여 내용을 복사해 신규입력합니다."><span class="{s_cls}">{s_val}</span></a>'
                     dt_link = f'<a href="?edit_id={row_id}&token={secret_token}" target="_self" style="color:#1e293b; text-decoration:none; cursor:pointer;" title="클릭하여 데이터 수정/삭제">{dt_str}</a>' if dt_str else ''
 
