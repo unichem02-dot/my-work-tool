@@ -95,7 +95,8 @@ col_title, col_empty, col_refresh, col_logout = st.columns([5, 3.5, 1.5, 1])
 with col_title:
     st.markdown("<h3 style='margin-bottom:0px;'>📦 입출력 통합 관리 시스템</h3>", unsafe_allow_html=True)
 with col_refresh:
-    if st.button("🔄 데이터 갱신", use_container_width=True, type="primary"):
+    # 💡 데이터 갱신 버튼을 이전처럼 기본(Gray) 스타일로 원복
+    if st.button("🔄 데이터 갱신", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
 with col_logout:
