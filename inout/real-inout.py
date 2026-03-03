@@ -1,77 +1,44 @@
-import streamlit as st
-import pymysql
-import pandas as pd
-from datetime import datetime
+import sys
+import time
 
-# 페이지 설정
-st.set_page_config(page_title="월별 입출고 데이터 조회", layout="wide")
+def process_input():
+    """
+    사용자의 입력을 실시간으로 처리하는 메인 함수입니다.
+    """
+    print("========================================")
+    print("   실시간 데이터 입출력 시스템 (Python)   ")
+    print("========================================")
+    print("안내: 'exit' 또는 '종료'를 입력하면 프로그램이 중단됩니다.\n")
 
-# 1. DB 연결 (스트림릿 클라우드의 Secrets 기능을 사용하여 보안 유지)
-@st.cache_resource
-def init_connection():
-    return pymysql.connect(
-        host=st.secrets["DB_HOST"],         
-        user=st.secrets["DB_USER"],         
-        password=st.secrets["DB_PASSWORD"], 
-        database=st.secrets["DB_NAME"],     
-        charset='utf8mb4',
-        cursorclass=pymysql.cursors.DictCursor
-    )
-
-# 2. 데이터 쿼리 실행 함수
-@st.cache_data(ttl=600) # 10분간 데이터 캐싱
-def run_query(query, params=None):
-    conn = init_connection()
-    with conn.cursor() as cursor:
-        cursor.execute(query, params)
-        result = cursor.fetchall()
-    return pd.DataFrame(result)
-
-# --- UI 구성 ---
-st.title("📊 년/월별 입출고 데이터 대시보드")
-
-# 3. 테이블 및 년/월 선택 필터
-# 알려주신 3개의 테이블을 선택할 수 있도록 구성했습니다.
-table_dict = {
-    "tomboy2 (inout)": "tomboy2",
-    "tomboy (t)": "tomboy",
-    "anymod (any)": "anymod"
-}
-
-st.subheader("검색 조건 설정")
-col_table, col_year, col_month = st.columns(3)
-
-with col_table:
-    selected_table_label = st.selectbox("조회할 테이블 선택", list(table_dict.keys()))
-    target_table = table_dict[selected_table_label]
-
-current_year = datetime.now().year
-years = list(range(current_year - 5, current_year + 2))
-months = list(range(1, 13))
-
-with col_year:
-    selected_year = st.selectbox("년도 선택", years, index=5)
-with col_month:
-    selected_month = st.selectbox("월 선택", months, index=datetime.now().month - 1)
-
-# 4. 조회 버튼 및 결과 출력
-if st.button("데이터 조회하기", type="primary"):
     try:
-        # ⚠️ 주의: 'date_column' 부분을 실제 DB 테이블에 있는 날짜 컬럼명으로 꼭 변경해야 합니다!
-        # 예: reg_date, created_at 등
-        query = f"""
-            SELECT * FROM {target_table} 
-            WHERE YEAR(date_column) = %s AND MONTH(date_column) = %s
-        """
-        
-        with st.spinner('데이터를 불러오는 중입니다...'):
-            df = run_query(query, (selected_year, selected_month))
-        
-        if df.empty:
-            st.warning(f"[{target_table}] 테이블에 {selected_year}년 {selected_month}월 해당하는 데이터가 없습니다.")
-        else:
-            st.success(f"[{target_table}] 테이블에서 총 {len(df)}건의 데이터를 불러왔습니다.")
-            st.dataframe(df, use_container_width=True) # 표 형태로 출력
-            
+        while True:
+            # 사용자로부터 실시간 입력 받기
+            user_input = input("입력값 기다리는 중... > ").strip()
+
+            # 종료 조건 체크
+            if user_input.lower() in ['exit', 'quit', '종료', 'q']:
+                print("\n[시스템] 프로그램을 안전하게 종료합니다.")
+                break
+
+            if not user_input:
+                continue
+
+            # 데이터 처리 로직 (예시: 문자열 반전 및 대문자 변환)
+            reversed_text = user_input[::-1]
+            upper_text = user_input.upper()
+            length = len(user_input)
+
+            # 결과 출력
+            print(f" -> [결과] 변환: {upper_text} | 역순: {reversed_text} | 길이: {length}")
+            print("-" * 40)
+
+            # CPU 부하 방지를 위한 미세한 대기
+            time.sleep(0.1)
+
+    except KeyboardInterrupt:
+        print("\n\n[알림] 사용자에 의해 강제 종료되었습니다 (Ctrl+C).")
     except Exception as e:
-        st.error(f"데이터베이스 오류가 발생했습니다: {e}")
+        print(f"\n[오류 발생] 상세 내용: {e}")
+
+if __name__ == "__main__":
+    process_input()
