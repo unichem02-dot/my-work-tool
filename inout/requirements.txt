@@ -3,3 +3,6 @@ pandas
 xlsxwriter
 gspread
 google-auth
+streamlit
+pymysql
+pandas
