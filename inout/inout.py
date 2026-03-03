@@ -4,7 +4,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime, timedelta
 import re
-import io # 💡 엑셀 다운로드를 위한 모듈 추가
+import io
 
 # --- [1. 페이지 기본 설정 및 테마 스타일] ---
 st.set_page_config(layout="wide", page_title="입출력 관리 시스템 (inout)")
@@ -309,33 +309,32 @@ try:
             table_title_text = params.get("title", "데이터 검색 결과")
 
             # ---------------------------------------------------------
-            # 💡 [신규] 상단 타이틀 구역 + 정렬 버튼 + 엑셀 다운로드 버튼
+            # 💡 상단 타이틀 구역 + 정렬 버튼 + 엑셀(CSV) 다운로드 버튼
             # ---------------------------------------------------------
             col_t1, col_t2, col_t3 = st.columns([6.5, 1.8, 1.7])
             with col_t1:
                 st.markdown(f'<div class="table-title-box"><span style="font-size: 16px; font-weight: bold; color: #f8fafc;">{table_title_text}</span> <span style="font-size: 13px; color: #cbd5e1; margin-left:10px;">| 출력된 자료 갯수 : {data_count} 개 (오로지 검색 조건순으로만 정렬되었습니다)</span></div>', unsafe_allow_html=True)
             with col_t2:
-                # 스트림릿 보안 우회를 위한 깔끔한 전용 정렬 버튼
                 sort_btn_text = "🔄 날짜 정렬 (현재:최신순)" if st.session_state.sort_desc else "🔄 날짜 정렬 (현재:과거순)"
                 if st.button(sort_btn_text, use_container_width=True):
                     st.session_state.sort_desc = not st.session_state.sort_desc
                     st.rerun()
             with col_t3:
-                # 💡 엑셀 파일 생성 (openpyxl 사용)
+                # 💡 에러 수정을 위해 모듈 의존성이 없는 CSV 방식으로 다운로드 (한글 완벽 지원)
                 export_df = f_df[['s', 'date', 'incom', 'initem', 'inq_val', 'inprice_val', 'outcom', 'outitem', 'outq_val', 'outprice_val', 'id', 'carno', 'carprice_val']].copy()
                 export_df['date'] = export_df['date'].dt.strftime('%Y-%m-%d')
                 export_df.columns = ['Vat(상태)', '날짜', '매입거래처', '매입품목', '매입수량', '매입단가', '매출거래처', '매출품목', '매출수량', '매출단가', 'NO', '차량배송', '운송비']
                 
-                excel_buffer = io.BytesIO()
-                export_df.to_excel(excel_buffer, index=False, engine='openpyxl')
-                st.download_button(label="💾 엑셀 다운로드", data=excel_buffer.getvalue(), file_name=f"검색결과_{datetime.now().strftime('%Y%m%d')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+                # utf-8-sig 로 인코딩하면 엑셀에서 한글이 깨지지 않고 바로 열림
+                csv_data = export_df.to_csv(index=False).encode('utf-8-sig')
+                st.download_button(label="💾 엑셀 다운로드", data=csv_data, file_name=f"검색결과_{datetime.now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True)
 
             # HTML 테이블 렌더링
             html_str = '<div class="custom-table-container">'
             html_str += '<table class="custom-table">'
             html_str += '<thead><tr>'
             html_str += '<th class="th-base">Vat</th>'
-            html_str += '<th class="th-base">날짜</th>' # 자바스크립트 버그 방지용 기본 텍스트 복구
+            html_str += '<th class="th-base">날짜</th>'
             html_str += '<th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th>'
             html_str += '<th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th>'
             html_str += '<th class="th-base">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th>'
