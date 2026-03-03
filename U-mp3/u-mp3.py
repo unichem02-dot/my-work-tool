@@ -28,6 +28,8 @@ def download_mp3(video_url):
         }],
         'quiet': True,
         'no_warnings': True,
+        'extractor_args': {'youtube': ['player_client=android']}, # HTTP 403 에러 우회 (안드로이드 클라이언트로 속임)
+        'nocheckcertificate': True, # 인증서 오류 무시
     }
 
     try:
