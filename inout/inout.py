@@ -442,14 +442,33 @@ try:
             params = st.session_state.search_params
             if params["mode"] != "init":
                 f_df = df.copy()
-                if params["mode"] == "기간": f_df = f_df[(f_df[date_col].dt.date >= params["start"]) & (f_df[date_col].dt.date <= params["end"])]
-                elif params["mode"] == "최근": f_df = f_df.sort_values(by=[date_col, 'id_val'], ascending=[not st.session_state.sort_desc, not st.session_state.sort_desc])
-                elif params["mode"] == "월별상세": f_df = f_df[(f_df['year']==params['year'])&(f_df['month']==params['month'])]
                 
-                # 검색 필터
+                # 1. 모드별 날짜 필터링
+                if params["mode"] == "기간": 
+                    f_df = f_df[(f_df[date_col].dt.date >= params["start"]) & (f_df[date_col].dt.date <= params["end"])]
+                elif params["mode"] in ["월별상세", "월별"]: 
+                    f_df = f_df[(f_df['year']==params['year'])&(f_df['month']==params['month'])]
+                elif params["mode"] == "일": 
+                    f_df = f_df[f_df[date_col].dt.date == params["date"]]
+
+                # 2. 종류(매입/매출) 필터링 (누락되었던 부분 복구)
+                target_type = params.get("type", "ALL")
+                if target_type == "매입": f_df = f_df[f_df['incom'].astype(str).str.strip() != '']
+                elif target_type == "매출": f_df = f_df[f_df['outcom'].astype(str).str.strip() != '']
+                
+                # 3. 검색어 필터링
                 if params.get("company"): f_df = f_df[f_df['incom'].str.contains(params["company"], na=False)|f_df['outcom'].str.contains(params["company"], na=False)]
                 if params.get("item"): f_df = f_df[f_df['initem'].str.contains(params["item"], na=False)|f_df['outitem'].str.contains(params["item"], na=False)]
-                if "개" in str(params.get("limit","")): f_df = f_df.head(int(params["limit"].replace("개","")))
+                
+                # 4. 정렬 (검색된 결과 내에서만 정렬 적용)
+                f_df = f_df.sort_values(by=[date_col, 'id_val'], ascending=[not st.session_state.sort_desc, not st.session_state.sort_desc])
+                
+                # 5. 표시 개수 리미트
+                limit_str = str(params.get("limit", "ALL"))
+                if "개" in limit_str:
+                    num = int(limit_str.replace("개", ""))
+                    if st.session_state.sort_desc: f_df = f_df.head(num)
+                    else: f_df = f_df.tail(num)
 
                 t_in_q, t_in_a = f_df['inq_val'].sum(), f_df['in_total'].sum()
                 t_out_q, t_out_a = f_df['outq_val'].sum(), f_df['out_total'].sum()
