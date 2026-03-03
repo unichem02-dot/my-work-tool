@@ -10,7 +10,7 @@ import json
 # --- [1. 페이지 기본 설정 및 테마 스타일] ---
 st.set_page_config(layout="wide", page_title="입출력 관리 시스템 (inout)")
 
-# 커스텀 CSS 및 자바스크립트 주입 (모달 팝업 포함)
+# 커스텀 CSS 및 자바스크립트 주입 (모달 팝업 및 디자인 통일)
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] { background-color: #2b323c; }
@@ -45,7 +45,9 @@ st.markdown("""
     
     .sum-profit { background-color: #2b323c; color: white; padding: 12px 20px; text-align: right; font-weight: bold; font-size: 16px; border-top: 1px solid #444; }
 
-    /* 자바스크립트 모달 스타일 */
+    /* -------------------------------------
+       자바스크립트 모달(팝업) 전용 스타일
+       ------------------------------------- */
     #memoModal {
         display: none; position: fixed; z-index: 9999; left: 0; top: 0;
         width: 100%; height: 100%; background-color: rgba(0,0,0,0.7);
@@ -58,8 +60,16 @@ st.markdown("""
     .modal-header { border-bottom: 1px solid #4a5568; padding-bottom: 10px; font-weight: bold; font-size: 18px; display: flex; justify-content: space-between; }
     .modal-body { padding: 20px 0; font-size: 16px; line-height: 1.6; color: #cbd5e1; }
     .close-modal { cursor: pointer; color: #ff5252; font-size: 24px; font-weight: bold; }
+
+    /* 신규입력 헤더 스타일 */
+    .nh-box { padding: 10px 8px; text-align: center; color: white; font-weight: bold; border: 1px solid #555; margin-bottom: 5px; font-size: 14px;}
+    .nh-base { background-color: #353b48; }
+    .nh-in { background-color: #3b5b88; }
+    .nh-out { background-color: #b8860b; }
+    .nh-etc { background-color: #757c43; }
     </style>
 
+    <!-- 모달 HTML -->
     <div id="memoModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -77,7 +87,7 @@ st.markdown("""
     function showMemo(text) {
         const modal = document.getElementById('memoModal');
         const content = document.getElementById('memoContent');
-        content.innerText = text ? text : "등록된 메모가 없습니다.";
+        content.innerText = text && text !== 'None' ? text : "등록된 메모가 없습니다.";
         modal.style.display = 'block';
     }
     window.onclick = function(event) {
@@ -94,19 +104,23 @@ if "sort_desc" not in st.session_state: st.session_state.sort_desc = True
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
 if "copy_id" not in st.session_state: st.session_state.copy_id = None
 
-# URL 파라미터 감지 및 자동 로그인 처리
+# URL 파라미터 감지 및 자동 로그인 처리 (복사/수정 기능 통합)
 if "edit_id" in st.query_params or "copy_id" in st.query_params:
     if st.query_params.get("token") == str(st.secrets.get("tom_password", "")):
         st.session_state.authenticated = True
-        if "edit_id" in st.query_params: st.session_state.edit_id = st.query_params["edit_id"]
-        if "copy_id" in st.query_params:
-            st.session_state.copy_id = st.query_params["copy_id"]
-            st.session_state.search_params = {"mode": "신규입력"}
-        st.query_params.clear()
-        st.rerun()
+        
+    if "edit_id" in st.query_params:
+        st.session_state.edit_id = st.query_params["edit_id"]
+    if "copy_id" in st.query_params:
+        st.session_state.copy_id = st.query_params["copy_id"]
+        st.session_state.search_params = {"mode": "신규입력"}
+        
+    st.query_params.clear()
+    st.rerun()
 
 # --- [3. 로그인 화면] ---
 if not st.session_state.authenticated:
+    st.markdown("<h1 style='text-align: center; color: #4e8cff !important;'>🛡️ ADMIN ACCESS</h1>", unsafe_allow_html=True)
     col_l, col_c, col_r = st.columns([1, 1.2, 1])
     with col_c:
         with st.form("login_form"):
@@ -154,6 +168,7 @@ def clean_numeric(val):
 
 def safe_str(val):
     if pd.isna(val) or str(val).lower() == 'nan': return ""
+    if isinstance(val, float) and val.is_integer(): return str(int(val))
     return str(val)
 
 def make_ul_list(items):
@@ -166,6 +181,7 @@ def make_ul_list(items):
 try:
     df = load_data()
     date_col = 'date'
+    
     if date_col in df.columns:
         df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
         df = df.dropna(subset=[date_col])
@@ -173,82 +189,195 @@ try:
         for c in ['inq', 'inprice', 'outq', 'outprice', 'carprice', 'id']:
             df[f'{c}_val'] = df[c].apply(clean_numeric)
         df['in_total'], df['out_total'] = df['inq_val'] * df['inprice_val'], df['outq_val'] * df['outprice_val']
+        
         years = sorted(df['year'].unique().tolist(), reverse=True)
         months = list(range(1, 13))
 
-        # --- [검색 패널 UI] ---
-        if not st.session_state.edit_id:
+        # ---------------------------------------------------------
+        # [화면 분기 1] 수정 및 삭제 모드
+        # ---------------------------------------------------------
+        if st.session_state.edit_id:
+            st.markdown("<h3 style='text-align:center; color:#ffeb3b; font-weight:bold;'>📝 등록 자료 수정 / 삭제</h3>", unsafe_allow_html=True)
+            target_row = df[df['id'].astype(str) == str(st.session_state.edit_id)]
+            if not target_row.empty:
+                t = target_row.iloc[0]
+                def_date = pd.to_datetime(t['date']).date() if pd.notnull(t['date']) else datetime.now().date()
+                s_idx = 1 if '중부' in safe_str(t.get('s')) else 0
+                
+                with st.form("edit_form"):
+                    c1, c2, c3, c4, c5, c6 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
+                    c1.markdown('<div class="nh-box nh-base">종류</div>', unsafe_allow_html=True)
+                    c2.markdown('<div class="nh-box nh-in">매입거래처</div>', unsafe_allow_html=True)
+                    c3.markdown('<div class="nh-box nh-in">매입품목</div>', unsafe_allow_html=True)
+                    c4.markdown('<div class="nh-box nh-in">수량</div>', unsafe_allow_html=True)
+                    c5.markdown('<div class="nh-box nh-in">단가</div>', unsafe_allow_html=True)
+                    c6.markdown('<div class="nh-box nh-etc">배송</div>', unsafe_allow_html=True)
+                    
+                    e_s = c1.selectbox("s", ["제일", "중부"], index=s_idx, label_visibility="collapsed")
+                    e_incom = c2.text_input("incom", safe_str(t.get('incom')), label_visibility="collapsed")
+                    e_initem = c3.text_input("initem", safe_str(t.get('initem')), label_visibility="collapsed")
+                    e_inq = c4.text_input("inq", safe_str(t.get('inq')), label_visibility="collapsed")
+                    e_inprice = c5.text_input("inprice", safe_str(t.get('inprice')), label_visibility="collapsed")
+                    e_carno = c6.text_input("carno", safe_str(t.get('carno')), label_visibility="collapsed")
+
+                    c7, c8, c9, c10, c11, c12 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
+                    c7.markdown('<div class="nh-box nh-base">날짜</div>', unsafe_allow_html=True)
+                    c8.markdown('<div class="nh-box nh-out">매출거래처</div>', unsafe_allow_html=True)
+                    c9.markdown('<div class="nh-box nh-out">매출품목</div>', unsafe_allow_html=True)
+                    c10.markdown('<div class="nh-box nh-out">수량</div>', unsafe_allow_html=True)
+                    c11.markdown('<div class="nh-box nh-out">단가</div>', unsafe_allow_html=True)
+                    c12.markdown('<div class="nh-box nh-etc">운송비</div>', unsafe_allow_html=True)
+
+                    e_date = c7.date_input("date", def_date, format="YYYY-MM-DD", label_visibility="collapsed")
+                    e_outcom = c8.text_input("outcom", safe_str(t.get('outcom')), label_visibility="collapsed")
+                    e_outitem = c9.text_input("outitem", safe_str(t.get('outitem')), label_visibility="collapsed")
+                    e_outq = c10.text_input("outq", safe_str(t.get('outq')), label_visibility="collapsed")
+                    e_outprice = c11.text_input("outprice", safe_str(t.get('outprice')), label_visibility="collapsed")
+                    e_carprice = c12.text_input("carprice", safe_str(t.get('carprice')), label_visibility="collapsed")
+                    
+                    st.markdown("<hr>", unsafe_allow_html=True)
+                    bc1, bc2, bc3, bc4 = st.columns([6, 1.5, 1.5, 1])
+                    if bc2.form_submit_button("💾 수정 저장", use_container_width=True, type="primary"):
+                        client = init_connection()
+                        sheet = client.open('SQL백업260211-jeilinout').sheet1
+                        cell = sheet.find(str(st.session_state.edit_id), in_column=1)
+                        if cell:
+                            new_row = [st.session_state.edit_id, e_date.strftime('%Y-%m-%d'), e_incom, e_initem, e_inq, e_inprice, e_outcom, e_outitem, e_outq, e_outprice, "", e_s, e_carno, e_carprice, "", "", ""]
+                            sheet.update(f"A{cell.row}:Q{cell.row}", [new_row])
+                            st.cache_data.clear(); st.session_state.edit_id = None; st.rerun()
+                    if bc3.form_submit_button("🗑️ 이 줄 삭제", use_container_width=True, type="primary"):
+                        client = init_connection(); sheet = client.open('SQL백업260211-jeilinout').sheet1
+                        cell = sheet.find(str(st.session_state.edit_id), in_column=1)
+                        if cell: sheet.delete_rows(cell.row)
+                        st.cache_data.clear(); st.session_state.edit_id = None; st.rerun()
+                    if bc4.form_submit_button("취소", use_container_width=True, type="primary"):
+                        st.session_state.edit_id = None; st.rerun()
+
+        # ---------------------------------------------------------
+        # [화면 분기 2] 신규입력 및 복사 모드
+        # ---------------------------------------------------------
+        elif st.session_state.search_params["mode"] == "신규입력":
+            st.markdown("<h3 style='text-align:center; font-weight:bold;'>🆕 신규자료입력 / 복사입력</h3>", unsafe_allow_html=True)
+            def_v = {"s_idx":0, "date":datetime.now().date()}
+            if st.session_state.copy_id:
+                copy_row = df[df['id'].astype(str) == str(st.session_state.copy_id)]
+                if not copy_row.empty:
+                    cr = copy_row.iloc[0]
+                    def_v.update({k: safe_str(cr.get(k)) for k in ['incom','initem','inq','inprice','outcom','outitem','outq','outprice','carno','carprice']})
+                    def_v["s_idx"] = 1 if '중부' in safe_str(cr.get('s')) else 0
+                    def_v["date"] = pd.to_datetime(cr['date']).date()
+
+            with st.form("new_form"):
+                c1, c2, c3, c4, c5, c6 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
+                c1.markdown('<div class="nh-box nh-base">종류</div>', unsafe_allow_html=True)
+                c2.markdown('<div class="nh-box nh-in">매입거래처</div>', unsafe_allow_html=True)
+                c3.markdown('<div class="nh-box nh-in">매입품목</div>', unsafe_allow_html=True)
+                c4.markdown('<div class="nh-box nh-in">수량</div>', unsafe_allow_html=True)
+                c5.markdown('<div class="nh-box nh-in">단가</div>', unsafe_allow_html=True)
+                c6.markdown('<div class="nh-box nh-etc">배송</div>', unsafe_allow_html=True)
+                n_s = c1.selectbox("s", ["제일", "중부"], index=def_v["s_idx"], label_visibility="collapsed")
+                n_incom = c2.text_input("incom", def_v.get("incom",""), label_visibility="collapsed")
+                n_initem = c3.text_input("initem", def_v.get("initem",""), label_visibility="collapsed")
+                n_inq = c4.text_input("inq", def_v.get("inq",""), label_visibility="collapsed")
+                n_inprice = c5.text_input("inprice", def_v.get("inprice",""), label_visibility="collapsed")
+                n_carno = c6.text_input("carno", def_v.get("carno",""), label_visibility="collapsed")
+                
+                c7, c8, c9, c10, c11, c12 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
+                c7.markdown('<div class="nh-box nh-base">날짜</div>', unsafe_allow_html=True)
+                c8.markdown('<div class="nh-box nh-out">매출거래처</div>', unsafe_allow_html=True)
+                c9.markdown('<div class="nh-box nh-out">매출품목</div>', unsafe_allow_html=True)
+                c10.markdown('<div class="nh-box nh-out">수량</div>', unsafe_allow_html=True)
+                c11.markdown('<div class="nh-box nh-out">단가</div>', unsafe_allow_html=True)
+                c12.markdown('<div class="nh-box nh-etc">운송비</div>', unsafe_allow_html=True)
+                n_date = c7.date_input("date", def_v["date"], format="YYYY-MM-DD", label_visibility="collapsed")
+                n_outcom = c8.text_input("outcom", def_v.get("outcom",""), label_visibility="collapsed")
+                n_outitem = c9.text_input("outitem", def_v.get("outitem",""), label_visibility="collapsed")
+                n_outq = c10.text_input("outq", def_v.get("outq",""), label_visibility="collapsed")
+                n_outprice = c11.text_input("outprice", def_v.get("outprice",""), label_visibility="collapsed")
+                n_carprice = c12.text_input("carprice", def_v.get("carprice",""), label_visibility="collapsed")
+
+                st.markdown("<hr>", unsafe_allow_html=True)
+                bc1, bc2, bc3 = st.columns([8.2, 1.1, 0.7])
+                if bc2.form_submit_button("신규자료입력", use_container_width=True, type="primary"):
+                    client = init_connection(); sheet = client.open('SQL백업260211-jeilinout').sheet1
+                    next_id = int(df['id_val'].max()) + 1 if not df.empty else 1
+                    sheet.append_row([next_id, n_date.strftime('%Y-%m-%d'), n_incom, n_initem, n_inq, n_inprice, n_outcom, n_outitem, n_outq, n_outprice, "", n_s, n_carno, n_carprice])
+                    st.cache_data.clear(); st.session_state.copy_id = None; st.session_state.search_params = {"mode":"최근","title":"최근입력순서","limit":"20개"}; st.rerun()
+                if bc3.form_submit_button("취소", use_container_width=True, type="primary"):
+                    st.session_state.copy_id = None; st.session_state.search_params = {"mode":"init"}; st.rerun()
+
+        # ---------------------------------------------------------
+        # [화면 분기 3] 메인 검색창 및 리스트 출력
+        # ---------------------------------------------------------
+        else:
             with st.container():
                 st.markdown("<div class='search-panel-container'>", unsafe_allow_html=True)
-                r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
-                with r1_1: type_1 = st.radio("r1", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
-                with r1_2: date_range = st.date_input("d1", [datetime(2014,1,1).date(), datetime.now().date()], format="YYYY-MM-DD", label_visibility="collapsed")
-                with r1_4: com_1 = st.text_input("t1", placeholder="거래처 검색", label_visibility="collapsed")
-                with r1_5: item_1 = st.text_input("t2", placeholder="품목 검색", label_visibility="collapsed")
-                with r1_6: btn_1 = st.button("기간 거래처&품목", use_container_width=True, type="primary")
+                r1, r2, r3, r4, r5, r6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
+                with r1: type_1 = st.radio("t1", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
+                with r2: d_range = st.date_input("dr", [datetime(2014,1,1).date(), datetime.now().date()], format="YYYY-MM-DD", label_visibility="collapsed")
+                with r4: com_1 = st.text_input("c1", placeholder="거래처 검색", label_visibility="collapsed")
+                with r5: itm_1 = st.text_input("i1", placeholder="품목 검색", label_visibility="collapsed")
+                with r6: b1 = st.button("기간 거래처&품목", use_container_width=True, type="primary")
 
-                st.markdown("<hr style='margin: 10px 0; border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
+                st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
                 c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14 = st.columns([0.8, 1.2, 1, 1, 1.2, 1, 1, 1.5, 1, 1.2, 0.8, 1.2, 1, 1.2])
-                with c2: y_3 = st.selectbox("y3", years, label_visibility="collapsed")
-                with c3: m_3 = st.selectbox("m3", months, index=datetime.now().month-1, label_visibility="collapsed", format_func=lambda x: f"{x}월")
-                with c4: btn_3 = st.button("결산", use_container_width=True, type="primary")
-                with c5: btn_4 = st.button("신규입력", use_container_width=True, type="primary")
-                with c6: limit_val = st.selectbox("s4", ["20개", "50개", "100개", "ALL"], index=0, label_visibility="collapsed")
-                with c7: btn_5 = st.button("최근입력", use_container_width=True, type="primary")
+                with c2: y3 = st.selectbox("y3", years, label_visibility="collapsed")
+                with c3: m3 = st.selectbox("m3", months, index=datetime.now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
+                with c4: b_set = st.button("결산", use_container_width=True, type="primary")
+                with c5: b_new = st.button("신규입력", use_container_width=True, type="primary")
+                with c6: lmt = st.selectbox("l4", ["20개", "50개", "100개", "ALL"], index=0, label_visibility="collapsed")
+                with c7: b_rec = st.button("최근입력", use_container_width=True, type="primary")
                 with c8: d_day = st.date_input("d2", datetime.now().date(), format="YYYY-MM-DD", label_visibility="collapsed")
-                with c9: btn_6 = st.button("일검색", use_container_width=True, type="primary")
-                with c14: btn_8 = st.button("월별검색", use_container_width=True, type="primary")
+                with c9: b_day = st.button("일검색", use_container_width=True, type="primary")
+                with c14: b_mon = st.button("월별검색", use_container_width=True, type="primary")
                 st.markdown("</div>", unsafe_allow_html=True)
 
-            if btn_1: st.session_state.search_params = { "mode": "기간", "title": "기간검색", "type": type_1, "company": com_1, "item": item_1, "limit": "ALL", "start": date_range[0], "end": date_range[1] if len(date_range)>1 else date_range[0] }
-            elif btn_3: st.session_state.search_params = { "mode": "결산", "year": y_3, "month": m_3 }
-            elif btn_4: st.session_state.search_params = { "mode": "신규입력" }; st.session_state.copy_id = None
-            elif btn_5: st.session_state.search_params = { "mode": "최근", "title": "최근입력순서", "limit": limit_val }
-            elif btn_6: st.session_state.search_params = { "mode": "일", "title": f"{d_day} 검색", "date": d_day }
-            elif btn_8: st.session_state.search_params = { "mode": "월별", "title": "월별검색", "year": y_3, "month": m_3 }
+            if b1: st.session_state.search_params = {"mode":"기간","title":"기간검색","type":type_1,"company":com_1,"item":itm_1,"limit":"ALL","start":d_range[0],"end":d_range[1] if len(d_range)>1 else d_range[0]}
+            elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3}
+            elif b_new: st.session_state.search_params = {"mode":"신규입력"}; st.session_state.copy_id = None; st.rerun()
+            elif b_rec: st.session_state.search_params = {"mode":"최근","title":"최근입력순서","limit":lmt}
+            elif b_day: st.session_state.search_params = {"mode":"일","title":f"{d_day} 검색","date":d_day}
+            elif b_mon: st.session_state.search_params = {"mode":"월별","title":f"{y3}년 {m3}월 검색","year":y3,"month":m3}
 
-        params = st.session_state.search_params
+            params = st.session_state.search_params
+            if params["mode"] != "init":
+                f_df = df.copy()
+                if params["mode"] == "기간": f_df = f_df[(f_df[date_col].dt.date >= params["start"]) & (f_df[date_col].dt.date <= params["end"])]
+                elif params["mode"] == "최근": f_df = f_df.sort_values(by=[date_col, 'id_val'], ascending=[False, False])
+                elif params["mode"] == "일": f_df = f_df[f_df[date_col].dt.date == params["date"]]
+                elif params["mode"] == "월별": f_df = f_df[(f_df['year'] == params["year"]) & (f_df['month'] == params["month"])]
+                
+                if "개" in str(params.get("limit","")): f_df = f_df.head(int(params["limit"].replace("개","")))
 
-        # --- [수정/신규입력/리스트 출력 분기] ---
-        if st.session_state.edit_id:
-            st.markdown("<h3 style='text-align:center; color:#ffeb3b;'>📝 자료 수정 / 삭제</h3>", unsafe_allow_html=True)
-            target = df[df['id_val'] == clean_numeric(st.session_state.edit_id)]
-            if not target.empty:
-                t = target.iloc[0]
-                with st.form("edit_form"):
-                    col_a, col_b = st.columns(2)
-                    e_incom = col_a.text_input("매입거래처", safe_str(t['incom']))
-                    e_outcom = col_b.text_input("매출거래처", safe_str(t['outcom']))
-                    if st.form_submit_button("💾 수정 저장", type="primary"):
-                        st.success("수정 완료 (시트 업데이트 로직 생략됨)"); st.session_state.edit_id = None; st.rerun()
-                    if st.form_submit_button("취소", type="primary"): st.session_state.edit_id = None; st.rerun()
+                # 합계 계산
+                t_in_q, t_in_a = f_df['inq_val'].sum(), f_df['in_total'].sum()
+                t_out_q, t_out_a = f_df['outq_val'].sum(), f_df['out_total'].sum()
+                t_car = f_df['carprice_val'].sum()
+                t_profit = t_out_a - t_in_a - t_car
 
-        elif params["mode"] == "신규입력":
-            st.markdown("<h3 style='text-align:center;'>🆕 신규자료입력</h3>", unsafe_allow_html=True)
-            with st.form("new_form"):
-                n_incom = st.text_input("매입거래처")
-                if st.form_submit_button("신규자료입력", type="primary"): 
-                    st.success("입력 완료"); st.session_state.search_params = {"mode":"init"}; st.rerun()
-                if st.form_submit_button("취소", type="primary"): st.session_state.search_params = {"mode":"init"}; st.rerun()
+                col_t1, col_t2, col_t3 = st.columns([6.5, 1.8, 1.7])
+                with col_t1: st.markdown(f'<div class="table-title-box"><span style="font-size:16px; font-weight:bold; color:#f8fafc;">{params.get("title","검색결과")}</span> <span style="font-size:13px; color:#cbd5e1; margin-left:10px;">| 출력 개수: {len(f_df)}</span></div>', unsafe_allow_html=True)
+                with col_t2: 
+                    if st.button("🔄 날짜 정렬 전환", use_container_width=True, type="primary"):
+                        st.session_state.sort_desc = not st.session_state.sort_desc; st.rerun()
+                with col_t3:
+                    csv = f_df.to_csv(index=False).encode('utf-8-sig')
+                    st.download_button("💾 엑셀 다운로드", data=csv, file_name="export.csv", mime="text/csv", use_container_width=True, type="primary")
 
-        elif params["mode"] != "init":
-            f_df = df.copy()
-            if params["mode"] == "최근": f_df = f_df.sort_values(by=[date_col, 'id_val'], ascending=[False, False]).head(20)
-            
-            # 테이블 렌더링
-            html_str = '<div class="custom-table-container"><table class="custom-table"><thead><tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
-            token = str(st.secrets.get("tom_password", ""))
-            for _, row in f_df.iterrows():
-                dt_str = row[date_col].strftime('%Y-%m-%d')
-                rid = safe_str(row['id'])
-                s_cls = "txt-green" if "제일" in str(row['s']) else "txt-purple"
-                memo_js = str(row.get('memoin', '')).replace("'", "\\'")
-                in_item_link = f'<a href="javascript:void(0)" onclick="showMemo(\'{memo_js}\')" style="color:#1e3a8a; cursor:pointer;">{safe_str(row["initem"])}</a>'
-                vat_link = f'<a href="?copy_id={rid}&token={token}" target="_self" style="text-decoration:none;"><span class="{s_cls}">{row["s"]}</span></a>'
-                dt_link = f'<a href="?edit_id={rid}&token={token}" target="_self" style="color:#1e293b; text-decoration:none;">{dt_str}</a>'
-                html_str += f'<tr><td class="tc">{vat_link}</td><td class="tc">{dt_link}</td><td class="tl">{row["incom"]}</td><td class="tl">{in_item_link}</td><td class="tr">{row["inq_val"]:,.0f}</td><td class="tr">{row["inprice_val"]:,.0f}</td><td class="tl">{row["outcom"]}</td><td class="tl">{row["outitem"]}</td><td class="tr">{row["outq_val"]:,.0f}</td><td class="tr">{row["outprice_val"]:,.0f}</td><td class="tc">{rid}</td><td class="tc">{row["carno"]}</td><td class="tr">{row["carprice_val"]:,.0f}</td></tr>'
-            html_str += "</tbody></table></div>"
-            st.markdown(html_str, unsafe_allow_html=True)
+                html = '<div class="custom-table-container"><table class="custom-table"><thead><tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
+                token = str(st.secrets["tom_password"])
+                for _, r in f_df.iterrows():
+                    rid = safe_str(r['id'])
+                    dt = r[date_col].strftime('%Y-%m-%d')
+                    s_cls = "txt-green" if "제일" in str(r['s']) else "txt-purple"
+                    memo_js = str(r.get('memoin','')).replace("'","\\'").replace('"','\\"')
+                    in_itm = f'<a href="javascript:void(0)" onclick="showMemo(\'{memo_js}\')" style="color:#1e3a8a; cursor:pointer;">{safe_str(r["initem"])}</a>'
+                    v_link = f'<a href="?copy_id={rid}&token={token}" target="_self" style="text-decoration:none;"><span class="{s_cls}">{r["s"]}</span></a>'
+                    d_link = f'<a href="?edit_id={rid}&token={token}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
+                    html += f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl">{r["incom"]}</td><td class="tl">{in_itm}</td><td class="tr">{r["inq_val"]:,.0f}</td><td class="tr">{r["inprice_val"]:,.0f}</td><td class="tl">{r["outcom"]}</td><td class="tl">{r["outitem"]}</td><td class="tr">{r["outq_val"]:,.0f}</td><td class="tr">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray">{rid}</td><td class="tc txt-gray">{r["carno"]}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
+                
+                html += f'</tbody><tfoot><tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr><tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr></tfoot></table></div>'
+                st.markdown(html, unsafe_allow_html=True)
 
 except Exception as e: st.error(f"⚠️ 시스템 오류: {e}")
 st.markdown("<br><p style='text-align:center; color:#64748b;'>© 2026 UNICHEM02-DOT. ALL RIGHTS RESERVED.</p>", unsafe_allow_html=True)
