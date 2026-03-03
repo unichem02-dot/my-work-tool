@@ -291,7 +291,7 @@ try:
             with st.container():
                 st.markdown("<div class='search-panel-container'>", unsafe_allow_html=True)
                 
-                # 💡 [버그 완전 수정] HTML/JS 코드가 깨지지 않도록 components 모듈로 완벽히 분리
+                # 💡 [버그 완전 수정] 소수점까지 100% 정확히 표시되는 실시간 계산기
                 components.html(
                     """
                     <!DOCTYPE html>
@@ -353,33 +353,40 @@ try:
                     
                     <script>
                     function rtFmt(num) {
+                        if (num === 0) return "0";
                         if (!num || isNaN(num) || !isFinite(num)) return "0";
-                        return Math.floor(num).toLocaleString('ko-KR');
+                        // 소수점 10자리까지 절사 없이 정확하게 표현되도록 수정
+                        return num.toLocaleString('ko-KR', { maximumFractionDigits: 10 });
                     }
+                    
                     function rtParse(str) {
                         return parseFloat(str.replace(/,/g, '')) || 0;
                     }
+                    
                     function formatAndCalc(el) {
-                        // Formatting
+                        // 1. 입력창 포맷팅 (소수점 입력 가능하도록 수정)
                         let rawVal = el.value.replace(/[^0-9.-]/g, '');
-                        let numVal = parseFloat(rawVal);
-                        if (!isNaN(numVal) && rawVal !== '-' && !rawVal.endsWith('.')) {
+                        if (rawVal === '-' || rawVal === '') {
+                            el.value = rawVal;
+                        } else if (!isNaN(parseFloat(rawVal))) {
                             let start = el.selectionStart;
                             let len = el.value.length;
-                            el.value = numVal.toLocaleString('ko-KR') + (rawVal.endsWith('.') ? '.' : '');
+                            
+                            let parts = rawVal.split('.');
+                            parts[0] = parseInt(parts[0] || '0', 10).toLocaleString('ko-KR');
+                            el.value = parts.join('.');
+                            
                             el.setSelectionRange(start + (el.value.length - len), start + (el.value.length - len));
-                        } else if(rawVal === '') {
-                            el.value = '';
                         }
                         
-                        // Calculating
+                        // 2. 실시간 계산 (Math.round 및 Math.floor 제거하여 소수점 정확도 유지)
                         let d1 = rtParse(document.getElementById('rt-d1').value);
                         let d2 = rtParse(document.getElementById('rt-d2').value);
                         document.getElementById('rt-dr').value = d2 !== 0 ? rtFmt(d1 / d2) : "0";
 
                         let v1 = rtParse(document.getElementById('rt-v1').value);
-                        document.getElementById('rt-vm').value = rtFmt(Math.round(v1 / 1.1));
-                        document.getElementById('rt-vp').value = rtFmt(Math.round(v1 * 1.1));
+                        document.getElementById('rt-vm').value = rtFmt(v1 / 1.1);
+                        document.getElementById('rt-vp').value = rtFmt(v1 * 1.1);
 
                         let m1 = rtParse(document.getElementById('rt-m1').value);
                         let m2 = rtParse(document.getElementById('rt-m2').value);
