@@ -291,7 +291,7 @@ try:
             with st.container():
                 st.markdown("<div class='search-panel-container'>", unsafe_allow_html=True)
                 
-                # 💡 [버그 완전 수정] 소수점까지 100% 정확히 표시되는 실시간 계산기
+                # 💡 [버그 완전 수정] 가볍고 끊김 없는 숫자 전용(type="number") 계산기
                 components.html(
                     """
                     <!DOCTYPE html>
@@ -321,31 +321,37 @@ try:
                     .rt-op { font-weight: bold; font-size: 16px; }
                     .rt-op.blue { color: #60a5fa; }
                     .rt-op.yellow { color: #fbbf24; }
+                    
+                    /* 숫자 입력창의 화살표(스피너) 제거 */
+                    input[type=number]::-webkit-inner-spin-button, 
+                    input[type=number]::-webkit-outer-spin-button { 
+                        -webkit-appearance: none; margin: 0; 
+                    }
                     </style>
                     </head>
                     <body>
                     <div class="rt-calc-wrap">
-                        <!-- 나눗셈 -->
+                        <!-- 나눗셈 (숫자 입력 전용) -->
                         <div class="rt-group">
-                            <input type="text" class="rt-in" id="rt-d1" oninput="formatAndCalc(this)" placeholder="0">
+                            <input type="number" class="rt-in" id="rt-d1" oninput="rtCalc()" placeholder="0">
                             <span class="rt-op blue">/</span>
-                            <input type="text" class="rt-in" id="rt-d2" oninput="formatAndCalc(this)" placeholder="0">
+                            <input type="number" class="rt-in" id="rt-d2" oninput="rtCalc()" placeholder="0">
                             <span class="rt-op blue">=</span>
                             <input type="text" class="rt-out" id="rt-dr" readonly placeholder="0">
                         </div>
-                        <!-- 부가세 -->
+                        <!-- 부가세 (숫자 입력 전용) -->
                         <div class="rt-group">
-                            <input type="text" class="rt-in" id="rt-v1" oninput="formatAndCalc(this)" placeholder="기준금액">
+                            <input type="number" class="rt-in" id="rt-v1" oninput="rtCalc()" placeholder="기준금액">
                             <span class="rt-txt blue">VAT-10%</span>
                             <input type="text" class="rt-out" id="rt-vm" readonly placeholder="0">
                             <span class="rt-txt yellow">VAT+10%</span>
                             <input type="text" class="rt-out orange" id="rt-vp" readonly placeholder="0">
                         </div>
-                        <!-- 곱셈 -->
+                        <!-- 곱셈 (숫자 입력 전용) -->
                         <div class="rt-group">
-                            <input type="text" class="rt-in" id="rt-m1" oninput="formatAndCalc(this)" placeholder="0">
+                            <input type="number" class="rt-in" id="rt-m1" oninput="rtCalc()" placeholder="0">
                             <span class="rt-op yellow">X</span>
-                            <input type="text" class="rt-in" id="rt-m2" oninput="formatAndCalc(this)" placeholder="0">
+                            <input type="number" class="rt-in" id="rt-m2" oninput="rtCalc()" placeholder="0">
                             <span class="rt-op yellow">=</span>
                             <input type="text" class="rt-out" id="rt-mr" readonly placeholder="0">
                         </div>
@@ -353,43 +359,28 @@ try:
                     
                     <script>
                     function rtFmt(num) {
-                        if (num === 0) return "0";
                         if (!num || isNaN(num) || !isFinite(num)) return "0";
-                        // 소수점 10자리까지 절사 없이 정확하게 표현되도록 수정
-                        return num.toLocaleString('ko-KR', { maximumFractionDigits: 10 });
-                    }
-                    
-                    function rtParse(str) {
-                        return parseFloat(str.replace(/,/g, '')) || 0;
-                    }
-                    
-                    function formatAndCalc(el) {
-                        // 1. 입력창 포맷팅 (소수점 입력 가능하도록 수정)
-                        let rawVal = el.value.replace(/[^0-9.-]/g, '');
-                        if (rawVal === '-' || rawVal === '') {
-                            el.value = rawVal;
-                        } else if (!isNaN(parseFloat(rawVal))) {
-                            let start = el.selectionStart;
-                            let len = el.value.length;
-                            
-                            let parts = rawVal.split('.');
-                            parts[0] = parseInt(parts[0] || '0', 10).toLocaleString('ko-KR');
-                            el.value = parts.join('.');
-                            
-                            el.setSelectionRange(start + (el.value.length - len), start + (el.value.length - len));
+                        // 소수점을 보존하면서 정수 부분만 콤마(,) 처리
+                        let parts = num.toString().split('.');
+                        parts[0] = parseInt(parts[0], 10).toLocaleString('ko-KR');
+                        if (parts[1] && parts[1].length > 4) { // 소수점이 너무 길 경우 4자리로 제한
+                            parts[1] = parts[1].substring(0, 4);
                         }
-                        
-                        // 2. 실시간 계산 (Math.round 및 Math.floor 제거하여 소수점 정확도 유지)
-                        let d1 = rtParse(document.getElementById('rt-d1').value);
-                        let d2 = rtParse(document.getElementById('rt-d2').value);
+                        return parts.join('.');
+                    }
+                    
+                    function rtCalc() {
+                        // 자바스크립트 기본 연산만 수행 (무한 루프/버벅거림 원천 차단)
+                        let d1 = parseFloat(document.getElementById('rt-d1').value) || 0;
+                        let d2 = parseFloat(document.getElementById('rt-d2').value) || 0;
                         document.getElementById('rt-dr').value = d2 !== 0 ? rtFmt(d1 / d2) : "0";
 
-                        let v1 = rtParse(document.getElementById('rt-v1').value);
+                        let v1 = parseFloat(document.getElementById('rt-v1').value) || 0;
                         document.getElementById('rt-vm').value = rtFmt(v1 / 1.1);
                         document.getElementById('rt-vp').value = rtFmt(v1 * 1.1);
 
-                        let m1 = rtParse(document.getElementById('rt-m1').value);
-                        let m2 = rtParse(document.getElementById('rt-m2').value);
+                        let m1 = parseFloat(document.getElementById('rt-m1').value) || 0;
+                        let m2 = parseFloat(document.getElementById('rt-m2').value) || 0;
                         document.getElementById('rt-mr').value = rtFmt(m1 * m2);
                     }
                     </script>
