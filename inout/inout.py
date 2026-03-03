@@ -78,12 +78,21 @@ if "lockout_until" not in st.session_state: st.session_state.lockout_until = Non
 if "last_activity" not in st.session_state: st.session_state.last_activity = None
 if "search_params" not in st.session_state: st.session_state.search_params = {"mode": "init"}
 if "sort_desc" not in st.session_state: st.session_state.sort_desc = True 
-if "edit_id" not in st.session_state: st.session_state.edit_id = None # 수정용 상태 추가
+if "edit_id" not in st.session_state: st.session_state.edit_id = None
+if "copy_id" not in st.session_state: st.session_state.copy_id = None # 💡 복사용 상태 추가
 
-# 💡 [핵심] URL로 전달된 편집 ID(edit_id) 감지 및 화면 즉시 전환 로직
-if "edit_id" in st.query_params:
-    st.session_state.edit_id = st.query_params["edit_id"]
-    # 파라미터 초기화 (새로고침시 계속 수정창 남는 것 방지)
+# 💡 URL 파라미터 감지 및 자동 로그인 처리 (복사기능 & 수정기능 둘 다 지원)
+if "edit_id" in st.query_params or "copy_id" in st.query_params:
+    if st.query_params.get("token") == str(st.secrets.get("tom_password", "")):
+        st.session_state.authenticated = True
+        st.session_state.last_activity = datetime.now()
+        
+    if "edit_id" in st.query_params:
+        st.session_state.edit_id = st.query_params["edit_id"]
+    if "copy_id" in st.query_params:
+        st.session_state.copy_id = st.query_params["copy_id"]
+        st.session_state.search_params = {"mode": "신규입력"} # 복사 클릭 시 자동으로 신규입력 모드로 전환
+        
     st.query_params.clear()
     st.rerun()
 
@@ -209,7 +218,7 @@ try:
         if not years: years = [datetime.now().year]
 
         # ---------------------------------------------------------
-        # 💡 [신규/편집 화면 분기] 편집 모드일 경우 다른 UI 숨김 처리
+        # [수정 화면 분기] 편집 모드일 경우
         # ---------------------------------------------------------
         if st.session_state.edit_id:
             st.markdown("<h3 style='text-align:center; color:#ffeb3b; margin-top:10px; font-weight:bold;'>📝 등록 자료 수정 / 삭제</h3>", unsafe_allow_html=True)
@@ -218,8 +227,6 @@ try:
             
             if not target_row.empty:
                 t_data = target_row.iloc[0]
-                
-                # 기존 데이터 셋업
                 def_s = safe_str(t_data.get('s', '제일'))
                 s_idx = 1 if '중부' in def_s else 0
                 def_date = pd.to_datetime(t_data['date']).date() if pd.notnull(t_data['date']) else datetime.now().date()
@@ -232,7 +239,6 @@ try:
                     </style>
                     """, unsafe_allow_html=True)
                     
-                    # 헤더 1
                     fc1, fc2, fc3, fc4, fc5, fc6 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
                     fc1.markdown('<div class="nh-box nh-base">종류</div>', unsafe_allow_html=True)
                     fc2.markdown('<div class="nh-box nh-in">매입거래처</div>', unsafe_allow_html=True)
@@ -241,7 +247,6 @@ try:
                     fc5.markdown('<div class="nh-box nh-in">단가</div>', unsafe_allow_html=True)
                     fc6.markdown('<div class="nh-box nh-etc">배송</div>', unsafe_allow_html=True)
                     
-                    # 입력 1 (기존 값 자동 채우기)
                     ic1, ic2, ic3, ic4, ic5, ic6 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
                     edit_s = ic1.selectbox("종류", ["제일", "중부"], index=s_idx, label_visibility="collapsed")
                     edit_incom = ic2.text_input("매입거래처", safe_str(t_data.get('incom')), label_visibility="collapsed")
@@ -252,7 +257,6 @@ try:
                     
                     st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
                     
-                    # 헤더 2
                     fc7, fc8, fc9, fc10, fc11, fc12 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
                     fc7.markdown('<div class="nh-box nh-base">날짜</div>', unsafe_allow_html=True)
                     fc8.markdown('<div class="nh-box nh-out">매출거래처</div>', unsafe_allow_html=True)
@@ -261,7 +265,6 @@ try:
                     fc11.markdown('<div class="nh-box nh-out">단가</div>', unsafe_allow_html=True)
                     fc12.markdown('<div class="nh-box nh-etc">운송비</div>', unsafe_allow_html=True)
                     
-                    # 입력 2 (기존 값 자동 채우기)
                     ic7, ic8, ic9, ic10, ic11, ic12 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
                     edit_date = ic7.date_input("날짜", def_date, format="YYYY-MM-DD", label_visibility="collapsed")
                     edit_outcom = ic8.text_input("매출거래처", safe_str(t_data.get('outcom')), label_visibility="collapsed")
@@ -272,7 +275,6 @@ try:
                     
                     st.markdown("<hr style='margin: 15px 0; border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
                     
-                    # 버튼 처리 (수정/삭제/취소)
                     bc1, bc2, bc3, bc4 = st.columns([6, 1.5, 1.5, 1])
                     btn_update = bc2.form_submit_button("💾 수정 저장", use_container_width=True, type="primary")
                     btn_delete = bc3.form_submit_button("🗑️ 이 줄 삭제", use_container_width=True, type="primary")
@@ -288,10 +290,10 @@ try:
                                 new_row = [st.session_state.edit_id, dt_str, edit_incom, edit_initem, edit_inq, edit_inprice, edit_outcom, edit_outitem, edit_outq, edit_outprice, "", edit_s, edit_carno, edit_carprice, "", "", ""]
                                 try:
                                     sheet.update(values=[new_row], range_name=f"A{cell.row}:Q{cell.row}")
-                                except TypeError: # 이전 버전 gspread 호환
+                                except TypeError:
                                     sheet.update(f"A{cell.row}:Q{cell.row}", [new_row])
                                 
-                                st.cache_data.clear() # 캐시 초기화
+                                st.cache_data.clear()
                                 st.session_state.edit_id = None
                                 st.success("✅ 자료가 성공적으로 수정되었습니다!")
                                 st.rerun()
@@ -370,7 +372,9 @@ try:
             if btn_1: st.session_state.search_params = { "mode": "기간", "title": "기간검색순서", "type": type_1, "company": com_1, "item": item_1, "limit": "ALL", "start": date_range[0], "end": date_range[1] if len(date_range)>1 else date_range[0] }
             elif btn_2: st.session_state.search_params = { "mode": "월별", "title": f"{year_2}년 {month_2}월 검색순서", "type": type_2, "company": com_2, "item": item_2, "limit": "ALL", "year": year_2, "month": month_2 }
             elif btn_3: st.session_state.search_params = { "mode": "결산", "year": y_3, "month": m_3 }
-            elif btn_4: st.session_state.search_params = { "mode": "신규입력" }
+            elif btn_4: 
+                st.session_state.search_params = { "mode": "신규입력" }
+                st.session_state.copy_id = None # 기본 신규입력은 빈칸으로 시작
             elif btn_5: st.session_state.search_params = { "mode": "최근", "title": "최근입력순서", "type": "ALL", "company": "", "item": "", "limit": limit_val }
             elif btn_6: st.session_state.search_params = { "mode": "일", "title": f"{d_day} 검색순서", "date": d_day, "type": "ALL", "company": "", "item": "", "limit": "ALL" }
             elif btn_7: st.session_state.search_params = { "mode": "기간", "title": "어제/오늘/내일 검색순서", "type": "ALL", "company": "", "item": "", "limit": "ALL", "start": datetime.now().date() - timedelta(days=1), "end": datetime.now().date() + timedelta(days=1) }
@@ -378,9 +382,32 @@ try:
             
             params = st.session_state.search_params
             
-            # --- 신규입력 화면 렌더링 ---
+            # --- 신규입력 화면 렌더링 (복사 데이터 채우기 포함) ---
             if params["mode"] == "신규입력":
                 st.markdown("<h3 style='text-align:center; color:white; margin-top:20px; font-weight:bold;'>신규자료입력 | New</h3>", unsafe_allow_html=True)
+                
+                # 💡 복사 데이터가 있을 경우 기본값 변수에 담기
+                def_s_idx, def_incom, def_initem, def_inq, def_inprice, def_carno = 0, "", "", "", "", ""
+                def_outcom, def_outitem, def_outq, def_outprice, def_carprice = "", "", "", "", ""
+                def_date = datetime.now().date()
+                
+                if st.session_state.copy_id:
+                    st.info("💡 선택하신 자료가 복사되었습니다. 내용을 수정하여 새롭게 저장하세요.")
+                    copy_row = df[df['id'].astype(str) == str(st.session_state.copy_id)]
+                    if not copy_row.empty:
+                        t_data = copy_row.iloc[0]
+                        def_s_idx = 1 if '중부' in safe_str(t_data.get('s')) else 0
+                        def_incom = safe_str(t_data.get('incom'))
+                        def_initem = safe_str(t_data.get('initem'))
+                        def_inq = safe_str(t_data.get('inq'))
+                        def_inprice = safe_str(t_data.get('inprice'))
+                        def_carno = safe_str(t_data.get('carno'))
+                        def_outcom = safe_str(t_data.get('outcom'))
+                        def_outitem = safe_str(t_data.get('outitem'))
+                        def_outq = safe_str(t_data.get('outq'))
+                        def_outprice = safe_str(t_data.get('outprice'))
+                        def_carprice = safe_str(t_data.get('carprice'))
+                        if pd.notnull(t_data['date']): def_date = pd.to_datetime(t_data['date']).date()
                 
                 with st.form("new_entry_form", clear_on_submit=True):
                     st.markdown("""
@@ -399,12 +426,12 @@ try:
                     fc6.markdown('<div class="nh-box nh-etc">배송</div>', unsafe_allow_html=True)
                     
                     ic1, ic2, ic3, ic4, ic5, ic6 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
-                    new_s = ic1.selectbox("종류", ["제일", "중부"], label_visibility="collapsed")
-                    new_incom = ic2.text_input("매입거래처", label_visibility="collapsed")
-                    new_initem = ic3.text_input("매입품목", label_visibility="collapsed")
-                    new_inq = ic4.text_input("매입수량", "", label_visibility="collapsed")
-                    new_inprice = ic5.text_input("매입단가", "", label_visibility="collapsed")
-                    new_carno = ic6.text_input("배송", label_visibility="collapsed")
+                    new_s = ic1.selectbox("종류", ["제일", "중부"], index=def_s_idx, label_visibility="collapsed")
+                    new_incom = ic2.text_input("매입거래처", value=def_incom, label_visibility="collapsed")
+                    new_initem = ic3.text_input("매입품목", value=def_initem, label_visibility="collapsed")
+                    new_inq = ic4.text_input("매입수량", value=def_inq, label_visibility="collapsed")
+                    new_inprice = ic5.text_input("매입단가", value=def_inprice, label_visibility="collapsed")
+                    new_carno = ic6.text_input("배송", value=def_carno, label_visibility="collapsed")
                     
                     st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
                     
@@ -417,12 +444,12 @@ try:
                     fc12.markdown('<div class="nh-box nh-etc">운송비</div>', unsafe_allow_html=True)
                     
                     ic7, ic8, ic9, ic10, ic11, ic12 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
-                    new_date = ic7.date_input("날짜", datetime.now().date(), format="YYYY-MM-DD", label_visibility="collapsed")
-                    new_outcom = ic8.text_input("매출거래처", label_visibility="collapsed")
-                    new_outitem = ic9.text_input("매출품목", label_visibility="collapsed")
-                    new_outq = ic10.text_input("매출수량", "", label_visibility="collapsed")
-                    new_outprice = ic11.text_input("매출단가", "", label_visibility="collapsed")
-                    new_carprice = ic12.text_input("운송비", "", label_visibility="collapsed")
+                    new_date = ic7.date_input("날짜", def_date, format="YYYY-MM-DD", label_visibility="collapsed")
+                    new_outcom = ic8.text_input("매출거래처", value=def_outcom, label_visibility="collapsed")
+                    new_outitem = ic9.text_input("매출품목", value=def_outitem, label_visibility="collapsed")
+                    new_outq = ic10.text_input("매출수량", value=def_outq, label_visibility="collapsed")
+                    new_outprice = ic11.text_input("매출단가", value=def_outprice, label_visibility="collapsed")
+                    new_carprice = ic12.text_input("운송비", value=def_carprice, label_visibility="collapsed")
                     
                     st.markdown("<hr style='margin: 15px 0; border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
                     
@@ -442,7 +469,8 @@ try:
                             new_row = [next_id, dt_str, new_incom, new_initem, new_inq, new_inprice, new_outcom, new_outitem, new_outq, new_outprice, "", new_s, new_carno, new_carprice, "", "", ""]
                             sheet.append_row(new_row)
                             
-                            st.cache_data.clear() # 입력 후 데이터 갱신
+                            st.cache_data.clear()
+                            st.session_state.copy_id = None # 복사 상태 해제
                             st.success("✅ 신규 자료가 구글 시트에 완벽하게 저장되었습니다!")
                             st.session_state.search_params = {"mode": "최근", "title": "최근입력순서", "type": "ALL", "company": "", "item": "", "limit": "20개"}
                             st.rerun()
@@ -450,6 +478,7 @@ try:
                             st.error(f"⚠️ 저장 중 시스템 오류가 발생했습니다: {e}")
                             
                     if canceled:
+                        st.session_state.copy_id = None # 복사 상태 해제
                         st.session_state.search_params = {"mode": "init"}
                         st.rerun()
 
@@ -540,6 +569,8 @@ try:
                 html_str += '<th class="th-base">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th>'
                 html_str += '</tr></thead><tbody>'
 
+                secret_token = str(st.secrets.get("tom_password", ""))
+
                 for _, row in f_df.iterrows():
                     dt_str = row[date_col].strftime('%Y-%m-%d') if pd.notnull(row[date_col]) else ''
                     in_q_str = f"{row['inq_val']:,.0f}" if row['inq_val'] else "0"
@@ -555,10 +586,12 @@ try:
                     else: s_cls = "txt-gray"
                     
                     row_id = safe_str(row.get("id"))
-                    # 💡 [핵심] 날짜(dt_str)에 클릭 가능한 URL 파라미터 링크 심기
-                    dt_link = f'<a href="?edit_id={row_id}" target="_self" style="color:#2196f3; text-decoration:underline; font-weight:bold; cursor:pointer;" title="클릭하여 데이터 수정/삭제">{dt_str}</a>' if dt_str else ''
+                    
+                    # 💡 [핵심] 날짜 링크 제거, Vat에 복사(copy_id) 링크 부여, NO에 수정/삭제(edit_id) 링크 부여
+                    vat_link = f'<a href="?copy_id={row_id}&token={secret_token}" target="_self" style="text-decoration:none; cursor:pointer;" title="클릭하여 내용을 복사해 신규입력합니다."><span class="{s_cls}">{s_val}</span></a>'
+                    no_link = f'<a href="?edit_id={row_id}&token={secret_token}" target="_self" style="color:#a1a1aa; text-decoration:underline; font-weight:bold; cursor:pointer;" title="클릭하여 데이터 수정/삭제">{row_id}</a>'
 
-                    html_str += f'<tr><td class="tc"><span class="{s_cls}">{s_val}</span></td><td class="tc">{dt_link}</td><td class="tl txt-in-bold">{safe_str(row.get("incom"))}</td><td class="tl txt-in">{in_item_full}</td><td class="tr txt-in">{in_q_str}</td><td class="tr txt-in">{in_p_str}</td><td class="tl txt-out-bold">{safe_str(row.get("outcom"))}</td><td class="tl txt-out">{out_item_full}</td><td class="tr txt-out">{out_q_str}</td><td class="tr txt-out">{out_p_str}</td><td class="tc txt-gray">{row_id}</td><td class="tc txt-gray">{safe_str(row.get("carno"))}</td><td class="tr txt-black">{car_p_str}</td></tr>'
+                    html_str += f'<tr><td class="tc">{vat_link}</td><td class="tc txt-black">{dt_str}</td><td class="tl txt-in-bold">{safe_str(row.get("incom"))}</td><td class="tl txt-in">{in_item_full}</td><td class="tr txt-in">{in_q_str}</td><td class="tr txt-in">{in_p_str}</td><td class="tl txt-out-bold">{safe_str(row.get("outcom"))}</td><td class="tl txt-out">{out_item_full}</td><td class="tr txt-out">{out_q_str}</td><td class="tr txt-out">{out_p_str}</td><td class="tc">{no_link}</td><td class="tc txt-gray">{safe_str(row.get("carno"))}</td><td class="tr txt-black">{car_p_str}</td></tr>'
                     
                 html_str += '</tbody>'
                 html_str += '<tfoot><tr>'
