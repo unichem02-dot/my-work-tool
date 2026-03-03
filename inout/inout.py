@@ -103,6 +103,7 @@ if not st.session_state.authenticated:
     with col_c:
         with st.form("login_form"):
             pwd = st.text_input("PASSWORD", type="password", placeholder="••••")
+            # 💡 로그인 버튼은 기본적으로 primary 적용되어 있음
             submit_btn = st.form_submit_button("SYSTEM LOGIN", use_container_width=True, type="primary")
             if submit_btn:
                 if "tom_password" not in st.secrets:
@@ -128,7 +129,8 @@ col_title, col_status, col_logout = st.columns([5, 4.5, 1])
 with col_title:
     st.markdown("<h3 style='margin-bottom:0px; padding-bottom:0px;'>📦 입출력 통합 관리 시스템</h3>", unsafe_allow_html=True)
 with col_logout:
-    if st.button("🔓 LOGOUT", use_container_width=True):
+    # 💡 로그아웃 버튼도 primary (빨간색) 테마 적용 완료
+    if st.button("🔓 LOGOUT", use_container_width=True, type="primary"):
         st.session_state.authenticated = False
         st.rerun()
 
@@ -237,7 +239,7 @@ try:
         if btn_1: st.session_state.search_params = { "mode": "기간", "title": "기간검색순서", "type": type_1, "company": com_1, "item": item_1, "limit": "ALL", "start": date_range[0], "end": date_range[1] if len(date_range)>1 else date_range[0] }
         elif btn_2: st.session_state.search_params = { "mode": "월별", "title": f"{year_2}년 {month_2}월 검색순서", "type": type_2, "company": com_2, "item": item_2, "limit": "ALL", "year": year_2, "month": month_2 }
         elif btn_3: st.session_state.search_params = { "mode": "결산", "year": y_3, "month": m_3 }
-        elif btn_4: st.info("신규입력 기능은 아직 구현되지 않았습니다.")
+        elif btn_4: st.session_state.search_params = { "mode": "신규입력" } # 💡 신규입력 모드로 변경
         elif btn_5: st.session_state.search_params = { "mode": "최근", "title": "최근입력순서", "type": "ALL", "company": "", "item": "", "limit": limit_val }
         elif btn_6: st.session_state.search_params = { "mode": "일", "title": f"{d_day} 검색순서", "date": d_day, "type": "ALL", "company": "", "item": "", "limit": "ALL" }
         elif btn_7: st.session_state.search_params = { "mode": "기간", "title": "어제/오늘/내일 검색순서", "type": "ALL", "company": "", "item": "", "limit": "ALL", "start": datetime.now().date() - timedelta(days=1), "end": datetime.now().date() + timedelta(days=1) }
@@ -245,8 +247,101 @@ try:
         
         params = st.session_state.search_params
         
-        if params["mode"] == "결산":
-            # [결산 화면 렌더링 코드 유지]
+        # ---------------------------------------------------------
+        # 💡 [신규] '신규자료입력' 화면 렌더링
+        # ---------------------------------------------------------
+        if params["mode"] == "신규입력":
+            st.markdown("<h3 style='text-align:center; color:white; margin-top:20px; font-weight:bold;'>신규자료입력 | New</h3>", unsafe_allow_html=True)
+            
+            with st.form("new_entry_form", clear_on_submit=True):
+                # 신규입력 폼 전용 CSS
+                st.markdown("""
+                <style>
+                .nh-box { padding: 10px 8px; text-align: center; color: white; font-weight: bold; border: 1px solid #555; margin-bottom: 5px; font-size: 14px;}
+                .nh-base { background-color: #353b48; }
+                .nh-in { background-color: #3b5b88; }
+                .nh-out { background-color: #b8860b; }
+                .nh-etc { background-color: #757c43; }
+                </style>
+                """, unsafe_allow_html=True)
+                
+                # --- 첫 번째 줄 (헤더) ---
+                fc1, fc2, fc3, fc4, fc5, fc6 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
+                fc1.markdown('<div class="nh-box nh-base">종류</div>', unsafe_allow_html=True)
+                fc2.markdown('<div class="nh-box nh-in">매입거래처</div>', unsafe_allow_html=True)
+                fc3.markdown('<div class="nh-box nh-in">매입품목 (MEMO)</div>', unsafe_allow_html=True)
+                fc4.markdown('<div class="nh-box nh-in">수량</div>', unsafe_allow_html=True)
+                fc5.markdown('<div class="nh-box nh-in">단가</div>', unsafe_allow_html=True)
+                fc6.markdown('<div class="nh-box nh-etc">배송</div>', unsafe_allow_html=True)
+                
+                # --- 두 번째 줄 (입력칸) ---
+                ic1, ic2, ic3, ic4, ic5, ic6 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
+                new_s = ic1.selectbox("종류", ["제일", "중부"], label_visibility="collapsed")
+                new_incom = ic2.text_input("매입거래처", label_visibility="collapsed")
+                new_initem = ic3.text_input("매입품목", label_visibility="collapsed")
+                new_inq = ic4.text_input("매입수량", "", label_visibility="collapsed")
+                new_inprice = ic5.text_input("매입단가", "", label_visibility="collapsed")
+                new_carno = ic6.text_input("배송", label_visibility="collapsed")
+                
+                st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+                
+                # --- 세 번째 줄 (헤더) ---
+                fc7, fc8, fc9, fc10, fc11, fc12 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
+                fc7.markdown('<div class="nh-box nh-base">날짜</div>', unsafe_allow_html=True)
+                fc8.markdown('<div class="nh-box nh-out">매출거래처</div>', unsafe_allow_html=True)
+                fc9.markdown('<div class="nh-box nh-out">매출품목 (MEMO)</div>', unsafe_allow_html=True)
+                fc10.markdown('<div class="nh-box nh-out">수량</div>', unsafe_allow_html=True)
+                fc11.markdown('<div class="nh-box nh-out">단가</div>', unsafe_allow_html=True)
+                fc12.markdown('<div class="nh-box nh-etc">운송비</div>', unsafe_allow_html=True)
+                
+                # --- 네 번째 줄 (입력칸) ---
+                ic7, ic8, ic9, ic10, ic11, ic12 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
+                new_date = ic7.date_input("날짜", datetime.now().date(), label_visibility="collapsed")
+                new_outcom = ic8.text_input("매출거래처", label_visibility="collapsed")
+                new_outitem = ic9.text_input("매출품목", label_visibility="collapsed")
+                new_outq = ic10.text_input("매출수량", "", label_visibility="collapsed")
+                new_outprice = ic11.text_input("매출단가", "", label_visibility="collapsed")
+                new_carprice = ic12.text_input("운송비", "", label_visibility="collapsed")
+                
+                st.markdown("<hr style='margin: 15px 0; border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
+                
+                # --- 하단 버튼 ---
+                bc1, bc2, bc3 = st.columns([8.2, 1.1, 0.7])
+                # 버튼도 동일하게 primary(빨간색) 적용
+                submitted = bc2.form_submit_button("신규자료입력", use_container_width=True, type="primary")
+                canceled = bc3.form_submit_button("취소", use_container_width=True)
+                
+                if submitted:
+                    try:
+                        client = init_connection()
+                        sheet = client.open('SQL백업260211-jeilinout').sheet1
+                        
+                        # 새로운 고유번호(ID) 부여를 위해 가장 큰 번호 찾기
+                        all_ids = df['id'].dropna().apply(clean_numeric).tolist()
+                        next_id = int(max(all_ids)) + 1 if all_ids else 1
+                        dt_str = new_date.strftime('%Y-%m-%d')
+                        
+                        # 시트 열 순서에 맞춰 데이터 배열 생성
+                        new_row = [
+                            next_id, dt_str, new_incom, new_initem, new_inq, new_inprice,
+                            new_outcom, new_outitem, new_outq, new_outprice, "", new_s,
+                            new_carno, new_carprice, "", "", ""
+                        ]
+                        sheet.append_row(new_row)
+                        st.success("✅ 신규 자료가 구글 시트에 완벽하게 저장되었습니다!")
+                        
+                        # 저장 후 확인을 위해 '최근입력' 모드로 전환
+                        st.session_state.search_params = {"mode": "최근", "title": "최근입력순서", "type": "ALL", "company": "", "item": "", "limit": "20개"}
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"⚠️ 저장 중 시스템 오류가 발생했습니다: {e}")
+                        
+                if canceled:
+                    st.session_state.search_params = {"mode": "init"}
+                    st.rerun()
+
+        elif params["mode"] == "결산":
+            # --- 결산 대시보드 화면 ---
             s_year = params["year"]
             s_month = params["month"]
             f_df = df[(df['year'] == s_year) & (df['month'] == s_month)].copy()
@@ -289,7 +384,7 @@ try:
             if com_kw: f_df = f_df[f_df['incom'].str.contains(com_kw, case=False, na=False) | f_df['outcom'].str.contains(com_kw, case=False, na=False)]
             if item_kw: f_df = f_df[f_df['initem'].str.contains(item_kw, case=False, na=False) | f_df['outitem'].str.contains(item_kw, case=False, na=False)]
             
-            # 파이썬 내부 정렬 실행 (클릭할 때마다 방향 전환됨)
+            # 파이썬 내부 정렬 실행
             f_df = f_df.sort_values(by=[date_col, 'id'], ascending=[not st.session_state.sort_desc, not st.session_state.sort_desc])
                 
             limit_str = params.get("limit", "ALL")
@@ -315,19 +410,19 @@ try:
             with col_t1:
                 st.markdown(f'<div class="table-title-box"><span style="font-size: 16px; font-weight: bold; color: #f8fafc;">{table_title_text}</span> <span style="font-size: 13px; color: #cbd5e1; margin-left:10px;">| 출력된 자료 갯수 : {data_count} 개 (오로지 검색 조건순으로만 정렬되었습니다)</span></div>', unsafe_allow_html=True)
             with col_t2:
+                # 💡 날짜정렬 버튼에 primary (빨간색) 속성 적용
                 sort_btn_text = "🔄 날짜 정렬 (현재:최신순)" if st.session_state.sort_desc else "🔄 날짜 정렬 (현재:과거순)"
-                if st.button(sort_btn_text, use_container_width=True):
+                if st.button(sort_btn_text, use_container_width=True, type="primary"):
                     st.session_state.sort_desc = not st.session_state.sort_desc
                     st.rerun()
             with col_t3:
-                # 💡 에러 수정을 위해 모듈 의존성이 없는 CSV 방식으로 다운로드 (한글 완벽 지원)
+                # 💡 엑셀다운로드 버튼에 primary (빨간색) 속성 적용
                 export_df = f_df[['s', 'date', 'incom', 'initem', 'inq_val', 'inprice_val', 'outcom', 'outitem', 'outq_val', 'outprice_val', 'id', 'carno', 'carprice_val']].copy()
                 export_df['date'] = export_df['date'].dt.strftime('%Y-%m-%d')
                 export_df.columns = ['Vat(상태)', '날짜', '매입거래처', '매입품목', '매입수량', '매입단가', '매출거래처', '매출품목', '매출수량', '매출단가', 'NO', '차량배송', '운송비']
                 
-                # utf-8-sig 로 인코딩하면 엑셀에서 한글이 깨지지 않고 바로 열림
                 csv_data = export_df.to_csv(index=False).encode('utf-8-sig')
-                st.download_button(label="💾 엑셀 다운로드", data=csv_data, file_name=f"검색결과_{datetime.now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True)
+                st.download_button(label="💾 엑셀 다운로드", data=csv_data, file_name=f"검색결과_{datetime.now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
 
             # HTML 테이블 렌더링
             html_str = '<div class="custom-table-container">'
