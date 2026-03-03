@@ -10,7 +10,7 @@ def get_api_data(year, month):
     외부 api.php 서버에 데이터를 요청합니다.
     """
     # 실제 api.php의 URL 주소로 수정이 필요합니다.
-    api_url = "http://your-domain.com/api.php" 
+    api_url = "http://www.unichemical.co.kr/inout/api.php" 
     
     params = {
         "year": year,
@@ -100,3 +100,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
