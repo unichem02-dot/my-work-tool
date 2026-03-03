@@ -290,88 +290,88 @@ try:
             with st.container():
                 st.markdown("<div class='search-panel-container'>", unsafe_allow_html=True)
                 
-                # 💡 [신규 추가] 실시간 자바스크립트 계산기 영역
+                # 💡 [버그 수정] HTML의 들여쓰기를 제거하여 코드가 텍스트로 노출되는 현상을 해결
                 st.markdown("""
-                <style>
-                .rt-calc-wrap {
-                    display: flex; justify-content: space-between; align-items: center;
-                    background-color: #242a33; padding: 12px 18px; border-radius: 6px;
-                    border: 1px solid #4a5568; margin-bottom: 15px;
-                }
-                .rt-group { display: flex; align-items: center; gap: 8px; }
-                .rt-in {
-                    width: 100px; padding: 6px 8px; border-radius: 4px; border: 1px solid #64748b;
-                    background: #dbeafe; color: #0f172a; text-align: right; font-weight: bold; outline: none; font-size: 14px;
-                }
-                .rt-in:focus { border-color: #4e8cff; box-shadow: 0 0 0 2px rgba(78,140,255,0.2); background: #ffffff; }
-                .rt-out {
-                    width: 100px; padding: 6px 8px; border-radius: 4px; border: 1px solid #4a5568;
-                    background: #e2e8f0; color: #1e293b; text-align: right; font-weight: bold; cursor: default; font-size: 14px;
-                }
-                .rt-out.orange { background: #ffedd5; border-color: #fdba74; color: #9a3412; }
-                .rt-txt { font-size: 13px; font-weight: bold; }
-                .rt-txt.blue { color: #60a5fa; }
-                .rt-txt.yellow { color: #fbbf24; }
-                .rt-op { font-weight: bold; font-size: 16px; }
-                .rt-op.blue { color: #60a5fa; }
-                .rt-op.yellow { color: #fbbf24; }
-                </style>
-                
-                <div class="rt-calc-wrap">
-                    <!-- 스트림릿 보안 우회 스크립트 실행기 -->
-                    <img src="x" onerror="
-                        if(!window.calcInit){
-                            window.rtFmt=function(n){return(!n||isNaN(n)||!isFinite(n))?'0':Math.floor(n).toLocaleString('ko-KR');};
-                            window.rtParse=function(s){return parseFloat(s.replace(/,/g,''))||0;};
-                            window.rtCalc=function(){
-                                let d1=window.rtParse(document.getElementById('rt-d1').value);
-                                let d2=window.rtParse(document.getElementById('rt-d2').value);
-                                document.getElementById('rt-dr').value=d2!==0?window.rtFmt(d1/d2):'0';
-                                let v1=window.rtParse(document.getElementById('rt-v1').value);
-                                document.getElementById('rt-vm').value=window.rtFmt(Math.round(v1/1.1));
-                                document.getElementById('rt-vp').value=window.rtFmt(Math.round(v1*1.1));
-                                let m1=window.rtParse(document.getElementById('rt-m1').value);
-                                let m2=window.rtParse(document.getElementById('rt-m2').value);
-                                document.getElementById('rt-mr').value=window.rtFmt(m1*m2);
-                            };
-                            window.rtFormatInput=function(el){
-                                let rv=el.value.replace(/[^0-9.-]/g,''); let nv=parseFloat(rv);
-                                if(!isNaN(nv)&&rv!=='-'&&!rv.endsWith('.')){
-                                    let st=el.selectionStart; let ln=el.value.length;
-                                    el.value=nv.toLocaleString('ko-KR')+(rv.endsWith('.')?'.':'');
-                                    el.setSelectionRange(st+(el.value.length-ln),st+(el.value.length-ln));
-                                }else if(rv==='')el.value='';
-                            };
-                            window.calcInit=true;
-                        }
-                    " style="display:none;">
-                    
-                    <!-- 나눗셈 -->
-                    <div class="rt-group">
-                        <input type="text" class="rt-in" id="rt-d1" oninput="window.rtFormatInput(this); window.rtCalc();" placeholder="0">
-                        <span class="rt-op blue">/</span>
-                        <input type="text" class="rt-in" id="rt-d2" oninput="window.rtFormatInput(this); window.rtCalc();" placeholder="0">
-                        <span class="rt-op blue">=</span>
-                        <input type="text" class="rt-out" id="rt-dr" readonly placeholder="0">
-                    </div>
-                    <!-- 부가세 -->
-                    <div class="rt-group">
-                        <input type="text" class="rt-in" id="rt-v1" oninput="window.rtFormatInput(this); window.rtCalc();" placeholder="0">
-                        <span class="rt-txt blue">VAT-10%</span>
-                        <input type="text" class="rt-out" id="rt-vm" readonly placeholder="0">
-                        <span class="rt-txt yellow">VAT+10%</span>
-                        <input type="text" class="rt-out orange" id="rt-vp" readonly placeholder="0">
-                    </div>
-                    <!-- 곱셈 -->
-                    <div class="rt-group">
-                        <input type="text" class="rt-in" id="rt-m1" oninput="window.rtFormatInput(this); window.rtCalc();" placeholder="0">
-                        <span class="rt-op yellow">X</span>
-                        <input type="text" class="rt-in" id="rt-m2" oninput="window.rtFormatInput(this); window.rtCalc();" placeholder="0">
-                        <span class="rt-op yellow">=</span>
-                        <input type="text" class="rt-out" id="rt-mr" readonly placeholder="0">
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+<style>
+.rt-calc-wrap {
+    display: flex; justify-content: space-between; align-items: center;
+    background-color: #242a33; padding: 12px 18px; border-radius: 6px;
+    border: 1px solid #4a5568; margin-bottom: 15px;
+}
+.rt-group { display: flex; align-items: center; gap: 8px; }
+.rt-in {
+    width: 100px; padding: 6px 8px; border-radius: 4px; border: 1px solid #64748b;
+    background: #dbeafe; color: #0f172a; text-align: right; font-weight: bold; outline: none; font-size: 14px;
+}
+.rt-in:focus { border-color: #4e8cff; box-shadow: 0 0 0 2px rgba(78,140,255,0.2); background: #ffffff; }
+.rt-out {
+    width: 100px; padding: 6px 8px; border-radius: 4px; border: 1px solid #4a5568;
+    background: #e2e8f0; color: #1e293b; text-align: right; font-weight: bold; cursor: default; font-size: 14px;
+}
+.rt-out.orange { background: #ffedd5; border-color: #fdba74; color: #9a3412; }
+.rt-txt { font-size: 13px; font-weight: bold; }
+.rt-txt.blue { color: #60a5fa; }
+.rt-txt.yellow { color: #fbbf24; }
+.rt-op { font-weight: bold; font-size: 16px; }
+.rt-op.blue { color: #60a5fa; }
+.rt-op.yellow { color: #fbbf24; }
+</style>
+
+<div class="rt-calc-wrap">
+    <!-- 스트림릿 보안 우회 스크립트 실행기 -->
+    <img src="x" onerror="
+        if(!window.calcInit){
+            window.rtFmt=function(n){return(!n||isNaN(n)||!isFinite(n))?'0':Math.floor(n).toLocaleString('ko-KR');};
+            window.rtParse=function(s){return parseFloat(s.replace(/,/g,''))||0;};
+            window.rtCalc=function(){
+                let d1=window.rtParse(document.getElementById('rt-d1').value);
+                let d2=window.rtParse(document.getElementById('rt-d2').value);
+                document.getElementById('rt-dr').value=d2!==0?window.rtFmt(d1/d2):'0';
+                let v1=window.rtParse(document.getElementById('rt-v1').value);
+                document.getElementById('rt-vm').value=window.rtFmt(Math.round(v1/1.1));
+                document.getElementById('rt-vp').value=window.rtFmt(Math.round(v1*1.1));
+                let m1=window.rtParse(document.getElementById('rt-m1').value);
+                let m2=window.rtParse(document.getElementById('rt-m2').value);
+                document.getElementById('rt-mr').value=window.rtFmt(m1*m2);
+            };
+            window.rtFormatInput=function(el){
+                let rv=el.value.replace(/[^0-9.-]/g,''); let nv=parseFloat(rv);
+                if(!isNaN(nv)&&rv!=='-'&&!rv.endsWith('.')){
+                    let st=el.selectionStart; let ln=el.value.length;
+                    el.value=nv.toLocaleString('ko-KR')+(rv.endsWith('.')?'.':'');
+                    el.setSelectionRange(st+(el.value.length-ln),st+(el.value.length-ln));
+                }else if(rv==='')el.value='';
+            };
+            window.calcInit=true;
+        }
+    " style="display:none;">
+    
+    <!-- 나눗셈 -->
+    <div class="rt-group">
+        <input type="text" class="rt-in" id="rt-d1" oninput="window.rtFormatInput(this); window.rtCalc();" placeholder="0">
+        <span class="rt-op blue">/</span>
+        <input type="text" class="rt-in" id="rt-d2" oninput="window.rtFormatInput(this); window.rtCalc();" placeholder="0">
+        <span class="rt-op blue">=</span>
+        <input type="text" class="rt-out" id="rt-dr" readonly placeholder="0">
+    </div>
+    <!-- 부가세 -->
+    <div class="rt-group">
+        <input type="text" class="rt-in" id="rt-v1" oninput="window.rtFormatInput(this); window.rtCalc();" placeholder="0">
+        <span class="rt-txt blue">VAT-10%</span>
+        <input type="text" class="rt-out" id="rt-vm" readonly placeholder="0">
+        <span class="rt-txt yellow">VAT+10%</span>
+        <input type="text" class="rt-out orange" id="rt-vp" readonly placeholder="0">
+    </div>
+    <!-- 곱셈 -->
+    <div class="rt-group">
+        <input type="text" class="rt-in" id="rt-m1" oninput="window.rtFormatInput(this); window.rtCalc();" placeholder="0">
+        <span class="rt-op yellow">X</span>
+        <input type="text" class="rt-in" id="rt-m2" oninput="window.rtFormatInput(this); window.rtCalc();" placeholder="0">
+        <span class="rt-op yellow">=</span>
+        <input type="text" class="rt-out" id="rt-mr" readonly placeholder="0">
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
                 # Row 1
                 r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
