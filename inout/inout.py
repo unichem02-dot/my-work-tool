@@ -18,9 +18,7 @@ st.markdown("""
     
     .search-panel-container { background-color: #353b48; padding: 15px; border-radius: 8px; border: 1px solid #4a5568; margin-bottom: 20px; }
     div.stButton > button { border-radius: 4px !important; font-weight: bold !important; padding: 0px 10px !important; }
-    div.btn-green > div > button { background-color: #8bc34a !important; color: white !important; border: 1px solid #7cb342 !important; }
-    div.btn-pink > div > button { background-color: #e57373 !important; color: white !important; border: 1px solid #e53935 !important; }
-
+    
     /* 데이터 테이블 스타일 */
     .custom-table-container { width: 100%; margin-top: 5px; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
     .table-title-box { background-color: #2b323c; padding: 10px 15px; border-top: 2px solid #555; border-bottom: none; display: flex; align-items: center; justify-content: space-between; }
@@ -81,7 +79,7 @@ if "sort_desc" not in st.session_state: st.session_state.sort_desc = True
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
 if "copy_id" not in st.session_state: st.session_state.copy_id = None
 
-# 💡 URL 파라미터 감지 및 자동 로그인 처리 (복사기능 & 수정기능 둘 다 지원)
+# URL 파라미터 감지 및 자동 로그인 처리 (복사/수정 기능 통합)
 if "edit_id" in st.query_params or "copy_id" in st.query_params:
     if st.query_params.get("token") == str(st.secrets.get("tom_password", "")):
         st.session_state.authenticated = True
@@ -144,7 +142,8 @@ col_title, col_empty, col_refresh, col_logout = st.columns([5, 3.5, 1.5, 1])
 with col_title:
     st.markdown("<h3 style='margin-bottom:0px; padding-bottom:0px;'>📦 입출력 통합 관리 시스템</h3>", unsafe_allow_html=True)
 with col_refresh:
-    if st.button("🔄 데이터 갱신", use_container_width=True):
+    # 💡 데이터 갱신 버튼 빨간색으로 변경
+    if st.button("🔄 데이터 갱신", use_container_width=True, type="primary"):
         st.cache_data.clear()
         st.rerun()
 with col_logout:
@@ -275,10 +274,12 @@ try:
                     
                     st.markdown("<hr style='margin: 15px 0; border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
                     
+                    # 버튼 처리 (수정/삭제/취소)
                     bc1, bc2, bc3, bc4 = st.columns([6, 1.5, 1.5, 1])
                     btn_update = bc2.form_submit_button("💾 수정 저장", use_container_width=True, type="primary")
                     btn_delete = bc3.form_submit_button("🗑️ 이 줄 삭제", use_container_width=True, type="primary")
-                    btn_cancel = bc4.form_submit_button("취소", use_container_width=True)
+                    # 💡 수정창 취소 버튼 빨간색으로 변경
+                    btn_cancel = bc4.form_submit_button("취소", use_container_width=True, type="primary")
                     
                     if btn_update:
                         try:
@@ -319,7 +320,7 @@ try:
                         st.rerun()
             else:
                 st.error("데이터를 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.")
-                if st.button("돌아가기"):
+                if st.button("돌아가기", type="primary"):
                     st.session_state.edit_id = None
                     st.rerun()
                     
@@ -454,7 +455,8 @@ try:
                     
                     bc1, bc2, bc3 = st.columns([8.2, 1.1, 0.7])
                     submitted = bc2.form_submit_button("신규자료입력", use_container_width=True, type="primary")
-                    canceled = bc3.form_submit_button("취소", use_container_width=True)
+                    # 💡 신규입력창 취소 버튼 빨간색으로 변경
+                    canceled = bc3.form_submit_button("취소", use_container_width=True, type="primary")
                     
                     if submitted:
                         try:
@@ -586,7 +588,7 @@ try:
                     
                     row_id = safe_str(row.get("id"))
                     
-                    # 💡 [핵심 복구] Vat 링크(복사) 유지, NO 링크 해제, 날짜(dt_link)에 수정/삭제 기능 다시 부여 (밑줄 제거)
+                    # Vat에 복사 링크, 날짜에 수정 링크 심기 (밑줄 제거)
                     vat_link = f'<a href="?copy_id={row_id}&token={secret_token}" target="_self" style="text-decoration:none; cursor:pointer;" title="클릭하여 내용을 복사해 신규입력합니다."><span class="{s_cls}">{s_val}</span></a>'
                     dt_link = f'<a href="?edit_id={row_id}&token={secret_token}" target="_self" style="color:#1e293b; text-decoration:none; cursor:pointer;" title="클릭하여 데이터 수정/삭제">{dt_str}</a>' if dt_str else ''
 
