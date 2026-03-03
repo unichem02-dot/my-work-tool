@@ -79,7 +79,7 @@ if "last_activity" not in st.session_state: st.session_state.last_activity = Non
 if "search_params" not in st.session_state: st.session_state.search_params = {"mode": "init"}
 if "sort_desc" not in st.session_state: st.session_state.sort_desc = True 
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
-if "copy_id" not in st.session_state: st.session_state.copy_id = None # 💡 복사용 상태 추가
+if "copy_id" not in st.session_state: st.session_state.copy_id = None
 
 # 💡 URL 파라미터 감지 및 자동 로그인 처리 (복사기능 & 수정기능 둘 다 지원)
 if "edit_id" in st.query_params or "copy_id" in st.query_params:
@@ -91,7 +91,7 @@ if "edit_id" in st.query_params or "copy_id" in st.query_params:
         st.session_state.edit_id = st.query_params["edit_id"]
     if "copy_id" in st.query_params:
         st.session_state.copy_id = st.query_params["copy_id"]
-        st.session_state.search_params = {"mode": "신규입력"} # 복사 클릭 시 자동으로 신규입력 모드로 전환
+        st.session_state.search_params = {"mode": "신규입력"}
         
     st.query_params.clear()
     st.rerun()
@@ -374,7 +374,7 @@ try:
             elif btn_3: st.session_state.search_params = { "mode": "결산", "year": y_3, "month": m_3 }
             elif btn_4: 
                 st.session_state.search_params = { "mode": "신규입력" }
-                st.session_state.copy_id = None # 기본 신규입력은 빈칸으로 시작
+                st.session_state.copy_id = None
             elif btn_5: st.session_state.search_params = { "mode": "최근", "title": "최근입력순서", "type": "ALL", "company": "", "item": "", "limit": limit_val }
             elif btn_6: st.session_state.search_params = { "mode": "일", "title": f"{d_day} 검색순서", "date": d_day, "type": "ALL", "company": "", "item": "", "limit": "ALL" }
             elif btn_7: st.session_state.search_params = { "mode": "기간", "title": "어제/오늘/내일 검색순서", "type": "ALL", "company": "", "item": "", "limit": "ALL", "start": datetime.now().date() - timedelta(days=1), "end": datetime.now().date() + timedelta(days=1) }
@@ -386,7 +386,6 @@ try:
             if params["mode"] == "신규입력":
                 st.markdown("<h3 style='text-align:center; color:white; margin-top:20px; font-weight:bold;'>신규자료입력 | New</h3>", unsafe_allow_html=True)
                 
-                # 💡 복사 데이터가 있을 경우 기본값 변수에 담기
                 def_s_idx, def_incom, def_initem, def_inq, def_inprice, def_carno = 0, "", "", "", "", ""
                 def_outcom, def_outitem, def_outq, def_outprice, def_carprice = "", "", "", "", ""
                 def_date = datetime.now().date()
@@ -470,7 +469,7 @@ try:
                             sheet.append_row(new_row)
                             
                             st.cache_data.clear()
-                            st.session_state.copy_id = None # 복사 상태 해제
+                            st.session_state.copy_id = None
                             st.success("✅ 신규 자료가 구글 시트에 완벽하게 저장되었습니다!")
                             st.session_state.search_params = {"mode": "최근", "title": "최근입력순서", "type": "ALL", "company": "", "item": "", "limit": "20개"}
                             st.rerun()
@@ -478,7 +477,7 @@ try:
                             st.error(f"⚠️ 저장 중 시스템 오류가 발생했습니다: {e}")
                             
                     if canceled:
-                        st.session_state.copy_id = None # 복사 상태 해제
+                        st.session_state.copy_id = None
                         st.session_state.search_params = {"mode": "init"}
                         st.rerun()
 
@@ -587,11 +586,11 @@ try:
                     
                     row_id = safe_str(row.get("id"))
                     
-                    # 💡 [핵심] 날짜 링크 제거, Vat에 복사(copy_id) 링크 부여, NO에 수정/삭제(edit_id) 링크 부여
+                    # 💡 [핵심 복구] Vat 링크(복사) 유지, NO 링크 해제, 날짜(dt_link)에 수정/삭제 기능 다시 부여 (밑줄 제거)
                     vat_link = f'<a href="?copy_id={row_id}&token={secret_token}" target="_self" style="text-decoration:none; cursor:pointer;" title="클릭하여 내용을 복사해 신규입력합니다."><span class="{s_cls}">{s_val}</span></a>'
-                    no_link = f'<a href="?edit_id={row_id}&token={secret_token}" target="_self" style="color:#a1a1aa; text-decoration:underline; font-weight:bold; cursor:pointer;" title="클릭하여 데이터 수정/삭제">{row_id}</a>'
+                    dt_link = f'<a href="?edit_id={row_id}&token={secret_token}" target="_self" style="color:#1e293b; text-decoration:none; cursor:pointer;" title="클릭하여 데이터 수정/삭제">{dt_str}</a>' if dt_str else ''
 
-                    html_str += f'<tr><td class="tc">{vat_link}</td><td class="tc txt-black">{dt_str}</td><td class="tl txt-in-bold">{safe_str(row.get("incom"))}</td><td class="tl txt-in">{in_item_full}</td><td class="tr txt-in">{in_q_str}</td><td class="tr txt-in">{in_p_str}</td><td class="tl txt-out-bold">{safe_str(row.get("outcom"))}</td><td class="tl txt-out">{out_item_full}</td><td class="tr txt-out">{out_q_str}</td><td class="tr txt-out">{out_p_str}</td><td class="tc">{no_link}</td><td class="tc txt-gray">{safe_str(row.get("carno"))}</td><td class="tr txt-black">{car_p_str}</td></tr>'
+                    html_str += f'<tr><td class="tc">{vat_link}</td><td class="tc">{dt_link}</td><td class="tl txt-in-bold">{safe_str(row.get("incom"))}</td><td class="tl txt-in">{in_item_full}</td><td class="tr txt-in">{in_q_str}</td><td class="tr txt-in">{in_p_str}</td><td class="tl txt-out-bold">{safe_str(row.get("outcom"))}</td><td class="tl txt-out">{out_item_full}</td><td class="tr txt-out">{out_q_str}</td><td class="tr txt-out">{out_p_str}</td><td class="tc txt-gray">{row_id}</td><td class="tc txt-gray">{safe_str(row.get("carno"))}</td><td class="tr txt-black">{car_p_str}</td></tr>'
                     
                 html_str += '</tbody>'
                 html_str += '<tfoot><tr>'
