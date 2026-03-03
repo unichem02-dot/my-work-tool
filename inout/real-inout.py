@@ -1,40 +1,85 @@
 import streamlit as st
+import sqlite3
+import pandas as pd
+from datetime import datetime
+
+# 1. 데이터베이스 초기화 및 샘플 데이터 생성
+def init_db():
+    conn = sqlite3.connect('my_data.db')
+    cursor = conn.cursor()
+    # 테이블 생성 (날짜, 항목, 금액)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT NOT NULL,
+            item TEXT NOT NULL,
+            amount INTEGER NOT NULL
+        )
+    ''')
+    
+    # 샘플 데이터가 없는 경우 삽입
+    cursor.execute("SELECT count(*) FROM records")
+    if cursor.fetchone()[0] == 0:
+        sample_data = [
+            ('2023-01-15', 'Office Supplies', 50000),
+            ('2023-01-20', 'Coffee', 5000),
+            ('2023-02-10', 'Internet Bill', 35000),
+            ('2024-01-05', 'New Monitor', 300000),
+            ('2024-03-12', 'Lunch', 12000),
+            ('2024-03-15', 'Keyboard', 85000)
+        ]
+        cursor.executemany("INSERT INTO records (date, item, amount) VALUES (?, ?, ?)", sample_data)
+        conn.commit()
+    conn.close()
+
+# 2. 데이터 조회 함수
+def get_filtered_data(year, month):
+    conn = sqlite3.connect('my_data.db')
+    # SQL의 strftime을 사용하여 년/월 필터링
+    query = f"SELECT date, item, amount FROM records WHERE strftime('%Y', date) = '{year}' AND strftime('%m', date) = '{month:02d}'"
+    df = pd.read_sql_query(query, conn)
+    conn.close()
+    return df
 
 def main():
-    # 1. 페이지 설정 및 제목
-    st.set_page_config(page_title="Real-time I/O System", page_icon="⚡")
-    st.title("⚡ 실시간 데이터 입출력 시스템")
-    st.markdown("스트림릿에서는 `input()` 대신 **위젯**을 사용해야 화면에 표시됩니다.")
+    st.set_page_config(page_title="DB Data Viewer", page_icon="📅", layout="wide")
+    
+    # DB 초기화 실행
+    init_db()
+
+    st.title("📅 월별 데이터 조회 시스템")
+    st.markdown("데이터베이스에 연결하여 선택한 **년도와 월**에 해당하는 내역을 표시합니다.")
     st.divider()
 
-    # 2. 안내 메시지
-    st.info("텍스트를 입력창에 넣고 엔터를 누르면 실시간으로 분석 결과가 업데이트됩니다.")
+    # 3. 사이드바 검색 필터
+    st.sidebar.header("🔍 조회 조건 설정")
+    
+    current_year = datetime.now().year
+    selected_year = st.sidebar.selectbox("년도 선택", [str(y) for y in range(current_year, current_year - 5, -1)])
+    selected_month = st.sidebar.slider("월 선택", 1, 12, datetime.now().month)
 
-    # 3. 사용자 입력 (Streamlit 전용 위젯)
-    # 기존 python의 input() 역할을 수행합니다.
-    user_input = st.text_input("입력값을 넣어주세요", placeholder="여기에 입력...")
+    # 4. 데이터 로드 및 출력
+    data = get_filtered_data(selected_year, selected_month)
 
-    # 4. 데이터 처리 및 결과 출력
-    if user_input:
-        # 로직 처리
-        upper_text = user_input.upper()
-        reversed_text = user_input[::-1]
-        length = len(user_input)
-
-        # 결과 레이아웃 구성
-        st.subheader("📊 분석 결과")
+    if not data.empty:
+        st.subheader(f"📊 {selected_year}년 {selected_month}월 조회 결과")
         
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("대문자 변환", upper_text)
-        with col2:
-            st.metric("글자 역순", reversed_text)
-        with col3:
-            st.metric("텍스트 길이", f"{length} 자")
+        # 요약 지표
+        total_amount = data['amount'].sum()
+        count = len(data)
         
-        st.success("데이터 처리가 완료되었습니다.")
+        col1, col2 = st.columns(2)
+        col1.metric("총 항목 수", f"{count} 건")
+        col2.metric("총 합계 금액", f"{total_amount:,} 원")
+
+        # 데이터 테이블
+        st.dataframe(data, use_container_width=True)
+        
+        # 간단한 차트 시각화
+        st.bar_chart(data.set_index('item')['amount'])
     else:
-        st.warning("현재 입력된 데이터가 없습니다.")
+        st.warning(f"⚠️ {selected_year}년 {selected_month}월에 해당하는 데이터가 없습니다.")
+        st.info("샘플 데이터 확인: 2023년 1월/2월 또는 2024년 1월/3월을 선택해보세요.")
 
 if __name__ == "__main__":
     main()
