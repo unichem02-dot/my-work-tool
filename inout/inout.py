@@ -7,6 +7,10 @@ from datetime import datetime, timedelta
 import re
 import io
 
+# 💡 [핵심] 한국 표준시(KST) 기준 시간 반환 함수
+def get_kst_now():
+    return datetime.utcnow() + timedelta(hours=9)
+
 # --- [1. 페이지 기본 설정 및 테마 스타일] ---
 st.set_page_config(layout="wide", page_title="입출력 관리 시스템 (inout)")
 
@@ -96,18 +100,37 @@ if "search_params" not in st.session_state: st.session_state.search_params = {"m
 if "sort_desc" not in st.session_state: st.session_state.sort_desc = True 
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
 if "copy_id" not in st.session_state: st.session_state.copy_id = None
+if "last_activity" not in st.session_state: st.session_state.last_activity = None
+if "failed_attempts" not in st.session_state: st.session_state.failed_attempts = 0
+if "lockout_until" not in st.session_state: st.session_state.lockout_until = None
 
 # URL 파라미터 감지 및 자동 로그인 (복사/수정 연동)
 if "edit_id" in st.query_params or "copy_id" in st.query_params:
     token = str(st.secrets.get("tom_password", ""))
     if st.query_params.get("token") == token:
         st.session_state.authenticated = True
+        st.session_state.last_activity = get_kst_now()
         if "edit_id" in st.query_params: st.session_state.edit_id = st.query_params["edit_id"]
         if "copy_id" in st.query_params:
             st.session_state.copy_id = st.query_params["copy_id"]
             st.session_state.search_params = {"mode": "신규입력"}
     st.query_params.clear()
     st.rerun()
+
+now_kst = get_kst_now()
+
+if st.session_state.lockout_until:
+    if now_kst < st.session_state.lockout_until:
+        st.error("🔒 해킹 방지: 비밀번호 5회 오류로 시스템이 잠겼습니다.")
+        st.stop()
+    else:
+        st.session_state.lockout_until = None
+        st.session_state.failed_attempts = 0
+
+if st.session_state.authenticated and st.session_state.last_activity:
+    if now_kst - st.session_state.last_activity > timedelta(minutes=30):
+        st.session_state.authenticated = False
+        st.warning("⏱️ 안전을 위해 장시간(30분) 미사용으로 자동 로그아웃 되었습니다.")
 
 # --- [3. 로그인 화면] ---
 if not st.session_state.authenticated:
@@ -119,11 +142,20 @@ if not st.session_state.authenticated:
             if st.form_submit_button("SYSTEM LOGIN", use_container_width=True, type="primary"):
                 if pwd == str(st.secrets.get("tom_password")):
                     st.session_state.authenticated = True
+                    st.session_state.failed_attempts = 0
+                    st.session_state.last_activity = get_kst_now()
                     st.rerun()
-                else: st.error("❌ 비밀번호 오류")
+                else:
+                    st.session_state.failed_attempts += 1
+                    if st.session_state.failed_attempts >= 5:
+                        st.session_state.lockout_until = get_kst_now() + timedelta(minutes=10)
+                        st.rerun()
+                    else:
+                        st.error("❌ 비밀번호 오류")
     st.stop()
 
 # --- [4. 상단 상태바] ---
+st.session_state.last_activity = get_kst_now()
 col_t, col_r, col_l = st.columns([7, 1.5, 1.5])
 with col_t: st.markdown("<h3 style='margin:0;'>📦 입출력 통합 관리 시스템</h3>", unsafe_allow_html=True)
 with col_r:
@@ -181,6 +213,7 @@ try:
             df[f'{c}_val'] = df[c].apply(clean_numeric)
         df['in_total'], df['out_total'] = df['inq_val'] * df['inprice_val'], df['outq_val'] * df['outprice_val']
         years = sorted(df['year'].unique().tolist(), reverse=True)
+        if not years: years = [get_kst_now().year]
         months = list(range(1, 13))
 
         # ---------------------------------------------------------
@@ -191,7 +224,7 @@ try:
             target = df[df['id'].astype(str) == str(st.session_state.edit_id)]
             if not target.empty:
                 t = target.iloc[0]
-                def_date = pd.to_datetime(t['date']).date() if pd.notnull(t['date']) else datetime.now().date()
+                def_date = pd.to_datetime(t['date']).date() if pd.notnull(t['date']) else get_kst_now().date()
                 s_idx = 1 if '중부' in safe_str(t.get('s')) else 0
                 with st.form("edit_form"):
                     c1, c2, c3, c4, c5, c6 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
@@ -244,12 +277,12 @@ try:
         # ---------------------------------------------------------
         elif st.session_state.search_params["mode"] == "신규입력":
             st.markdown("<h3 style='text-align:center; font-weight:bold;'>🆕 신규자료입력 / 복사입력</h3>", unsafe_allow_html=True)
-            def_v = {"s_idx":0, "date":datetime.now().date()}
+            def_v = {"s_idx":0, "date":get_kst_now().date()}
             if st.session_state.copy_id:
                 cr = df[df['id'].astype(str) == str(st.session_state.copy_id)].iloc[0]
                 def_v.update({k: safe_str(cr.get(k)) for k in ['incom','initem','inq','inprice','outcom','outitem','outq','outprice','carno','carprice']})
                 def_v["s_idx"] = 1 if '중부' in safe_str(cr.get('s')) else 0
-                def_v["date"] = pd.to_datetime(cr['date']).date()
+                if pd.notnull(cr['date']): def_v["date"] = pd.to_datetime(cr['date']).date()
 
             with st.form("new_form"):
                 c1, c2, c3, c4, c5, c6 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
@@ -291,7 +324,7 @@ try:
             with st.container():
                 st.markdown("<div class='search-panel-container'>", unsafe_allow_html=True)
                 
-                # 💡 [버그 완전 수정] 가볍고 끊김 없는 숫자 전용(type="number") 계산기
+                # 💡 실시간 계산기 렌더링 유지
                 components.html(
                     """
                     <!DOCTYPE html>
@@ -393,7 +426,7 @@ try:
                 # Row 1
                 r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
                 with r1_1: t1 = st.radio("t1", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
-                with r1_2: dr1 = st.date_input("dr1", [datetime(2014,1,1).date(), datetime.now().date()], format="YYYY-MM-DD", label_visibility="collapsed")
+                with r1_2: dr1 = st.date_input("dr1", [datetime(2014,1,1).date(), get_kst_now().date()], format="YYYY-MM-DD", label_visibility="collapsed")
                 with r1_4: c1 = st.text_input("c1", placeholder="거래처 검색", label_visibility="collapsed")
                 with r1_5: i1 = st.text_input("i1", placeholder="품목 검색", label_visibility="collapsed")
                 with r1_6: b1 = st.button("기간 거래처&품목", use_container_width=True, type="primary")
@@ -403,7 +436,7 @@ try:
                 r2_1, r2_2, r2_3, r2_4, r2_5, r2_6, r2_7 = st.columns([1.5, 1.2, 1.3, 1, 2, 2, 2.5])
                 with r2_1: t2 = st.radio("t2", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
                 with r2_2: y2 = st.selectbox("y2", years, label_visibility="collapsed")
-                with r2_3: m2 = st.selectbox("m2", months, index=datetime.now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
+                with r2_3: m2 = st.selectbox("m2", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
                 with r2_5: c2 = st.text_input("c2", placeholder="거래처 검색", label_visibility="collapsed")
                 with r2_6: i2 = st.text_input("i2", placeholder="품목 검색", label_visibility="collapsed")
                 with r2_7: b2 = st.button("월별 거래처&품목", use_container_width=True, type="primary")
@@ -412,12 +445,12 @@ try:
                 # Row 3
                 u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14 = st.columns([0.8, 1.2, 1, 1, 1.2, 1, 1, 1.5, 1, 1.2, 0.8, 1.2, 1, 1.2])
                 with u2: y3 = st.selectbox("y3", years, label_visibility="collapsed")
-                with u3: m3 = st.selectbox("m3", months, index=datetime.now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
+                with u3: m3 = st.selectbox("m3", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
                 with u4: b_set = st.button("결산", use_container_width=True, type="primary")
                 with u5: b_new = st.button("신규입력", use_container_width=True, type="primary")
                 with u6: lmt = st.selectbox("l4", ["20개", "50개", "100개", "ALL"], index=0, label_visibility="collapsed")
                 with u7: b_rec = st.button("최근입력", use_container_width=True, type="primary")
-                with u8: d_day = st.date_input("d2", datetime.now().date(), format="YYYY-MM-DD", label_visibility="collapsed")
+                with u8: d_day = st.date_input("d2", get_kst_now().date(), format="YYYY-MM-DD", label_visibility="collapsed")
                 with u9: b_day = st.button("일검색", use_container_width=True, type="primary")
                 with u14: b_mon = st.button("월별검색", use_container_width=True, type="primary")
                 st.markdown("</div>", unsafe_allow_html=True)
@@ -442,7 +475,7 @@ try:
                 elif params["mode"] == "일": 
                     f_df = f_df[f_df[date_col].dt.date == params["date"]]
 
-                # 2. 종류(매입/매출) 필터링 (누락되었던 부분 복구)
+                # 2. 종류(매입/매출) 필터링
                 target_type = params.get("type", "ALL")
                 if target_type == "매입": f_df = f_df[f_df['incom'].astype(str).str.strip() != '']
                 elif target_type == "매출": f_df = f_df[f_df['outcom'].astype(str).str.strip() != '']
@@ -451,7 +484,7 @@ try:
                 if params.get("company"): f_df = f_df[f_df['incom'].str.contains(params["company"], na=False)|f_df['outcom'].str.contains(params["company"], na=False)]
                 if params.get("item"): f_df = f_df[f_df['initem'].str.contains(params["item"], na=False)|f_df['outitem'].str.contains(params["item"], na=False)]
                 
-                # 4. 정렬 (검색된 결과 내에서만 정렬 적용)
+                # 4. 정렬
                 f_df = f_df.sort_values(by=[date_col, 'id_val'], ascending=[not st.session_state.sort_desc, not st.session_state.sort_desc])
                 
                 # 5. 표시 개수 리미트
@@ -473,7 +506,8 @@ try:
                         st.session_state.sort_desc = not st.session_state.sort_desc; st.rerun()
                 with col_t3:
                     csv = f_df.to_csv(index=False).encode('utf-8-sig')
-                    st.download_button("💾 엑셀 다운로드", data=csv, file_name="export.csv", mime="text/csv", use_container_width=True, type="primary")
+                    # 다운로드 파일명에도 KST 한국 시간 적용
+                    st.download_button("💾 엑셀 다운로드", data=csv, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
 
                 html = '<div class="custom-table-container"><table class="custom-table"><thead><tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
                 pwd_token = str(st.secrets["tom_password"])
