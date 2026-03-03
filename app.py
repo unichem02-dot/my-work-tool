@@ -18,6 +18,19 @@ st.markdown("""
     
     .search-panel-container { background-color: #353b48; padding: 15px; border-radius: 8px; border: 1px solid #4a5568; margin-bottom: 20px; }
     div.stButton > button { border-radius: 4px !important; font-weight: bold !important; padding: 0px 10px !important; }
+    
+    /* 💡 Primary 버튼 파란색 커스텀 (기본 빨간색 덮어쓰기) */
+    button[kind="primary"] {
+        background-color: #4e8cff !important;
+        border-color: #4e8cff !important;
+        color: white !important;
+    }
+    button[kind="primary"]:hover {
+        background-color: #3b76e5 !important;
+        border-color: #3b76e5 !important;
+        color: white !important;
+    }
+
     div.btn-green > div > button { background-color: #8bc34a !important; color: white !important; border: 1px solid #7cb342 !important; }
     div.btn-pink > div > button { background-color: #e57373 !important; color: white !important; border: 1px solid #e53935 !important; }
 
