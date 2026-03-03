@@ -28,11 +28,14 @@ def download_mp3(video_url):
         }],
         'quiet': True,
         'no_warnings': True,
-        # HTTP 403 에러 우회 강화 (다중 클라이언트 사용)
-        'extractor_args': {'youtube': ['player_client=ios,android,web']}, 
-        # 실제 웹 브라우저인 것처럼 위장
+        
+        # HTTP 403 에러 우회 강화 (최종 수단)
+        'extractor_args': {'youtube': ['player_client=android,mweb']}, # 모바일 웹 혼합 우회
+        'force_ipv4': True, # 클라우드 서버의 IPv6 차단 우회 (IPv4 강제 할당)
+        
+        # 실제 최신 웹 브라우저인 것처럼 위장
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         },
         'nocheckcertificate': True, # 인증서 오류 무시
     }
@@ -68,4 +71,8 @@ if st.button("MP3 변환 및 다운로드 준비", type="primary"):
                         mime="audio/mpeg"
                     )
                 
-                # 주의: 실제 서비스에서는 메모리 관리 및 임시 파일 삭제 로직이 추가로 필요할 수 있습니다.
+                # 변환 후 서버 용량 관리를 위해 원본 파일 삭제 로직 추가 (선택사항)
+                try:
+                    os.remove(file_path)
+                except:
+                    pass
