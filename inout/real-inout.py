@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 from datetime import datetime
+import json
 
 # 1. API를 통한 데이터 조회 함수
 def get_api_data(year, month):
@@ -9,7 +10,6 @@ def get_api_data(year, month):
     외부 api.php 서버에 데이터를 요청합니다.
     """
     # 실제 api.php의 URL 주소로 수정이 필요합니다.
-    # 예: http://yourserver.com/api.php
     api_url = "http://your-domain.com/api.php" 
     
     params = {
@@ -23,10 +23,25 @@ def get_api_data(year, month):
         
         # HTTP 상태 코드 확인
         if response.status_code == 200:
-            data = response.json() # JSON 파싱
-            return pd.DataFrame(data)
+            # 서버 응답이 비어있는지 확인
+            if not response.text.strip():
+                st.warning("서버 응답이 비어있습니다. (Empty Response)")
+                return pd.DataFrame()
+            
+            try:
+                # JSON 파싱 시도
+                data = response.json()
+                return pd.DataFrame(data)
+            except json.JSONDecodeError:
+                # JSON 파싱 실패 시 서버가 보낸 원문 표시 (디버깅용)
+                st.error("서버에서 올바른 JSON 형식을 보내지 않았습니다.")
+                with st.expander("서버 응답 원문 보기 (Debug)"):
+                    st.code(response.text)
+                return pd.DataFrame()
         else:
             st.error(f"서버 응답 오류: {response.status_code}")
+            with st.expander("에러 내용 보기"):
+                st.write(response.text)
             return pd.DataFrame()
             
     except Exception as e:
@@ -58,18 +73,23 @@ def main():
         # 데이터에 필수 컬럼('date', 'item', 'amount')이 있다고 가정
         if all(col in data.columns for col in ['date', 'item', 'amount']):
             # 요약 지표
-            total_amount = pd.to_numeric(data['amount']).sum()
-            count = len(data)
-            
-            col1, col2 = st.columns(2)
-            col1.metric("총 항목 수", f"{count} 건")
-            col2.metric("총 합계 금액", f"{total_amount:,} 원")
+            try:
+                data['amount'] = pd.to_numeric(data['amount'])
+                total_amount = data['amount'].sum()
+                count = len(data)
+                
+                col1, col2 = st.columns(2)
+                col1.metric("총 항목 수", f"{count} 건")
+                col2.metric("총 합계 금액", f"{total_amount:,} 원")
 
-            # 데이터 테이블
-            st.dataframe(data, use_container_width=True)
-            
-            # 차트 시각화
-            st.bar_chart(data.set_index('item')['amount'])
+                # 데이터 테이블
+                st.dataframe(data, use_container_width=True)
+                
+                # 차트 시각화
+                st.bar_chart(data.set_index('item')['amount'])
+            except Exception as e:
+                st.error(f"데이터 처리 중 오류 발생: {e}")
+                st.dataframe(data)
         else:
             st.warning("데이터는 수신했으나 컬럼 구성이 맞지 않습니다.")
             st.write("수신된 컬럼:", list(data.columns))
