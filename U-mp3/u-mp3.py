@@ -28,7 +28,12 @@ def download_mp3(video_url):
         }],
         'quiet': True,
         'no_warnings': True,
-        'extractor_args': {'youtube': ['player_client=android']}, # HTTP 403 에러 우회 (안드로이드 클라이언트로 속임)
+        # HTTP 403 에러 우회 강화 (다중 클라이언트 사용)
+        'extractor_args': {'youtube': ['player_client=ios,android,web']}, 
+        # 실제 웹 브라우저인 것처럼 위장
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
         'nocheckcertificate': True, # 인증서 오류 무시
     }
 
