@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import re
 import io
 
-# 💡 [핵심] 한국 표준시(KST) 기준 시간 반환 함수
+# 💡 한국 표준시(KST) 기준 시간 반환 함수
 def get_kst_now():
     return datetime.utcnow() + timedelta(hours=9)
 
@@ -35,6 +35,18 @@ st.markdown("""
         border-radius: 4px !important;
         font-weight: bold !important;
         padding: 0px 10px !important;
+    }
+    
+    /* Primary 버튼 파란색 커스텀 */
+    button[kind="primary"] {
+        background-color: #4e8cff !important;
+        border-color: #4e8cff !important;
+        color: white !important;
+    }
+    button[kind="primary"]:hover {
+        background-color: #3b76e5 !important;
+        border-color: #3b76e5 !important;
+        color: white !important;
     }
 
     /* 메인 데이터 테이블 스타일 */
@@ -179,10 +191,10 @@ def init_connection():
 def load_data():
     client = init_connection()
     sheet = client.open('SQL백업260211-jeilinout').sheet1
-    raw = sheet.get_all_values()
-    if not raw: return pd.DataFrame()
-    header = [n.strip() if n.strip() else f"col_{i}" for i, n in enumerate(raw[0])]
-    return pd.DataFrame(raw[1:], columns=header)
+    raw_data = sheet.get_all_values()
+    if not raw_data: return pd.DataFrame()
+    header = [n.strip() if n.strip() else f"col_{i}" for i, n in enumerate(raw_data[0])]
+    return pd.DataFrame(raw_data[1:], columns=header)
 
 def clean_numeric(val):
     if pd.isna(val) or val == '': return 0
@@ -228,12 +240,8 @@ try:
                 s_idx = 1 if '중부' in safe_str(t.get('s')) else 0
                 with st.form("edit_form"):
                     c1, c2, c3, c4, c5, c6 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
-                    c1.markdown('<div class="nh-box nh-base">종류</div>', unsafe_allow_html=True)
-                    c2.markdown('<div class="nh-box nh-in">매입거래처</div>', unsafe_allow_html=True)
-                    c3.markdown('<div class="nh-box nh-in">매입품목</div>', unsafe_allow_html=True)
-                    c4.markdown('<div class="nh-box nh-in">수량</div>', unsafe_allow_html=True)
-                    c5.markdown('<div class="nh-box nh-in">단가</div>', unsafe_allow_html=True)
-                    c6.markdown('<div class="nh-box nh-etc">배송</div>', unsafe_allow_html=True)
+                    for i, txt in enumerate(["종류","매입거래처","매입품목","수량","단가","배송"]):
+                        [c1, c2, c3, c4, c5, c6][i].markdown(f'<div class="nh-box nh-{"base" if i==0 else "in" if i<5 else "etc"}">{txt}</div>', unsafe_allow_html=True)
                     e_s = c1.selectbox("s", ["제일", "중부"], index=s_idx, label_visibility="collapsed")
                     e_incom = c2.text_input("incom", safe_str(t.get('incom')), label_visibility="collapsed")
                     e_initem = c3.text_input("initem", safe_str(t.get('initem')), label_visibility="collapsed")
@@ -242,12 +250,8 @@ try:
                     e_carno = c6.text_input("carno", safe_str(t.get('carno')), label_visibility="collapsed")
 
                     c7, c8, c9, c10, c11, c12 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
-                    c7.markdown('<div class="nh-box nh-base">날짜</div>', unsafe_allow_html=True)
-                    c8.markdown('<div class="nh-box nh-out">매출거래처</div>', unsafe_allow_html=True)
-                    c9.markdown('<div class="nh-box nh-out">매출품목</div>', unsafe_allow_html=True)
-                    c10.markdown('<div class="nh-box nh-out">수량</div>', unsafe_allow_html=True)
-                    c11.markdown('<div class="nh-box nh-out">단가</div>', unsafe_allow_html=True)
-                    c12.markdown('<div class="nh-box nh-etc">운송비</div>', unsafe_allow_html=True)
+                    for i, txt in enumerate(["날짜","매출거래처","매출품목","수량","단가","운송비"]):
+                        [c7, c8, c9, c10, c11, c12][i].markdown(f'<div class="nh-box nh-{"base" if i==0 else "out" if i<5 else "etc"}">{txt}</div>', unsafe_allow_html=True)
                     e_date = c7.date_input("date", def_date, format="YYYY-MM-DD", label_visibility="collapsed")
                     e_outcom = c8.text_input("outcom", safe_str(t.get('outcom')), label_visibility="collapsed")
                     e_outitem = c9.text_input("outitem", safe_str(t.get('outitem')), label_visibility="collapsed")
@@ -287,8 +291,7 @@ try:
             with st.form("new_form"):
                 c1, c2, c3, c4, c5, c6 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
                 for i, txt in enumerate(["종류","매입거래처","매입품목","수량","단가","배송"]):
-                    c_list = [c1, c2, c3, c4, c5, c6]
-                    c_list[i].markdown(f'<div class="nh-box nh-{"base" if i==0 else "in" if i<5 else "etc"}">{txt}</div>', unsafe_allow_html=True)
+                    [c1, c2, c3, c4, c5, c6][i].markdown(f'<div class="nh-box nh-{"base" if i==0 else "in" if i<5 else "etc"}">{txt}</div>', unsafe_allow_html=True)
                 n_s = c1.selectbox("s", ["제일", "중부"], index=def_v["s_idx"], label_visibility="collapsed")
                 n_incom = c2.text_input("incom", def_v.get("incom",""), label_visibility="collapsed")
                 n_initem = c3.text_input("initem", def_v.get("initem",""), label_visibility="collapsed")
@@ -298,8 +301,7 @@ try:
                 
                 c7, c8, c9, c10, c11, c12 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
                 for i, txt in enumerate(["날짜","매출거래처","매출품목","수량","단가","운송비"]):
-                    c_list = [c7, c8, c9, c10, c11, c12]
-                    c_list[i].markdown(f'<div class="nh-box nh-{"base" if i==0 else "out" if i<5 else "etc"}">{txt}</div>', unsafe_allow_html=True)
+                    [c7, c8, c9, c10, c11, c12][i].markdown(f'<div class="nh-box nh-{"base" if i==0 else "out" if i<5 else "etc"}">{txt}</div>', unsafe_allow_html=True)
                 n_date = c7.date_input("date", def_v["date"], format="YYYY-MM-DD", label_visibility="collapsed")
                 n_outcom = c8.text_input("outcom", def_v.get("outcom",""), label_visibility="collapsed")
                 n_outitem = c9.text_input("outitem", def_v.get("outitem",""), label_visibility="collapsed")
@@ -354,17 +356,11 @@ try:
                     .rt-op { font-weight: bold; font-size: 16px; }
                     .rt-op.blue { color: #60a5fa; }
                     .rt-op.yellow { color: #fbbf24; }
-                    
-                    /* 숫자 입력창의 화살표(스피너) 제거 */
-                    input[type=number]::-webkit-inner-spin-button, 
-                    input[type=number]::-webkit-outer-spin-button { 
-                        -webkit-appearance: none; margin: 0; 
-                    }
+                    input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
                     </style>
                     </head>
                     <body>
                     <div class="rt-calc-wrap">
-                        <!-- 나눗셈 (숫자 입력 전용) -->
                         <div class="rt-group">
                             <input type="number" class="rt-in" id="rt-d1" oninput="rtCalc()" placeholder="0">
                             <span class="rt-op blue">/</span>
@@ -372,7 +368,6 @@ try:
                             <span class="rt-op blue">=</span>
                             <input type="text" class="rt-out" id="rt-dr" readonly placeholder="0">
                         </div>
-                        <!-- 부가세 (숫자 입력 전용) -->
                         <div class="rt-group">
                             <input type="number" class="rt-in" id="rt-v1" oninput="rtCalc()" placeholder="기준금액">
                             <span class="rt-txt blue">VAT-10%</span>
@@ -380,7 +375,6 @@ try:
                             <span class="rt-txt yellow">VAT+10%</span>
                             <input type="text" class="rt-out orange" id="rt-vp" readonly placeholder="0">
                         </div>
-                        <!-- 곱셈 (숫자 입력 전용) -->
                         <div class="rt-group">
                             <input type="number" class="rt-in" id="rt-m1" oninput="rtCalc()" placeholder="0">
                             <span class="rt-op yellow">X</span>
@@ -389,29 +383,21 @@ try:
                             <input type="text" class="rt-out" id="rt-mr" readonly placeholder="0">
                         </div>
                     </div>
-                    
                     <script>
                     function rtFmt(num) {
                         if (!num || isNaN(num) || !isFinite(num)) return "0";
-                        // 소수점을 보존하면서 정수 부분만 콤마(,) 처리
                         let parts = num.toString().split('.');
                         parts[0] = parseInt(parts[0], 10).toLocaleString('ko-KR');
-                        if (parts[1] && parts[1].length > 4) { // 소수점이 너무 길 경우 4자리로 제한
-                            parts[1] = parts[1].substring(0, 4);
-                        }
+                        if (parts[1] && parts[1].length > 4) { parts[1] = parts[1].substring(0, 4); }
                         return parts.join('.');
                     }
-                    
                     function rtCalc() {
-                        // 자바스크립트 기본 연산만 수행 (무한 루프/버벅거림 원천 차단)
                         let d1 = parseFloat(document.getElementById('rt-d1').value) || 0;
                         let d2 = parseFloat(document.getElementById('rt-d2').value) || 0;
                         document.getElementById('rt-dr').value = d2 !== 0 ? rtFmt(d1 / d2) : "0";
-
                         let v1 = parseFloat(document.getElementById('rt-v1').value) || 0;
                         document.getElementById('rt-vm').value = rtFmt(v1 / 1.1);
                         document.getElementById('rt-vp').value = rtFmt(v1 * 1.1);
-
                         let m1 = parseFloat(document.getElementById('rt-m1').value) || 0;
                         let m2 = parseFloat(document.getElementById('rt-m2').value) || 0;
                         document.getElementById('rt-mr').value = rtFmt(m1 * m2);
@@ -423,7 +409,7 @@ try:
                     height=75
                 )
 
-                # Row 1
+                # Row 1: 기간 검색
                 r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
                 with r1_1: t1 = st.radio("t1", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
                 with r1_2: dr1 = st.date_input("dr1", [datetime(2014,1,1).date(), get_kst_now().date()], format="YYYY-MM-DD", label_visibility="collapsed")
@@ -432,7 +418,8 @@ try:
                 with r1_6: b1 = st.button("기간 거래처&품목", use_container_width=True, type="primary")
 
                 st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
-                # Row 2
+
+                # Row 2: 월별 상세 검색
                 r2_1, r2_2, r2_3, r2_4, r2_5, r2_6, r2_7 = st.columns([1.5, 1.2, 1.3, 1, 2, 2, 2.5])
                 with r2_1: t2 = st.radio("t2", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
                 with r2_2: y2 = st.selectbox("y2", years, label_visibility="collapsed")
@@ -442,32 +429,54 @@ try:
                 with r2_7: b2 = st.button("월별 거래처&품목", use_container_width=True, type="primary")
 
                 st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
-                # Row 3
+
+                # Row 3: 각종 유틸리티 버튼 (스크린샷 구조로 재편성)
                 u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14 = st.columns([0.8, 1.2, 1, 1, 1.2, 1, 1, 1.5, 1, 1.2, 0.8, 1.2, 1, 1.2])
-                with u2: y3 = st.selectbox("y3", years, label_visibility="collapsed")
+                with u1: st.selectbox("s3", ["ALL"], label_visibility="collapsed")
+                with u2: y3 = st.selectbox("y3", years, label_visibility="collapsed", format_func=lambda x: f"{x}년")
                 with u3: m3 = st.selectbox("m3", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
                 with u4: b_set = st.button("결산", use_container_width=True, type="primary")
+                
                 with u5: b_new = st.button("신규입력", use_container_width=True, type="primary")
+                
                 with u6: lmt = st.selectbox("l4", ["20개", "50개", "100개", "ALL"], index=0, label_visibility="collapsed")
                 with u7: b_rec = st.button("최근입력", use_container_width=True, type="primary")
+                
                 with u8: d_day = st.date_input("d2", get_kst_now().date(), format="YYYY-MM-DD", label_visibility="collapsed")
                 with u9: b_day = st.button("일검색", use_container_width=True, type="primary")
+                with u10: b_ayt = st.button("어제오늘내일", use_container_width=True, type="primary")
+                
+                # 💡 월별검색 앞 선택기 복구
+                with u11: st.selectbox("s5", ["ALL"], label_visibility="collapsed")
+                with u12: y4 = st.selectbox("y4", years, key="y4_sel", label_visibility="collapsed", format_func=lambda x: f"{x}년")
+                with u13: m4 = st.selectbox("m4", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", key="m4_sel", label_visibility="collapsed")
                 with u14: b_mon = st.button("월별검색", use_container_width=True, type="primary")
                 st.markdown("</div>", unsafe_allow_html=True)
 
+            # --- 버튼 액션 라우팅 ---
             if b1: st.session_state.search_params = {"mode":"기간","title":"기간검색","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0]}
             elif b2: st.session_state.search_params = {"mode":"월별상세","title":"월별상세검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2}
             elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3}
             elif b_new: st.session_state.search_params = {"mode":"신규입력"}; st.session_state.copy_id = None; st.rerun()
             elif b_rec: st.session_state.search_params = {"mode":"최근","title":"최근입력순서","limit":lmt}
             elif b_day: st.session_state.search_params = {"mode":"일","title":f"{d_day} 검색","date":d_day}
-            elif b_mon: st.session_state.search_params = {"mode":"월별","title":f"{y3}년 {m3}월 검색","year":y3,"month":m3}
+            elif b_ayt:
+                st.session_state.search_params = {
+                    "mode":"기간",
+                    "title":f"{d_day} 기준 (어제~내일)",
+                    "type":"ALL",
+                    "company":"",
+                    "item":"",
+                    "limit":"ALL",
+                    "start": d_day - timedelta(days=1),
+                    "end": d_day + timedelta(days=1)
+                }
+            elif b_mon: st.session_state.search_params = {"mode":"월별","title":f"{y4}년 {m4}월 검색","year":y4,"month":m4}
 
             params = st.session_state.search_params
             if params["mode"] != "init":
                 f_df = df.copy()
                 
-                # 1. 모드별 날짜 필터링
                 if params["mode"] == "기간": 
                     f_df = f_df[(f_df[date_col].dt.date >= params["start"]) & (f_df[date_col].dt.date <= params["end"])]
                 elif params["mode"] in ["월별상세", "월별"]: 
@@ -475,19 +484,15 @@ try:
                 elif params["mode"] == "일": 
                     f_df = f_df[f_df[date_col].dt.date == params["date"]]
 
-                # 2. 종류(매입/매출) 필터링
                 target_type = params.get("type", "ALL")
                 if target_type == "매입": f_df = f_df[f_df['incom'].astype(str).str.strip() != '']
                 elif target_type == "매출": f_df = f_df[f_df['outcom'].astype(str).str.strip() != '']
                 
-                # 3. 검색어 필터링
                 if params.get("company"): f_df = f_df[f_df['incom'].str.contains(params["company"], na=False)|f_df['outcom'].str.contains(params["company"], na=False)]
                 if params.get("item"): f_df = f_df[f_df['initem'].str.contains(params["item"], na=False)|f_df['outitem'].str.contains(params["item"], na=False)]
                 
-                # 4. 정렬
                 f_df = f_df.sort_values(by=[date_col, 'id_val'], ascending=[not st.session_state.sort_desc, not st.session_state.sort_desc])
                 
-                # 5. 표시 개수 리미트
                 limit_str = str(params.get("limit", "ALL"))
                 if "개" in limit_str:
                     num = int(limit_str.replace("개", ""))
@@ -506,7 +511,6 @@ try:
                         st.session_state.sort_desc = not st.session_state.sort_desc; st.rerun()
                 with col_t3:
                     csv = f_df.to_csv(index=False).encode('utf-8-sig')
-                    # 다운로드 파일명에도 KST 한국 시간 적용
                     st.download_button("💾 엑셀 다운로드", data=csv, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
 
                 html = '<div class="custom-table-container"><table class="custom-table"><thead><tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
