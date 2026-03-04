@@ -222,13 +222,13 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             div.style.opacity = '0'; 
             div.style.zIndex = '10';
 
-            // ★ 글자수가 20자 초과 시 폰트 크기 50% 축소
-            let enFontSize = item.en.length > 20 ? 'clamp(25px, 4.2vw, 45px)' : 'clamp(50px, 8.4vw, 90px)';
+            // ★ 글자수가 25자 초과 시 폰트 크기 50% 축소 (기준 상향)
+            let enFontSize = item.en.length > 25 ? 'clamp(25px, 4.2vw, 45px)' : 'clamp(50px, 8.4vw, 90px)';
 
-            // 구성 요소들 (발음, 해석, 메모)
-            let pronHtml = item.pron ? `<p style="font-size: clamp(21px, 3.2vw, 29px); color: #FFFFFF; margin: 15px 0 0 0; font-weight: normal; font-style: italic; text-shadow: none;">${{item.pron}}</p>` : "";
+            // 구성 요소들 (발음, 해석, 메모) - 발음 및 해석 폰트 30% 추가 확대
+            let pronHtml = item.pron ? `<p style="font-size: clamp(27px, 4.2vw, 38px); color: #FFFFFF; margin: 15px 0 0 0; font-weight: normal; font-style: italic; text-shadow: none;">${{item.pron}}</p>` : "";
             
-            let koHtml = item.ko ? `<p class="anim-ko" style="color: #a08b7a; font-size: clamp(24px, 4vw, 36px); font-weight: bold; margin: 25px 0 0 0; opacity: 0; transition: opacity 0.5s ease-in-out; word-break: keep-all; line-height: 1.4; text-shadow: none;">${{item.ko}}</p>` : "";
+            let koHtml = item.ko ? `<p class="anim-ko" style="color: #a08b7a; font-size: clamp(31px, 5.2vw, 47px); font-weight: bold; margin: 25px 0 0 0; opacity: 0; transition: opacity 0.5s ease-in-out; word-break: keep-all; line-height: 1.4; text-shadow: none;">${{item.ko}}</p>` : "";
             
             let memoHtml = `<div class="anim-memo" style="opacity: 0; transition: opacity 0.5s ease-in-out; margin-top: 20px; text-shadow: none;">`;
             if (item.memo1) memoHtml += `<p style="color: #ccc; font-size: clamp(23px, 3.9vw, 34px); font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4;">${{item.memo1}}</p>`;
