@@ -102,6 +102,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                     <button onclick="moveNext()">아래</button>
                 </div>
                 <select id="speed-select" class="cat-select" onchange="changeSpeed()">
+                    <option value="2000">2초</option>
                     <option value="4000">4초</option>
                     <option value="7000">7초</option>
                     <option value="10000" selected>10초</option>
