@@ -56,11 +56,11 @@ def render_study_mode(study_data, unique_cats, initial_cat):
     <head>
     <style>
         /* 내부 iframe의 여백 완벽 제거 */
-        body {{ margin: 0; padding: 0; background: #0a0a0a; overflow: hidden; font-family: sans-serif; }}
+        body {{ margin: 0; padding: 0; background: #0a0a0a; overflow: hidden; font-family: sans-serif; cursor: pointer; }}
         .container {{ width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; align-items: center; position: relative; }}
         
         /* 상단 헤더 바 (좌측 컨트롤 그룹) */
-        .header-bar {{ position: absolute; top: 20px; left: 30px; right: 30px; display: flex; justify-content: space-between; align-items: center; z-index: 100; }}
+        .header-bar {{ position: absolute; top: 20px; left: 30px; right: 30px; display: flex; justify-content: space-between; align-items: center; z-index: 100; cursor: default; }}
         .left-controls {{ display: flex; gap: 15px; align-items: center; flex-wrap: wrap; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 15px; }}
         
         /* 셀렉터 투명화 및 테두리 제거 */
@@ -297,6 +297,13 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             if (intervalId) clearInterval(intervalId);
             intervalId = setInterval(step, currentSpeed);
         }}
+
+        // ★ 화면 클릭 시 멈춤/재생 토글 이벤트
+        document.body.addEventListener('click', function(e) {{
+            // 상단 컨트롤 바(버튼, 셀렉터 등) 클릭 시에는 작동하지 않도록 예외 처리
+            if (e.target.closest('.header-bar')) return;
+            togglePause();
+        }});
 
         // 초기 실행
         changeCategory();
