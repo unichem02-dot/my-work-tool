@@ -21,15 +21,6 @@ st.markdown("""
     .main .block-container { padding-top: 1rem; max-width: 98%; }
     h1, h2, h3, p, span { color: #ffffff !important; }
     
-    /* 검색 패널 컨테이너 */
-    .search-panel-container {
-        background-color: #353b48;
-        padding: 15px;
-        border-radius: 8px;
-        border: 1px solid #4a5568;
-        margin-bottom: 20px;
-    }
-    
     /* 버튼 공통 스타일 */
     div.stButton > button {
         border-radius: 4px !important;
@@ -324,7 +315,6 @@ try:
         # ---------------------------------------------------------
         else:
             with st.container():
-                st.markdown("<div class='search-panel-container'>", unsafe_allow_html=True)
                 
                 # 💡 실시간 계산기 렌더링 유지
                 components.html(
@@ -451,7 +441,6 @@ try:
                 with u12: y4 = st.selectbox("y4", years, key="y4_sel", label_visibility="collapsed", format_func=lambda x: f"{x}년")
                 with u13: m4 = st.selectbox("m4", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", key="m4_sel", label_visibility="collapsed")
                 with u14: b_mon = st.button("월별검색", use_container_width=True, type="primary")
-                st.markdown("</div>", unsafe_allow_html=True)
 
             # --- 버튼 액션 라우팅 ---
             if b1: st.session_state.search_params = {"mode":"기간","title":"기간검색","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0]}
