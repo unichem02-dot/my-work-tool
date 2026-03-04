@@ -63,12 +63,12 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         .header-bar {{ position: absolute; top: 20px; left: 30px; right: 30px; display: flex; justify-content: space-between; align-items: center; z-index: 100; }}
         .left-controls {{ display: flex; gap: 15px; align-items: center; flex-wrap: wrap; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 15px; }}
         
-        /* ★ 셀렉터 투명화 및 테두리 제거 적용 */
+        /* 셀렉터 투명화 및 테두리 제거 */
         .cat-select {{ background: transparent; color: #FFD700; border: none; padding: 8px 10px; font-size: 18px; border-radius: 8px; font-weight: bold; cursor: pointer; outline: none; transition: 0.3s; appearance: none; -webkit-appearance: none; text-align: center; }}
         .cat-select:hover {{ background: rgba(255,215,0,0.15); }}
-        .cat-select option {{ background: #0a0a0a; color: #FFD700; }} /* 펼쳤을 때 리스트는 어둡게 유지하여 가독성 확보 */
+        .cat-select option {{ background: #0a0a0a; color: #FFD700; }}
         
-        /* 작고 귀여운 재생 컨트롤러 */
+        /* 재생 컨트롤러 */
         .playback-controls {{ display: flex; gap: 8px; border-left: 1px solid rgba(255,255,255,0.2); border-right: 1px solid rgba(255,255,255,0.2); padding: 0 15px; }}
         .playback-controls button {{ background: rgba(255,255,255,0.15); border: none; color: white; font-size: 14px; padding: 8px 14px; border-radius: 8px; cursor: pointer; transition: 0.3s; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }}
         .playback-controls button:hover {{ background: rgba(255,255,255,0.3); transform: translateY(-2px); }}
@@ -78,15 +78,8 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         .close-btn {{ background: rgba(255,255,255,0.1); border: none; color: white; font-size: 16px; padding: 10px 20px; border-radius: 50px; cursor: pointer; transition: 0.3s; font-weight: bold; }}
         .close-btn:hover {{ background: rgba(255,100,100,0.8); }}
         
-        #rolling-container {{ flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; width: 100%; text-align: center; }}
-        
-        /* 하단 푸터 영역 (고정 높이로 흔들림 방지) */
-        .footer {{ width: 100%; border-top: 1px solid rgba(255,255,255,0.1); padding: 30px 20px; text-align: center; box-sizing: border-box; min-height: 250px; display: flex; flex-direction: column; justify-content: center; align-items: center; }}
-        
-        /* 텍스트 스타일 */
-        #ko-text {{ color: #a08b7a; font-size: 36px; font-weight: bold; margin: 0 0 15px 0; transition: opacity 0.4s; word-break: keep-all; line-height: 1.4; }}
-        #memo-box {{ transition: opacity 0.4s; display: none; width: 100%; }}
-        .memo-text {{ color: #ccc; font-size: 24px; font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4; }}
+        /* 메인 컨텐츠 영역 */
+        #rolling-container {{ flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; width: 100%; text-align: center; align-items: center; }}
     </style>
     </head>
     <body>
@@ -100,8 +93,8 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                     <button onclick="moveNext()">아래</button>
                 </div>
                 <select id="speed-select" class="cat-select" style="color: #4CAF50;" onchange="changeSpeed()">
-                    <option value="5000" selected>5초 ⏱</option>
-                    <option value="10000">10초 ⏱</option>
+                    <option value="5000">5초 ⏱</option>
+                    <option value="10000" selected>10초 ⏱</option>
                     <option value="15000">15초 ⏱</option>
                     <option value="20000">20초 ⏱</option>
                 </select>
@@ -109,15 +102,8 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             <button class="close-btn" onclick="closeWindow()">❌ 창 닫기</button>
         </div>
         
+        <!-- 하단 영역을 모두 없애고 중앙 컨테이너 하나만 사용 -->
         <div id="rolling-container"></div>
-
-        <div class="footer">
-            <p id="ko-text"></p>
-            <div id="memo-box">
-                <p id="memo1-text" class="memo-text"></p>
-                <p id="memo2-text" class="memo-text"></p>
-            </div>
-        </div>
     </div>
 
     <script>
@@ -127,7 +113,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         let currentIndex = 0;
         let intervalId;
         let isPaused = false;
-        let currentSpeed = 5000;
+        let currentSpeed = 10000; // 메모가 표시될 시간을 고려해 기본 10초 설정
 
         // 확실한 창닫기
         function closeWindow() {{
@@ -186,21 +172,20 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
             currentIndex = 0;
             renderRolling();
-            renderFooter();
             if(!isPaused) resetInterval();
         }}
 
-        // 컨트롤러 기능 (위, 아래, 멈춤/재생)
+        // 컨트롤러 기능
         function movePrev() {{
             if (!filteredData || filteredData.length === 0) return;
             currentIndex = (currentIndex - 1 + filteredData.length) % filteredData.length;
-            renderRolling(); renderFooter();
+            renderRolling();
             if(!isPaused) resetInterval();
         }}
         function moveNext() {{
             if (!filteredData || filteredData.length === 0) return;
             currentIndex = (currentIndex + 1) % filteredData.length;
-            renderRolling(); renderFooter();
+            renderRolling();
             if(!isPaused) resetInterval();
         }}
         function togglePause() {{
@@ -217,7 +202,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
         }}
 
-        // ★ 1단 집중 디자인: 단어 및 발음 렌더링
+        // ★ 1단 집중 디자인 및 시간차 렌더링
         function renderRolling() {{
             if (!filteredData || filteredData.length === 0) return;
             const container = document.getElementById('rolling-container');
@@ -231,7 +216,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
 
             const item = filteredData[currentIndex];
 
-            // 새 문장 렌더링
+            // 새 컨테이너 박스 생성
             const div = document.createElement('div');
             div.style.position = 'absolute';
             div.style.width = '100%';
@@ -241,57 +226,51 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             div.style.transform = 'translateY(-50%)'; 
             div.style.padding = '0 20px';
             div.style.boxSizing = 'border-box';
-            div.style.opacity = '0'; // 페이드 인 준비
-            
-            div.style.color = '#E67E22'; 
-            div.style.fontWeight = '900';
-            div.style.textShadow = '0 0 20px rgba(230,126,34,0.4)';
+            div.style.opacity = '0'; // 전체 투명도 0으로 시작 (페이드 인 준비)
             div.style.zIndex = '10';
 
-            let pronHtml = "";
-            if(item.pron) pronHtml = `<p style="font-size: clamp(16px, 2.5vw, 22px); color: #FFFFFF; margin: 15px 0 0 0; font-weight: normal; font-style: italic; text-shadow: none;">${{item.pron}}</p>`;
+            // 구성 요소들 (발음, 해석, 메모)
+            let pronHtml = item.pron ? `<p style="font-size: clamp(16px, 2.5vw, 22px); color: #FFFFFF; margin: 15px 0 0 0; font-weight: normal; font-style: italic; text-shadow: none;">${{item.pron}}</p>` : "";
+            
+            let koHtml = item.ko ? `<p class="anim-ko" style="color: #a08b7a; font-size: clamp(24px, 4vw, 36px); font-weight: bold; margin: 25px 0 0 0; opacity: 0; transition: opacity 0.5s ease-in-out; word-break: keep-all; line-height: 1.4; text-shadow: none;">${{item.ko}}</p>` : "";
+            
+            let memoHtml = `<div class="anim-memo" style="opacity: 0; transition: opacity 0.5s ease-in-out; margin-top: 20px; text-shadow: none;">`;
+            if (item.memo1) memoHtml += `<p style="color: #ccc; font-size: clamp(18px, 3vw, 26px); font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4;">${{item.memo1}}</p>`;
+            if (item.memo2) memoHtml += `<p style="color: #ccc; font-size: clamp(18px, 3vw, 26px); font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4;">${{item.memo2}}</p>`;
+            memoHtml += `</div>`;
 
-            div.innerHTML = `<p style="font-size: clamp(36px, 6vw, 64px); margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.3;">${{item.en}}</p>` + pronHtml; 
+            // DOM 병합 (단어-문장 -> 발음 -> 해석 -> 메모 순)
+            div.innerHTML = `<div style="color: #E67E22; font-weight: 900; text-shadow: 0 0 20px rgba(230,126,34,0.4);"><p style="font-size: clamp(36px, 6vw, 64px); margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.3;">${{item.en}}</p></div>` 
+                            + pronHtml 
+                            + koHtml 
+                            + memoHtml; 
             
             container.appendChild(div);
+
+            // 전체 프레임 페이드 인 (단어와 발음 즉시 등장)
             setTimeout(() => {{ div.style.opacity = '1'; }}, 50);
-        }}
 
-        // ★ 하단에 해석 및 메모 모두 동시에 렌더링 (페이즈 분리 제거)
-        function renderFooter() {{
-            if (!filteredData || filteredData.length === 0) return;
-            const item = filteredData[currentIndex];
-            
-            const koEl = document.getElementById('ko-text');
-            const memoBox = document.getElementById('memo-box');
-            
-            // Fade out
-            koEl.style.opacity = 0;
-            memoBox.style.opacity = 0;
+            // 2초 뒤 해석 페이드 인
+            if(item.ko) {{
+                setTimeout(() => {{
+                    const koEl = div.querySelector('.anim-ko');
+                    if(koEl) koEl.style.opacity = '1';
+                }}, 2000);
+            }}
 
-            setTimeout(() => {{
-                // 모든 정보를 한 화면에 표시
-                koEl.innerText = item.ko || "";
-                koEl.style.display = item.ko ? 'block' : 'none';
-                
-                document.getElementById('memo1-text').innerText = item.memo1 ? item.memo1 : "";
-                document.getElementById('memo2-text').innerText = item.memo2 ? item.memo2 : "";
-                document.getElementById('memo1-text').style.display = item.memo1 ? 'block' : 'none';
-                document.getElementById('memo2-text').style.display = item.memo2 ? 'block' : 'none';
-
-                memoBox.style.display = (item.memo1 || item.memo2) ? 'block' : 'none';
-
-                // Fade in
-                koEl.style.opacity = 1;
-                memoBox.style.opacity = 1;
-            }}, 400); // 0.4초 페이드 아웃 후 교체
+            // 5초(2초+3초) 뒤 메모 페이드 인
+            if(item.memo1 || item.memo2) {{
+                setTimeout(() => {{
+                    const memoEl = div.querySelector('.anim-memo');
+                    if(memoEl) memoEl.style.opacity = '1';
+                }}, 5000);
+            }}
         }}
 
         // 다음 단어로 이동
         function step() {{
             currentIndex = (currentIndex + 1) % filteredData.length;
             renderRolling();
-            renderFooter();
         }}
 
         function resetInterval() {{
