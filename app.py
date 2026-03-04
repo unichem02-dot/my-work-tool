@@ -237,7 +237,11 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                 btn.style.background = "rgba(230,126,34,0.7)";
                 btn.innerText = "🔊 소리 켜기";
                 // 켤 때 현재 단어 바로 읽어주기
-                if(filteredData.length > 0) speakText(filteredData[currentIndex].en);
+                if(filteredData.length > 0) {{
+                    window.speechSynthesis.cancel();
+                    speakText(filteredData[currentIndex].en, 'en-US');
+                    if(filteredData[currentIndex].ko) speakText(filteredData[currentIndex].ko, 'ko-KR');
+                }}
             }} else {{
                 btn.style.background = "rgba(255,255,255,0.15)";
                 btn.innerText = "🔇 소리 끄기";
@@ -245,13 +249,13 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
         }}
 
-        // ★ 영어 텍스트 읽어주기 기능 (Web Speech API)
-        function speakText(text) {{
+        // ★ 다국어 지원 텍스트 읽어주기 기능 (Web Speech API)
+        function speakText(text, lang) {{
             if (!window.speechSynthesis) return;
-            window.speechSynthesis.cancel(); // 기존 재생되던 음성 취소
             const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'en-US'; // 미국 영어
+            utterance.lang = lang; // 'en-US' (영어) 또는 'ko-KR' (한국어)
             utterance.rate = 0.9; // 약간 느린 속도 (학습용)
+            // 브라우저 음성 큐(Queue)에 등록하여 순차적으로 재생됨
             window.speechSynthesis.speak(utterance);
         }}
 
@@ -269,7 +273,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
 
             const item = filteredData[currentIndex];
             
-            // ★ 상단 바에 현재 단어의 카테고리 표시 (대괄호 제거)
+            // ★ 상단 바에 현재 단어의 카테고리 표시
             document.getElementById('word-cat-display').innerText = item.cat;
 
             // 새 컨테이너 박스 생성
@@ -301,7 +305,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                 memoHtml += `</div>`;
             }}
 
-            // DOM 병합 (중앙 영역에서는 카테고리 제거됨)
+            // DOM 병합 (중앙 영역)
             div.innerHTML = `<div style="color: #E67E22; font-weight: 900; text-shadow: 0 0 20px rgba(230,126,34,0.4);"><p style="font-size: ${{enFontSize}}; margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.3;">${{item.en}}</p></div>` 
                             + pronHtml 
                             + koHtml 
@@ -328,9 +332,11 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                 }}, 5000);
             }}
 
-            // ★ 텍스트가 화면에 그려진 후 음성 재생
+            // ★ 단어가 바뀔 때마다 영어 -> 한국어 순서대로 큐에 담아 재생
             if(isTTSEnabled) {{
-                speakText(item.en);
+                window.speechSynthesis.cancel(); // 이전 단어 음성이 남아있으면 취소
+                speakText(item.en, 'en-US');
+                if(item.ko) speakText(item.ko, 'ko-KR');
             }}
         }}
 
