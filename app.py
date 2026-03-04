@@ -102,7 +102,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                     <button onclick="moveNext()">아래</button>
                 </div>
                 <select id="speed-select" class="cat-select" onchange="changeSpeed()">
-                    <option value="2000">2초</option>
+                    <option value="2300">2.3초</option>
                     <option value="4000">4초</option>
                     <option value="7000">7초</option>
                     <option value="10000" selected>10초</option>
@@ -783,7 +783,7 @@ else:
     now_kst = datetime.now(kst)
     date_str = now_kst.strftime("%A, %B %d, %Y")
 
-    # 타이틀과 모드 전환, 학습 모드 버튼
+    # 타이틀과 모드 전환, 학습 모 버튼
     col_title, col_link_btn, col_study_btn, col_date = st.columns([2.5, 1.5, 1.5, 4.5], vertical_alignment="center")
     with col_title:
         st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.6rem, 2.9vw, 2.9rem);'>TOmBOy94</h1>", unsafe_allow_html=True)
