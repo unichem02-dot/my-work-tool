@@ -121,7 +121,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             window.close();
         }}
 
-        // 카테고리 드롭다운 렌더링
+        // 카테고 드롭다운 렌더링
         const selectEl = document.getElementById('category-select');
         let allOpt = document.createElement('option');
         allOpt.value = "ALL";
@@ -202,7 +202,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
         }}
 
-        // ★ 1단 집중 디자인 및 시간차 렌더링
+        // ★ 1단 집중 디자인 및 시간차 렌더링 (폰트 40%, 30% 확대 반영)
         function renderRolling() {{
             if (!filteredData || filteredData.length === 0) return;
             const container = document.getElementById('rolling-container');
@@ -229,18 +229,18 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             div.style.opacity = '0'; // 전체 투명도 0으로 시작 (페이드 인 준비)
             div.style.zIndex = '10';
 
-            // 구성 요소들 (발음, 해석, 메모)
-            let pronHtml = item.pron ? `<p style="font-size: clamp(16px, 2.5vw, 22px); color: #FFFFFF; margin: 15px 0 0 0; font-weight: normal; font-style: italic; text-shadow: none;">${{item.pron}}</p>` : "";
+            // 구성 요소들 (발음, 해석, 메모) - 사이즈 확대 적용
+            let pronHtml = item.pron ? `<p style="font-size: clamp(21px, 3.2vw, 29px); color: #FFFFFF; margin: 15px 0 0 0; font-weight: normal; font-style: italic; text-shadow: none;">${{item.pron}}</p>` : "";
             
             let koHtml = item.ko ? `<p class="anim-ko" style="color: #a08b7a; font-size: clamp(24px, 4vw, 36px); font-weight: bold; margin: 25px 0 0 0; opacity: 0; transition: opacity 0.5s ease-in-out; word-break: keep-all; line-height: 1.4; text-shadow: none;">${{item.ko}}</p>` : "";
             
             let memoHtml = `<div class="anim-memo" style="opacity: 0; transition: opacity 0.5s ease-in-out; margin-top: 20px; text-shadow: none;">`;
-            if (item.memo1) memoHtml += `<p style="color: #ccc; font-size: clamp(18px, 3vw, 26px); font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4;">${{item.memo1}}</p>`;
-            if (item.memo2) memoHtml += `<p style="color: #ccc; font-size: clamp(18px, 3vw, 26px); font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4;">${{item.memo2}}</p>`;
+            if (item.memo1) memoHtml += `<p style="color: #ccc; font-size: clamp(23px, 3.9vw, 34px); font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4;">${{item.memo1}}</p>`;
+            if (item.memo2) memoHtml += `<p style="color: #ccc; font-size: clamp(23px, 3.9vw, 34px); font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4;">${{item.memo2}}</p>`;
             memoHtml += `</div>`;
 
-            // DOM 병합 (단어-문장 -> 발음 -> 해석 -> 메모 순)
-            div.innerHTML = `<div style="color: #E67E22; font-weight: 900; text-shadow: 0 0 20px rgba(230,126,34,0.4);"><p style="font-size: clamp(36px, 6vw, 64px); margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.3;">${{item.en}}</p></div>` 
+            // DOM 병합 (단어-문장 -> 발음 -> 해석 -> 메모 순) - 단어 문장 크기 40% 확대 적용
+            div.innerHTML = `<div style="color: #E67E22; font-weight: 900; text-shadow: 0 0 20px rgba(230,126,34,0.4);"><p style="font-size: clamp(50px, 8.4vw, 90px); margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.3;">${{item.en}}</p></div>` 
                             + pronHtml 
                             + koHtml 
                             + memoHtml; 
