@@ -59,24 +59,20 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         body {{ margin: 0; padding: 0; background: #0a0a0a; overflow: hidden; font-family: sans-serif; }}
         .container {{ width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; align-items: center; position: relative; }}
         
-        /* 상단 헤더 바 (좌측 컨트롤 그룹 & 우측 닫기 버튼) */
+        /* 상단 헤더 바 (좌측 컨트롤 그룹) */
         .header-bar {{ position: absolute; top: 20px; left: 30px; right: 30px; display: flex; justify-content: space-between; align-items: center; z-index: 100; }}
         .left-controls {{ display: flex; gap: 15px; align-items: center; flex-wrap: wrap; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 15px; }}
         
         /* 셀렉터 투명화 및 테두리 제거 */
-        .cat-select {{ background: transparent; color: #FFD700; border: none; padding: 8px 10px; font-size: 18px; border-radius: 8px; font-weight: bold; cursor: pointer; outline: none; transition: 0.3s; appearance: none; -webkit-appearance: none; text-align: center; }}
-        .cat-select:hover {{ background: rgba(255,215,0,0.15); }}
-        .cat-select option {{ background: #0a0a0a; color: #FFD700; }}
+        .cat-select {{ background: transparent; color: #FFFFFF; border: none; padding: 8px 10px; font-size: 18px; border-radius: 8px; font-weight: bold; cursor: pointer; outline: none; transition: 0.3s; appearance: none; -webkit-appearance: none; text-align: center; }}
+        .cat-select:hover {{ background: rgba(255,255,255,0.15); }}
+        .cat-select option {{ background: #0a0a0a; color: #FFFFFF; }}
         
         /* 재생 컨트롤러 */
         .playback-controls {{ display: flex; gap: 8px; border-left: 1px solid rgba(255,255,255,0.2); border-right: 1px solid rgba(255,255,255,0.2); padding: 0 15px; }}
         .playback-controls button {{ background: rgba(255,255,255,0.15); border: none; color: white; font-size: 14px; padding: 8px 14px; border-radius: 8px; cursor: pointer; transition: 0.3s; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }}
         .playback-controls button:hover {{ background: rgba(255,255,255,0.3); transform: translateY(-2px); }}
         .playback-controls button:active {{ transform: translateY(0); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }}
-        
-        /* 닫기 버튼 */
-        .close-btn {{ background: rgba(255,255,255,0.1); border: none; color: white; font-size: 16px; padding: 10px 20px; border-radius: 50px; cursor: pointer; transition: 0.3s; font-weight: bold; }}
-        .close-btn:hover {{ background: rgba(255,100,100,0.8); }}
         
         /* 메인 컨텐츠 영역 */
         #rolling-container {{ flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; width: 100%; text-align: center; align-items: center; }}
@@ -97,19 +93,21 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                 <select id="category-select" class="cat-select" onchange="changeCategory()"></select>
                 <div class="playback-controls">
                     <button onclick="movePrev()">위</button>
-                    <button onclick="togglePause()" id="pause-btn">멈춤 ⏸</button>
+                    <button onclick="togglePause()" id="pause-btn">멈춤</button>
                     <button onclick="moveNext()">아래</button>
                 </div>
-                <select id="speed-select" class="cat-select" style="color: #4CAF50;" onchange="changeSpeed()">
-                    <option value="5000">5초 ⏱</option>
-                    <option value="10000" selected>10초 ⏱</option>
-                    <option value="15000">15초 ⏱</option>
-                    <option value="20000">20초 ⏱</option>
+                <select id="speed-select" class="cat-select" onchange="changeSpeed()">
+                    <option value="4000">4초</option>
+                    <option value="7000">7초</option>
+                    <option value="10000" selected>10초</option>
+                    <option value="15000">15초</option>
+                    <option value="20000">20초</option>
+                    <option value="30000">30초</option>
                 </select>
             </div>
-            <button class="close-btn" onclick="closeWindow()">❌ 창 닫기</button>
         </div>
         
+        <!-- 하단 영역을 모두 없애고 중앙 컨테이너 하나만 사용 -->
         <div id="rolling-container"></div>
     </div>
 
@@ -120,39 +118,26 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         let currentIndex = 0;
         let intervalId;
         let isPaused = false;
-        let currentSpeed = 10000;
-
-        // 확실한 창닫기 (iframe 우회하여 최상위 부모 창 닫기 시도)
-        function closeWindow() {{
-            try {{ window.top.close(); }} catch(e) {{}}
-            try {{ window.parent.close(); }} catch(e) {{}}
-            window.close();
-        }}
+        let currentSpeed = 10000; // 메모가 표시될 시간을 고려해 기본 10초 설정
 
         // 카테고리 드롭다운 렌더링
         const selectEl = document.getElementById('category-select');
         let allOpt = document.createElement('option');
         allOpt.value = "ALL";
-        allOpt.innerText = "전체 랜덤 🔀";
-        allOpt.style.color = "#E67E22";
+        allOpt.innerText = "전체 랜덤";
         selectEl.appendChild(allOpt);
         
         categories.forEach(cat => {{
             let opt = document.createElement('option');
             opt.value = cat;
-            opt.innerText = cat + " (랜덤) 🔀";
+            opt.innerText = cat + " (랜덤)";
             if (cat === "{initial_cat}") opt.selected = true;
             selectEl.appendChild(opt);
         }});
         
         if ("{initial_cat}" === "ALL") {{
             selectEl.value = "ALL";
-            selectEl.style.color = "#E67E22";
         }}
-        selectEl.addEventListener('change', function() {{
-            if (this.value === "ALL") this.style.color = "#E67E22";
-            else this.style.color = "#FFD700";
-        }});
 
         // 속도 변경
         function changeSpeed() {{
@@ -201,16 +186,16 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             const btn = document.getElementById('pause-btn');
             if(isPaused) {{
                 clearInterval(intervalId);
-                btn.innerText = "재생 ▶";
-                btn.style.background = "rgba(230,126,34,0.7)";
+                btn.innerText = "재생";
+                btn.style.background = "rgba(255,255,255,0.3)";
             }} else {{
                 resetInterval();
-                btn.innerText = "멈춤 ⏸";
+                btn.innerText = "멈춤";
                 btn.style.background = "rgba(255,255,255,0.15)";
             }}
         }}
 
-        // 1단 집중 디자인 및 시간차 렌더링 (글자 길이 조건부 폰트 사이즈 조정)
+        // ★ 1단 집중 디자인 및 시간차 렌더링 (글자 길이 조건부 폰트 사이즈 조정)
         function renderRolling() {{
             if (!filteredData || filteredData.length === 0) return;
             const container = document.getElementById('rolling-container');
