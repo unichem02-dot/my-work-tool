@@ -56,7 +56,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
     <head>
     <style>
         /* 내부 iframe의 여백 완벽 제거 */
-        body {{ margin: 0; padding: 0; background: #0a0a0a; overflow: hidden; font-family: sans-serif; }}
+        body {{ margin: 0; padding: 0; background: #0a0a0a; overflow: hidden; font-family: sans-serif; cursor: pointer; }}
         .container {{ width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; align-items: center; position: relative; }}
         
         /* 상단 헤더 바 (좌측 컨트롤 그룹) */
@@ -405,6 +405,12 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             if (intervalId) clearInterval(intervalId);
             intervalId = setInterval(step, currentSpeed);
         }}
+
+        // 화면 클릭 시 멈춤/재생 토글 이벤트
+        document.body.addEventListener('click', function(e) {{
+            if (e.target.closest('.header-bar')) return;
+            togglePause();
+        }});
 
         // 초기 실행
         changeCategory();
@@ -1090,21 +1096,21 @@ else:
                         st.session_state.sort_order = 'asc' if st.session_state.sort_order == 'None' else ('desc' if st.session_state.sort_order == 'asc' else 'None')
                         st.rerun()
                 else: h_cols[i].markdown(f"<span class='header-label'>{l}</span>", unsafe_allow_html=True)
-        
-        st.markdown("<div style='border-bottom:2px solid rgba(255,255,255,0.4); margin-top:-20px; margin-bottom:5px;'></div>", unsafe_allow_html=True)
+            
+            st.markdown("<div style='border-bottom:2px solid rgba(255,255,255,0.4); margin-top:-20px; margin-bottom:5px;'></div>", unsafe_allow_html=True)
 
-        for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
-            cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1], vertical_alignment="center")
-            cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold'>{row['분류']}</span>", unsafe_allow_html=True)
-            cols[1].markdown(f"<span class='word-text'>{row['단어-문장']}</span>", unsafe_allow_html=True)
-            cols[2].markdown(f"<span class='mean-text'>{row['해석']}</span>", unsafe_allow_html=True)
-            if not is_simple:
-                cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
-                if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(row['row_idx'], row['sheet_idx'], row.to_dict(), unique_cats)
-            elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(row['row_idx'], row['sheet_idx'], row.to_dict(), unique_cats)
+            for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
+                cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1], vertical_alignment="center")
+                cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold'>{row['분류']}</span>", unsafe_allow_html=True)
+                cols[1].markdown(f"<span class='word-text'>{row['단어-문장']}</span>", unsafe_allow_html=True)
+                cols[2].markdown(f"<span class='mean-text'>{row['해석']}</span>", unsafe_allow_html=True)
+                if not is_simple:
+                    cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
+                    if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(row['row_idx'], row['sheet_idx'], row.to_dict(), unique_cats)
+                elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(row['row_idx'], row['sheet_idx'], row.to_dict(), unique_cats)
 
-        if pages > 1:
-            p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5], vertical_alignment="center")
+            if pages > 1:
+                p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5], vertical_alignment="center")
                 if p_cols[1].button("◀ 이전", disabled=(st.session_state.curr_p == 1)): 
                     st.session_state.curr_p -= 1
                     st.rerun()
