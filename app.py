@@ -46,8 +46,10 @@ def reset_page():
     st.session_state.curr_p = 1
 
 # --- [전체화면 학습 모드 컴포넌트 렌더링 함수] ---
-def render_study_mode(study_data):
+def render_study_mode(study_data, unique_cats, initial_cat):
     data_json = json.dumps(study_data, ensure_ascii=False)
+    cats_json = json.dumps(unique_cats, ensure_ascii=False)
+    
     html_code = f"""
     <!DOCTYPE html>
     <html>
@@ -56,41 +58,101 @@ def render_study_mode(study_data):
         /* 내부 iframe의 여백 완벽 제거 */
         body {{ margin: 0; padding: 0; background: #0a0a0a; overflow: hidden; font-family: sans-serif; }}
         .container {{ width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; align-items: center; position: relative; }}
-        .close-btn {{ position: absolute; top: 30px; right: 40px; background: rgba(255,255,255,0.1); border: none; color: white; font-size: 18px; padding: 12px 24px; border-radius: 50px; cursor: pointer; z-index: 100; transition: 0.3s; font-weight: bold; }}
+        
+        /* 상단 헤더 바 (셀렉터 & 닫기 버튼) */
+        .header-bar {{ position: absolute; top: 20px; left: 30px; right: 30px; display: flex; justify-content: space-between; align-items: center; z-index: 100; }}
+        .cat-select {{ background: rgba(0,0,0,0.7); color: #FFD700; border: 2px solid rgba(255,215,0,0.5); padding: 12px 20px; font-size: 18px; border-radius: 12px; font-weight: bold; cursor: pointer; outline: none; transition: 0.3s; }}
+        .cat-select:hover {{ border-color: #FFD700; background: rgba(255,215,0,0.1); }}
+        .close-btn {{ background: rgba(255,255,255,0.1); border: none; color: white; font-size: 18px; padding: 12px 24px; border-radius: 50px; cursor: pointer; transition: 0.3s; font-weight: bold; }}
         .close-btn:hover {{ background: rgba(255,255,255,0.3); }}
+        
         #rolling-container {{ flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; width: 100%; text-align: center; }}
-        .footer {{ width: 100%; border-top: 1px solid rgba(255,255,255,0.1); padding: 50px 20px; text-align: center; box-sizing: border-box; }}
-        #ko-text {{ color: #a08b7a; font-size: 32px; font-weight: bold; margin: 0; transition: opacity 0.5s; word-break: keep-all; line-height: 1.4; }}
+        
+        /* 하단 푸터 영역 (고정 높이로 흔들림 방지) */
+        .footer {{ width: 100%; border-top: 1px solid rgba(255,255,255,0.1); padding: 40px 20px; text-align: center; box-sizing: border-box; min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center; }}
+        
+        /* 텍스트 스타일 */
+        #ko-text {{ color: #a08b7a; font-size: 36px; font-weight: bold; margin: 0; transition: opacity 0.4s; word-break: keep-all; line-height: 1.4; }}
+        #pron-text {{ color: #777; font-size: 24px; margin: 10px 0 0 0; font-style: italic; transition: opacity 0.4s; }}
+        #memo-box {{ transition: opacity 0.4s; display: none; }}
+        .memo-text {{ color: #ccc; font-size: 26px; font-weight: 500; margin: 8px 0; word-break: keep-all; line-height: 1.4; }}
     </style>
     </head>
     <body>
     <div class="container">
-        <button class="close-btn" onclick="window.close()">❌ 창 닫기</button>
+        <div class="header-bar">
+            <select id="category-select" class="cat-select" onchange="changeCategory()"></select>
+            <button class="close-btn" onclick="window.close()">❌ 창 닫기</button>
+        </div>
         
         <div id="rolling-container"></div>
 
         <div class="footer">
             <p id="ko-text"></p>
+            <p id="pron-text"></p>
+            <div id="memo-box">
+                <p id="memo1-text" class="memo-text"></p>
+                <p id="memo2-text" class="memo-text"></p>
+            </div>
         </div>
     </div>
 
     <script>
-        const studyData = {data_json};
+        const rawData = {data_json};
+        const categories = {cats_json};
+        let filteredData = [];
         let currentIndex = 0;
-        const container = document.getElementById('rolling-container');
-        const koText = document.getElementById('ko-text');
+        let phase = 0; // 0: 해석/발음, 1: 메모
+        let intervalId;
 
-        function render() {{
-            if (!studyData || studyData.length === 0) return;
+        // 드롭다운 메뉴 렌더링
+        const selectEl = document.getElementById('category-select');
+        let allOpt = document.createElement('option');
+        allOpt.value = "ALL";
+        allOpt.innerText = "전체 랜덤 🔀";
+        selectEl.appendChild(allOpt);
+        
+        categories.forEach(cat => {{
+            let opt = document.createElement('option');
+            opt.value = cat;
+            opt.innerText = cat + " (랜덤) 🔀";
+            if (cat === "{initial_cat}") opt.selected = true;
+            selectEl.appendChild(opt);
+        }});
+        if ("{initial_cat}" === "ALL") selectEl.value = "ALL";
+
+        // 배열 셔플 함수
+        function shuffle(array) {{
+            let arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {{
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }}
+            return arr;
+        }}
+
+        // 카테고리 변경 시 데이터 필터링 및 셔플
+        function changeCategory() {{
+            const selected = selectEl.value;
+            if (selected === "ALL") {{
+                filteredData = shuffle(rawData);
+            }} else {{
+                filteredData = shuffle(rawData.filter(d => d.cat === selected));
+            }}
+            currentIndex = 0;
+            phase = 0;
+            renderRolling();
+            renderFooter();
+            resetInterval();
+        }}
+
+        // 중앙 영어 문장 렌더링
+        function renderRolling() {{
+            if (!filteredData || filteredData.length === 0) return;
+            const container = document.getElementById('rolling-container');
             container.innerHTML = '';
-            koText.style.opacity = 0;
-            
-            setTimeout(() => {{
-                koText.innerText = studyData[currentIndex].ko || "";
-                koText.style.opacity = 1;
-            }}, 200);
 
-            studyData.forEach((item, index) => {{
+            filteredData.forEach((item, index) => {{
                 const distance = index - currentIndex;
                 if (distance < -2 || distance > 2) return;
 
@@ -104,33 +166,95 @@ def render_study_mode(study_data):
                 
                 if (distance === 0) {{
                     div.style.top = '50%';
-                    div.style.transform = 'translateY(-50%) scale(1.15)';
+                    // ★ 메인 글자 크기 1.3배 확대 (scale 1.15 -> 1.5)
+                    div.style.transform = 'translateY(-50%) scale(1.5)';
                     div.style.opacity = '1';
                     div.style.color = '#E67E22'; 
                     div.style.fontWeight = '900';
                     div.style.textShadow = '0 0 20px rgba(230,126,34,0.4)';
                     div.style.zIndex = '10';
                 }} else {{
-                    div.style.top = `calc(50% + ${{distance * 100}}px)`; 
-                    div.style.transform = 'translateY(-50%) scale(0.85)';
+                    // 간격 조정 (distance * 100 -> 130)
+                    div.style.top = `calc(50% + ${{distance * 130}}px)`; 
+                    div.style.transform = 'translateY(-50%) scale(0.9)';
                     div.style.opacity = Math.abs(distance) === 1 ? '0.3' : '0.1';
                     div.style.color = 'rgba(255,255,255,0.4)';
                     div.style.fontWeight = '500';
                     div.style.zIndex = '5';
                 }}
 
-                div.innerHTML = `<p style="font-size: clamp(24px, 4vw, 42px); margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.3;">${{item.en}}</p>`; 
+                div.innerHTML = `<p style="font-size: clamp(26px, 4.5vw, 48px); margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.3;">${{item.en}}</p>`; 
                 container.appendChild(div);
             }});
         }}
 
-        if (studyData && studyData.length > 0) {{
-            setInterval(() => {{
-                currentIndex = (currentIndex + 1) % studyData.length;
-                render();
-            }}, 5000);
-            render();
+        // 하단 해석/발음/메모 렌더링
+        function renderFooter() {{
+            if (!filteredData || filteredData.length === 0) return;
+            const item = filteredData[currentIndex];
+            
+            const koEl = document.getElementById('ko-text');
+            const pronEl = document.getElementById('pron-text');
+            const memoBox = document.getElementById('memo-box');
+            
+            // Fade out
+            koEl.style.opacity = 0;
+            pronEl.style.opacity = 0;
+            memoBox.style.opacity = 0;
+
+            setTimeout(() => {{
+                if (phase === 0) {{
+                    koEl.innerText = item.ko || "";
+                    pronEl.innerText = item.pron ? "[" + item.pron + "]" : "";
+                    
+                    koEl.style.display = 'block';
+                    pronEl.style.display = item.pron ? 'block' : 'none';
+                    memoBox.style.display = 'none';
+
+                    koEl.style.opacity = 1;
+                    if(item.pron) pronEl.style.opacity = 1;
+                }} else {{
+                    koEl.style.display = 'none';
+                    pronEl.style.display = 'none';
+                    memoBox.style.display = 'block';
+
+                    document.getElementById('memo1-text').innerText = item.memo1 ? "💡 " + item.memo1 : "";
+                    document.getElementById('memo2-text').innerText = item.memo2 ? "💡 " + item.memo2 : "";
+                    
+                    document.getElementById('memo1-text').style.display = item.memo1 ? 'block' : 'none';
+                    document.getElementById('memo2-text').style.display = item.memo2 ? 'block' : 'none';
+
+                    memoBox.style.opacity = 1;
+                }}
+            }}, 400); // 0.4초 페이드 아웃 후 교체
         }}
+
+        // 5초마다 실행되는 스텝 함수
+        function step() {{
+            const item = filteredData[currentIndex];
+            const hasMemo = item.memo1 || item.memo2;
+
+            if (phase === 0 && hasMemo) {{
+                // 메모가 있으면 메모 페이즈로 전환
+                phase = 1;
+                renderFooter();
+            }} else {{
+                // 메모가 없거나 이미 메모를 보여줬으면 다음 단어로 이동
+                phase = 0;
+                currentIndex = (currentIndex + 1) % filteredData.length;
+                renderRolling();
+                renderFooter();
+            }}
+        }}
+
+        function resetInterval() {{
+            if (intervalId) clearInterval(intervalId);
+            intervalId = setInterval(step, 5000);
+        }}
+
+        // 초기 실행
+        changeCategory();
+
     </script>
     </body>
     </html>
@@ -189,30 +313,28 @@ if st.query_params.get("study") == "true":
         </style>
     """, unsafe_allow_html=True)
     
-    # 2. URL로 넘어온 필터 데이터 받아오기
-    cat_param = st.query_params.get("cat", "🔀 랜덤 10")
-    search_param = st.query_params.get("search", "")
-    
+    # 2. 전체 데이터 로드
     try:
         sheet = get_sheet()
         df = load_dataframe(sheet)
-        d_df = df.copy()
         
-        # 필터 적용
-        if search_param:
-            d_df = d_df[d_df['단어-문장'].str.contains(search_param, case=False, na=False)]
-        else:
-            if cat_param == "🔀 랜덤 10":
-                d_df = df.sample(n=min(10, len(df)))
-            elif cat_param != "전체 분류":
-                d_df = d_df[d_df['분류'] == cat_param]
-                
-        if d_df.empty:
-            st.error("조건에 맞는 문장이 없습니다. ❌ 닫기 버튼을 누르거나 창을 닫아주세요.")
+        # 카테고리 추출
+        unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
+        
+        # JS에 전달할 초기 선택값 설정
+        cat_param = st.query_params.get("cat", "ALL")
+        initial_cat = "ALL" if cat_param in ["🔀 랜덤 10", "전체 분류", "ALL"] else cat_param
+        
+        # 프론트엔드로 전달할 전체 데이터 딕셔너리 변환
+        study_data = df[['분류', '단어-문장', '해석', '발음', '메모1', '메모2']].rename(
+            columns={'분류':'cat', '단어-문장': 'en', '해석': 'ko', '발음': 'pron', '메모1': 'memo1', '메모2': 'memo2'}
+        ).to_dict('records')
+        
+        if not study_data:
+            st.error("데이터가 없습니다. 창을 닫아주세요.")
         else:
             # 3. HTML 렌더링
-            study_data = d_df[['단어-문장', '해석']].rename(columns={'단어-문장': 'en', '해석': 'ko'}).to_dict('records')
-            render_study_mode(study_data)
+            render_study_mode(study_data, unique_cats, initial_cat)
             
     except Exception as e:
         st.error(f"데이터 로드 실패: {e}")
