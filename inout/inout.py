@@ -399,6 +399,8 @@ try:
                     height=75
                 )
 
+                st.markdown("<div class='search-panel-container'>", unsafe_allow_html=True)
+                
                 # Row 1: 기간 검색
                 r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
                 with r1_1: t1 = st.radio("t1", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
@@ -412,7 +414,7 @@ try:
                 # Row 2: 월별 상세 검색
                 r2_1, r2_2, r2_3, r2_4, r2_5, r2_6, r2_7 = st.columns([1.5, 1.2, 1.3, 1, 2, 2, 2.5])
                 with r2_1: t2 = st.radio("t2", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
-                with r2_2: y2 = st.selectbox("y2", years, label_visibility="collapsed")
+                with r2_2: y2 = st.selectbox("y2", years, label_visibility="collapsed", format_func=lambda x: f"{x}년")
                 with r2_3: m2 = st.selectbox("m2", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
                 with r2_5: c2 = st.text_input("c2", placeholder="거래처 검색", label_visibility="collapsed")
                 with r2_6: i2 = st.text_input("i2", placeholder="품목 검색", label_visibility="collapsed")
@@ -420,15 +422,14 @@ try:
 
                 st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
-                # Row 3: 각종 유틸리티 버튼 (스크린샷 구조로 재편성)
-                u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14 = st.columns([0.8, 1.2, 1, 1, 1.2, 1, 1, 1.5, 1, 1.2, 0.8, 1.2, 1, 1.2])
+                # 💡 Row 3: 각종 유틸리티 버튼 (어제오늘내일 & 용차 버튼 추가 및 레이아웃 정밀 조정)
+                u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15 = st.columns([0.7, 1.0, 0.8, 0.8, 1.0, 0.8, 0.8, 1.3, 0.8, 1.1, 0.7, 1.0, 0.8, 0.9, 0.9])
                 with u1: st.selectbox("s3", ["ALL"], label_visibility="collapsed")
                 with u2: y3 = st.selectbox("y3", years, label_visibility="collapsed", format_func=lambda x: f"{x}년")
                 with u3: m3 = st.selectbox("m3", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
                 with u4: b_set = st.button("결산", use_container_width=True, type="primary")
                 
                 with u5: b_new = st.button("신규입력", use_container_width=True, type="primary")
-                
                 with u6: lmt = st.selectbox("l4", ["20개", "50개", "100개", "ALL"], index=0, label_visibility="collapsed")
                 with u7: b_rec = st.button("최근입력", use_container_width=True, type="primary")
                 
@@ -436,11 +437,12 @@ try:
                 with u9: b_day = st.button("일검색", use_container_width=True, type="primary")
                 with u10: b_ayt = st.button("어제오늘내일", use_container_width=True, type="primary")
                 
-                # 💡 월별검색 앞 선택기 복구
                 with u11: st.selectbox("s5", ["ALL"], label_visibility="collapsed")
                 with u12: y4 = st.selectbox("y4", years, key="y4_sel", label_visibility="collapsed", format_func=lambda x: f"{x}년")
                 with u13: m4 = st.selectbox("m4", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", key="m4_sel", label_visibility="collapsed")
                 with u14: b_mon = st.button("월별검색", use_container_width=True, type="primary")
+                with u15: b_yong = st.button("용차", use_container_width=True, type="primary")
+                st.markdown("</div>", unsafe_allow_html=True)
 
             # --- 버튼 액션 라우팅 ---
             if b1: st.session_state.search_params = {"mode":"기간","title":"기간검색","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0]}
@@ -461,27 +463,36 @@ try:
                     "end": d_day + timedelta(days=1)
                 }
             elif b_mon: st.session_state.search_params = {"mode":"월별","title":f"{y4}년 {m4}월 검색","year":y4,"month":m4}
+            elif b_yong: st.session_state.search_params = {"mode":"용차","title":f"{y4}년 {m4}월 용차(용/다) 검색","year":y4,"month":m4}
 
             params = st.session_state.search_params
             if params["mode"] != "init":
                 f_df = df.copy()
                 
+                # 1. 모드별 날짜 필터링
                 if params["mode"] == "기간": 
                     f_df = f_df[(f_df[date_col].dt.date >= params["start"]) & (f_df[date_col].dt.date <= params["end"])]
-                elif params["mode"] in ["월별상세", "월별"]: 
+                elif params["mode"] in ["월별상세", "월별", "용차"]: 
                     f_df = f_df[(f_df['year']==params['year'])&(f_df['month']==params['month'])]
+                    # 💡 용차 필터링: 'carno' 열에 '용' 또는 '다'가 포함된 행만 필터
+                    if params["mode"] == "용차":
+                        f_df = f_df[f_df['carno'].astype(str).str.contains('용|다', na=False, regex=True)]
                 elif params["mode"] == "일": 
                     f_df = f_df[f_df[date_col].dt.date == params["date"]]
 
+                # 2. 종류(매입/매출) 필터링
                 target_type = params.get("type", "ALL")
                 if target_type == "매입": f_df = f_df[f_df['incom'].astype(str).str.strip() != '']
                 elif target_type == "매출": f_df = f_df[f_df['outcom'].astype(str).str.strip() != '']
                 
+                # 3. 검색어 필터링
                 if params.get("company"): f_df = f_df[f_df['incom'].str.contains(params["company"], na=False)|f_df['outcom'].str.contains(params["company"], na=False)]
                 if params.get("item"): f_df = f_df[f_df['initem'].str.contains(params["item"], na=False)|f_df['outitem'].str.contains(params["item"], na=False)]
                 
+                # 4. 정렬
                 f_df = f_df.sort_values(by=[date_col, 'id_val'], ascending=[not st.session_state.sort_desc, not st.session_state.sort_desc])
                 
+                # 5. 표시 개수 리미트
                 limit_str = str(params.get("limit", "ALL"))
                 if "개" in limit_str:
                     num = int(limit_str.replace("개", ""))
