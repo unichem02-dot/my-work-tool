@@ -114,6 +114,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                     <option value="30000">30초</option>
                 </select>
                 <button id="simple-btn" class="simple-btn" onclick="toggleSimpleMode()">SIMPLE OFF</button>
+                <button id="tts-btn" class="simple-btn" onclick="toggleTTS()">🔇 소리 끄기</button>
                 <span id="word-cat-display"></span>
             </div>
         </div>
@@ -130,6 +131,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         let isPaused = false;
         let currentSpeed = 10000;
         let isSimpleMode = false;
+        let isTTSEnabled = false;
 
         // 확실한 창닫기 (iframe 우회하여 최상위 부모 창 닫기 시도)
         function closeWindow() {{
@@ -227,6 +229,32 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             renderRolling(); // 모드 변경 즉시 화면 갱신
         }}
 
+        // ★ TTS 음성 재생 토글
+        function toggleTTS() {{
+            isTTSEnabled = !isTTSEnabled;
+            const btn = document.getElementById('tts-btn');
+            if(isTTSEnabled) {{
+                btn.style.background = "rgba(230,126,34,0.7)";
+                btn.innerText = "🔊 소리 켜기";
+                // 켤 때 현재 단어 바로 읽어주기
+                if(filteredData.length > 0) speakText(filteredData[currentIndex].en);
+            }} else {{
+                btn.style.background = "rgba(255,255,255,0.15)";
+                btn.innerText = "🔇 소리 끄기";
+                window.speechSynthesis.cancel();
+            }}
+        }}
+
+        // ★ 영어 텍스트 읽어주기 기능 (Web Speech API)
+        function speakText(text) {{
+            if (!window.speechSynthesis) return;
+            window.speechSynthesis.cancel(); // 기존 재생되던 음성 취소
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US'; // 미국 영어
+            utterance.rate = 0.9; // 약간 느린 속도 (학습용)
+            window.speechSynthesis.speak(utterance);
+        }}
+
         // ★ 1단 집중 디자인 및 시간차 렌더링
         function renderRolling() {{
             if (!filteredData || filteredData.length === 0) return;
@@ -298,6 +326,11 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                     const memoEl = div.querySelector('.anim-memo');
                     if(memoEl) memoEl.style.opacity = '1';
                 }}, 5000);
+            }}
+
+            // ★ 텍스트가 화면에 그려진 후 음성 재생
+            if(isTTSEnabled) {{
+                speakText(item.en);
             }}
         }}
 
