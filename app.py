@@ -8,6 +8,7 @@ import io
 import math
 import re
 import json
+import urllib.parse
 from datetime import datetime, timedelta, timezone
 
 # --- [페이지 기본 설정] ---
@@ -27,8 +28,6 @@ if 'is_simple' not in st.session_state: st.session_state.is_simple = False
 if 'curr_p' not in st.session_state: st.session_state.curr_p = 1
 # ★ 새 페이지 전환용 상태 추가 ★
 if 'app_mode' not in st.session_state: st.session_state.app_mode = 'English' 
-# ★ 학습 모드 상태 추가 ★
-if 'show_study' not in st.session_state: st.session_state.show_study = False
 
 # --- [보안 설정 및 Google Sheets 연결] ---
 LOGIN_PASSWORD = st.secrets["tom_password"]
@@ -50,14 +49,28 @@ def reset_page():
 def render_study_mode(study_data):
     data_json = json.dumps(study_data, ensure_ascii=False)
     html_code = f"""
-    <div style="background: #0a0a0a; color: white; height: 80vh; display: flex; flex-direction: column; justify-content: space-between; align-items: center; font-family: sans-serif; border-radius: 20px; overflow: hidden; position: relative;">
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        /* 내부 iframe의 여백 완벽 제거 */
+        body {{ margin: 0; padding: 0; background: #0a0a0a; overflow: hidden; font-family: sans-serif; }}
+        .container {{ width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; align-items: center; position: relative; }}
+        .close-btn {{ position: absolute; top: 30px; right: 40px; background: rgba(255,255,255,0.1); border: none; color: white; font-size: 18px; padding: 12px 24px; border-radius: 50px; cursor: pointer; z-index: 100; transition: 0.3s; font-weight: bold; }}
+        .close-btn:hover {{ background: rgba(255,255,255,0.3); }}
+        #rolling-container {{ flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; width: 100%; text-align: center; }}
+        .footer {{ width: 100%; border-top: 1px solid rgba(255,255,255,0.1); padding: 50px 20px; text-align: center; box-sizing: border-box; }}
+        #ko-text {{ color: #a08b7a; font-size: 32px; font-weight: bold; margin: 0; transition: opacity 0.5s; word-break: keep-all; line-height: 1.4; }}
+    </style>
+    </head>
+    <body>
+    <div class="container">
+        <button class="close-btn" onclick="window.close()">❌ 창 닫기</button>
         
-        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; width: 100%; text-align: center;">
-            <div id="rolling-container"></div>
-        </div>
+        <div id="rolling-container"></div>
 
-        <div style="width: 100%; border-top: 1px solid rgba(255,255,255,0.1); padding: 40px; text-align: center;">
-            <p id="ko-text" style="color: #a08b7a; font-size: 26px; font-weight: bold; margin: 0; transition: opacity 0.5s;"></p>
+        <div class="footer">
+            <p id="ko-text"></p>
         </div>
     </div>
 
@@ -86,17 +99,19 @@ def render_study_mode(study_data):
                 div.style.width = '100%';
                 div.style.transition = 'all 0.7s ease-in-out';
                 div.style.left = '0';
+                div.style.padding = '0 20px';
+                div.style.boxSizing = 'border-box';
                 
                 if (distance === 0) {{
                     div.style.top = '50%';
-                    div.style.transform = 'translateY(-50%) scale(1.1)';
+                    div.style.transform = 'translateY(-50%) scale(1.15)';
                     div.style.opacity = '1';
-                    div.style.color = '#E67E22'; // 요청하신 오렌지색
+                    div.style.color = '#E67E22'; 
                     div.style.fontWeight = '900';
-                    div.style.textShadow = '0 0 15px rgba(230,126,34,0.3)';
+                    div.style.textShadow = '0 0 20px rgba(230,126,34,0.4)';
                     div.style.zIndex = '10';
                 }} else {{
-                    div.style.top = `calc(50% + ${{distance * 80}}px)`; // ★ 파이썬 f-string 중복 파싱 에러 방지용 이중 괄호 적용
+                    div.style.top = `calc(50% + ${{distance * 100}}px)`; 
                     div.style.transform = 'translateY(-50%) scale(0.85)';
                     div.style.opacity = Math.abs(distance) === 1 ? '0.3' : '0.1';
                     div.style.color = 'rgba(255,255,255,0.4)';
@@ -104,12 +119,11 @@ def render_study_mode(study_data):
                     div.style.zIndex = '5';
                 }}
 
-                div.innerHTML = `<p style="font-size: 36px; margin: 0; letter-spacing: 0.5px;">${{item.en}}</p>`; // ★ 파이썬 f-string 중복 파싱 에러 방지용 이중 괄호 적용
+                div.innerHTML = `<p style="font-size: clamp(24px, 4vw, 42px); margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.3;">${{item.en}}</p>`; 
                 container.appendChild(div);
             }});
         }}
 
-        // 5초(5000ms)마다 인덱스 변경 및 다시 그리기
         if (studyData && studyData.length > 0) {{
             setInterval(() => {{
                 currentIndex = (currentIndex + 1) % studyData.length;
@@ -118,8 +132,93 @@ def render_study_mode(study_data):
             render();
         }}
     </script>
+    </body>
+    </html>
     """
-    components.html(html_code, height=750)
+    components.html(html_code, height=1000)
+
+@st.cache_resource
+def init_connection():
+    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
+    return gspread.authorize(creds)
+
+def get_sheet():
+    return init_connection().open("English_Sentences").sheet1
+
+def get_links_sheet():
+    return init_connection().open("English_Sentences").get_worksheet(1) # 인덱스 1 (시트2)
+
+def load_dataframe(sheet):
+    for _ in range(3):
+        try:
+            data = sheet.get_all_values()
+            if not data: return pd.DataFrame(columns=['분류', '단어-문장', '해석', '발음', '메모1', '메모2'])
+            rows = [row + [""] * (6 - len(row)) for row in data[1:]]
+            df = pd.DataFrame(rows, columns=['분류', '단어-문장', '해석', '발음', '메모1', '메모2'])
+            for col in df.columns: df[col] = df[col].astype(str).str.strip()
+            return df
+        except: time.sleep(1)
+    raise Exception("데이터 로드 실패")
+
+def load_links_dataframe(sheet):
+    for _ in range(3):
+        try:
+            data = sheet.get_all_values()
+            if not data: return pd.DataFrame(columns=['대분류', '소분류', '제목', '메모', '링크'])
+            rows = [row + [""] * (5 - len(row)) for row in data[1:]]
+            df = pd.DataFrame(rows, columns=['대분류', '소분류', '제목', '메모', '링크'])
+            for col in df.columns: df[col] = df[col].astype(str).str.strip()
+            return df
+        except: time.sleep(1)
+    raise Exception("링크 데이터 로드 실패")
+
+
+# ==============================================================
+# ★ 새창 열림 전용 라우팅 (URL 파라미터에 study=true가 있을 때)
+# ==============================================================
+if st.query_params.get("study") == "true":
+    # 1. Streamlit 기본 여백 및 UI 요소 완벽 제거 (꽉 찬 화면)
+    st.markdown("""
+        <style>
+            html, body, [data-testid="stAppViewContainer"], .main, .block-container {
+                padding: 0 !important; margin: 0 !important; max-width: 100% !important; background-color: #0a0a0a !important; overflow: hidden !important;
+            }
+            [data-testid="stHeader"], footer, div[data-testid="stToolbar"] { display: none !important; }
+            iframe { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; border: none !important; z-index: 99999 !important; }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # 2. URL로 넘어온 필터 데이터 받아오기
+    cat_param = st.query_params.get("cat", "🔀 랜덤 10")
+    search_param = st.query_params.get("search", "")
+    
+    try:
+        sheet = get_sheet()
+        df = load_dataframe(sheet)
+        d_df = df.copy()
+        
+        # 필터 적용
+        if search_param:
+            d_df = d_df[d_df['단어-문장'].str.contains(search_param, case=False, na=False)]
+        else:
+            if cat_param == "🔀 랜덤 10":
+                d_df = df.sample(n=min(10, len(df)))
+            elif cat_param != "전체 분류":
+                d_df = d_df[d_df['분류'] == cat_param]
+                
+        if d_df.empty:
+            st.error("조건에 맞는 문장이 없습니다. ❌ 닫기 버튼을 누르거나 창을 닫아주세요.")
+        else:
+            # 3. HTML 렌더링
+            study_data = d_df[['단어-문장', '해석']].rename(columns={'단어-문장': 'en', '해석': 'ko'}).to_dict('records')
+            render_study_mode(study_data)
+            
+    except Exception as e:
+        st.error(f"데이터 로드 실패: {e}")
+        
+    st.stop() # 새창 모드일 때는 아래의 기본 앱을 실행하지 않음
+
 
 # --- [사용자 정의 디자인 (CSS)] ---
 st.markdown("""
@@ -317,41 +416,6 @@ if st.session_state.is_simple:
         </style>
     """, unsafe_allow_html=True)
 
-@st.cache_resource
-def init_connection():
-    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
-    return gspread.authorize(creds)
-
-def get_sheet():
-    return init_connection().open("English_Sentences").sheet1
-
-def get_links_sheet():
-    return init_connection().open("English_Sentences").get_worksheet(1) # 인덱스 1 (시트2)
-
-def load_dataframe(sheet):
-    for _ in range(3):
-        try:
-            data = sheet.get_all_values()
-            if not data: return pd.DataFrame(columns=['분류', '단어-문장', '해석', '발음', '메모1', '메모2'])
-            rows = [row + [""] * (6 - len(row)) for row in data[1:]]
-            df = pd.DataFrame(rows, columns=['분류', '단어-문장', '해석', '발음', '메모1', '메모2'])
-            for col in df.columns: df[col] = df[col].astype(str).str.strip()
-            return df
-        except: time.sleep(1)
-    raise Exception("데이터 로드 실패")
-
-def load_links_dataframe(sheet):
-    for _ in range(3):
-        try:
-            data = sheet.get_all_values()
-            if not data: return pd.DataFrame(columns=['대분류', '소분류', '제목', '메모', '링크'])
-            rows = [row + [""] * (5 - len(row)) for row in data[1:]]
-            df = pd.DataFrame(rows, columns=['대분류', '소분류', '제목', '메모', '링크'])
-            for col in df.columns: df[col] = df[col].astype(str).str.strip()
-            return df
-        except: time.sleep(1)
-    raise Exception("링크 데이터 로드 실패")
 
 # --- [다이얼로그 설정 (영어 단어장)] ---
 @st.dialog("새 항목 추가")
@@ -562,9 +626,21 @@ else:
 
     with col_study_btn:
         if st.session_state.app_mode == 'English':
-            if st.button("📚 학습 모드", use_container_width=True, type="primary"):
-                st.session_state.show_study = True
-                st.rerun()
+            # ★ 실제 HTML a 태그를 이용해 새 탭으로 열기 (현재 필터 파라미터 전달)
+            cat_encoded = urllib.parse.quote(st.session_state.current_cat)
+            search_encoded = urllib.parse.quote(st.session_state.active_search)
+            study_url = f"/?study=true&cat={cat_encoded}&search={search_encoded}"
+            
+            st.markdown(f"""
+                <a href="{study_url}" target="_blank" style="
+                    display: flex; align-items: center; justify-content: center;
+                    width: 100%; padding: 0.5rem 1.2rem;
+                    background-color: #FFFFFF; color: #224343;
+                    border-radius: 50px; text-decoration: none;
+                    font-weight: 900; font-size: clamp(0.75rem, 1.1vw, 1.15rem);
+                    transition: all 0.3s ease; box-sizing: border-box; margin-top: 2px;
+                ">📚 학습 모드</a>
+            """, unsafe_allow_html=True)
 
     with col_date:
         components.html(f"""
@@ -629,39 +705,8 @@ else:
     if st.session_state.app_mode == 'English':
         try:
             sheet = get_sheet(); df = load_dataframe(sheet)
-            
-            # --- 학습 모드가 켜져있을 때 (새창 느낌으로 렌더링) ---
-            if st.session_state.show_study:
-                # 1. 데이터 필터링 연동
-                d_df = df.copy()
-                if st.session_state.active_search:
-                    d_df = d_df[d_df['단어-문장'].str.contains(st.session_state.active_search, case=False, na=False)]
-                else:
-                    if st.session_state.current_cat == "🔀 랜덤 10":
-                        if 'random_df' in st.session_state: d_df = st.session_state.random_df
-                        else: d_df = df.sample(n=min(10, len(df)))
-                    elif st.session_state.current_cat != "전체 분류":
-                        d_df = d_df[d_df['분류'] == st.session_state.current_cat]
 
-                # 2. 학습 모드 UI 렌더링
-                st.markdown("<br>", unsafe_allow_html=True)
-                col1, col2, col3 = st.columns([1, 8, 1])
-                with col2:
-                    if st.button("❌ 학습 모드 종료 (돌아가기)", use_container_width=True):
-                        st.session_state.show_study = False
-                        st.rerun()
-                    
-                    if d_df.empty:
-                        st.warning("조건에 맞는 문장이 없어 학습 모드를 실행할 수 없습니다.")
-                    else:
-                        study_data = d_df[['단어-문장', '해석']].rename(columns={'단어-문장': 'en', '해석': 'ko'}).to_dict('records')
-                        render_study_mode(study_data)
-                
-                # 여기서 실행을 멈춰 기존 메뉴와 표가 보이지 않게 함 (새창 효과)
-                st.stop()
-
-
-            # --- 기본 UI 렌더링 (학습 모드가 꺼져있을 때) ---
+            # --- 기본 UI 렌더링 ---
             unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
             sel_cat = st.radio("분류 필터", ["🔀 랜덤 10", "전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed", key="cat_radio", on_change=clear_search)
             
