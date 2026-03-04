@@ -7,6 +7,7 @@ import time
 import io
 import math
 import re
+import json
 from datetime import datetime, timedelta, timezone
 
 # --- [페이지 기본 설정] ---
@@ -26,6 +27,8 @@ if 'is_simple' not in st.session_state: st.session_state.is_simple = False
 if 'curr_p' not in st.session_state: st.session_state.curr_p = 1
 # ★ 새 페이지 전환용 상태 추가 ★
 if 'app_mode' not in st.session_state: st.session_state.app_mode = 'English' 
+# ★ 학습 모드 상태 추가 ★
+if 'show_study' not in st.session_state: st.session_state.show_study = False
 
 # --- [보안 설정 및 Google Sheets 연결] ---
 LOGIN_PASSWORD = st.secrets["tom_password"]
@@ -42,6 +45,81 @@ def clear_search():
 
 def reset_page():
     st.session_state.curr_p = 1
+
+# --- [전체화면 학습 모드 컴포넌트 렌더링 함수] ---
+def render_study_mode(study_data):
+    data_json = json.dumps(study_data, ensure_ascii=False)
+    html_code = f"""
+    <div style="background: #0a0a0a; color: white; height: 80vh; display: flex; flex-direction: column; justify-content: space-between; align-items: center; font-family: sans-serif; border-radius: 20px; overflow: hidden; position: relative;">
+        
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; width: 100%; text-align: center;">
+            <div id="rolling-container"></div>
+        </div>
+
+        <div style="width: 100%; border-top: 1px solid rgba(255,255,255,0.1); padding: 40px; text-align: center;">
+            <p id="ko-text" style="color: #a08b7a; font-size: 26px; font-weight: bold; margin: 0; transition: opacity 0.5s;"></p>
+        </div>
+    </div>
+
+    <script>
+        const studyData = {data_json};
+        let currentIndex = 0;
+        const container = document.getElementById('rolling-container');
+        const koText = document.getElementById('ko-text');
+
+        function render() {{
+            if (!studyData || studyData.length === 0) return;
+            container.innerHTML = '';
+            koText.style.opacity = 0;
+            
+            setTimeout(() => {{
+                koText.innerText = studyData[currentIndex].ko || "";
+                koText.style.opacity = 1;
+            }}, 200);
+
+            studyData.forEach((item, index) => {{
+                const distance = index - currentIndex;
+                if (distance < -2 || distance > 2) return;
+
+                const div = document.createElement('div');
+                div.style.position = 'absolute';
+                div.style.width = '100%';
+                div.style.transition = 'all 0.7s ease-in-out';
+                div.style.left = '0';
+                
+                if (distance === 0) {{
+                    div.style.top = '50%';
+                    div.style.transform = 'translateY(-50%) scale(1.1)';
+                    div.style.opacity = '1';
+                    div.style.color = '#E67E22'; // 요청하신 오렌지색
+                    div.style.fontWeight = '900';
+                    div.style.textShadow = '0 0 15px rgba(230,126,34,0.3)';
+                    div.style.zIndex = '10';
+                }} else {{
+                    div.style.top = `calc(50% + ${distance * 80}px)`;
+                    div.style.transform = 'translateY(-50%) scale(0.85)';
+                    div.style.opacity = Math.abs(distance) === 1 ? '0.3' : '0.1';
+                    div.style.color = 'rgba(255,255,255,0.4)';
+                    div.style.fontWeight = '500';
+                    div.style.zIndex = '5';
+                }}
+
+                div.innerHTML = `<p style="font-size: 36px; margin: 0; letter-spacing: 0.5px;">${item.en}</p>`;
+                container.appendChild(div);
+            }});
+        }}
+
+        // 5초(5000ms)마다 인덱스 변경 및 다시 그리기
+        if (studyData && studyData.length > 0) {{
+            setInterval(() => {{
+                currentIndex = (currentIndex + 1) % studyData.length;
+                render();
+            }}, 5000);
+            render();
+        }}
+    </script>
+    """
+    components.html(html_code, height=750)
 
 # --- [사용자 정의 디자인 (CSS)] ---
 st.markdown("""
@@ -88,7 +166,7 @@ st.markdown("""
     div.element-container:has(.row-marker) { width: 100% !important; min-width: 100% !important; }
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 12px 10px !important; /* ★ 상하 여백을 늘려 텍스트가 하단 밑줄에 붙지 않고 중간에 위치하도록 수정 */
+        padding: 12px 10px !important; 
         border-radius: 0px !important; 
         margin-bottom: 0px !important; border-bottom: 1px dotted rgba(255, 255, 255, 0.2) !important; 
         width: 100% !important; min-width: 100% !important; flex: 1 1 100% !important;
@@ -196,11 +274,11 @@ st.markdown("""
     a.link-table-title { font-size: 2.0em !important; font-weight: bold; color: #FFD700 !important; text-decoration: none !important; border-bottom: none !important; background-image: none !important; display: inline-block; margin-bottom: 0px; transition: opacity 0.2s; }
     a.link-table-title:hover { opacity: 0.8; text-decoration: none !important; border-bottom: none !important; }
     
-    /* ★ 복사 가능한 링크 스타일 (Streamlit a 태그 자동 변환 대응하여 연두색으로 강제 고정) */
+    /* ★ 복사 가능한 링크 스타일 */
     span.link-table-url, span.link-table-url a { 
         cursor: pointer; 
         font-size: 0.85rem; 
-        color: #9ACD32 !important; /* 파란색 무시하고 연두색(YellowGreen) 강제 적용 */
+        color: #9ACD32 !important; 
         text-decoration: none !important; 
         border-bottom: none !important; 
         background-image: none !important; 
@@ -465,8 +543,8 @@ else:
     now_kst = datetime.now(kst)
     date_str = now_kst.strftime("%A, %B %d, %Y")
 
-    # 타이틀과 링크 모음 전환 버튼 추가 영역
-    col_title, col_link_btn, col_date = st.columns([2.5, 1.5, 6.0], vertical_alignment="center")
+    # 타이틀과 모드 전환, 학습 모드 버튼
+    col_title, col_link_btn, col_study_btn, col_date = st.columns([2.5, 1.5, 1.5, 4.5], vertical_alignment="center")
     with col_title:
         st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.6rem, 2.9vw, 2.9rem);'>TOmBOy94</h1>", unsafe_allow_html=True)
 
@@ -482,11 +560,17 @@ else:
                     st.session_state.app_mode = 'English'
                     st.rerun()
 
+    with col_study_btn:
+        if st.session_state.app_mode == 'English':
+            if st.button("📚 학습 모드", use_container_width=True, type="primary"):
+                st.session_state.show_study = True
+                st.rerun()
+
     with col_date:
         components.html(f"""
             <style>
                 body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: visible; }}
-                .date-wrapper {{ display: flex; flex-wrap: wrap; align-items: center; gap: clamp(5px, 1.5vw, 15px); padding-top: 5px; font-family: sans-serif; width: 100%; }}
+                .date-wrapper {{ display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: clamp(5px, 1.5vw, 15px); padding-top: 5px; font-family: sans-serif; width: 100%; }}
                 .date-text {{ color: #FFFFFF; font-weight: bold; font-size: clamp(1.1rem, 2.6vw, 2.6rem); white-space: nowrap; }}
                 .copy-btn {{ background-color: transparent; border: 1px solid rgba(255,255,255,0.5); color: #FFF; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: clamp(0.7rem, 1vw, 1.1rem); font-weight:bold; transition: 0.3s; white-space: nowrap; }}
                 .copy-btn:hover {{ background-color: rgba(255,255,255,0.2) !important; }}
@@ -545,6 +629,39 @@ else:
     if st.session_state.app_mode == 'English':
         try:
             sheet = get_sheet(); df = load_dataframe(sheet)
+            
+            # --- 학습 모드가 켜져있을 때 (새창 느낌으로 렌더링) ---
+            if st.session_state.show_study:
+                # 1. 데이터 필터링 연동
+                d_df = df.copy()
+                if st.session_state.active_search:
+                    d_df = d_df[d_df['단어-문장'].str.contains(st.session_state.active_search, case=False, na=False)]
+                else:
+                    if st.session_state.current_cat == "🔀 랜덤 10":
+                        if 'random_df' in st.session_state: d_df = st.session_state.random_df
+                        else: d_df = df.sample(n=min(10, len(df)))
+                    elif st.session_state.current_cat != "전체 분류":
+                        d_df = d_df[d_df['분류'] == st.session_state.current_cat]
+
+                # 2. 학습 모드 UI 렌더링
+                st.markdown("<br>", unsafe_allow_html=True)
+                col1, col2, col3 = st.columns([1, 8, 1])
+                with col2:
+                    if st.button("❌ 학습 모드 종료 (돌아가기)", use_container_width=True):
+                        st.session_state.show_study = False
+                        st.rerun()
+                    
+                    if d_df.empty:
+                        st.warning("조건에 맞는 문장이 없어 학습 모드를 실행할 수 없습니다.")
+                    else:
+                        study_data = d_df[['단어-문장', '해석']].rename(columns={'단어-문장': 'en', '해석': 'ko'}).to_dict('records')
+                        render_study_mode(study_data)
+                
+                # 여기서 실행을 멈춰 기존 메뉴와 표가 보이지 않게 함 (새창 효과)
+                st.stop()
+
+
+            # --- 기본 UI 렌더링 (학습 모드가 꺼져있을 때) ---
             unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
             sel_cat = st.radio("분류 필터", ["🔀 랜덤 10", "전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed", key="cat_radio", on_change=clear_search)
             
