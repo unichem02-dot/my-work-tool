@@ -266,8 +266,8 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         function speakText(text, lang) {{
             if (!window.speechSynthesis) return;
             
-            // 파이썬 f-string 충돌 방지 및 특수 기호(/, ?, (, ), [, ]) 제거 필터링
-            const cleanText = text.replace(/[/?()[\\]]/g, ' ');
+            // 파이썬 f-string 충돌 방지 및 특수 기호(/, ?, (, ), [, ], ~) 제거 필터링
+            const cleanText = text.replace(/[/?()[\\]~]/g, ' ');
             
             const utterance = new SpeechSynthesisUtterance(cleanText);
             utterance.lang = lang; 
