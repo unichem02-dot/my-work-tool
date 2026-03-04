@@ -626,13 +626,13 @@ else:
 
     with col_study_btn:
         if st.session_state.app_mode == 'English':
-            # ★ 자바스크립트 window.open을 사용하여 팝업 형태로 열기 (주소창, 툴바 등 숨김)
+            # ★ Streamlit의 onclick 제거 문제를 우회하기 위해 글로벌 JS 리스너로 연결될 고유 클래스 추가
             cat_encoded = urllib.parse.quote(st.session_state.current_cat)
             search_encoded = urllib.parse.quote(st.session_state.active_search)
             study_url = f"/?study=true&cat={cat_encoded}&search={search_encoded}"
             
             st.markdown(f"""
-                <a href="#" onclick="window.open('{study_url}', 'StudyWindow', 'location=no,toolbar=no,menubar=no,scrollbars=no,status=no,resizable=yes,width='+screen.availWidth+',height='+screen.availHeight); return false;" style="
+                <a href="{study_url}" class="study-popup-link" style="
                     display: flex; align-items: center; justify-content: center;
                     width: 100%; padding: 0.5rem 1.2rem;
                     background-color: #FFFFFF; color: #224343;
@@ -662,17 +662,17 @@ else:
                 setTimeout(function(){{ btn.innerHTML = "📋 복사"; }}, 1500);
             }}
             
-            // ★ 링크 클릭 시 클립보드 복사 이벤트 글로벌 등록 (재렌더링 시 끊김 완벽 방지)
             const doc = window.parent.document;
-            if (doc.copyLinkHandler) {{
-                doc.removeEventListener('click', doc.copyLinkHandler, true); // 이전 리스너 찌꺼기 제거
-            }}
             
+            // ★ 링크 클릭 시 클립보드 복사 이벤트 (기존 기능)
+            if (doc.copyLinkHandler) {{
+                doc.removeEventListener('click', doc.copyLinkHandler, true);
+            }}
             doc.copyLinkHandler = function(e) {{
                 let target = e.target.closest('.copyable-link');
                 if (target) {{
                     e.preventDefault();
-                    e.stopPropagation(); // Streamlit 기본 a 태그 속성 발동(새창 열기) 완벽 차단
+                    e.stopPropagation();
                     
                     let url = target.getAttribute('data-url');
                     if (url) {{
@@ -696,6 +696,21 @@ else:
                 }}
             }};
             doc.addEventListener('click', doc.copyLinkHandler, true);
+
+            // ★ 학습 모드 새창 팝업 이벤트 핸들러 (Streamlit onclick 필터 우회)
+            if (doc.studyPopupHandler) {{
+                doc.removeEventListener('click', doc.studyPopupHandler, true);
+            }}
+            doc.studyPopupHandler = function(e) {{
+                let target = e.target.closest('.study-popup-link');
+                if (target) {{
+                    e.preventDefault();
+                    e.stopPropagation();
+                    let url = target.getAttribute('href');
+                    window.parent.open(url, 'StudyWindow', 'location=no,toolbar=no,menubar=no,scrollbars=no,status=no,resizable=yes,width=' + screen.availWidth + ',height=' + screen.availHeight);
+                }}
+            }};
+            doc.addEventListener('click', doc.studyPopupHandler, true);
             </script>
         """, height=90) 
 
