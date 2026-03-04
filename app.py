@@ -132,8 +132,18 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         let currentSpeed = 10000;
         let isSimpleMode = false;
         let isTTSEnabled = false;
+        let availableVoices = [];
 
-        // 확실한 창닫기 (iframe 우회하여 최상위 부모 창 닫기 시도)
+        // 브라우저에 내장된 고품질 음성 목록 미리 로드
+        function loadVoices() {{
+            availableVoices = window.speechSynthesis.getVoices();
+        }}
+        loadVoices();
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {{
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+        }}
+
+        // 확실한 창닫기
         function closeWindow() {{
             try {{ window.top.close(); }} catch(e) {{}}
             try {{ window.parent.close(); }} catch(e) {{}}
@@ -236,7 +246,6 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             if(isTTSEnabled) {{
                 btn.style.background = "rgba(230,126,34,0.7)";
                 btn.innerText = "🔊 소리 켜기";
-                // 켤 때 현재 단어 바로 읽어주기
                 if(filteredData.length > 0) {{
                     window.speechSynthesis.cancel();
                     speakText(filteredData[currentIndex].en, 'en-US');
@@ -249,17 +258,52 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
         }}
 
-        // ★ 다국어 지원 텍스트 읽어주기 기능 (Web Speech API)
+        // ★ 다국어 지원 및 자연스러운 원어민 음성 선택 로직
         function speakText(text, lang) {{
             if (!window.speechSynthesis) return;
             const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = lang; // 'en-US' (영어) 또는 'ko-KR' (한국어)
-            utterance.rate = 0.9; // 약간 느린 속도 (학습용)
-            // 브라우저 음성 큐(Queue)에 등록하여 순차적으로 재생됨
+            utterance.lang = lang; 
+            
+            // 영어는 연음이 자연스럽게 이어지도록 속도를 0.95로 세팅, 한국어는 0.9 유지
+            utterance.rate = lang.includes('en') ? 0.95 : 0.9; 
+
+            if (availableVoices.length > 0) {{
+                let bestVoice = null;
+                
+                if (lang.includes('en')) {{
+                    // 1순위: 가장 자연스러운 Google 또는 Microsoft AI/Premium 음성 탐색
+                    bestVoice = availableVoices.find(voice => 
+                        voice.lang.includes('en-US') && 
+                        (voice.name.includes('Google') || voice.name.includes('Microsoft') || voice.name.includes('Natural'))
+                    );
+                    // 2순위: 그 외 프리미엄/고품질 영어 음성
+                    if (!bestVoice) {{
+                        bestVoice = availableVoices.find(voice => 
+                            voice.lang.includes('en') && 
+                            (voice.name.includes('Premium') || voice.name.includes('Enhanced'))
+                        );
+                    }}
+                    // 3순위: 기본 미국 영어 음성
+                    if (!bestVoice) {{
+                        bestVoice = availableVoices.find(voice => voice.lang.includes('en-US'));
+                    }}
+                }} else if (lang.includes('ko')) {{
+                    bestVoice = availableVoices.find(voice => 
+                        voice.lang.includes('ko-KR') && 
+                        (voice.name.includes('Google') || voice.name.includes('Microsoft') || voice.name.includes('Premium'))
+                    );
+                    if(!bestVoice) bestVoice = availableVoices.find(voice => voice.lang.includes('ko-KR'));
+                }}
+
+                if (bestVoice) {{
+                    utterance.voice = bestVoice;
+                }}
+            }}
+            
             window.speechSynthesis.speak(utterance);
         }}
 
-        // ★ 1단 집중 디자인 및 시간차 렌더링
+        // 1단 집중 디자인 및 시간차 렌더링
         function renderRolling() {{
             if (!filteredData || filteredData.length === 0) return;
             const container = document.getElementById('rolling-container');
@@ -273,7 +317,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
 
             const item = filteredData[currentIndex];
             
-            // ★ 상단 바에 현재 단어의 카테고리 표시
+            // 상단 바에 현재 단어의 카테고리 표시
             document.getElementById('word-cat-display').innerText = item.cat;
 
             // 새 컨테이너 박스 생성
@@ -289,7 +333,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             div.style.opacity = '0'; 
             div.style.zIndex = '10';
 
-            // ★ 글자수가 25자 초과 시 폰트 크기 50% 축소
+            // 글자수가 25자 초과 시 폰트 크기 50% 축소
             let enFontSize = item.en.length > 25 ? 'clamp(25px, 4.2vw, 45px)' : 'clamp(50px, 8.4vw, 90px)';
 
             // 구성 요소들 (발음, 해석, 메모)
@@ -332,9 +376,9 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                 }}, 5000);
             }}
 
-            // ★ 단어가 바뀔 때마다 영어 -> 한국어 순서대로 큐에 담아 재생
+            // 단어가 바뀔 때마다 영어 -> 한국어 순서대로 재생
             if(isTTSEnabled) {{
-                window.speechSynthesis.cancel(); // 이전 단어 음성이 남아있으면 취소
+                window.speechSynthesis.cancel(); 
                 speakText(item.en, 'en-US');
                 if(item.ko) speakText(item.ko, 'ko-KR');
             }}
@@ -351,7 +395,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             intervalId = setInterval(step, currentSpeed);
         }}
 
-        // ★ 화면 클릭 시 멈춤/재생 토글 이벤트
+        // 화면 클릭 시 멈춤/재생 토글 이벤트
         document.body.addEventListener('click', function(e) {{
             if (e.target.closest('.header-bar')) return;
             togglePause();
