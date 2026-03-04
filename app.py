@@ -79,6 +79,9 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         .simple-btn:hover {{ background: rgba(255,255,255,0.3); transform: translateY(-2px); }}
         .simple-btn:active {{ transform: translateY(0); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }}
         
+        /* 현재 분류 표시 라벨 */
+        #current-cat-display {{ color: #FFFFFF; font-weight: bold; font-size: 16px; margin-left: 5px; padding-left: 15px; border-left: 1px solid rgba(255,255,255,0.2); }}
+
         /* 메인 컨텐츠 영역 */
         #rolling-container {{ flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; width: 100%; text-align: center; align-items: center; }}
         
@@ -111,10 +114,10 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                     <option value="30000">30초</option>
                 </select>
                 <button id="simple-btn" class="simple-btn" onclick="toggleSimpleMode()">SIMPLE OFF</button>
+                <span id="current-cat-display"></span>
             </div>
         </div>
         
-        <!-- 하단 영역을 모두 없애고 중앙 컨테이너 하나만 사용 -->
         <div id="rolling-container"></div>
     </div>
 
@@ -125,8 +128,15 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         let currentIndex = 0;
         let intervalId;
         let isPaused = false;
-        let currentSpeed = 10000; // 메모가 표시될 시간을 고려해 기본 10초 설정
+        let currentSpeed = 10000;
         let isSimpleMode = false;
+
+        // 확실한 창닫기 (iframe 우회하여 최상위 부모 창 닫기 시도)
+        function closeWindow() {{
+            try {{ window.top.close(); }} catch(e) {{}}
+            try {{ window.parent.close(); }} catch(e) {{}}
+            window.close();
+        }}
 
         // 카테고리 드롭다운 렌더링
         const selectEl = document.getElementById('category-select');
@@ -172,6 +182,10 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                 filteredData = shuffle(rawData.filter(d => d.cat === selected));
             }}
             currentIndex = 0;
+            
+            // ★ 현재 분류 라벨 업데이트
+            document.getElementById('current-cat-display').innerText = selected === "ALL" ? "전체 랜덤" : selected;
+            
             renderRolling();
             if(!isPaused) resetInterval();
         }}
@@ -247,9 +261,10 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             // ★ 글자수가 25자 초과 시 폰트 크기 50% 축소 (기준 상향)
             let enFontSize = item.en.length > 25 ? 'clamp(25px, 4.2vw, 45px)' : 'clamp(50px, 8.4vw, 90px)';
 
-            // 구성 요소들 (발음, 해석, 메모) - 발음 길이가 60자 이하인 경우에만 렌더링
+            // 구성 요소들 (발음, 해석, 메모) - 발음 길이가 60자 이하인 경우에만 렌더링 (사이즈 30% 확대 반영)
             let pronHtml = (item.pron && item.pron.length <= 60) ? `<p style="font-size: clamp(27px, 4.2vw, 38px); color: #FFFFFF; margin: 15px 0 0 0; font-weight: normal; font-style: italic; text-shadow: none;">${{item.pron}}</p>` : "";
             
+            // 해석 폰트 30% 확대 반영
             let koHtml = item.ko ? `<p class="anim-ko" style="color: #a08b7a; font-size: clamp(31px, 5.2vw, 47px); font-weight: bold; margin: 25px 0 0 0; opacity: 0; transition: opacity 0.5s ease-in-out; word-break: keep-all; line-height: 1.4; text-shadow: none;">${{item.ko}}</p>` : "";
             
             let memoHtml = "";
@@ -783,7 +798,7 @@ else:
     now_kst = datetime.now(kst)
     date_str = now_kst.strftime("%A, %B %d, %Y")
 
-    # 타이틀과 모드 전환, 학습 모 버튼
+    # 타이틀과 모드 전환, 학습 모드 버튼
     col_title, col_link_btn, col_study_btn, col_date = st.columns([2.5, 1.5, 1.5, 4.5], vertical_alignment="center")
     with col_title:
         st.markdown("<h1 style='color:#FFF; padding-top: 0.5rem; font-size: clamp(1.6rem, 2.9vw, 2.9rem);'>TOmBOy94</h1>", unsafe_allow_html=True)
