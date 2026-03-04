@@ -73,6 +73,11 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         .playback-controls button {{ background: rgba(255,255,255,0.15); border: none; color: white; font-size: 14px; padding: 8px 14px; border-radius: 8px; cursor: pointer; transition: 0.3s; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }}
         .playback-controls button:hover {{ background: rgba(255,255,255,0.3); transform: translateY(-2px); }}
         .playback-controls button:active {{ transform: translateY(0); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }}
+
+        /* SIMPLE 버튼 */
+        .simple-btn {{ background: rgba(255,255,255,0.15); border: none; color: white; font-size: 14px; padding: 8px 14px; border-radius: 8px; cursor: pointer; transition: 0.3s; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); margin-left: 5px; }}
+        .simple-btn:hover {{ background: rgba(255,255,255,0.3); transform: translateY(-2px); }}
+        .simple-btn:active {{ transform: translateY(0); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }}
         
         /* 메인 컨텐츠 영역 */
         #rolling-container {{ flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; width: 100%; text-align: center; align-items: center; }}
@@ -104,6 +109,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                     <option value="20000">20초</option>
                     <option value="30000">30초</option>
                 </select>
+                <button id="simple-btn" class="simple-btn" onclick="toggleSimpleMode()">SIMPLE OFF</button>
             </div>
         </div>
         
@@ -119,6 +125,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         let intervalId;
         let isPaused = false;
         let currentSpeed = 10000; // 메모가 표시될 시간을 고려해 기본 10초 설정
+        let isSimpleMode = false;
 
         // 카테고리 드롭다운 렌더링
         const selectEl = document.getElementById('category-select');
@@ -195,6 +202,20 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
         }}
 
+        // SIMPLE 모드 토글
+        function toggleSimpleMode() {{
+            isSimpleMode = !isSimpleMode;
+            const btn = document.getElementById('simple-btn');
+            if(isSimpleMode) {{
+                btn.style.background = "rgba(230,126,34,0.7)";
+                btn.innerText = "SIMPLE ON";
+            }} else {{
+                btn.style.background = "rgba(255,255,255,0.15)";
+                btn.innerText = "SIMPLE OFF";
+            }}
+            renderRolling(); // 모드 변경 즉시 화면 갱신
+        }}
+
         // ★ 1단 집중 디자인 및 시간차 렌더링 (글자 길이 조건부 폰트 사이즈 조정)
         function renderRolling() {{
             if (!filteredData || filteredData.length === 0) return;
@@ -230,10 +251,13 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             
             let koHtml = item.ko ? `<p class="anim-ko" style="color: #a08b7a; font-size: clamp(31px, 5.2vw, 47px); font-weight: bold; margin: 25px 0 0 0; opacity: 0; transition: opacity 0.5s ease-in-out; word-break: keep-all; line-height: 1.4; text-shadow: none;">${{item.ko}}</p>` : "";
             
-            let memoHtml = `<div class="anim-memo" style="opacity: 0; transition: opacity 0.5s ease-in-out; margin-top: 20px; text-shadow: none;">`;
-            if (item.memo1) memoHtml += `<p style="color: #FFFF00; font-size: clamp(23px, 3.9vw, 34px); font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4;">${{item.memo1}}</p>`;
-            if (item.memo2) memoHtml += `<p style="color: #FFFF00; font-size: clamp(23px, 3.9vw, 34px); font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4;">${{item.memo2}}</p>`;
-            memoHtml += `</div>`;
+            let memoHtml = "";
+            if (!isSimpleMode) {{
+                memoHtml = `<div class="anim-memo" style="opacity: 0; transition: opacity 0.5s ease-in-out; margin-top: 20px; text-shadow: none;">`;
+                if (item.memo1) memoHtml += `<p style="color: #FFFF00; font-size: clamp(23px, 3.9vw, 34px); font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4;">${{item.memo1}}</p>`;
+                if (item.memo2) memoHtml += `<p style="color: #FFFF00; font-size: clamp(23px, 3.9vw, 34px); font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4;">${{item.memo2}}</p>`;
+                memoHtml += `</div>`;
+            }}
 
             // DOM 병합
             div.innerHTML = `<div style="color: #E67E22; font-weight: 900; text-shadow: 0 0 20px rgba(230,126,34,0.4);"><p style="font-size: ${{enFontSize}}; margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.3;">${{item.en}}</p></div>` 
@@ -255,7 +279,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
 
             // 5초 뒤 메모 페이드 인
-            if(item.memo1 || item.memo2) {{
+            if(!isSimpleMode && (item.memo1 || item.memo2)) {{
                 setTimeout(() => {{
                     const memoEl = div.querySelector('.anim-memo');
                     if(memoEl) memoEl.style.opacity = '1';
