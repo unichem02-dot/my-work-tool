@@ -56,7 +56,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
     <head>
     <style>
         /* 내부 iframe의 여백 완벽 제거 */
-        body {{ margin: 0; padding: 0; background: #0a0a0a; overflow: hidden; font-family: sans-serif; cursor: pointer; }}
+        body {{ margin: 0; padding: 0; background: #0a0a0a; overflow: hidden; font-family: sans-serif; }}
         .container {{ width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; align-items: center; position: relative; }}
         
         /* 상단 헤더 바 (좌측 컨트롤 그룹) */
@@ -405,12 +405,6 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             if (intervalId) clearInterval(intervalId);
             intervalId = setInterval(step, currentSpeed);
         }}
-
-        // 화면 클릭 시 멈춤/재생 토글 이벤트
-        document.body.addEventListener('click', function(e) {{
-            if (e.target.closest('.header-bar')) return;
-            togglePause();
-        }});
 
         // 초기 실행
         changeCategory();
