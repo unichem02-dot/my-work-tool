@@ -143,7 +143,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             window.speechSynthesis.onvoiceschanged = loadVoices;
         }}
 
-        // 확실한 창닫기
+        // 확실한 창닫기 (iframe 우회하여 최상위 부모 창 닫기 시도)
         function closeWindow() {{
             try {{ window.top.close(); }} catch(e) {{}}
             try {{ window.parent.close(); }} catch(e) {{}}
@@ -194,6 +194,10 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                 filteredData = shuffle(rawData.filter(d => d.cat === selected));
             }}
             currentIndex = 0;
+            
+            // 상단 필터 정보 라벨 업데이트
+            document.getElementById('word-cat-display').innerText = selected === "ALL" ? "전체 랜덤 중" : selected + " 학습 중";
+            
             renderRolling();
             if(!isPaused) resetInterval();
         }}
@@ -258,10 +262,14 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
         }}
 
-        // ★ 다국어 지원 및 자연스러운 원어민 음성 선택 로직
+        // ★ 다국어 지원 및 자연스러운 원어민 음성 선택 로직 (특수기호 제거 적용)
         function speakText(text, lang) {{
             if (!window.speechSynthesis) return;
-            const utterance = new SpeechSynthesisUtterance(text);
+            
+            // 특수 기호(/, ?, (, ), [, ], {, }) 제거 필터링
+            const cleanText = text.replace(/[\/\?\(\)\[\]\{\}]/g, ' ');
+            
+            const utterance = new SpeechSynthesisUtterance(cleanText);
             utterance.lang = lang; 
             
             // 영어는 연음이 자연스럽게 이어지도록 속도를 0.95로 세팅, 한국어는 0.9 유지
