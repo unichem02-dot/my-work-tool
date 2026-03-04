@@ -59,48 +59,54 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         body {{ margin: 0; padding: 0; background: #0a0a0a; overflow: hidden; font-family: sans-serif; }}
         .container {{ width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; align-items: center; position: relative; }}
         
-        /* 상단 헤더 바 (셀렉터 & 닫기 버튼) */
-        .header-bar {{ position: absolute; top: 20px; left: 30px; right: 30px; display: flex; justify-content: space-between; align-items: flex-start; z-index: 100; }}
+        /* 상단 헤더 바 (좌측 컨트롤 그룹 & 우측 닫기 버튼) */
+        .header-bar {{ position: absolute; top: 20px; left: 30px; right: 30px; display: flex; justify-content: space-between; align-items: center; z-index: 100; }}
+        .left-controls {{ display: flex; gap: 15px; align-items: center; flex-wrap: wrap; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 15px; }}
         
-        /* ★ 셀렉터 투명화 적용 */
-        .cat-select {{ background: transparent; color: #FFD700; border: 2px solid rgba(255,215,0,0.5); padding: 12px 20px; font-size: 18px; border-radius: 12px; font-weight: bold; cursor: pointer; outline: none; transition: 0.3s; appearance: none; -webkit-appearance: none; text-align: center; }}
-        .cat-select:hover {{ border-color: #FFD700; background: rgba(255,215,0,0.1); }}
+        /* ★ 셀렉터 투명화 및 테두리 제거 적용 */
+        .cat-select {{ background: transparent; color: #FFD700; border: none; padding: 8px 10px; font-size: 18px; border-radius: 8px; font-weight: bold; cursor: pointer; outline: none; transition: 0.3s; appearance: none; -webkit-appearance: none; text-align: center; }}
+        .cat-select:hover {{ background: rgba(255,215,0,0.15); }}
         .cat-select option {{ background: #0a0a0a; color: #FFD700; }} /* 펼쳤을 때 리스트는 어둡게 유지하여 가독성 확보 */
         
-        /* 우측 상단 컨트롤 버튼 그룹 */
-        .right-controls {{ display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }}
-        .close-btn {{ background: rgba(255,255,255,0.1); border: none; color: white; font-size: 18px; padding: 12px 24px; border-radius: 50px; cursor: pointer; transition: 0.3s; font-weight: bold; }}
-        .close-btn:hover {{ background: rgba(255,100,100,0.8); }}
-        
         /* 작고 귀여운 재생 컨트롤러 */
-        .playback-controls {{ display: flex; gap: 8px; }}
+        .playback-controls {{ display: flex; gap: 8px; border-left: 1px solid rgba(255,255,255,0.2); border-right: 1px solid rgba(255,255,255,0.2); padding: 0 15px; }}
         .playback-controls button {{ background: rgba(255,255,255,0.15); border: none; color: white; font-size: 14px; padding: 8px 14px; border-radius: 8px; cursor: pointer; transition: 0.3s; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }}
         .playback-controls button:hover {{ background: rgba(255,255,255,0.3); transform: translateY(-2px); }}
         .playback-controls button:active {{ transform: translateY(0); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }}
         
+        /* 닫기 버튼 */
+        .close-btn {{ background: rgba(255,255,255,0.1); border: none; color: white; font-size: 16px; padding: 10px 20px; border-radius: 50px; cursor: pointer; transition: 0.3s; font-weight: bold; }}
+        .close-btn:hover {{ background: rgba(255,100,100,0.8); }}
+        
         #rolling-container {{ flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; width: 100%; text-align: center; }}
         
         /* 하단 푸터 영역 (고정 높이로 흔들림 방지) */
-        .footer {{ width: 100%; border-top: 1px solid rgba(255,255,255,0.1); padding: 40px 20px; text-align: center; box-sizing: border-box; min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center; }}
+        .footer {{ width: 100%; border-top: 1px solid rgba(255,255,255,0.1); padding: 30px 20px; text-align: center; box-sizing: border-box; min-height: 250px; display: flex; flex-direction: column; justify-content: center; align-items: center; }}
         
         /* 텍스트 스타일 */
-        #ko-text {{ color: #a08b7a; font-size: 36px; font-weight: bold; margin: 0; transition: opacity 0.4s; word-break: keep-all; line-height: 1.4; }}
-        #memo-box {{ transition: opacity 0.4s; display: none; }}
-        .memo-text {{ color: #ccc; font-size: 26px; font-weight: 500; margin: 8px 0; word-break: keep-all; line-height: 1.4; }}
+        #ko-text {{ color: #a08b7a; font-size: 36px; font-weight: bold; margin: 0 0 15px 0; transition: opacity 0.4s; word-break: keep-all; line-height: 1.4; }}
+        #memo-box {{ transition: opacity 0.4s; display: none; width: 100%; }}
+        .memo-text {{ color: #ccc; font-size: 24px; font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4; }}
     </style>
     </head>
     <body>
     <div class="container">
         <div class="header-bar">
-            <select id="category-select" class="cat-select" onchange="changeCategory()"></select>
-            <div class="right-controls">
-                <button class="close-btn" onclick="closeWindow()">❌ 창 닫기</button>
+            <div class="left-controls">
+                <select id="category-select" class="cat-select" onchange="changeCategory()"></select>
                 <div class="playback-controls">
                     <button onclick="movePrev()">위</button>
                     <button onclick="togglePause()" id="pause-btn">멈춤 ⏸</button>
                     <button onclick="moveNext()">아래</button>
                 </div>
+                <select id="speed-select" class="cat-select" style="color: #4CAF50;" onchange="changeSpeed()">
+                    <option value="5000" selected>5초 ⏱</option>
+                    <option value="10000">10초 ⏱</option>
+                    <option value="15000">15초 ⏱</option>
+                    <option value="20000">20초 ⏱</option>
+                </select>
             </div>
+            <button class="close-btn" onclick="closeWindow()">❌ 창 닫기</button>
         </div>
         
         <div id="rolling-container"></div>
@@ -119,17 +125,17 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         const categories = {cats_json};
         let filteredData = [];
         let currentIndex = 0;
-        let phase = 0; // 0: 해석, 1: 메모
         let intervalId;
         let isPaused = false;
+        let currentSpeed = 5000;
 
-        // 확실한 창닫기 (부모 창까지 닫기 시도)
+        // 확실한 창닫기
         function closeWindow() {{
             try {{ window.parent.close(); }} catch(e) {{}}
             window.close();
         }}
 
-        // 드롭다운 메뉴 렌더링
+        // 카테고리 드롭다운 렌더링
         const selectEl = document.getElementById('category-select');
         let allOpt = document.createElement('option');
         allOpt.value = "ALL";
@@ -145,7 +151,6 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             selectEl.appendChild(opt);
         }});
         
-        // 초기 선택값에 따른 컬러 변경 로직
         if ("{initial_cat}" === "ALL") {{
             selectEl.value = "ALL";
             selectEl.style.color = "#E67E22";
@@ -155,7 +160,13 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             else this.style.color = "#FFD700";
         }});
 
-        // 배열 셔플 함수
+        // 속도 변경
+        function changeSpeed() {{
+            currentSpeed = parseInt(document.getElementById('speed-select').value);
+            if(!isPaused) resetInterval();
+        }}
+
+        // 배열 셔플
         function shuffle(array) {{
             let arr = [...array];
             for (let i = arr.length - 1; i > 0; i--) {{
@@ -165,7 +176,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             return arr;
         }}
 
-        // 카테고리 변경 시 데이터 필터링 및 셔플
+        // 카테고리 변경 시 실행
         function changeCategory() {{
             const selected = selectEl.value;
             if (selected === "ALL") {{
@@ -174,7 +185,6 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                 filteredData = shuffle(rawData.filter(d => d.cat === selected));
             }}
             currentIndex = 0;
-            phase = 0;
             renderRolling();
             renderFooter();
             if(!isPaused) resetInterval();
@@ -184,14 +194,12 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         function movePrev() {{
             if (!filteredData || filteredData.length === 0) return;
             currentIndex = (currentIndex - 1 + filteredData.length) % filteredData.length;
-            phase = 0;
             renderRolling(); renderFooter();
             if(!isPaused) resetInterval();
         }}
         function moveNext() {{
             if (!filteredData || filteredData.length === 0) return;
             currentIndex = (currentIndex + 1) % filteredData.length;
-            phase = 0;
             renderRolling(); renderFooter();
             if(!isPaused) resetInterval();
         }}
@@ -209,7 +217,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
         }}
 
-        // ★ 1단 집중 디자인 및 부드러운 페이드 효과 적용 (중앙 렌더링)
+        // ★ 1단 집중 디자인: 단어 및 발음 렌더링
         function renderRolling() {{
             if (!filteredData || filteredData.length === 0) return;
             const container = document.getElementById('rolling-container');
@@ -233,7 +241,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             div.style.transform = 'translateY(-50%)'; 
             div.style.padding = '0 20px';
             div.style.boxSizing = 'border-box';
-            div.style.opacity = '0'; // 초기 투명도 0 (페이드 인 준비)
+            div.style.opacity = '0'; // 페이드 인 준비
             
             div.style.color = '#E67E22'; 
             div.style.fontWeight = '900';
@@ -246,12 +254,10 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             div.innerHTML = `<p style="font-size: clamp(36px, 6vw, 64px); margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.3;">${{item.en}}</p>` + pronHtml; 
             
             container.appendChild(div);
-
-            // 요소 삽입 후 아주 짧은 지연 뒤 투명도 1로 설정하여 페이드 인 효과 발동
             setTimeout(() => {{ div.style.opacity = '1'; }}, 50);
         }}
 
-        // 하단 해석 및 메모 렌더링
+        // ★ 하단에 해석 및 메모 모두 동시에 렌더링 (페이즈 분리 제거)
         function renderFooter() {{
             if (!filteredData || filteredData.length === 0) return;
             const item = filteredData[currentIndex];
@@ -264,49 +270,33 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             memoBox.style.opacity = 0;
 
             setTimeout(() => {{
-                if (phase === 0) {{
-                    koEl.innerText = item.ko || "";
-                    
-                    koEl.style.display = 'block';
-                    memoBox.style.display = 'none';
-                    koEl.style.opacity = 1;
-                }} else {{
-                    koEl.style.display = 'none';
-                    memoBox.style.display = 'block';
+                // 모든 정보를 한 화면에 표시
+                koEl.innerText = item.ko || "";
+                koEl.style.display = item.ko ? 'block' : 'none';
+                
+                document.getElementById('memo1-text').innerText = item.memo1 ? item.memo1 : "";
+                document.getElementById('memo2-text').innerText = item.memo2 ? item.memo2 : "";
+                document.getElementById('memo1-text').style.display = item.memo1 ? 'block' : 'none';
+                document.getElementById('memo2-text').style.display = item.memo2 ? 'block' : 'none';
 
-                    // 메모 부분 이모티콘 제거
-                    document.getElementById('memo1-text').innerText = item.memo1 ? item.memo1 : "";
-                    document.getElementById('memo2-text').innerText = item.memo2 ? item.memo2 : "";
-                    
-                    document.getElementById('memo1-text').style.display = item.memo1 ? 'block' : 'none';
-                    document.getElementById('memo2-text').style.display = item.memo2 ? 'block' : 'none';
+                memoBox.style.display = (item.memo1 || item.memo2) ? 'block' : 'none';
 
-                    memoBox.style.opacity = 1;
-                }}
+                // Fade in
+                koEl.style.opacity = 1;
+                memoBox.style.opacity = 1;
             }}, 400); // 0.4초 페이드 아웃 후 교체
         }}
 
-        // 5초마다 실행되는 스텝 함수
+        // 다음 단어로 이동
         function step() {{
-            const item = filteredData[currentIndex];
-            const hasMemo = item.memo1 || item.memo2;
-
-            if (phase === 0 && hasMemo) {{
-                // 메모가 있으면 메모 페이즈로 전환
-                phase = 1;
-                renderFooter();
-            }} else {{
-                // 메모가 없거나 이미 메모를 보여줬으면 다음 단어로 이동
-                phase = 0;
-                currentIndex = (currentIndex + 1) % filteredData.length;
-                renderRolling();
-                renderFooter();
-            }}
+            currentIndex = (currentIndex + 1) % filteredData.length;
+            renderRolling();
+            renderFooter();
         }}
 
         function resetInterval() {{
             if (intervalId) clearInterval(intervalId);
-            intervalId = setInterval(step, 5000);
+            intervalId = setInterval(step, currentSpeed);
         }}
 
         // 초기 실행
