@@ -1132,12 +1132,12 @@ else:
             unique_links_cats1 = sorted([x for x in df_links['대분류'].unique().tolist() if x != ''])
             unique_links_cats2 = sorted([x for x in df_links['소분류'].unique().tolist() if x != ''])
             
-            # 1. 대분류 라디오 버튼 (✨ 최근 5개를 기본으로 추가)
-            sel_link_cat1 = st.radio("대분류 필터", ["✨ 최근 5개", "전체 링크"] + unique_links_cats1, horizontal=True, label_visibility="collapsed")
+            # 1. 대분류 라디오 버튼 (전체 링크를 기본으로)
+            sel_link_cat1 = st.radio("대분류 필터", ["전체 링크", "✨ 최근 5개"] + unique_links_cats1, horizontal=True, label_visibility="collapsed")
             
             # 2. 대분류 선택 시, 바로 밑에 소분류 라디오 버튼 렌더링
             sel_link_cat2 = "전체"
-            if sel_link_cat1 not in ["✨ 최근 5개", "전체 링크"]:
+            if sel_link_cat1 not in ["전체 링크", "✨ 최근 5개"]:
                 subset_cat2 = sorted([x for x in df_links[df_links['대분류'] == sel_link_cat1]['소분류'].unique().tolist() if x != ''])
                 if subset_cat2:
                     display_cat2 = ["전체"] + subset_cat2
@@ -1160,7 +1160,7 @@ else:
                 df_links = df_links[df_links['제목'].str.contains(search, case=False, na=False) | df_links['메모'].str.contains(search, case=False, na=False) | df_links['링크'].str.contains(search, case=False, na=False)]
             else:
                 if sel_link_cat1 == "✨ 최근 5개":
-                    df_links = df_links.iloc[::-1].head(5) # 최신 역순으로 5개만 추출
+                    df_links = df_links.tail(5) # 마지막 5개를 시트 순서대로 추출
                 elif sel_link_cat1 != "전체 링크":
                     df_links = df_links[df_links['대분류'] == sel_link_cat1]
                     if sel_link_cat2 != "전체":
