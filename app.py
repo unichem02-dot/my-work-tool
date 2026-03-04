@@ -60,11 +60,20 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         .container {{ width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; align-items: center; position: relative; }}
         
         /* 상단 헤더 바 (셀렉터 & 닫기 버튼) */
-        .header-bar {{ position: absolute; top: 20px; left: 30px; right: 30px; display: flex; justify-content: space-between; align-items: center; z-index: 100; }}
+        .header-bar {{ position: absolute; top: 20px; left: 30px; right: 30px; display: flex; justify-content: space-between; align-items: flex-start; z-index: 100; }}
         .cat-select {{ background: rgba(0,0,0,0.7); color: #FFD700; border: 2px solid rgba(255,215,0,0.5); padding: 12px 20px; font-size: 18px; border-radius: 12px; font-weight: bold; cursor: pointer; outline: none; transition: 0.3s; }}
         .cat-select:hover {{ border-color: #FFD700; background: rgba(255,215,0,0.1); }}
+        
+        /* 우측 상단 컨트롤 버튼 그룹 */
+        .right-controls {{ display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }}
         .close-btn {{ background: rgba(255,255,255,0.1); border: none; color: white; font-size: 18px; padding: 12px 24px; border-radius: 50px; cursor: pointer; transition: 0.3s; font-weight: bold; }}
-        .close-btn:hover {{ background: rgba(255,255,255,0.3); }}
+        .close-btn:hover {{ background: rgba(255,100,100,0.8); }}
+        
+        /* 작고 귀여운 재생 컨트롤러 */
+        .playback-controls {{ display: flex; gap: 8px; }}
+        .playback-controls button {{ background: rgba(255,255,255,0.15); border: none; color: white; font-size: 14px; padding: 8px 14px; border-radius: 8px; cursor: pointer; transition: 0.3s; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }}
+        .playback-controls button:hover {{ background: rgba(255,255,255,0.3); transform: translateY(-2px); }}
+        .playback-controls button:active {{ transform: translateY(0); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }}
         
         #rolling-container {{ flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; width: 100%; text-align: center; }}
         
@@ -73,7 +82,6 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         
         /* 텍스트 스타일 */
         #ko-text {{ color: #a08b7a; font-size: 36px; font-weight: bold; margin: 0; transition: opacity 0.4s; word-break: keep-all; line-height: 1.4; }}
-        #pron-text {{ color: #777; font-size: 24px; margin: 10px 0 0 0; font-style: italic; transition: opacity 0.4s; }}
         #memo-box {{ transition: opacity 0.4s; display: none; }}
         .memo-text {{ color: #ccc; font-size: 26px; font-weight: 500; margin: 8px 0; word-break: keep-all; line-height: 1.4; }}
     </style>
@@ -82,14 +90,20 @@ def render_study_mode(study_data, unique_cats, initial_cat):
     <div class="container">
         <div class="header-bar">
             <select id="category-select" class="cat-select" onchange="changeCategory()"></select>
-            <button class="close-btn" onclick="window.close()">❌ 창 닫기</button>
+            <div class="right-controls">
+                <button class="close-btn" onclick="closeWindow()">❌ 창 닫기</button>
+                <div class="playback-controls">
+                    <button onclick="movePrev()">위</button>
+                    <button onclick="togglePause()" id="pause-btn">멈춤 ⏸</button>
+                    <button onclick="moveNext()">아래</button>
+                </div>
+            </div>
         </div>
         
         <div id="rolling-container"></div>
 
         <div class="footer">
             <p id="ko-text"></p>
-            <p id="pron-text"></p>
             <div id="memo-box">
                 <p id="memo1-text" class="memo-text"></p>
                 <p id="memo2-text" class="memo-text"></p>
@@ -102,14 +116,22 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         const categories = {cats_json};
         let filteredData = [];
         let currentIndex = 0;
-        let phase = 0; // 0: 해석/발음, 1: 메모
+        let phase = 0; // 0: 해석, 1: 메모
         let intervalId;
+        let isPaused = false;
+
+        // 확실한 창닫기 (부모 창까지 닫기 시도)
+        function closeWindow() {{
+            try {{ window.parent.close(); }} catch(e) {{}}
+            window.close();
+        }}
 
         // 드롭다운 메뉴 렌더링
         const selectEl = document.getElementById('category-select');
         let allOpt = document.createElement('option');
         allOpt.value = "ALL";
         allOpt.innerText = "전체 랜덤 🔀";
+        allOpt.style.color = "#E67E22"; // 주황색 지정
         selectEl.appendChild(allOpt);
         
         categories.forEach(cat => {{
@@ -119,7 +141,16 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             if (cat === "{initial_cat}") opt.selected = true;
             selectEl.appendChild(opt);
         }});
-        if ("{initial_cat}" === "ALL") selectEl.value = "ALL";
+        
+        // 초기 선택값에 따른 컬러 변경 로직
+        if ("{initial_cat}" === "ALL") {{
+            selectEl.value = "ALL";
+            selectEl.style.color = "#E67E22";
+        }}
+        selectEl.addEventListener('change', function() {{
+            if (this.value === "ALL") this.style.color = "#E67E22";
+            else this.style.color = "#FFD700";
+        }});
 
         // 배열 셔플 함수
         function shuffle(array) {{
@@ -143,10 +174,39 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             phase = 0;
             renderRolling();
             renderFooter();
-            resetInterval();
+            if(!isPaused) resetInterval();
         }}
 
-        // 중앙 영어 문장 렌더링
+        // 컨트롤러 기능 (위, 아래, 멈춤/재생)
+        function movePrev() {{
+            if (!filteredData || filteredData.length === 0) return;
+            currentIndex = (currentIndex - 1 + filteredData.length) % filteredData.length;
+            phase = 0;
+            renderRolling(); renderFooter();
+            if(!isPaused) resetInterval();
+        }}
+        function moveNext() {{
+            if (!filteredData || filteredData.length === 0) return;
+            currentIndex = (currentIndex + 1) % filteredData.length;
+            phase = 0;
+            renderRolling(); renderFooter();
+            if(!isPaused) resetInterval();
+        }}
+        function togglePause() {{
+            isPaused = !isPaused;
+            const btn = document.getElementById('pause-btn');
+            if(isPaused) {{
+                clearInterval(intervalId);
+                btn.innerText = "재생 ▶";
+                btn.style.background = "rgba(230,126,34,0.7)";
+            }} else {{
+                resetInterval();
+                btn.innerText = "멈춤 ⏸";
+                btn.style.background = "rgba(255,255,255,0.15)";
+            }}
+        }}
+
+        // 중앙 영어 문장 및 발음 렌더링
         function renderRolling() {{
             if (!filteredData || filteredData.length === 0) return;
             const container = document.getElementById('rolling-container');
@@ -164,62 +224,60 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                 div.style.padding = '0 20px';
                 div.style.boxSizing = 'border-box';
                 
+                let pronHtml = "";
+                
                 if (distance === 0) {{
                     div.style.top = '50%';
-                    // ★ 메인 글자 크기 1.3배 확대 (scale 1.15 -> 1.5)
                     div.style.transform = 'translateY(-50%) scale(1.5)';
                     div.style.opacity = '1';
                     div.style.color = '#E67E22'; 
                     div.style.fontWeight = '900';
                     div.style.textShadow = '0 0 20px rgba(230,126,34,0.4)';
                     div.style.zIndex = '10';
+                    // 현재 활성화된 단어 밑에 작고 하얀 발음 추가
+                    if(item.pron) pronHtml = `<p style="font-size: clamp(14px, 2vw, 18px); color: #FFFFFF; margin: 8px 0 0 0; font-weight: normal; font-style: italic; text-shadow: none;">${{item.pron}}</p>`;
                 }} else {{
-                    // 간격 조정 (distance * 100 -> 130)
                     div.style.top = `calc(50% + ${{distance * 130}}px)`; 
                     div.style.transform = 'translateY(-50%) scale(0.9)';
                     div.style.opacity = Math.abs(distance) === 1 ? '0.3' : '0.1';
                     div.style.color = 'rgba(255,255,255,0.4)';
                     div.style.fontWeight = '500';
                     div.style.zIndex = '5';
+                    // 흐릿한 주변 단어 밑에도 흐릿한 발음 추가
+                    if(item.pron) pronHtml = `<p style="font-size: clamp(14px, 2vw, 18px); color: rgba(255,255,255,0.5); margin: 8px 0 0 0; font-weight: normal; font-style: italic;">${{item.pron}}</p>`;
                 }}
 
-                div.innerHTML = `<p style="font-size: clamp(26px, 4.5vw, 48px); margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.3;">${{item.en}}</p>`; 
+                div.innerHTML = `<p style="font-size: clamp(26px, 4.5vw, 48px); margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.3;">${{item.en}}</p>` + pronHtml; 
                 container.appendChild(div);
             }});
         }}
 
-        // 하단 해석/발음/메모 렌더링
+        // 하단 해석 및 메모 렌더링
         function renderFooter() {{
             if (!filteredData || filteredData.length === 0) return;
             const item = filteredData[currentIndex];
             
             const koEl = document.getElementById('ko-text');
-            const pronEl = document.getElementById('pron-text');
             const memoBox = document.getElementById('memo-box');
             
             // Fade out
             koEl.style.opacity = 0;
-            pronEl.style.opacity = 0;
             memoBox.style.opacity = 0;
 
             setTimeout(() => {{
                 if (phase === 0) {{
                     koEl.innerText = item.ko || "";
-                    pronEl.innerText = item.pron ? "[" + item.pron + "]" : "";
                     
                     koEl.style.display = 'block';
-                    pronEl.style.display = item.pron ? 'block' : 'none';
                     memoBox.style.display = 'none';
-
                     koEl.style.opacity = 1;
-                    if(item.pron) pronEl.style.opacity = 1;
                 }} else {{
                     koEl.style.display = 'none';
-                    pronEl.style.display = 'none';
                     memoBox.style.display = 'block';
 
-                    document.getElementById('memo1-text').innerText = item.memo1 ? "💡 " + item.memo1 : "";
-                    document.getElementById('memo2-text').innerText = item.memo2 ? "💡 " + item.memo2 : "";
+                    // 메모 부분 이모티콘 제거
+                    document.getElementById('memo1-text').innerText = item.memo1 ? item.memo1 : "";
+                    document.getElementById('memo2-text').innerText = item.memo2 ? item.memo2 : "";
                     
                     document.getElementById('memo1-text').style.display = item.memo1 ? 'block' : 'none';
                     document.getElementById('memo2-text').style.display = item.memo2 ? 'block' : 'none';
