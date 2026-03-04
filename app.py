@@ -626,13 +626,13 @@ else:
 
     with col_study_btn:
         if st.session_state.app_mode == 'English':
-            # ★ 실제 HTML a 태그를 이용해 새 탭으로 열기 (현재 필터 파라미터 전달)
+            # ★ 자바스크립트 window.open을 사용하여 팝업 형태로 열기 (주소창, 툴바 등 숨김)
             cat_encoded = urllib.parse.quote(st.session_state.current_cat)
             search_encoded = urllib.parse.quote(st.session_state.active_search)
             study_url = f"/?study=true&cat={cat_encoded}&search={search_encoded}"
             
             st.markdown(f"""
-                <a href="{study_url}" target="_blank" style="
+                <a href="#" onclick="window.open('{study_url}', 'StudyWindow', 'location=no,toolbar=no,menubar=no,scrollbars=no,status=no,resizable=yes,width='+screen.availWidth+',height='+screen.availHeight); return false;" style="
                     display: flex; align-items: center; justify-content: center;
                     width: 100%; padding: 0.5rem 1.2rem;
                     background-color: #FFFFFF; color: #224343;
