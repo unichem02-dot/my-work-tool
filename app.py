@@ -61,8 +61,11 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         
         /* 상단 헤더 바 (셀렉터 & 닫기 버튼) */
         .header-bar {{ position: absolute; top: 20px; left: 30px; right: 30px; display: flex; justify-content: space-between; align-items: flex-start; z-index: 100; }}
-        .cat-select {{ background: rgba(0,0,0,0.7); color: #FFD700; border: 2px solid rgba(255,215,0,0.5); padding: 12px 20px; font-size: 18px; border-radius: 12px; font-weight: bold; cursor: pointer; outline: none; transition: 0.3s; }}
+        
+        /* ★ 셀렉터 투명화 적용 */
+        .cat-select {{ background: transparent; color: #FFD700; border: 2px solid rgba(255,215,0,0.5); padding: 12px 20px; font-size: 18px; border-radius: 12px; font-weight: bold; cursor: pointer; outline: none; transition: 0.3s; appearance: none; -webkit-appearance: none; text-align: center; }}
         .cat-select:hover {{ border-color: #FFD700; background: rgba(255,215,0,0.1); }}
+        .cat-select option {{ background: #0a0a0a; color: #FFD700; }} /* 펼쳤을 때 리스트는 어둡게 유지하여 가독성 확보 */
         
         /* 우측 상단 컨트롤 버튼 그룹 */
         .right-controls {{ display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }}
@@ -206,50 +209,46 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
         }}
 
-        // 중앙 영어 문장 및 발음 렌더링
+        // ★ 1단 집중 디자인 및 부드러운 페이드 효과 적용 (중앙 렌더링)
         function renderRolling() {{
             if (!filteredData || filteredData.length === 0) return;
             const container = document.getElementById('rolling-container');
-            container.innerHTML = '';
+            
+            // 기존 문장 부드럽게 지우기
+            const oldItems = container.children;
+            for(let i=0; i<oldItems.length; i++) {{
+                oldItems[i].style.opacity = '0';
+                setTimeout((el) => {{ if (container.contains(el)) container.removeChild(el); }}, 600, oldItems[i]);
+            }}
 
-            filteredData.forEach((item, index) => {{
-                const distance = index - currentIndex;
-                if (distance < -2 || distance > 2) return;
+            const item = filteredData[currentIndex];
 
-                const div = document.createElement('div');
-                div.style.position = 'absolute';
-                div.style.width = '100%';
-                div.style.transition = 'all 0.7s ease-in-out';
-                div.style.left = '0';
-                div.style.padding = '0 20px';
-                div.style.boxSizing = 'border-box';
-                
-                let pronHtml = "";
-                
-                if (distance === 0) {{
-                    div.style.top = '50%';
-                    div.style.transform = 'translateY(-50%) scale(1.5)';
-                    div.style.opacity = '1';
-                    div.style.color = '#E67E22'; 
-                    div.style.fontWeight = '900';
-                    div.style.textShadow = '0 0 20px rgba(230,126,34,0.4)';
-                    div.style.zIndex = '10';
-                    // 현재 활성화된 단어 밑에 작고 하얀 발음 추가
-                    if(item.pron) pronHtml = `<p style="font-size: clamp(14px, 2vw, 18px); color: #FFFFFF; margin: 8px 0 0 0; font-weight: normal; font-style: italic; text-shadow: none;">${{item.pron}}</p>`;
-                }} else {{
-                    div.style.top = `calc(50% + ${{distance * 130}}px)`; 
-                    div.style.transform = 'translateY(-50%) scale(0.9)';
-                    div.style.opacity = Math.abs(distance) === 1 ? '0.3' : '0.1';
-                    div.style.color = 'rgba(255,255,255,0.4)';
-                    div.style.fontWeight = '500';
-                    div.style.zIndex = '5';
-                    // 흐릿한 주변 단어 밑에도 흐릿한 발음 추가
-                    if(item.pron) pronHtml = `<p style="font-size: clamp(14px, 2vw, 18px); color: rgba(255,255,255,0.5); margin: 8px 0 0 0; font-weight: normal; font-style: italic;">${{item.pron}}</p>`;
-                }}
+            // 새 문장 렌더링
+            const div = document.createElement('div');
+            div.style.position = 'absolute';
+            div.style.width = '100%';
+            div.style.transition = 'opacity 0.6s ease-in-out';
+            div.style.left = '0';
+            div.style.top = '50%';
+            div.style.transform = 'translateY(-50%)'; 
+            div.style.padding = '0 20px';
+            div.style.boxSizing = 'border-box';
+            div.style.opacity = '0'; // 초기 투명도 0 (페이드 인 준비)
+            
+            div.style.color = '#E67E22'; 
+            div.style.fontWeight = '900';
+            div.style.textShadow = '0 0 20px rgba(230,126,34,0.4)';
+            div.style.zIndex = '10';
 
-                div.innerHTML = `<p style="font-size: clamp(26px, 4.5vw, 48px); margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.3;">${{item.en}}</p>` + pronHtml; 
-                container.appendChild(div);
-            }});
+            let pronHtml = "";
+            if(item.pron) pronHtml = `<p style="font-size: clamp(16px, 2.5vw, 22px); color: #FFFFFF; margin: 15px 0 0 0; font-weight: normal; font-style: italic; text-shadow: none;">${{item.pron}}</p>`;
+
+            div.innerHTML = `<p style="font-size: clamp(36px, 6vw, 64px); margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.3;">${{item.en}}</p>` + pronHtml; 
+            
+            container.appendChild(div);
+
+            // 요소 삽입 후 아주 짧은 지연 뒤 투명도 1로 설정하여 페이드 인 효과 발동
+            setTimeout(() => {{ div.style.opacity = '1'; }}, 50);
         }}
 
         // 하단 해석 및 메모 렌더링
