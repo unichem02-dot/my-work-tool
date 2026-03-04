@@ -421,13 +421,14 @@ def init_connection():
     creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
     return gspread.authorize(creds)
 
-def get_sheet():
-    return init_connection().open("English_Sentences").sheet1
+def get_english_sheets():
+    wb = init_connection().open("English_Sentences")
+    return wb.get_worksheet(0), wb.get_worksheet(2) # 시트1과 시트3
 
 def get_links_sheet():
     return init_connection().open("English_Sentences").get_worksheet(1) # 인덱스 1 (시트2)
 
-def load_dataframe(sheet):
+def _load_single_sheet(sheet):
     for _ in range(3):
         try:
             data = sheet.get_all_values()
@@ -438,6 +439,20 @@ def load_dataframe(sheet):
             return df
         except: time.sleep(1)
     raise Exception("데이터 로드 실패")
+
+def load_dataframe():
+    sheet1, sheet3 = get_english_sheets()
+    
+    df1 = _load_single_sheet(sheet1)
+    df1['sheet_idx'] = 0
+    df1['row_idx'] = df1.index + 2  # 구글 시트의 실제 행 번호 기록
+
+    df3 = _load_single_sheet(sheet3)
+    df3['sheet_idx'] = 2
+    df3['row_idx'] = df3.index + 2
+
+    # 두 시트의 데이터를 하나로 합침
+    return pd.concat([df1, df3], ignore_index=True)
 
 def load_links_dataframe(sheet):
     for _ in range(3):
@@ -469,8 +484,7 @@ if st.query_params.get("study") == "true":
     
     # 2. 전체 데이터 로드
     try:
-        sheet = get_sheet()
-        df = load_dataframe(sheet)
+        df = load_dataframe()
         
         # 카테고리 추출
         unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
@@ -697,6 +711,7 @@ if st.session_state.is_simple:
 @st.dialog("새 항목 추가")
 def add_dialog(unique_cats):
     with st.form("add_form", clear_on_submit=True):
+        target_sheet_name = st.radio("저장할 시트 선택", ["시트1", "시트3"], horizontal=True)
         c1, c2 = st.columns(2)
         selected_cat = c1.selectbox("기존 분류", ["(새로 입력)"] + unique_cats)
         new_cat = c2.text_input("새 분류 입력")
@@ -709,19 +724,20 @@ def add_dialog(unique_cats):
         if st.form_submit_button("저장하기", use_container_width=True, type="primary"):
             final_cat = new_cat.strip() if new_cat.strip() else (selected_cat if selected_cat != "(새로 입력)" else "")
             if word_sent:
-                sheet = get_sheet()
-                sheet.append_row([final_cat, word_sent, mean, pron, m1, m2])
+                sheet_index = 0 if target_sheet_name == "시트1" else 2
+                target_sheet = init_connection().open("English_Sentences").get_worksheet(sheet_index)
+                target_sheet.append_row([final_cat, word_sent, mean, pron, m1, m2])
                 st.success("저장 완료!")
                 time.sleep(1)
                 st.rerun()
 
 @st.dialog("항목 수정 및 삭제")
-def edit_dialog(idx, row_data, unique_cats):
+def edit_dialog(row_idx, sheet_idx, row_data, unique_cats):
     safe_cats = unique_cats if unique_cats else ["(없음)"]
     cat_val = row_data.get('분류', '')
     cat_index = safe_cats.index(cat_val) if cat_val in safe_cats else 0
     
-    with st.form(f"edit_{idx}"):
+    with st.form(f"edit_{sheet_idx}_{row_idx}"):
         c1, c2 = st.columns(2)
         edit_cat = c1.selectbox("분류", safe_cats, index=cat_index)
         new_cat = c2.text_input("분류 직접 수정")
@@ -734,12 +750,12 @@ def edit_dialog(idx, row_data, unique_cats):
         b1, b2 = st.columns(2)
         if b1.form_submit_button("💾 저장", use_container_width=True, type="primary"):
             final_cat = new_cat.strip() if new_cat.strip() else edit_cat
-            sheet = get_sheet()
-            sheet.update(f"A{idx+2}:F{idx+2}", [[final_cat, word_sent, mean, pron, m1, m2]])
+            target_sheet = init_connection().open("English_Sentences").get_worksheet(sheet_idx)
+            target_sheet.update(f"A{row_idx}:F{row_idx}", [[final_cat, word_sent, mean, pron, m1, m2]])
             st.rerun()
         if b2.form_submit_button("🗑️ 삭제", use_container_width=True):
-            sheet = get_sheet()
-            sheet.delete_rows(idx + 2)
+            target_sheet = init_connection().open("English_Sentences").get_worksheet(sheet_idx)
+            target_sheet.delete_rows(row_idx)
             st.rerun()
 
 # --- [다이얼로그 설정 (링크 모음)] ---
@@ -995,7 +1011,7 @@ else:
     # ==============================================================
     if st.session_state.app_mode == 'English':
         try:
-            sheet = get_sheet(); df = load_dataframe(sheet)
+            df = load_dataframe()
 
             # --- 기본 UI 렌더링 ---
             unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
@@ -1074,21 +1090,21 @@ else:
                         st.session_state.sort_order = 'asc' if st.session_state.sort_order == 'None' else ('desc' if st.session_state.sort_order == 'asc' else 'None')
                         st.rerun()
                 else: h_cols[i].markdown(f"<span class='header-label'>{l}</span>", unsafe_allow_html=True)
-            
-            st.markdown("<div style='border-bottom:2px solid rgba(255,255,255,0.4); margin-top:-20px; margin-bottom:5px;'></div>", unsafe_allow_html=True)
+        
+        st.markdown("<div style='border-bottom:2px solid rgba(255,255,255,0.4); margin-top:-20px; margin-bottom:5px;'></div>", unsafe_allow_html=True)
 
-            for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
-                cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1], vertical_alignment="center")
-                cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold'>{row['분류']}</span>", unsafe_allow_html=True)
-                cols[1].markdown(f"<span class='word-text'>{row['단어-문장']}</span>", unsafe_allow_html=True)
-                cols[2].markdown(f"<span class='mean-text'>{row['해석']}</span>", unsafe_allow_html=True)
-                if not is_simple:
-                    cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
-                    if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(idx, row.to_dict(), unique_cats)
-                elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(idx, row.to_dict(), unique_cats)
+        for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
+            cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1], vertical_alignment="center")
+            cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold'>{row['분류']}</span>", unsafe_allow_html=True)
+            cols[1].markdown(f"<span class='word-text'>{row['단어-문장']}</span>", unsafe_allow_html=True)
+            cols[2].markdown(f"<span class='mean-text'>{row['해석']}</span>", unsafe_allow_html=True)
+            if not is_simple:
+                cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
+                if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(row['row_idx'], row['sheet_idx'], row.to_dict(), unique_cats)
+            elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(row['row_idx'], row['sheet_idx'], row.to_dict(), unique_cats)
 
-            if pages > 1:
-                p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5], vertical_alignment="center")
+        if pages > 1:
+            p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5], vertical_alignment="center")
                 if p_cols[1].button("◀ 이전", disabled=(st.session_state.curr_p == 1)): 
                     st.session_state.curr_p -= 1
                     st.rerun()
