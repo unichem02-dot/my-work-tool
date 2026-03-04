@@ -225,8 +225,8 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             // ★ 글자수가 25자 초과 시 폰트 크기 50% 축소 (기준 상향)
             let enFontSize = item.en.length > 25 ? 'clamp(25px, 4.2vw, 45px)' : 'clamp(50px, 8.4vw, 90px)';
 
-            // 구성 요소들 (발음, 해석, 메모) - 발음 및 해석 폰트 30% 추가 확대
-            let pronHtml = item.pron ? `<p style="font-size: clamp(27px, 4.2vw, 38px); color: #FFFFFF; margin: 15px 0 0 0; font-weight: normal; font-style: italic; text-shadow: none;">${{item.pron}}</p>` : "";
+            // 구성 요소들 (발음, 해석, 메모) - 발음 길이가 60자 이하인 경우에만 렌더링
+            let pronHtml = (item.pron && item.pron.length <= 60) ? `<p style="font-size: clamp(27px, 4.2vw, 38px); color: #FFFFFF; margin: 15px 0 0 0; font-weight: normal; font-style: italic; text-shadow: none;">${{item.pron}}</p>` : "";
             
             let koHtml = item.ko ? `<p class="anim-ko" style="color: #a08b7a; font-size: clamp(31px, 5.2vw, 47px); font-weight: bold; margin: 25px 0 0 0; opacity: 0; transition: opacity 0.5s ease-in-out; word-break: keep-all; line-height: 1.4; text-shadow: none;">${{item.ko}}</p>` : "";
             
