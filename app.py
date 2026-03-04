@@ -160,7 +160,8 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         categories.forEach(cat => {{
             let opt = document.createElement('option');
             opt.value = cat;
-            opt.innerText = cat + " (랜덤)";
+            // ★ Basic G 선택 시 메모2 기준 순서대로 재생됨을 표시
+            opt.innerText = cat === "Basic G" ? cat + " (순서대로)" : cat + " (랜덤)";
             if (cat === "{initial_cat}") opt.selected = true;
             selectEl.appendChild(opt);
         }});
@@ -190,6 +191,15 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             const selected = selectEl.value;
             if (selected === "ALL") {{
                 filteredData = shuffle(rawData);
+            }} else if (selected === "Basic G") {{
+                // ★ Basic G는 셔플하지 않고 메모2 숫자 기준으로 정렬
+                filteredData = rawData.filter(d => d.cat === selected).sort((a, b) => {{
+                    let numA = parseFloat(a.memo2);
+                    let numB = parseFloat(b.memo2);
+                    if (isNaN(numA)) numA = 999999; // 숫자가 아니면 맨 뒤로
+                    if (isNaN(numB)) numB = 999999;
+                    return numA - numB;
+                }});
             }} else {{
                 filteredData = shuffle(rawData.filter(d => d.cat === selected));
             }}
@@ -427,14 +437,13 @@ def init_connection():
     creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
     return gspread.authorize(creds)
 
-def get_english_sheets():
-    wb = init_connection().open("English_Sentences")
-    return wb.get_worksheet(0), wb.get_worksheet(2) # 시트1과 시트3
+def get_sheet():
+    return init_connection().open("English_Sentences").sheet1
 
 def get_links_sheet():
     return init_connection().open("English_Sentences").get_worksheet(1) # 인덱스 1 (시트2)
 
-def _load_single_sheet(sheet):
+def load_dataframe(sheet):
     for _ in range(3):
         try:
             data = sheet.get_all_values()
@@ -445,20 +454,6 @@ def _load_single_sheet(sheet):
             return df
         except: time.sleep(1)
     raise Exception("데이터 로드 실패")
-
-def load_dataframe():
-    sheet1, sheet3 = get_english_sheets()
-    
-    df1 = _load_single_sheet(sheet1)
-    df1['sheet_idx'] = 0
-    df1['row_idx'] = df1.index + 2  # 구글 시트의 실제 행 번호 기록
-
-    df3 = _load_single_sheet(sheet3)
-    df3['sheet_idx'] = 2
-    df3['row_idx'] = df3.index + 2
-
-    # 두 시트의 데이터를 하나로 합침
-    return pd.concat([df1, df3], ignore_index=True)
 
 def load_links_dataframe(sheet):
     for _ in range(3):
@@ -490,7 +485,8 @@ if st.query_params.get("study") == "true":
     
     # 2. 전체 데이터 로드
     try:
-        df = load_dataframe()
+        sheet = get_sheet()
+        df = load_dataframe(sheet)
         
         # 카테고리 추출
         unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
@@ -717,7 +713,6 @@ if st.session_state.is_simple:
 @st.dialog("새 항목 추가")
 def add_dialog(unique_cats):
     with st.form("add_form", clear_on_submit=True):
-        target_sheet_name = st.radio("저장할 시트 선택", ["시트1", "시트3"], horizontal=True)
         c1, c2 = st.columns(2)
         selected_cat = c1.selectbox("기존 분류", ["(새로 입력)"] + unique_cats)
         new_cat = c2.text_input("새 분류 입력")
@@ -730,20 +725,19 @@ def add_dialog(unique_cats):
         if st.form_submit_button("저장하기", use_container_width=True, type="primary"):
             final_cat = new_cat.strip() if new_cat.strip() else (selected_cat if selected_cat != "(새로 입력)" else "")
             if word_sent:
-                sheet_index = 0 if target_sheet_name == "시트1" else 2
-                target_sheet = init_connection().open("English_Sentences").get_worksheet(sheet_index)
-                target_sheet.append_row([final_cat, word_sent, mean, pron, m1, m2])
+                sheet = get_sheet()
+                sheet.append_row([final_cat, word_sent, mean, pron, m1, m2])
                 st.success("저장 완료!")
                 time.sleep(1)
                 st.rerun()
 
 @st.dialog("항목 수정 및 삭제")
-def edit_dialog(row_idx, sheet_idx, row_data, unique_cats):
+def edit_dialog(idx, row_data, unique_cats):
     safe_cats = unique_cats if unique_cats else ["(없음)"]
     cat_val = row_data.get('분류', '')
     cat_index = safe_cats.index(cat_val) if cat_val in safe_cats else 0
     
-    with st.form(f"edit_{sheet_idx}_{row_idx}"):
+    with st.form(f"edit_{idx}"):
         c1, c2 = st.columns(2)
         edit_cat = c1.selectbox("분류", safe_cats, index=cat_index)
         new_cat = c2.text_input("분류 직접 수정")
@@ -756,12 +750,12 @@ def edit_dialog(row_idx, sheet_idx, row_data, unique_cats):
         b1, b2 = st.columns(2)
         if b1.form_submit_button("💾 저장", use_container_width=True, type="primary"):
             final_cat = new_cat.strip() if new_cat.strip() else edit_cat
-            target_sheet = init_connection().open("English_Sentences").get_worksheet(sheet_idx)
-            target_sheet.update(f"A{row_idx}:F{row_idx}", [[final_cat, word_sent, mean, pron, m1, m2]])
+            sheet = get_sheet()
+            sheet.update(f"A{idx+2}:F{idx+2}", [[final_cat, word_sent, mean, pron, m1, m2]])
             st.rerun()
         if b2.form_submit_button("🗑️ 삭제", use_container_width=True):
-            target_sheet = init_connection().open("English_Sentences").get_worksheet(sheet_idx)
-            target_sheet.delete_rows(row_idx)
+            sheet = get_sheet()
+            sheet.delete_rows(idx + 2)
             st.rerun()
 
 # --- [다이얼로그 설정 (링크 모음)] ---
@@ -1017,7 +1011,7 @@ else:
     # ==============================================================
     if st.session_state.app_mode == 'English':
         try:
-            df = load_dataframe()
+            sheet = get_sheet(); df = load_dataframe(sheet)
 
             # --- 기본 UI 렌더링 ---
             unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
@@ -1048,9 +1042,17 @@ else:
                 elif sel_cat != "전체 분류": d_df = d_df[d_df['분류'] == sel_cat]
                 st.session_state.current_cat = sel_cat
 
-            if st.session_state.sort_order == 'asc': d_df = d_df.sort_values(by='단어-문장', ascending=True)
-            elif st.session_state.sort_order == 'desc': d_df = d_df.sort_values(by='단어-문장', ascending=False)
-            else: d_df = d_df.iloc[::-1]
+            # ★ 정렬 로직 (Basic G 일 때는 메모2의 숫자를 기준으로 오름차순 정렬)
+            if st.session_state.sort_order == 'asc': 
+                d_df = d_df.sort_values(by='단어-문장', ascending=True)
+            elif st.session_state.sort_order == 'desc': 
+                d_df = d_df.sort_values(by='단어-문장', ascending=False)
+            else: 
+                if sel_cat == "Basic G":
+                    d_df['memo2_num'] = pd.to_numeric(d_df['메모2'], errors='coerce')
+                    d_df = d_df.sort_values(by=['memo2_num', '단어-문장'], ascending=[True, True]).drop(columns=['memo2_num'])
+                else:
+                    d_df = d_df.iloc[::-1]
 
             if st.session_state.authenticated:
                 cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
@@ -1106,8 +1108,8 @@ else:
                 cols[2].markdown(f"<span class='mean-text'>{row['해석']}</span>", unsafe_allow_html=True)
                 if not is_simple:
                     cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
-                    if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(row['row_idx'], row['sheet_idx'], row.to_dict(), unique_cats)
-                elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(row['row_idx'], row['sheet_idx'], row.to_dict(), unique_cats)
+                    if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(idx, row.to_dict(), unique_cats)
+                elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(idx, row.to_dict(), unique_cats)
 
             if pages > 1:
                 p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5], vertical_alignment="center")
