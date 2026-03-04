@@ -96,7 +96,7 @@ def render_study_mode(study_data):
                     div.style.textShadow = '0 0 15px rgba(230,126,34,0.3)';
                     div.style.zIndex = '10';
                 }} else {{
-                    div.style.top = `calc(50% + ${distance * 80}px)`;
+                    div.style.top = `calc(50% + ${{distance * 80}}px)`; // ★ 파이썬 f-string 중복 파싱 에러 방지용 이중 괄호 적용
                     div.style.transform = 'translateY(-50%) scale(0.85)';
                     div.style.opacity = Math.abs(distance) === 1 ? '0.3' : '0.1';
                     div.style.color = 'rgba(255,255,255,0.4)';
@@ -104,7 +104,7 @@ def render_study_mode(study_data):
                     div.style.zIndex = '5';
                 }}
 
-                div.innerHTML = `<p style="font-size: 36px; margin: 0; letter-spacing: 0.5px;">${item.en}</p>`;
+                div.innerHTML = `<p style="font-size: 36px; margin: 0; letter-spacing: 0.5px;">${{item.en}}</p>`; // ★ 파이썬 f-string 중복 파싱 에러 방지용 이중 괄호 적용
                 container.appendChild(div);
             }});
         }}
