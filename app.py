@@ -83,7 +83,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         /* 텍스트 스타일 */
         #ko-text {{ color: #a08b7a; font-size: 36px; font-weight: bold; margin: 0 0 15px 0; transition: opacity 0.4s; word-break: keep-all; line-height: 1.4; }}
         #memo-box {{ transition: opacity 0.4s; display: none; width: 100%; }}
-        .memo-text {{ color: #ccc; font-size: 24px; font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4; }}
+        .memo-text {{ color: #FFFF00; font-size: 24px; font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4; }}
     </style>
     </head>
     <body>
@@ -231,8 +231,8 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             let koHtml = item.ko ? `<p class="anim-ko" style="color: #a08b7a; font-size: clamp(31px, 5.2vw, 47px); font-weight: bold; margin: 25px 0 0 0; opacity: 0; transition: opacity 0.5s ease-in-out; word-break: keep-all; line-height: 1.4; text-shadow: none;">${{item.ko}}</p>` : "";
             
             let memoHtml = `<div class="anim-memo" style="opacity: 0; transition: opacity 0.5s ease-in-out; margin-top: 20px; text-shadow: none;">`;
-            if (item.memo1) memoHtml += `<p style="color: #ccc; font-size: clamp(23px, 3.9vw, 34px); font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4;">${{item.memo1}}</p>`;
-            if (item.memo2) memoHtml += `<p style="color: #ccc; font-size: clamp(23px, 3.9vw, 34px); font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4;">${{item.memo2}}</p>`;
+            if (item.memo1) memoHtml += `<p style="color: #FFFF00; font-size: clamp(23px, 3.9vw, 34px); font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4;">${{item.memo1}}</p>`;
+            if (item.memo2) memoHtml += `<p style="color: #FFFF00; font-size: clamp(23px, 3.9vw, 34px); font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4;">${{item.memo2}}</p>`;
             memoHtml += `</div>`;
 
             // DOM 병합
