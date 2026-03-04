@@ -262,44 +262,44 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
         }}
 
-        // ★ 고품질 원어민 음성을 최우선으로 선택하는 강화된 TTS 로직
+        // ★ 오직 미국식(US) 고품질 원어민 음성을 최우선으로 선택하는 로직
         function speakText(text, lang) {{
             if (!window.speechSynthesis) return;
             
-            // 특수 기호(/, ?, (, ), [, ], {, }) 제거 필터링
-            const cleanText = text.replace(/[\/\?\(\)\[\]\{\}]/g, ' ');
+            // 파이썬 f-string 충돌 방지 및 특수 기호(/, ?, (, ), [, ]) 제거 필터링
+            const cleanText = text.replace(/[/?()[\\]]/g, ' ');
             
             const utterance = new SpeechSynthesisUtterance(cleanText);
             utterance.lang = lang; 
             
-            // 영어는 연음이 부드럽고 자연스럽게 들리도록 0.95 세팅, 한국어는 또박또박 0.9 유지
-            utterance.rate = lang.includes('en') ? 0.95 : 0.9; 
+            // 영어는 연음이 부드럽고 자연스럽게 들리도록 0.95 세팅, 한국어는 0.9 유지
+            utterance.rate = lang === 'en-US' ? 0.95 : 0.9; 
             utterance.pitch = 1.0;
 
             if (availableVoices.length > 0) {{
                 let bestVoice = null;
                 
-                if (lang.includes('en')) {{
-                    // 1순위: 크롬 브라우저의 고품질 클라우드 음성 (가장 원어민에 가까움)
+                if (lang === 'en-US') {{
+                    // 1순위: 크롬 브라우저의 고품질 클라우드 음성 (미국식)
                     bestVoice = availableVoices.find(voice => voice.name === 'Google US English');
                     
-                    // 2순위: 엣지 브라우저의 고품질 신경망(Neural/Natural) 음성
+                    // 2순위: 엣지 브라우저의 고품질 신경망(Natural) 미국식 음성
                     if (!bestVoice) {{
-                        bestVoice = availableVoices.find(voice => voice.name.includes('Natural') && voice.lang.includes('en'));
+                        bestVoice = availableVoices.find(voice => voice.name.includes('Natural') && voice.lang === 'en-US');
                     }}
-                    // 3순위: 애플 Mac/iOS의 자연스러운 기본 음성
+                    // 3순위: 애플 Mac/iOS의 자연스러운 기본 미국식 음성
                     if (!bestVoice) {{
-                        bestVoice = availableVoices.find(voice => (voice.name === 'Samantha' || voice.name === 'Alex') && voice.lang.includes('en'));
+                        bestVoice = availableVoices.find(voice => (voice.name === 'Samantha' || voice.name === 'Alex') && voice.lang === 'en-US');
                     }}
-                    // 4순위: 기타 고품질 표기 음성
+                    // 4순위: 기타 고품질 미국 영어
                     if (!bestVoice) {{
-                        bestVoice = availableVoices.find(voice => voice.lang.includes('en') && (voice.name.includes('Premium') || voice.name.includes('Enhanced')));
+                        bestVoice = availableVoices.find(voice => voice.lang === 'en-US' && (voice.name.includes('Premium') || voice.name.includes('Enhanced')));
                     }}
-                    // 5순위: 일반 기본 미국 영어
+                    // 5순위: 기본 미국 영어 (영국식 배제 보장)
                     if (!bestVoice) {{
                         bestVoice = availableVoices.find(voice => voice.lang === 'en-US');
                     }}
-                }} else if (lang.includes('ko')) {{
+                }} else if (lang === 'ko-KR') {{
                     bestVoice = availableVoices.find(voice => voice.name === 'Google 한국의');
                     if (!bestVoice) bestVoice = availableVoices.find(voice => voice.name.includes('Natural') && voice.lang.includes('ko'));
                     if (!bestVoice) bestVoice = availableVoices.find(voice => voice.lang.includes('ko-KR'));
