@@ -457,12 +457,11 @@ def load_dataframe():
     df1['row_idx'] = df1.index + 2  # 구글 시트의 실제 행 번호 기록
     df1 = df1.iloc[::-1] 
 
-    # 시트3 로드 및 메모2 숫자 기준 오름차순 정렬
+    # 시트3 로드 및 메모2 텍스트 기준 오름차순 정렬 (a,b,c, 가,나,다)
     df3 = _load_single_sheet(sheet3)
     df3['sheet_idx'] = 2
     df3['row_idx'] = df3.index + 2
-    df3['memo2_num'] = pd.to_numeric(df3['메모2'], errors='coerce')
-    df3 = df3.sort_values(by=['memo2_num', '단어-문장'], ascending=[True, True]).drop(columns=['memo2_num'])
+    df3 = df3.sort_values(by=['메모2', '단어-문장'], ascending=[True, True])
 
     # 두 시트의 데이터를 하나로 합침
     return pd.concat([df1, df3], ignore_index=True)
@@ -1063,10 +1062,9 @@ else:
             else: 
                 # 전체 분류나 랜덤이 아닌 특정 분류를 선택했을 때
                 if sel_cat not in ["🔀 랜덤 10", "전체 분류"]:
-                    # 해당 분류에 시트3(sheet_idx == 2) 데이터가 포함되어 있다면 메모2 숫자순으로 명시적 정렬
+                    # 해당 분류에 시트3(sheet_idx == 2) 데이터가 포함되어 있다면 메모2 텍스트순(a,b,c, 가,나,다)으로 명시적 정렬
                     if 'sheet_idx' in d_df.columns and (d_df['sheet_idx'] == 2).any():
-                        d_df['memo2_num'] = pd.to_numeric(d_df['메모2'], errors='coerce')
-                        d_df = d_df.sort_values(by=['memo2_num', '단어-문장'], ascending=[True, True]).drop(columns=['memo2_num'])
+                        d_df = d_df.sort_values(by=['메모2', '단어-문장'], ascending=[True, True])
 
             if st.session_state.authenticated:
                 cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
