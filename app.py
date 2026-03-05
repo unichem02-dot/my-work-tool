@@ -103,9 +103,9 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             <div class="left-controls">
                 <select id="category-select" class="cat-select" onchange="changeCategory()"></select>
                 <div class="playback-controls">
-                    <button onclick="movePrev()">위</button>
+                    <button onclick="movePrev()">&lt;</button>
                     <button onclick="togglePause()" id="pause-btn">멈춤</button>
-                    <button onclick="moveNext()">아래</button>
+                    <button onclick="moveNext()">&gt;</button>
                 </div>
                 <select id="speed-select" class="cat-select" onchange="changeSpeed()">
                     <option value="2300">2.3초</option>
