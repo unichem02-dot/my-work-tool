@@ -26,6 +26,7 @@ if 'active_search' not in st.session_state: st.session_state.active_search = ""
 if 'search_input' not in st.session_state: st.session_state.search_input = ""
 if 'is_simple' not in st.session_state: st.session_state.is_simple = False
 if 'curr_p' not in st.session_state: st.session_state.curr_p = 1
+# ★ 새 페이지 전환용 상태 추가 ★
 if 'app_mode' not in st.session_state: st.session_state.app_mode = 'English' 
 
 # --- [보안 설정 및 Google Sheets 연결] ---
@@ -592,6 +593,13 @@ st.markdown("""
         box-shadow: 0 0 8px rgba(255, 215, 0, 0.3) !important;
     }
     div[data-testid="stTextInput"] button { display: none !important; } /* 검색창 눈알 아이콘 숨김 */
+    
+    /* ★ Num.ENG 변환기 전용 입력창 (흰색 배경 / 검은색 글자) */
+    div[data-testid="stTextInput"]:has(input[placeholder*="숫자를 입력하면"]) input {
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+        font-weight: bold !important;
+    }
 
     /* 4. 컨텐츠 행(Row) 호버 효과 및 레이아웃 보정 */
     div.element-container:has(.row-marker) { width: 100% !important; min-width: 100% !important; }
@@ -981,7 +989,7 @@ else:
     # [Row 1] 타이틀 및 우측 날짜 영역
     h_col1, h_col2 = st.columns([6, 4], vertical_alignment="bottom")
     with h_col1:
-        st.markdown("<h1 style='color:#FFD700; font-size: clamp(2.2rem, 3.5vw, 3.5rem); line-height: 1.1; margin:0; padding:0; letter-spacing:-0.5px;'>TOmBOy94 <span style='font-size:0.7em; color:#FFFFFF;'>Hub</span></h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='color:#FFD700; font-size: clamp(2.2rem, 3.5vw, 3.5rem); line-height: 1.1; margin:0; padding:0; letter-spacing:-0.5px;'>TOmBOy94 <span style='font-size:0.7em; color:#FFFFFF;'>ENG+LINK</span></h1>", unsafe_allow_html=True)
     with h_col2:
         components.html(f"""
             <style>
@@ -1059,7 +1067,7 @@ else:
             eng_text = num_to_eng(int(clean_num)).capitalize()
             res_col1, res_col2 = st.columns([1, 1], vertical_alignment="center")
             with res_col1:
-                st.markdown(f"<div class='num-result'><span style='font-size:0.5em; color:#FFFFFF; font-weight:normal;'>변환 결과:</span><br>{eng_text}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='num-result'>{eng_text}</div>", unsafe_allow_html=True)
             with res_col2:
                 st.button("❌ 결과 지우기", key="btn_clear_res_inline", on_click=clear_num_input)
         else:
