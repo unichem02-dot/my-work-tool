@@ -160,12 +160,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         categories.forEach(cat => {{
             let opt = document.createElement('option');
             opt.value = cat;
-            
-            // ★ 시트3(sheet_idx === 2) 데이터가 포함된 카테고리인지 확인하여 라벨 분기
-            const hasSheet3 = rawData.some(d => d.cat === cat && d.sheet_idx === 2);
-            // (랜덤) 글자 삭제, 순서대로만 남김
-            opt.innerText = hasSheet3 ? cat + " (순서대로)" : cat;
-            
+            opt.innerText = cat;
             if (cat === "{initial_cat}") opt.selected = true;
             selectEl.appendChild(opt);
         }});
@@ -196,16 +191,15 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             if (selected === "ALL") {{
                 filteredData = shuffle(rawData);
             }} else {{
+                // ★ 모든 카테고리(시트3 포함) 랜덤 섞기 적용
                 let catData = rawData.filter(d => d.cat === selected);
-                // ★ 시트3 데이터가 포함된 분류면 셔플하지 않고 파이썬에서 정렬한 숫자 순서 그대로 사용
-                const hasSheet3 = catData.some(d => d.sheet_idx === 2);
-                if (hasSheet3) {{
-                    filteredData = catData;
-                }} else {{
-                    filteredData = shuffle(catData);
-                }}
+                filteredData = shuffle(catData);
             }}
             currentIndex = 0;
+            
+            // 상단 필터 정보 라벨 업데이트
+            document.getElementById('word-cat-display').innerText = selected === "ALL" ? "전체 랜덤 중" : selected + " 학습 중";
+            
             renderRolling();
             if(!isPaused) resetInterval();
         }}
@@ -1131,13 +1125,32 @@ else:
                     if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(row['row_idx'], row['sheet_idx'], row.to_dict(), unique_cats)
                 elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(row['row_idx'], row['sheet_idx'], row.to_dict(), unique_cats)
 
+            # ★ 페이지네이션 숫자 버튼 클릭 UI 적용
             if pages > 1:
-                p_cols = st.columns([3.5, 1.5, 2, 1.5, 3.5], vertical_alignment="center")
-                if p_cols[1].button("◀ 이전", disabled=(st.session_state.curr_p == 1)): 
+                st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+                
+                # 표시할 페이지 번호 계산 (현재 페이지 기준 좌우 최대 10개 표시)
+                start_p = max(1, st.session_state.curr_p - 4)
+                end_p = min(pages, start_p + 9)
+                if end_p - start_p < 9:
+                    start_p = max(1, end_p - 9)
+                display_pages = list(range(start_p, end_p + 1))
+                
+                # 번호들을 나란히 배치하기 위한 컬럼 설정 (여백 + [이전] + [번호들...] + [다음] + 여백)
+                c_ratio = [2] + [1] * (len(display_pages) + 2) + [2]
+                p_cols = st.columns(c_ratio, vertical_alignment="center")
+                
+                if p_cols[1].button("◀", key="prev_p", disabled=(st.session_state.curr_p == 1), use_container_width=True): 
                     st.session_state.curr_p -= 1
                     st.rerun()
-                p_cols[2].markdown(f"<div style='text-align:center; padding:10px; color:#FFD700; font-weight:bold;'>Page {st.session_state.curr_p} / {pages}</div>", unsafe_allow_html=True)
-                if p_cols[3].button("다음 ▶", disabled=(st.session_state.curr_p == pages)): 
+                    
+                for idx, p in enumerate(display_pages):
+                    btn_type = "primary" if p == st.session_state.curr_p else "secondary"
+                    if p_cols[idx + 2].button(str(p), key=f"page_{p}", type=btn_type, use_container_width=True):
+                        st.session_state.curr_p = p
+                        st.rerun()
+                        
+                if p_cols[-2].button("▶", key="next_p", disabled=(st.session_state.curr_p == pages), use_container_width=True): 
                     st.session_state.curr_p += 1
                     st.rerun()
 
