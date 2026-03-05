@@ -1092,7 +1092,7 @@ else:
             if st.session_state.authenticated:
                 cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
 
-            total = len(d_df); pages = math.ceil(total/100) if total > 0 else 1
+            total = len(d_df); pages = math.ceil(total/50) if total > 0 else 1
             curr_p = st.session_state.curr_p
             
             components.html(f"""
@@ -1136,7 +1136,7 @@ else:
             
             st.markdown("<div style='border-bottom:2px solid rgba(255,255,255,0.4); margin-top:-20px; margin-bottom:5px;'></div>", unsafe_allow_html=True)
 
-            for idx, row in d_df.iloc[(curr_p-1)*100 : curr_p*100].iterrows():
+            for idx, row in d_df.iloc[(curr_p-1)*50 : curr_p*50].iterrows():
                 cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1], vertical_alignment="center")
                 cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold'>{row['분류']}</span>", unsafe_allow_html=True)
                 cols[1].markdown(f"<span class='word-text'>{row['단어-문장']}</span>", unsafe_allow_html=True)
