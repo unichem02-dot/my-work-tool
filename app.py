@@ -45,6 +45,9 @@ def clear_search():
 def reset_page():
     st.session_state.curr_p = 1
 
+def set_state(key, val):
+    st.session_state[key] = val
+
 # --- [전체화면 학습 모드 컴포넌트 렌더링 함수] ---
 def render_study_mode(study_data, unique_cats, initial_cat):
     data_json = json.dumps(study_data, ensure_ascii=False)
@@ -136,7 +139,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         let isTouchMode = false; // ★ 터치 모드 상태 변수
         let availableVoices = [];
 
-        // 브라우저에 내장된 고품질 음성 목록 미리 로드
+        // 브라우저에 내장 고품질 음성 목록 미리 로드
         function loadVoices() {{
             availableVoices = window.speechSynthesis.getVoices();
         }}
@@ -656,7 +659,7 @@ st.markdown("""
         color: #224343 !important;
     }
 
-    /* 6. 버튼 스타일 */
+    /* 6. 버튼 기본 스타일 */
     button, div.stDownloadButton > button {
         border-radius: 50px !important; padding: 0.5rem 1.2rem !important; font-weight: 900 !important;
         transition: all 0.3s ease !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;
@@ -664,6 +667,15 @@ st.markdown("""
     button[kind="primary"] { background-color: #FFFFFF !important; border-color: #FFFFFF !important; }
     button[kind="primary"] p { color: #224343 !important; font-size: clamp(0.75rem, 1.1vw, 1.15rem) !important; font-weight: 900 !important; }
     button[kind="secondary"], div.stDownloadButton > button { background-color: transparent !important; border: 2px solid #FFFFFF !important; color: #FFFFFF !important; }
+
+    /* ★ 삭제 버튼 빨간색 강제 지정 (CSS Trick) */
+    div[data-testid="element-container"]:has(.delete-btn-wrapper) { display: none !important; }
+    div[data-testid="element-container"]:has(.delete-btn-wrapper) + div[data-testid="element-container"] button {
+        background-color: #FF4B4B !important; border-color: #FF4B4B !important;
+    }
+    div[data-testid="element-container"]:has(.delete-btn-wrapper) + div[data-testid="element-container"] button p {
+        color: #FFFFFF !important;
+    }
 
     /* 7. 수정 버튼: 투명 연필 아이콘 (행 번호 표시) */
     button[kind="tertiary"] {
@@ -758,7 +770,7 @@ def add_dialog(unique_cats):
         pron = c4.text_input("발음")
         m1 = st.text_input("메모1")
         m2 = st.text_input("메모2")
-        if st.form_submit_button("저장하기", use_container_width=True, type="primary"):
+        if st.form_submit_button("💾 저장하기", use_container_width=True, type="primary"):
             final_cat = new_cat.strip() if new_cat.strip() else (selected_cat if selected_cat != "(새로 입력)" else "")
             if word_sent:
                 sheet_index = 0 if target_sheet_name == "시트1" else 2
@@ -767,33 +779,63 @@ def add_dialog(unique_cats):
                 st.success("저장 완료!")
                 time.sleep(1)
                 st.rerun()
+                
+    # 폼 바깥, 팝업창 하단에 큰 닫기(취소) 버튼 배치
+    if st.button("❌ 창 닫기 (취소)", use_container_width=True):
+        st.rerun()
 
 @st.dialog("항목 수정 및 삭제")
 def edit_dialog(row_idx, sheet_idx, row_data, unique_cats):
-    safe_cats = unique_cats if unique_cats else ["(없음)"]
-    cat_val = row_data.get('분류', '')
-    cat_index = safe_cats.index(cat_val) if cat_val in safe_cats else 0
-    
-    with st.form(f"edit_{sheet_idx}_{row_idx}"):
+    del_key = f"confirm_del_{sheet_idx}_{row_idx}"
+    if del_key not in st.session_state:
+        st.session_state[del_key] = False
+
+    # 삭제 확인 모드가 아닐 때 (일반 수정 모드)
+    if not st.session_state[del_key]:
+        safe_cats = unique_cats if unique_cats else ["(없음)"]
+        cat_val = row_data.get('분류', '')
+        cat_index = safe_cats.index(cat_val) if cat_val in safe_cats else 0
+        
+        with st.form(f"edit_{sheet_idx}_{row_idx}"):
+            c1, c2 = st.columns(2)
+            edit_cat = c1.selectbox("분류", safe_cats, index=cat_index)
+            new_cat = c2.text_input("분류 직접 수정")
+            word_sent = st.text_input("단어-문장", value=row_data.get('단어-문장', ''))
+            c3, c4 = st.columns(2)
+            mean = c3.text_input("해석", value=row_data.get('해석', ''))
+            pron = c4.text_input("발음", value=row_data.get('발음', ''))
+            m1 = st.text_input("메모1", value=row_data.get('메모1', ''))
+            m2 = st.text_input("메모2", value=row_data.get('메모2', ''))
+            
+            if st.form_submit_button("💾 저장", use_container_width=True, type="primary"):
+                final_cat = new_cat.strip() if new_cat.strip() else edit_cat
+                target_sheet = init_connection().open("English_Sentences").get_worksheet(sheet_idx)
+                target_sheet.update(f"A{row_idx}:F{row_idx}", [[final_cat, word_sent, mean, pron, m1, m2]])
+                st.rerun()
+
+        # 삭제 버튼 (CSS로 빨간색 적용됨)
+        st.markdown('<div class="delete-btn-wrapper"></div>', unsafe_allow_html=True)
+        st.button("🗑️ 삭제", use_container_width=True, on_click=set_state, args=(del_key, True))
+        
+        # 큰 닫기(취소) 버튼
+        if st.button("❌ 창 닫기 (취소)", use_container_width=True):
+            st.rerun()
+
+    # 삭제 재확인 모드
+    else:
+        st.warning("⚠️ 정말 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.")
+        st.info(f"선택 항목: {row_data.get('단어-문장', '')}")
+        
         c1, c2 = st.columns(2)
-        edit_cat = c1.selectbox("분류", safe_cats, index=cat_index)
-        new_cat = c2.text_input("분류 직접 수정")
-        word_sent = st.text_input("단어-문장", value=row_data.get('단어-문장', ''))
-        c3, c4 = st.columns(2)
-        mean = c3.text_input("해석", value=row_data.get('해석', ''))
-        pron = c4.text_input("발음", value=row_data.get('발음', ''))
-        m1 = st.text_input("메모1", value=row_data.get('메모1', ''))
-        m2 = st.text_input("메모2", value=row_data.get('메모2', ''))
-        b1, b2 = st.columns(2)
-        if b1.form_submit_button("💾 저장", use_container_width=True, type="primary"):
-            final_cat = new_cat.strip() if new_cat.strip() else edit_cat
-            target_sheet = init_connection().open("English_Sentences").get_worksheet(sheet_idx)
-            target_sheet.update(f"A{row_idx}:F{row_idx}", [[final_cat, word_sent, mean, pron, m1, m2]])
-            st.rerun()
-        if b2.form_submit_button("🗑️ 삭제", use_container_width=True):
-            target_sheet = init_connection().open("English_Sentences").get_worksheet(sheet_idx)
-            target_sheet.delete_rows(row_idx)
-            st.rerun()
+        with c1:
+            st.markdown('<div class="delete-btn-wrapper"></div>', unsafe_allow_html=True)
+            if st.button("✅ 네, 삭제합니다", use_container_width=True):
+                target_sheet = init_connection().open("English_Sentences").get_worksheet(sheet_idx)
+                target_sheet.delete_rows(row_idx)
+                st.session_state[del_key] = False
+                st.rerun()
+        with c2:
+            st.button("아니오 (돌아가기)", use_container_width=True, on_click=set_state, args=(del_key, False))
 
 # --- [다이얼로그 설정 (링크 모음)] ---
 @st.dialog("새 링크 추가")
@@ -811,7 +853,7 @@ def add_link_dialog(unique_cats1, unique_cats2):
         memo = st.text_input("메모")
         link_url = st.text_input("링크 주소 (URL) (필수)")
         
-        if st.form_submit_button("저장하기", use_container_width=True, type="primary"):
+        if st.form_submit_button("💾 저장하기", use_container_width=True, type="primary"):
             final_cat1 = new_cat1.strip() if new_cat1.strip() else (selected_cat1 if selected_cat1 != "(새로 입력)" else "")
             final_cat2 = new_cat2.strip() if new_cat2.strip() else (selected_cat2 if selected_cat2 != "(새로 입력)" else "")
             
@@ -823,41 +865,66 @@ def add_link_dialog(unique_cats1, unique_cats2):
                 st.rerun()
             else:
                 st.error("제목과 링크 주소는 필수입니다.")
+                
+    if st.button("❌ 창 닫기 (취소)", use_container_width=True):
+        st.rerun()
 
 @st.dialog("링크 수정 및 삭제")
 def edit_link_dialog(row_idx, row_data, unique_cats1, unique_cats2):
-    safe_cats1 = unique_cats1 if unique_cats1 else ["(없음)"]
-    cat1_val = row_data.get('대분류', '')
-    cat1_index = safe_cats1.index(cat1_val) if cat1_val in safe_cats1 else 0
-    
-    safe_cats2 = unique_cats2 if unique_cats2 else ["(없음)"]
-    cat2_val = row_data.get('소분류', '')
-    cat2_index = safe_cats2.index(cat2_val) if cat2_val in safe_cats2 else 0
-    
-    with st.form(f"edit_link_{row_idx}"):
+    del_key = f"confirm_del_link_{row_idx}"
+    if del_key not in st.session_state:
+        st.session_state[del_key] = False
+
+    if not st.session_state[del_key]:
+        safe_cats1 = unique_cats1 if unique_cats1 else ["(없음)"]
+        cat1_val = row_data.get('대분류', '')
+        cat1_index = safe_cats1.index(cat1_val) if cat1_val in safe_cats1 else 0
+        
+        safe_cats2 = unique_cats2 if unique_cats2 else ["(없음)"]
+        cat2_val = row_data.get('소분류', '')
+        cat2_index = safe_cats2.index(cat2_val) if cat2_val in safe_cats2 else 0
+        
+        with st.form(f"edit_link_{row_idx}"):
+            c1, c2 = st.columns(2)
+            edit_cat1 = c1.selectbox("대분류", safe_cats1, index=cat1_index)
+            new_cat1 = c2.text_input("대분류 직접 수정")
+            
+            c3, c4 = st.columns(2)
+            edit_cat2 = c3.selectbox("소분류", safe_cats2, index=cat2_index)
+            new_cat2 = c4.text_input("소분류 직접 수정")
+            
+            title = st.text_input("제목", value=row_data.get('제목', ''))
+            memo = st.text_input("메모", value=row_data.get('메모', ''))
+            link_url = st.text_input("링크 주소(URL)", value=row_data.get('링크', ''))
+            
+            if st.form_submit_button("💾 저장", use_container_width=True, type="primary"):
+                final_cat1 = new_cat1.strip() if new_cat1.strip() else edit_cat1
+                final_cat2 = new_cat2.strip() if new_cat2.strip() else edit_cat2
+                sheet2 = get_links_sheet()
+                sheet2.update(f"A{row_idx}:E{row_idx}", [[final_cat1, final_cat2, title, memo, link_url]])
+                st.rerun()
+
+        # 삭제 버튼 (CSS로 빨간색 적용됨)
+        st.markdown('<div class="delete-btn-wrapper"></div>', unsafe_allow_html=True)
+        st.button("🗑️ 삭제", use_container_width=True, on_click=set_state, args=(del_key, True))
+        
+        if st.button("❌ 창 닫기 (취소)", use_container_width=True):
+            st.rerun()
+            
+    else:
+        st.warning("⚠️ 정말 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.")
+        st.info(f"선택 링크: {row_data.get('제목', '')}")
+        
         c1, c2 = st.columns(2)
-        edit_cat1 = c1.selectbox("대분류", safe_cats1, index=cat1_index)
-        new_cat1 = c2.text_input("대분류 직접 수정")
-        
-        c3, c4 = st.columns(2)
-        edit_cat2 = c3.selectbox("소분류", safe_cats2, index=cat2_index)
-        new_cat2 = c4.text_input("소분류 직접 수정")
-        
-        title = st.text_input("제목", value=row_data.get('제목', ''))
-        memo = st.text_input("메모", value=row_data.get('메모', ''))
-        link_url = st.text_input("링크 주소(URL)", value=row_data.get('링크', ''))
-        
-        b1, b2 = st.columns(2)
-        if b1.form_submit_button("💾 저장", use_container_width=True, type="primary"):
-            final_cat1 = new_cat1.strip() if new_cat1.strip() else edit_cat1
-            final_cat2 = new_cat2.strip() if new_cat2.strip() else edit_cat2
-            sheet2 = get_links_sheet()
-            sheet2.update(f"A{row_idx}:E{row_idx}", [[final_cat1, final_cat2, title, memo, link_url]])
-            st.rerun()
-        if b2.form_submit_button("🗑️ 삭제", use_container_width=True):
-            sheet2 = get_links_sheet()
-            sheet2.delete_rows(row_idx)
-            st.rerun()
+        with c1:
+            st.markdown('<div class="delete-btn-wrapper"></div>', unsafe_allow_html=True)
+            if st.button("✅ 네, 삭제합니다", use_container_width=True):
+                sheet2 = get_links_sheet()
+                sheet2.delete_rows(row_idx)
+                st.session_state[del_key] = False
+                st.rerun()
+        with c2:
+            st.button("아니오 (돌아가기)", use_container_width=True, on_click=set_state, args=(del_key, False))
 
 # --- [비즈니스 로직 함수] ---
 def format_num_input():
@@ -1197,7 +1264,7 @@ else:
                 if sel_link_cat1 == "✨ 최근 5개":
                     df_links = df_links.tail(5) # 마지막 5개를 시트 순서대로 추출
                 elif sel_link_cat1 != "전체 링크":
-                    df_links = df_links[df_links['대분류'] == sel_link_cat1]
+                    df_links = df_links[df_links['대분류'] == 시트1]
                     if sel_link_cat2 != "전체":
                         df_links = df_links[df_links['소분류'] == sel_link_cat2]
 
