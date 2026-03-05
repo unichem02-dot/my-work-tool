@@ -139,7 +139,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         let isTouchMode = false; // ★ 터치 모드 상태 변수
         let availableVoices = [];
 
-        // 브라우저에 내장 고품질 음성 목록 미리 로드
+        // 브라우저에 내장된 고품질 음성 목록 미리 로드
         function loadVoices() {{
             availableVoices = window.speechSynthesis.getVoices();
         }}
@@ -671,7 +671,7 @@ st.markdown("""
     /* ★ 삭제 버튼 빨간색 강제 지정 (CSS Trick) */
     div[data-testid="element-container"]:has(.delete-btn-wrapper) { display: none !important; }
     div[data-testid="element-container"]:has(.delete-btn-wrapper) + div[data-testid="element-container"] button {
-        background-color: #FF4B4B !important; border-color: #FF4B4B !important;
+        background-color: #FF4B4B !important; border-color: #FF4B4B !important; color: #FFFFFF !important;
     }
     div[data-testid="element-container"]:has(.delete-btn-wrapper) + div[data-testid="element-container"] button p {
         color: #FFFFFF !important;
@@ -1107,6 +1107,34 @@ else:
                 }}
             }};
             doc.addEventListener('click', doc.studyPopupHandler, true);
+            
+            // ★ 팝업창 외곽(배경) 클릭 시 닫힘 방지 강제 적용
+            if (doc.preventDialogCloseHandler) {{
+                doc.removeEventListener('mousedown', doc.preventDialogCloseHandler, true);
+                doc.removeEventListener('click', doc.preventDialogCloseHandler, true);
+            }}
+            doc.preventDialogCloseHandler = function(e) {{
+                let isDialogBg = false;
+                
+                // stDialog 컨테이너인지 체크
+                let stDialog = e.target.closest('div[data-testid="stDialog"]');
+                if (stDialog && !e.target.closest('div[role="dialog"]')) {{
+                    isDialogBg = true;
+                }}
+                
+                // baseweb modal 방식인지 체크
+                let baseWebModal = e.target.closest('div[data-baseweb="modal"]');
+                if (baseWebModal && !e.target.closest('div[role="dialog"]') && !e.target.closest('section[role="dialog"]')) {{
+                    isDialogBg = true;
+                }}
+
+                if (isDialogBg) {{
+                    e.stopPropagation();
+                    e.preventDefault();
+                }}
+            }};
+            doc.addEventListener('mousedown', doc.preventDialogCloseHandler, true);
+            doc.addEventListener('click', doc.preventDialogCloseHandler, true);
             </script>
         """, height=90) 
 
@@ -1264,7 +1292,7 @@ else:
                 if sel_link_cat1 == "✨ 최근 5개":
                     df_links = df_links.tail(5) # 마지막 5개를 시트 순서대로 추출
                 elif sel_link_cat1 != "전체 링크":
-                    df_links = df_links[df_links['대분류'] == 시트1]
+                    df_links = df_links[df_links['대분류'] == sel_link_cat1]
                     if sel_link_cat2 != "전체":
                         df_links = df_links[df_links['소분류'] == sel_link_cat2]
 
