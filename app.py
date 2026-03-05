@@ -493,10 +493,12 @@ def load_links_dataframe(sheet):
     for _ in range(3):
         try:
             data = sheet.get_all_values()
-            if not data: return pd.DataFrame(columns=['대분류', '소분류', '제목', '메모', '링크'])
+            if not data: return pd.DataFrame(columns=['대분류', '소분류', '제목', '메모', '링크', 'row_idx'])
             rows = [row + [""] * (5 - len(row)) for row in data[1:]]
             df = pd.DataFrame(rows, columns=['대분류', '소분류', '제목', '메모', '링크'])
             for col in df.columns: df[col] = df[col].astype(str).str.strip()
+            # 링크 시트도 row_idx 기록
+            df['row_idx'] = df.index + 2
             return df
         except: time.sleep(1)
     raise Exception("링크 데이터 로드 실패")
@@ -663,14 +665,14 @@ st.markdown("""
     button[kind="primary"] p { color: #224343 !important; font-size: clamp(0.75rem, 1.1vw, 1.15rem) !important; font-weight: 900 !important; }
     button[kind="secondary"], div.stDownloadButton > button { background-color: transparent !important; border: 2px solid #FFFFFF !important; color: #FFFFFF !important; }
 
-    /* 7. 수정 버튼: 투명 연필 아이콘 */
+    /* 7. 수정 버튼: 투명 연필 아이콘 (행 번호 표시) */
     button[kind="tertiary"] {
         background-color: transparent !important; border: none !important; padding: 0 !important; margin: 0 !important;
         min-height: 0 !important; min-width: 40px !important; box-shadow: none !important;
         display: flex !important; align-items: center !important; justify-content: center !important;
     }
-    button[kind="tertiary"] p { font-size: 1.6rem !important; margin: 0 !important; padding: 0 !important; transition: transform 0.2s ease !important; }
-    button[kind="tertiary"]:hover p { transform: scale(1.2) !important; }
+    button[kind="tertiary"] p { font-size: 1.1rem !important; color: #FFD700 !important; font-weight: bold !important; margin: 0 !important; padding: 0 !important; transition: transform 0.2s ease !important; }
+    button[kind="tertiary"]:hover p { transform: scale(1.1) !important; color: #FFFFFF !important; }
 
     /* 8. 텍스트 스타일 */
     .header-label { font-size: clamp(1.0rem, 1.4vw, 1.5rem) !important; font-weight: 800 !important; color: #FFFFFF !important; white-space: nowrap !important; }
@@ -823,7 +825,7 @@ def add_link_dialog(unique_cats1, unique_cats2):
                 st.error("제목과 링크 주소는 필수입니다.")
 
 @st.dialog("링크 수정 및 삭제")
-def edit_link_dialog(idx, row_data, unique_cats1, unique_cats2):
+def edit_link_dialog(row_idx, row_data, unique_cats1, unique_cats2):
     safe_cats1 = unique_cats1 if unique_cats1 else ["(없음)"]
     cat1_val = row_data.get('대분류', '')
     cat1_index = safe_cats1.index(cat1_val) if cat1_val in safe_cats1 else 0
@@ -832,7 +834,7 @@ def edit_link_dialog(idx, row_data, unique_cats1, unique_cats2):
     cat2_val = row_data.get('소분류', '')
     cat2_index = safe_cats2.index(cat2_val) if cat2_val in safe_cats2 else 0
     
-    with st.form(f"edit_link_{idx}"):
+    with st.form(f"edit_link_{row_idx}"):
         c1, c2 = st.columns(2)
         edit_cat1 = c1.selectbox("대분류", safe_cats1, index=cat1_index)
         new_cat1 = c2.text_input("대분류 직접 수정")
@@ -850,11 +852,11 @@ def edit_link_dialog(idx, row_data, unique_cats1, unique_cats2):
             final_cat1 = new_cat1.strip() if new_cat1.strip() else edit_cat1
             final_cat2 = new_cat2.strip() if new_cat2.strip() else edit_cat2
             sheet2 = get_links_sheet()
-            sheet2.update(f"A{idx+2}:E{idx+2}", [[final_cat1, final_cat2, title, memo, link_url]])
+            sheet2.update(f"A{row_idx}:E{row_idx}", [[final_cat1, final_cat2, title, memo, link_url]])
             st.rerun()
         if b2.form_submit_button("🗑️ 삭제", use_container_width=True):
             sheet2 = get_links_sheet()
-            sheet2.delete_rows(idx + 2)
+            sheet2.delete_rows(row_idx)
             st.rerun()
 
 # --- [비즈니스 로직 함수] ---
@@ -1124,7 +1126,7 @@ else:
             """, height=35)
             
             ratio = [1.5, 6, 4.5, 1] if is_simple else [1.2, 4, 2.5, 2, 2.5, 2.5, 1]
-            labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정"]
+            labels = ["분류", "단어-문장", "해석", "수정"] if is_simple else ["분류", "단어-문장", "해석", "발음", "메모1", "메모2", "수정/행"]
             h_cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1], vertical_alignment="center")
             for i, l in enumerate(labels if st.session_state.authenticated else labels[:-1]):
                 if l == "단어-문장":
@@ -1141,10 +1143,16 @@ else:
                 cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold'>{row['분류']}</span>", unsafe_allow_html=True)
                 cols[1].markdown(f"<span class='word-text'>{row['단어-문장']}</span>", unsafe_allow_html=True)
                 cols[2].markdown(f"<span class='mean-text'>{row['해석']}</span>", unsafe_allow_html=True)
+                
+                # ★ 행 번호가 포함된 버튼 라벨
+                btn_label = f"✏️ {row.get('row_idx', '')}"
+                
                 if not is_simple:
                     cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
-                    if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(row['row_idx'], row['sheet_idx'], row.to_dict(), unique_cats)
-                elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(row['row_idx'], row['sheet_idx'], row.to_dict(), unique_cats)
+                    if st.session_state.authenticated and cols[6].button(btn_label, key=f"e_{row['sheet_idx']}_{row['row_idx']}", type="tertiary"): 
+                        edit_dialog(row['row_idx'], row['sheet_idx'], row.to_dict(), unique_cats)
+                elif st.session_state.authenticated and cols[3].button(btn_label, key=f"es_{row['sheet_idx']}_{row['row_idx']}", type="tertiary"): 
+                    edit_dialog(row['row_idx'], row['sheet_idx'], row.to_dict(), unique_cats)
 
         except Exception as e: st.error(f"오류 발생: {e}")
 
@@ -1201,7 +1209,7 @@ else:
 
             # --- 표 형식 헤더 ---
             l_ratio = [1.2, 1.2, 2.5, 2.0, 2.5, 1.0] if st.session_state.authenticated else [1.2, 1.2, 2.5, 2.0, 2.5]
-            l_labels = ["대분류", "소분류", "제목", "메모", "링크", "수정"] if st.session_state.authenticated else ["대분류", "소분류", "제목", "메모", "링크"]
+            l_labels = ["대분류", "소분류", "제목", "메모", "링크", "수정/행"] if st.session_state.authenticated else ["대분류", "소분류", "제목", "메모", "링크"]
             
             h_cols = st.columns(l_ratio, vertical_alignment="center")
             for i, l in enumerate(l_labels):
@@ -1235,10 +1243,11 @@ else:
                     link_html = f"<span class='link-table-url copyable-link' data-url='{row['링크']}' title='클릭하여 복사'>{safe_display_url}</span>"
                     cols[4].markdown(link_html, unsafe_allow_html=True)
                     
-                    # 6. 수정 버튼
+                    # 6. 수정 버튼 (행 번호 표시 적용)
+                    btn_label_link = f"✏️ {row.get('row_idx', '')}"
                     if st.session_state.authenticated:
-                        if len(cols) > 5 and cols[5].button("✏️", key=f"el_{idx}", type="tertiary"):
-                            edit_link_dialog(idx, row.to_dict(), unique_links_cats1, unique_links_cats2)
+                        if len(cols) > 5 and cols[5].button(btn_label_link, key=f"el_{row['row_idx']}", type="tertiary"):
+                            edit_link_dialog(row['row_idx'], row.to_dict(), unique_links_cats1, unique_links_cats2)
 
         except Exception as e: st.error(f"링크 데이터 오류 발생: {e}")
 
