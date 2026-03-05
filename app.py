@@ -1069,7 +1069,7 @@ else:
             with res_col1:
                 st.markdown(f"<div class='num-result'>{eng_text}</div>", unsafe_allow_html=True)
             with res_col2:
-                st.button("❌ 결과 지우기", key="btn_clear_res_inline", on_click=clear_num_input)
+                st.button("❌", key="btn_clear_res_inline", on_click=clear_num_input)
         else:
             st.markdown("<div class='num-result' style='border-left-color:#FF4B4B;'><span style='color:#FF4B4B!important; font-size:1.2rem!important;'>⚠️ 숫자만 입력 가능합니다.</span></div>", unsafe_allow_html=True)
 
