@@ -56,7 +56,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
     <head>
     <style>
         /* 내부 iframe의 여백 완벽 제거 */
-        body {{ margin: 0; padding: 0; background: #0a0a0a; overflow: hidden; font-family: sans-serif; cursor: pointer; }}
+        body {{ margin: 0; padding: 0; background: #0a0a0a; overflow: hidden; font-family: sans-serif; cursor: pointer; user-select: none; -webkit-user-select: none; }}
         .container {{ width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; align-items: center; position: relative; }}
         
         /* 상단 헤더 바 (좌측 컨트롤 그룹) */
@@ -74,7 +74,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         .playback-controls button:hover {{ background: rgba(255,255,255,0.3); transform: translateY(-2px); }}
         .playback-controls button:active {{ transform: translateY(0); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }}
 
-        /* SIMPLE 버튼 */
+        /* SIMPLE & 기타 버튼 */
         .simple-btn {{ background: rgba(255,255,255,0.15); border: none; color: white; font-size: 14px; padding: 8px 14px; border-radius: 8px; cursor: pointer; transition: 0.3s; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); margin-left: 5px; }}
         .simple-btn:hover {{ background: rgba(255,255,255,0.3); transform: translateY(-2px); }}
         .simple-btn:active {{ transform: translateY(0); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }}
@@ -113,6 +113,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                     <option value="20000">20초</option>
                     <option value="30000">30초</option>
                 </select>
+                <button id="touch-btn" class="simple-btn" onclick="toggleTouchMode()">👆 TOUCH OFF</button>
                 <button id="simple-btn" class="simple-btn" onclick="toggleSimpleMode()">SIMPLE OFF</button>
                 <button id="tts-btn" class="simple-btn" onclick="toggleTTS()">🔇 소리 끄기</button>
                 <span id="word-cat-display"></span>
@@ -132,6 +133,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         let currentSpeed = 10000;
         let isSimpleMode = false;
         let isTTSEnabled = false;
+        let isTouchMode = false; // ★ 터치 모드 상태 변수
         let availableVoices = [];
 
         // 브라우저에 내장된 고품질 음성 목록 미리 로드
@@ -160,7 +162,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         categories.forEach(cat => {{
             let opt = document.createElement('option');
             opt.value = cat;
-            opt.innerText = cat;
+            opt.innerText = cat; // 랜덤 글자 제거됨
             if (cat === "{initial_cat}") opt.selected = true;
             selectEl.appendChild(opt);
         }});
@@ -172,7 +174,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         // 속도 변경
         function changeSpeed() {{
             currentSpeed = parseInt(document.getElementById('speed-select').value);
-            if(!isPaused) resetInterval();
+            if(!isPaused && !isTouchMode) resetInterval();
         }}
 
         // 배열 셔플
@@ -191,17 +193,13 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             if (selected === "ALL") {{
                 filteredData = shuffle(rawData);
             }} else {{
-                // ★ 모든 카테고리(시트3 포함) 랜덤 섞기 적용
+                // 모든 카테고리(시트3 포함) 랜덤 섞기 적용
                 let catData = rawData.filter(d => d.cat === selected);
                 filteredData = shuffle(catData);
             }}
             currentIndex = 0;
-            
-            // 상단 필터 정보 라벨 업데이트
-            document.getElementById('word-cat-display').innerText = selected === "ALL" ? "전체 랜덤 중" : selected + " 학습 중";
-            
             renderRolling();
-            if(!isPaused) resetInterval();
+            resetInterval();
         }}
 
         // 컨트롤러 기능
@@ -209,25 +207,43 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             if (!filteredData || filteredData.length === 0) return;
             currentIndex = (currentIndex - 1 + filteredData.length) % filteredData.length;
             renderRolling();
-            if(!isPaused) resetInterval();
+            resetInterval();
         }}
         function moveNext() {{
             if (!filteredData || filteredData.length === 0) return;
             currentIndex = (currentIndex + 1) % filteredData.length;
             renderRolling();
-            if(!isPaused) resetInterval();
+            resetInterval();
         }}
+        
         function togglePause() {{
             isPaused = !isPaused;
             const btn = document.getElementById('pause-btn');
             if(isPaused) {{
-                clearInterval(intervalId);
+                if (intervalId) clearInterval(intervalId);
                 btn.innerText = "재생";
                 btn.style.background = "rgba(255,255,255,0.3)";
             }} else {{
                 resetInterval();
                 btn.innerText = "멈춤";
                 btn.style.background = "rgba(255,255,255,0.15)";
+            }}
+        }}
+
+        // ★ TOUCH 모드 토글 (터치 시에만 다음으로 넘어가는 수동 모드)
+        function toggleTouchMode() {{
+            isTouchMode = !isTouchMode;
+            const btn = document.getElementById('touch-btn');
+            if(isTouchMode) {{
+                btn.style.background = "rgba(230,126,34,0.7)";
+                btn.innerText = "👆 TOUCH ON";
+                // 터치 모드를 켜면 자동 재생 인터벌 해제
+                if (intervalId) clearInterval(intervalId);
+            }} else {{
+                btn.style.background = "rgba(255,255,255,0.15)";
+                btn.innerText = "👆 TOUCH OFF";
+                // 터치 모드를 끄면 다시 자동 재생 시작 (일시정지 상태가 아니라면)
+                resetInterval();
             }}
         }}
 
@@ -245,7 +261,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             renderRolling(); // 모드 변경 즉시 화면 갱신
         }}
 
-        // ★ TTS 음성 재생 토글
+        // TTS 음성 재생 토글
         function toggleTTS() {{
             isTTSEnabled = !isTTSEnabled;
             const btn = document.getElementById('tts-btn');
@@ -264,7 +280,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
         }}
 
-        // ★ 오직 미국식(US) 고품질 원어민 음성을 최우선으로 선택하는 로직
+        // 오직 미국식(US) 고품질 원어민 음성을 최우선으로 선택하는 로직
         function speakText(text, lang) {{
             if (!window.speechSynthesis) return;
             
@@ -403,15 +419,22 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             renderRolling();
         }}
 
+        // 인터벌 설정 로직 (터치 모드나 일시정지 상태일 때는 타이머 작동 안 함)
         function resetInterval() {{
             if (intervalId) clearInterval(intervalId);
-            intervalId = setInterval(step, currentSpeed);
+            if (!isTouchMode && !isPaused) {{
+                intervalId = setInterval(step, currentSpeed);
+            }}
         }}
 
-        // 화면 클릭 시 멈춤/재생 토글 이벤트
+        // ★ 터치 모드일 때만 화면 클릭으로 다음 넘어가기 작동
         document.body.addEventListener('click', function(e) {{
+            // 상단 컨트롤 바(버튼, 셀렉터 등) 클릭 시에는 작동하지 않도록 예외 처리
             if (e.target.closest('.header-bar')) return;
-            togglePause();
+            
+            if (isTouchMode) {{
+                moveNext(); // 터치 모드가 켜져 있을 때만 클릭 시 다음 단어로 이동
+            }}
         }});
 
         // 초기 실행
@@ -1123,35 +1146,6 @@ else:
                     if st.session_state.authenticated and cols[6].button("✏️", key=f"e_{idx}", type="tertiary"): edit_dialog(row['row_idx'], row['sheet_idx'], row.to_dict(), unique_cats)
                 elif st.session_state.authenticated and cols[3].button("✏️", key=f"es_{idx}", type="tertiary"): edit_dialog(row['row_idx'], row['sheet_idx'], row.to_dict(), unique_cats)
 
-            # ★ 페이지네이션 숫자 버튼 클릭 UI 적용
-            if pages > 1:
-                st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-                
-                # 표시할 페이지 번호 계산 (현재 페이지 기준 좌우 최대 10개 표시)
-                start_p = max(1, st.session_state.curr_p - 4)
-                end_p = min(pages, start_p + 9)
-                if end_p - start_p < 9:
-                    start_p = max(1, end_p - 9)
-                display_pages = list(range(start_p, end_p + 1))
-                
-                # 번호들을 나란히 배치하기 위한 컬럼 설정 (여백 + [이전] + [번호들...] + [다음] + 여백)
-                c_ratio = [2] + [1] * (len(display_pages) + 2) + [2]
-                p_cols = st.columns(c_ratio, vertical_alignment="center")
-                
-                if p_cols[1].button("◀", key="prev_p", disabled=(st.session_state.curr_p == 1), use_container_width=True): 
-                    st.session_state.curr_p -= 1
-                    st.rerun()
-                    
-                for idx, p in enumerate(display_pages):
-                    btn_type = "primary" if p == st.session_state.curr_p else "secondary"
-                    if p_cols[idx + 2].button(str(p), key=f"page_{p}", type=btn_type, use_container_width=True):
-                        st.session_state.curr_p = p
-                        st.rerun()
-                        
-                if p_cols[-2].button("▶", key="next_p", disabled=(st.session_state.curr_p == pages), use_container_width=True): 
-                    st.session_state.curr_p += 1
-                    st.rerun()
-
         except Exception as e: st.error(f"오류 발생: {e}")
 
     # ==============================================================
@@ -1248,7 +1242,34 @@ else:
 
         except Exception as e: st.error(f"링크 데이터 오류 발생: {e}")
 
-    # --- 공통 푸터 ---
+    # --- 공통 푸터 (페이지 네비게이션 포함) ---
+    # 영어 모드일 때만 공통 푸터 위에 페이지네이션 표시
+    if st.session_state.app_mode == 'English' and 'pages' in locals() and pages > 1:
+        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+        
+        start_p = max(1, st.session_state.curr_p - 4)
+        end_p = min(pages, start_p + 9)
+        if end_p - start_p < 9:
+            start_p = max(1, end_p - 9)
+        display_pages = list(range(start_p, end_p + 1))
+        
+        c_ratio = [2] + [1] * (len(display_pages) + 2) + [2]
+        p_cols = st.columns(c_ratio, vertical_alignment="center")
+        
+        if p_cols[1].button("◀", key="prev_p", disabled=(st.session_state.curr_p == 1), use_container_width=True): 
+            st.session_state.curr_p -= 1
+            st.rerun()
+            
+        for idx, p in enumerate(display_pages):
+            btn_type = "primary" if p == st.session_state.curr_p else "secondary"
+            if p_cols[idx + 2].button(str(p), key=f"page_{p}", type=btn_type, use_container_width=True):
+                st.session_state.curr_p = p
+                st.rerun()
+                
+        if p_cols[-2].button("▶", key="next_p", disabled=(st.session_state.curr_p == pages), use_container_width=True): 
+            st.session_state.curr_p += 1
+            st.rerun()
+
     current_year = datetime.now(timezone(timedelta(hours=9))).year
     st.markdown(f"""
         <div style='text-align: center; margin-top: 30px; margin-bottom: 20px; padding-top: 15px; border-top: 1px dotted rgba(255, 255, 255, 0.2);'>
