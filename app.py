@@ -160,7 +160,12 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         categories.forEach(cat => {{
             let opt = document.createElement('option');
             opt.value = cat;
-            opt.innerText = cat + " (랜덤)";
+            
+            // ★ 시트3(sheet_idx === 2) 데이터가 포함된 카테고리인지 확인하여 라벨 분기
+            const hasSheet3 = rawData.some(d => d.cat === cat && d.sheet_idx === 2);
+            // (랜덤) 글자 삭제, 순서대로만 남김
+            opt.innerText = hasSheet3 ? cat + " (순서대로)" : cat;
+            
             if (cat === "{initial_cat}") opt.selected = true;
             selectEl.appendChild(opt);
         }});
@@ -191,14 +196,16 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             if (selected === "ALL") {{
                 filteredData = shuffle(rawData);
             }} else {{
-                // ★ 무조건 랜덤 섞기 복구
-                filteredData = shuffle(rawData.filter(d => d.cat === selected));
+                let catData = rawData.filter(d => d.cat === selected);
+                // ★ 시트3 데이터가 포함된 분류면 셔플하지 않고 파이썬에서 정렬한 숫자 순서 그대로 사용
+                const hasSheet3 = catData.some(d => d.sheet_idx === 2);
+                if (hasSheet3) {{
+                    filteredData = catData;
+                }} else {{
+                    filteredData = shuffle(catData);
+                }}
             }}
             currentIndex = 0;
-            
-            // 상단 필터 정보 라벨 업데이트
-            document.getElementById('word-cat-display').innerText = selected === "ALL" ? "전체 랜덤 중" : selected + " 학습 중";
-            
             renderRolling();
             if(!isPaused) resetInterval();
         }}
