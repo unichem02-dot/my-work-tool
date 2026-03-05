@@ -579,18 +579,18 @@ st.markdown("""
 
     /* 3. 입력창 디자인 세련되게 변경 */
     .stTextInput input, .stTextArea textarea {
-        background-color: rgba(255, 255, 255, 0.08) !important;
-        color: #FFFFFF !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+        border: 1px solid #A3B8B8 !important;
         border-radius: 10px !important;
         font-size: 1.1rem !important;
         padding: 10px 15px !important;
         transition: all 0.3s ease !important;
     }
     .stTextInput input:focus, .stTextArea textarea:focus {
-        background-color: rgba(255, 255, 255, 0.15) !important;
+        background-color: #FFFFFF !important;
         border-color: #FFD700 !important;
-        box-shadow: 0 0 8px rgba(255, 215, 0, 0.3) !important;
+        box-shadow: 0 0 8px rgba(255, 215, 0, 0.4) !important;
     }
     div[data-testid="stTextInput"] button { display: none !important; } /* 검색창 눈알 아이콘 숨김 */
     
@@ -764,18 +764,18 @@ def add_dialog(unique_cats):
         # 2. 카테고리 (줄바꿈 배치로 변경)
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>2. 카테고리 분류</p>", unsafe_allow_html=True)
         selected_cat = st.selectbox("기존 분류 선택", ["(새로 입력)"] + unique_cats)
-        new_cat = st.text_input("또는 새 분류 직접 입력") # 설명(Placeholder) 제거
+        new_cat = st.text_input("또는 새 분류 직접 입력", value="") # Placeholder 제거
         
         # 3. 학습 데이터
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>3. 학습 데이터</p>", unsafe_allow_html=True)
-        word_sent = st.text_area("단어-문장 (필수)", height=80) # 설명 제거
-        mean = st.text_area("해석", height=80) # 설명 제거
+        word_sent = st.text_area("단어-문장 (필수)", value="", height=80) # Placeholder 제거
+        mean = st.text_area("해석", value="", height=80) # Placeholder 제거
         
         # 4. 부가 정보 (줄바꿈 배치로 변경)
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>4. 부가 정보 (선택)</p>", unsafe_allow_html=True)
-        pron = st.text_input("발음") # 설명 제거
-        m1 = st.text_area("메모 1", height=80) # text_area로 변경 및 설명 제거
-        m2 = st.text_area("메모 2", height=80) # text_area로 변경 및 설명 제거
+        pron = st.text_input("발음", value="") # Placeholder 제거
+        m1 = st.text_area("메모 1", value="", height=80) # text_area로 변경 및 Placeholder 제거
+        m2 = st.text_area("메모 2", value="", height=80) # text_area로 변경 및 Placeholder 제거
         
         st.markdown("<br>", unsafe_allow_html=True)
         if st.form_submit_button("💾 저장하기", use_container_width=True, type="primary"):
@@ -805,7 +805,7 @@ def edit_dialog(row_idx, sheet_idx, row_data, unique_cats):
         with st.form(f"edit_{sheet_idx}_{row_idx}"):
             st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; color: #FFD700;'>1. 카테고리 수정</p>", unsafe_allow_html=True)
             edit_cat = st.selectbox("기존 분류 선택", safe_cats, index=cat_index)
-            new_cat = st.text_input("분류 직접 변경") # 설명 제거
+            new_cat = st.text_input("분류 직접 변경", value="") # Placeholder 제거
             
             st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>2. 학습 데이터 수정</p>", unsafe_allow_html=True)
             word_sent = st.text_area("단어-문장", value=row_data.get('단어-문장', ''), height=80)
@@ -850,16 +850,16 @@ def add_link_dialog(unique_cats1, unique_cats2):
     with st.form("add_link_form", clear_on_submit=True):
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; color: #FFD700;'>1. 카테고리 지정</p>", unsafe_allow_html=True)
         selected_cat1 = st.selectbox("기존 대분류", ["(새로 입력)"] + unique_cats1)
-        new_cat1 = st.text_input("새 대분류 직접 입력") # 줄바꿈 및 설명 제거
+        new_cat1 = st.text_input("새 대분류 직접 입력", value="") # Placeholder 제거
         
         st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
         selected_cat2 = st.selectbox("기존 소분류", ["(새로 입력)"] + unique_cats2)
-        new_cat2 = st.text_input("새 소분류 직접 입력") # 줄바꿈 및 설명 제거
+        new_cat2 = st.text_input("새 소분류 직접 입력", value="") # Placeholder 제거
         
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>2. 링크 정보</p>", unsafe_allow_html=True)
-        title = st.text_input("제목 (필수)") # 설명 제거
-        link_url = st.text_input("링크 주소(URL) (필수)") # 설명 제거
-        memo = st.text_input("메모") # 설명 제거
+        title = st.text_input("제목 (필수)", value="") # Placeholder 제거
+        link_url = st.text_input("링크 주소(URL) (필수)", value="") # Placeholder 제거
+        memo = st.text_input("메모", value="") # Placeholder 제거
         
         st.markdown("<br>", unsafe_allow_html=True)
         if st.form_submit_button("💾 저장하기", use_container_width=True, type="primary"):
@@ -896,11 +896,11 @@ def edit_link_dialog(row_idx, row_data, unique_cats1, unique_cats2):
         with st.form(f"edit_link_{row_idx}"):
             st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; color: #FFD700;'>1. 카테고리 수정</p>", unsafe_allow_html=True)
             edit_cat1 = st.selectbox("대분류", safe_cats1, index=cat1_index)
-            new_cat1 = st.text_input("대분류 직접 수정") # 줄바꿈 및 설명 제거
+            new_cat1 = st.text_input("대분류 직접 수정", value="") # Placeholder 제거
             
             st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
             edit_cat2 = st.selectbox("소분류", safe_cats2, index=cat2_index)
-            new_cat2 = st.text_input("소분류 직접 수정") # 줄바꿈 및 설명 제거
+            new_cat2 = st.text_input("소분류 직접 수정", value="") # Placeholder 제거
             
             st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>2. 링크 정보 수정</p>", unsafe_allow_html=True)
             title = st.text_input("제목", value=row_data.get('제목', ''))
