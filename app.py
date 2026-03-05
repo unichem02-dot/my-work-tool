@@ -765,9 +765,8 @@ def add_dialog(unique_cats):
         target_sheet_name = st.radio("저장할 시트", ["시트1", "시트3"], horizontal=True, label_visibility="collapsed")
         
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>2. 카테고리 분류</p>", unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        selected_cat = c1.selectbox("기존 분류 선택", ["(새로 입력)"] + unique_cats)
-        new_cat = c2.text_input("또는 새 분류 직접 입력", placeholder="새로운 분류명...")
+        selected_cat = st.selectbox("기존 분류 선택", ["(새로 입력)"] + unique_cats)
+        new_cat = st.text_input("또는 새 분류 직접 입력", placeholder="새로운 분류명...")
         
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>3. 학습 데이터</p>", unsafe_allow_html=True)
         # 긴 문장 입력을 위해 text_area 적용
@@ -776,9 +775,8 @@ def add_dialog(unique_cats):
         
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>4. 부가 정보 (선택)</p>", unsafe_allow_html=True)
         pron = st.text_input("발음", placeholder="발음 기호나 한글 발음...")
-        c3, c4 = st.columns(2)
-        m1 = c3.text_input("메모 1", placeholder="추가 설명이나 문법 등...")
-        m2 = c4.text_input("메모 2", placeholder="정렬용 숫자 등...")
+        m1 = st.text_area("메모 1", placeholder="추가 설명이나 문법 등...", height=80)
+        m2 = st.text_area("메모 2", placeholder="정렬용 숫자 등...", height=80)
         
         st.markdown("<br>", unsafe_allow_html=True)
         if st.form_submit_button("💾 저장하기", use_container_width=True, type="primary"):
@@ -809,9 +807,8 @@ def edit_dialog(row_idx, sheet_idx, row_data, unique_cats):
         
         with st.form(f"edit_{sheet_idx}_{row_idx}"):
             st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; color: #FFD700;'>1. 카테고리 수정</p>", unsafe_allow_html=True)
-            c1, c2 = st.columns(2)
-            edit_cat = c1.selectbox("기존 분류 선택", safe_cats, index=cat_index)
-            new_cat = c2.text_input("분류 직접 변경", placeholder="새로운 분류명...")
+            edit_cat = st.selectbox("기존 분류 선택", safe_cats, index=cat_index)
+            new_cat = st.text_input("분류 직접 변경", placeholder="새로운 분류명...")
             
             st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>2. 학습 데이터 수정</p>", unsafe_allow_html=True)
             word_sent = st.text_area("단어-문장", value=row_data.get('단어-문장', ''), height=80)
@@ -819,9 +816,8 @@ def edit_dialog(row_idx, sheet_idx, row_data, unique_cats):
             
             st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>3. 부가 정보 수정</p>", unsafe_allow_html=True)
             pron = st.text_input("발음", value=row_data.get('발음', ''))
-            c3, c4 = st.columns(2)
-            m1 = c3.text_input("메모 1", value=row_data.get('메모1', ''))
-            m2 = c4.text_input("메모 2", value=row_data.get('메모2', ''))
+            m1 = st.text_area("메모 1", value=row_data.get('메모1', ''), height=80)
+            m2 = st.text_area("메모 2", value=row_data.get('메모2', ''), height=80)
             
             st.markdown("<br>", unsafe_allow_html=True)
             if st.form_submit_button("💾 수정한 내용 저장", use_container_width=True, type="primary"):
@@ -1269,6 +1265,35 @@ else:
                         edit_dialog(row['row_idx'], row['sheet_idx'], row.to_dict(), unique_cats)
                 elif st.session_state.authenticated and cols[3].button(btn_label, key=f"es_{row['sheet_idx']}_{row['row_idx']}", type="tertiary"): 
                     edit_dialog(row['row_idx'], row['sheet_idx'], row.to_dict(), unique_cats)
+
+            # ★ 페이지네이션 숫자 버튼 클릭 UI 적용
+            if pages > 1:
+                st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+                
+                # 표시할 페이지 번호 계산 (현재 페이지 기준 좌우 최대 10개 표시)
+                start_p = max(1, st.session_state.curr_p - 4)
+                end_p = min(pages, start_p + 9)
+                if end_p - start_p < 9:
+                    start_p = max(1, end_p - 9)
+                display_pages = list(range(start_p, end_p + 1))
+                
+                # 번호들을 나란히 배치하기 위한 컬럼 설정 (여백 + [이전] + [번호들...] + [다음] + 여백)
+                c_ratio = [2] + [1] * (len(display_pages) + 2) + [2]
+                p_cols = st.columns(c_ratio, vertical_alignment="center")
+                
+                if p_cols[1].button("◀", key="prev_p", disabled=(st.session_state.curr_p == 1), use_container_width=True): 
+                    st.session_state.curr_p -= 1
+                    st.rerun()
+                    
+                for idx, p in enumerate(display_pages):
+                    btn_type = "primary" if p == st.session_state.curr_p else "secondary"
+                    if p_cols[idx + 2].button(str(p), key=f"page_{p}", type=btn_type, use_container_width=True):
+                        st.session_state.curr_p = p
+                        st.rerun()
+                        
+                if p_cols[-2].button("▶", key="next_p", disabled=(st.session_state.curr_p == pages), use_container_width=True): 
+                    st.session_state.curr_p += 1
+                    st.rerun()
 
         except Exception as e: st.error(f"오류 발생: {e}")
 
