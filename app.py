@@ -160,11 +160,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         categories.forEach(cat => {{
             let opt = document.createElement('option');
             opt.value = cat;
-            
-            // ★ 시트3(sheet_idx === 2) 데이터가 포함된 카테고리인지 확인하여 라벨 분기
-            const hasSheet3 = rawData.some(d => d.cat === cat && d.sheet_idx === 2);
-            opt.innerText = hasSheet3 ? cat + " (순서대로)" : cat + " (랜덤)";
-            
+            opt.innerText = cat + " (랜덤)";
             if (cat === "{initial_cat}") opt.selected = true;
             selectEl.appendChild(opt);
         }});
@@ -195,14 +191,8 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             if (selected === "ALL") {{
                 filteredData = shuffle(rawData);
             }} else {{
-                let catData = rawData.filter(d => d.cat === selected);
-                // ★ 시트3 데이터가 포함된 분류면 셔플하지 않고 파이썬에서 정렬한 숫자 순서 그대로 사용
-                const hasSheet3 = catData.some(d => d.sheet_idx === 2);
-                if (hasSheet3) {{
-                    filteredData = catData;
-                }} else {{
-                    filteredData = shuffle(catData);
-                }}
+                // ★ 무조건 랜덤 섞기 복구
+                filteredData = shuffle(rawData.filter(d => d.cat === selected));
             }}
             currentIndex = 0;
             
@@ -1070,7 +1060,12 @@ else:
             elif st.session_state.sort_order == 'desc': 
                 d_df = d_df.sort_values(by='단어-문장', ascending=False)
             else: 
-                pass # 이미 load_dataframe()에서 시트1은 최신순, 시트3은 메모2 순서로 정렬됨
+                # 전체 분류나 랜덤이 아닌 특정 분류를 선택했을 때
+                if sel_cat not in ["🔀 랜덤 10", "전체 분류"]:
+                    # 해당 분류에 시트3(sheet_idx == 2) 데이터가 포함되어 있다면 메모2 숫자순으로 명시적 정렬
+                    if 'sheet_idx' in d_df.columns and (d_df['sheet_idx'] == 2).any():
+                        d_df['memo2_num'] = pd.to_numeric(d_df['메모2'], errors='coerce')
+                        d_df = d_df.sort_values(by=['memo2_num', '단어-문장'], ascending=[True, True]).drop(columns=['memo2_num'])
 
             if st.session_state.authenticated:
                 cb[4].download_button("📥 CSV", d_df.to_csv(index=False).encode('utf-8-sig'), f"Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
