@@ -458,14 +458,20 @@ def get_english_sheets():
     sheet_main = wb.worksheet("메인")
     sheet_trans = wb.worksheet("해석")
     
-    # 추가된 시트 연동 ('구동사', 'TOM-영어')
+    # 추가된 시트 연동 ('구동사', 'TOM-영어', '동사구', '문법')
     try: sheet_phrasal = wb.worksheet("구동사")
     except: sheet_phrasal = None
         
     try: sheet_tom = wb.worksheet("TOM-영어")
     except: sheet_tom = None
         
-    return sheet_main, sheet_trans, sheet_phrasal, sheet_tom
+    try: sheet_verb_phrase = wb.worksheet("동사구")
+    except: sheet_verb_phrase = None
+        
+    try: sheet_grammar = wb.worksheet("문법")
+    except: sheet_grammar = None
+        
+    return sheet_main, sheet_trans, sheet_phrasal, sheet_tom, sheet_verb_phrase, sheet_grammar
 
 def get_links_sheet():
     # ★ 시트 이름 변경 반영: 1번 시트 -> '링크'
@@ -484,7 +490,7 @@ def _load_single_sheet(sheet):
     raise Exception("데이터 로드 실패")
 
 def load_dataframe():
-    sheet_main, sheet_trans, sheet_phrasal, sheet_tom = get_english_sheets()
+    sheet_main, sheet_trans, sheet_phrasal, sheet_tom, sheet_verb_phrase, sheet_grammar = get_english_sheets()
     
     # 1. 메인 로드 및 역순(최신순) 정렬
     df1 = _load_single_sheet(sheet_main)
@@ -515,6 +521,22 @@ def load_dataframe():
         df_t['row_idx'] = df_t.index + 2
         df_t = df_t.iloc[::-1]
         dfs.append(df_t)
+
+    # 5. 동사구 시트 로드 및 역순(최신순) 정렬
+    if sheet_verb_phrase is not None:
+        df_vp = _load_single_sheet(sheet_verb_phrase)
+        df_vp['sheet_idx'] = "동사구"
+        df_vp['row_idx'] = df_vp.index + 2
+        df_vp = df_vp.iloc[::-1]
+        dfs.append(df_vp)
+
+    # 6. 문법 시트 로드 및 역순(최신순) 정렬
+    if sheet_grammar is not None:
+        df_g = _load_single_sheet(sheet_grammar)
+        df_g['sheet_idx'] = "문법"
+        df_g['row_idx'] = df_g.index + 2
+        df_g = df_g.iloc[::-1]
+        dfs.append(df_g)
 
     # 모든 시트의 데이터를 하나로 합침
     return pd.concat(dfs, ignore_index=True)
@@ -782,7 +804,7 @@ def add_dialog(unique_cats):
     with st.form("add_form", clear_on_submit=True):
         # 1. 시트 선택 (업데이트된 시트명 반영)
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; color: #FFD700;'>1. 저장할 시트</p>", unsafe_allow_html=True)
-        target_sheet_name = st.radio("저장할 시트", ["메인", "해석", "구동사", "TOM-영어"], horizontal=True, label_visibility="collapsed")
+        target_sheet_name = st.radio("저장할 시트", ["메인", "해석", "구동사", "TOM-영어", "동사구", "문법"], horizontal=True, label_visibility="collapsed")
         
         # 2. 카테고리
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>2. 카테고리 분류</p>", unsafe_allow_html=True)
