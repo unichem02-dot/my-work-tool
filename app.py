@@ -1112,11 +1112,11 @@ else:
                 elif sel_cat != "전체 분류": d_df = d_df[d_df['분류'] == sel_cat]
                 st.session_state.current_cat = sel_cat
 
-            # ★ 정렬 로직 (모든 시트를 행 번호 오름차순으로 통일)
+            # ★ 정렬 로직 (모든 시트를 행 번호 오름차순으로 통일, 대소문자 구분 없이 정렬)
             if st.session_state.sort_order == 'asc': 
-                d_df = d_df.sort_values(by='단어-문장', ascending=True)
+                d_df = d_df.sort_values(by='단어-문장', ascending=True, key=lambda col: col.str.lower())
             elif st.session_state.sort_order == 'desc': 
-                d_df = d_df.sort_values(by='단어-문장', ascending=False)
+                d_df = d_df.sort_values(by='단어-문장', ascending=False, key=lambda col: col.str.lower())
             else: 
                 if sel_cat != "🔀 랜덤 10":
                     d_df = d_df.sort_values(by='row_idx', ascending=True)
