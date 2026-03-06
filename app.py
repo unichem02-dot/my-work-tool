@@ -495,6 +495,8 @@ def _load_single_sheet(sheet):
         except: time.sleep(1)
     raise Exception("데이터 로드 실패")
 
+# ★ 429 API 초과 오류 방지를 위해 캐시 적용 (10분 유지)
+@st.cache_data(ttl=600)
 def load_dataframe():
     sheet_main, sheet_trans, sheet_phrasal, sheet_tom, sheet_verb_phrase, sheet_grammar, sheet_travel, sheet_words = get_english_sheets()
     
@@ -563,7 +565,10 @@ def load_dataframe():
     # 모든 시트의 데이터를 하나로 합침
     return pd.concat(dfs, ignore_index=True)
 
-def load_links_dataframe(sheet):
+# ★ 429 API 초과 오류 방지를 위해 캐시 적용 (10분 유지)
+@st.cache_data(ttl=600)
+def load_links_dataframe():
+    sheet = get_links_sheet()
     for _ in range(3):
         try:
             data = sheet.get_all_values()
@@ -777,7 +782,7 @@ st.markdown("""
     /* 8. 텍스트 스타일 */
     .header-label { font-size: clamp(1.0rem, 1.4vw, 1.5rem) !important; font-weight: 800 !important; color: #FFFFFF !important; white-space: nowrap !important; text-transform: uppercase; letter-spacing: 1px; }
     .word-text { font-size: 1.98em; font-weight: bold; color: #FFD700 !important; word-break: keep-all; display: inline-block !important; margin-bottom: 0px !important; margin-top: -2px !important; transition: transform 0.2s ease !important; transform-origin: left center !important; }
-    .mean-text { font-size: 1.3em; word-break: keep-all; display: inline-block !important; margin-bottom: 0px !important; }
+    .mean-text { font-size: 1.3em; word-break: keep-all; display: inline-block !important; margin-bottom: 0px !important; color: #E0E0E0 !important; }
     .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; color: #A3B8B8 !important; display: inline-block !important; margin-bottom: 0px !important; }
     div[data-testid="stHorizontalBlock"]:has(.row-marker):hover .word-text { transform: scale(1.05) !important; z-index: 10 !important; }
 
@@ -855,6 +860,7 @@ def add_dialog(unique_cats):
                 target_sheet.append_row([final_cat, word_sent, mean, pron, m1, m2])
                 st.success("저장 완료!")
                 time.sleep(1)
+                st.cache_data.clear() # 캐시 초기화
                 st.rerun()
                 
     if st.button("❌ 창 닫기 (취소)", use_container_width=True):
@@ -892,6 +898,7 @@ def edit_dialog(row_idx, sheet_idx, row_data, unique_cats):
                 # sheet_idx에는 시트 이름 텍스트("메인", "해석" 등)가 들어있음
                 target_sheet = wb.worksheet(sheet_idx) if isinstance(sheet_idx, str) else wb.get_worksheet(sheet_idx)
                 target_sheet.update(f"A{row_idx}:F{row_idx}", [[final_cat, word_sent, mean, pron, m1, m2]])
+                st.cache_data.clear() # 캐시 초기화
                 st.rerun()
 
         st.markdown('<div class="delete-btn-wrapper"></div>', unsafe_allow_html=True)
@@ -912,6 +919,7 @@ def edit_dialog(row_idx, sheet_idx, row_data, unique_cats):
                 target_sheet = wb.worksheet(sheet_idx) if isinstance(sheet_idx, str) else wb.get_worksheet(sheet_idx)
                 target_sheet.delete_rows(row_idx)
                 st.session_state[del_key] = False
+                st.cache_data.clear() # 캐시 초기화
                 st.rerun()
         with c2:
             st.button("아니오 (수정창으로 돌아가기)", use_container_width=True, on_click=set_state, args=(del_key, False))
@@ -943,6 +951,7 @@ def add_link_dialog(unique_cats1, unique_cats2):
                 sheet2.append_row([final_cat1, final_cat2, title, memo, link_url])
                 st.success("새 링크 저장 완료!")
                 time.sleep(1)
+                st.cache_data.clear() # 캐시 초기화
                 st.rerun()
             else:
                 st.error("제목과 링크 주소는 필수입니다.")
@@ -985,6 +994,7 @@ def edit_link_dialog(row_idx, row_data, unique_cats1, unique_cats2):
                 final_cat2 = new_cat2.strip() if new_cat2.strip() else edit_cat2
                 sheet2 = get_links_sheet()
                 sheet2.update(f"A{row_idx}:E{row_idx}", [[final_cat1, final_cat2, title, memo, link_url]])
+                st.cache_data.clear() # 캐시 초기화
                 st.rerun()
 
         st.markdown('<div class="delete-btn-wrapper"></div>', unsafe_allow_html=True)
@@ -1004,6 +1014,7 @@ def edit_link_dialog(row_idx, row_data, unique_cats1, unique_cats2):
                 sheet2 = get_links_sheet()
                 sheet2.delete_rows(row_idx)
                 st.session_state[del_key] = False
+                st.cache_data.clear() # 캐시 초기화
                 st.rerun()
         with c2:
             st.button("아니오 (수정창으로 돌아가기)", use_container_width=True, on_click=set_state, args=(del_key, False))
@@ -1309,7 +1320,7 @@ else:
     elif st.session_state.app_mode == 'Links':
         try:
             sheet2 = get_links_sheet()
-            df_links = load_links_dataframe(sheet2)
+            df_links = load_links_dataframe()
             
             unique_links_cats1 = sorted([x for x in df_links['대분류'].unique().tolist() if x != ''])
             unique_links_cats2 = sorted([x for x in df_links['소분류'].unique().tolist() if x != ''])
