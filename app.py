@@ -408,18 +408,18 @@ def _fetch_sheet_concurrently(wb, sheet_name):
         if sheet_name == "해석":
             return df.sort_values(by=['메모2', '단어-문장'], ascending=[True, True])
         else:
-            return df  # 원본 시트 순서(행 번호 작은 순서부터) 그대로 반환
+            # ★ 핵심: 역순([::-1]) 제거 및 행 번호 기준 확실한 오름차순 정렬 적용
+            return df.sort_values(by='row_idx', ascending=True)
     except Exception:
         return pd.DataFrame()
 
-# ★ 429 API 초과 오류 방지를 위해 캐시 적용 및 병렬 처리 적용 (속도 8배 향상)
+# ★ 함수명을 변경하여 기존에 저장되어 있던 잘못된 역순 캐시를 강제로 삭제하고 새로 불러옵니다.
 @st.cache_data(ttl=600)
-def load_dataframe():
+def get_english_data():
     wb = init_connection().open("English_Sentences")
     sheet_names = ["메인", "해석", "구동사", "TOM-영어", "동사구", "문법", "여행", "단어"]
     
     dfs = []
-    # ★ 핵심: ThreadPoolExecutor를 사용해 모든 시트를 동시에 읽어옴
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(sheet_names)) as executor:
         results = executor.map(lambda name: _fetch_sheet_concurrently(wb, name), sheet_names)
         for res in results:
@@ -433,8 +433,9 @@ def load_dataframe():
 def get_links_sheet():
     return init_connection().open("English_Sentences").worksheet("링크")
 
+# ★ 함수명 변경으로 기존 링크 시트 캐시 강제 삭제
 @st.cache_data(ttl=600)
-def load_links_dataframe():
+def get_links_data():
     sheet = get_links_sheet()
     for _ in range(3):
         try:
@@ -444,7 +445,8 @@ def load_links_dataframe():
             df = pd.DataFrame(rows, columns=['대분류', '소분류', '제목', '메모', '링크'])
             for col in df.columns: df[col] = df[col].astype(str).str.strip()
             df['row_idx'] = df.index + 2
-            return df
+            # ★ 링크도 행 번호 오름차순으로 명시적 정렬
+            return df.sort_values(by='row_idx', ascending=True)
         except: time.sleep(1)
     raise Exception("링크 데이터 로드 실패")
 
@@ -453,7 +455,6 @@ def load_links_dataframe():
 # ★ 새창 열림 전용 라우팅 (URL 파라미터에 study=true가 있을 때)
 # ==============================================================
 if st.query_params.get("study") == "true":
-    # 1. Streamlit 기본 여백 및 UI 요소 완벽 제거 (꽉 찬 화면)
     st.markdown("""
         <style>
             html, body, [data-testid="stAppViewContainer"], .main, .block-container {
@@ -464,14 +465,12 @@ if st.query_params.get("study") == "true":
         </style>
     """, unsafe_allow_html=True)
     
-    # 2. 전체 데이터 로드
     try:
-        df = load_dataframe()
+        df = get_english_data() # 변경된 캐시 함수 사용
         unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
         cat_param = st.query_params.get("cat", "ALL")
         initial_cat = "ALL" if cat_param in ["🔀 랜덤 10", "전체 분류", "ALL"] else cat_param
         
-        # ★ 모바일 에러 방지를 위해 변환 과정을 명시적으로 분리
         study_df = df[['분류', '단어-문장', '해석', '발음', '메모1', '메모2', 'sheet_idx']].rename(
             columns={'분류':'cat', '단어-문장': 'en', '해석': 'ko', '발음': 'pron', '메모1': 'memo1', '메모2': 'memo2'}
         )
@@ -543,7 +542,7 @@ st.markdown("""
     div.element-container:has(.row-marker) { width: 100% !important; min-width: 100% !important; }
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 12px 10px 16px 10px !important; /* 상하 여백 밸런스 조정 (하단을 약간 더 주어 중앙에 맞춤) */
+        padding: 12px 10px 16px 10px !important; 
         border-radius: 0px !important; 
         margin-bottom: 0px !important; border-bottom: 1px dotted rgba(255, 255, 255, 0.2) !important; 
         width: 100% !important; min-width: 100% !important; flex: 1 1 100% !important;
@@ -716,7 +715,7 @@ def add_dialog(unique_cats):
                 target_sheet.append_row([final_cat, word_sent, mean, pron, m1, m2])
                 st.success("저장 완료!")
                 time.sleep(1)
-                st.cache_data.clear() # 캐시 초기화 (데이터 갱신)
+                st.cache_data.clear() # 강제 캐시 초기화
                 st.rerun()
                 
     if st.button("❌ 창 닫기 (취소)", use_container_width=True):
@@ -751,10 +750,9 @@ def edit_dialog(row_idx, sheet_idx, row_data, unique_cats):
             if st.form_submit_button("💾 수정한 내용 저장", use_container_width=True, type="primary"):
                 final_cat = new_cat.strip() if new_cat.strip() else edit_cat
                 wb = init_connection().open("English_Sentences")
-                # sheet_idx에는 시트 이름 텍스트("메인", "해석" 등)가 들어있음
                 target_sheet = wb.worksheet(sheet_idx) if isinstance(sheet_idx, str) else wb.get_worksheet(sheet_idx)
                 target_sheet.update(f"A{row_idx}:F{row_idx}", [[final_cat, word_sent, mean, pron, m1, m2]])
-                st.cache_data.clear() # 캐시 초기화
+                st.cache_data.clear() # 강제 캐시 초기화
                 st.rerun()
 
         st.markdown('<div class="delete-btn-wrapper"></div>', unsafe_allow_html=True)
@@ -775,7 +773,7 @@ def edit_dialog(row_idx, sheet_idx, row_data, unique_cats):
                 target_sheet = wb.worksheet(sheet_idx) if isinstance(sheet_idx, str) else wb.get_worksheet(sheet_idx)
                 target_sheet.delete_rows(row_idx)
                 st.session_state[del_key] = False
-                st.cache_data.clear() # 캐시 초기화
+                st.cache_data.clear() # 강제 캐시 초기화
                 st.rerun()
         with c2:
             st.button("아니오 (수정창으로 돌아가기)", use_container_width=True, on_click=set_state, args=(del_key, False))
@@ -807,7 +805,7 @@ def add_link_dialog(unique_cats1, unique_cats2):
                 sheet2.append_row([final_cat1, final_cat2, title, memo, link_url])
                 st.success("새 링크 저장 완료!")
                 time.sleep(1)
-                st.cache_data.clear() # 캐시 초기화
+                st.cache_data.clear() # 강제 캐시 초기화
                 st.rerun()
             else:
                 st.error("제목과 링크 주소는 필수입니다.")
@@ -850,7 +848,7 @@ def edit_link_dialog(row_idx, row_data, unique_cats1, unique_cats2):
                 final_cat2 = new_cat2.strip() if new_cat2.strip() else edit_cat2
                 sheet2 = get_links_sheet()
                 sheet2.update(f"A{row_idx}:E{row_idx}", [[final_cat1, final_cat2, title, memo, link_url]])
-                st.cache_data.clear() # 캐시 초기화
+                st.cache_data.clear() # 강제 캐시 초기화
                 st.rerun()
 
         st.markdown('<div class="delete-btn-wrapper"></div>', unsafe_allow_html=True)
@@ -870,7 +868,7 @@ def edit_link_dialog(row_idx, row_data, unique_cats1, unique_cats2):
                 sheet2 = get_links_sheet()
                 sheet2.delete_rows(row_idx)
                 st.session_state[del_key] = False
-                st.cache_data.clear() # 캐시 초기화
+                st.cache_data.clear() # 강제 캐시 초기화
                 st.rerun()
         with c2:
             st.button("아니오 (수정창으로 돌아가기)", use_container_width=True, on_click=set_state, args=(del_key, False))
@@ -1076,7 +1074,7 @@ else:
     # ==============================================================
     if st.session_state.app_mode == 'English':
         try:
-            df = load_dataframe()
+            df = get_english_data() # ★ 변경된 캐시 함수 연동
 
             # 카테고리
             unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
@@ -1116,6 +1114,7 @@ else:
                 elif sel_cat != "전체 분류": d_df = d_df[d_df['분류'] == sel_cat]
                 st.session_state.current_cat = sel_cat
 
+            # 정렬 로직 (해석 시트만 메모2 기준 정렬 반영)
             if st.session_state.sort_order == 'asc': 
                 d_df = d_df.sort_values(by='단어-문장', ascending=True)
             elif st.session_state.sort_order == 'desc': 
@@ -1124,6 +1123,12 @@ else:
                 if sel_cat not in ["🔀 랜덤 10", "전체 분류"]:
                     if 'sheet_idx' in d_df.columns and (d_df['sheet_idx'] == "해석").any():
                         d_df = d_df.sort_values(by=['메모2', '단어-문장'], ascending=[True, True])
+                    else:
+                        # ★ 다른 모든 탭은 행 번호 오름차순 고정 적용
+                        d_df = d_df.sort_values(by='row_idx', ascending=True)
+                else:
+                    if sel_cat != "🔀 랜덤 10":
+                        d_df = d_df.sort_values(by='row_idx', ascending=True)
 
             total = len(d_df); pages = math.ceil(total/30) if total > 0 else 1
             curr_p = st.session_state.curr_p
@@ -1165,7 +1170,7 @@ else:
     # ==============================================================
     elif st.session_state.app_mode == 'Links':
         try:
-            df_links = load_links_dataframe()
+            df_links = get_links_data() # ★ 변경된 캐시 함수 연동
             
             unique_links_cats1 = sorted([x for x in df_links['대분류'].unique().tolist() if x != ''])
             unique_links_cats2 = sorted([x for x in df_links['소분류'].unique().tolist() if x != ''])
