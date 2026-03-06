@@ -408,7 +408,7 @@ def _fetch_sheet_concurrently(wb, sheet_name):
         if sheet_name == "해석":
             return df.sort_values(by=['메모2', '단어-문장'], ascending=[True, True])
         else:
-            return df.iloc[::-1]
+            return df  # 원본 시트 순서(행 번호 작은 순서부터) 그대로 반환
     except Exception:
         return pd.DataFrame()
 
@@ -543,7 +543,7 @@ st.markdown("""
     div.element-container:has(.row-marker) { width: 100% !important; min-width: 100% !important; }
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 12px 10px 16px 10px !important; 
+        padding: 12px 10px 16px 10px !important; /* 상하 여백 밸런스 조정 (하단을 약간 더 주어 중앙에 맞춤) */
         border-radius: 0px !important; 
         margin-bottom: 0px !important; border-bottom: 1px dotted rgba(255, 255, 255, 0.2) !important; 
         width: 100% !important; min-width: 100% !important; flex: 1 1 100% !important;
@@ -751,6 +751,7 @@ def edit_dialog(row_idx, sheet_idx, row_data, unique_cats):
             if st.form_submit_button("💾 수정한 내용 저장", use_container_width=True, type="primary"):
                 final_cat = new_cat.strip() if new_cat.strip() else edit_cat
                 wb = init_connection().open("English_Sentences")
+                # sheet_idx에는 시트 이름 텍스트("메인", "해석" 등)가 들어있음
                 target_sheet = wb.worksheet(sheet_idx) if isinstance(sheet_idx, str) else wb.get_worksheet(sheet_idx)
                 target_sheet.update(f"A{row_idx}:F{row_idx}", [[final_cat, word_sent, mean, pron, m1, m2]])
                 st.cache_data.clear() # 캐시 초기화
