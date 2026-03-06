@@ -48,7 +48,7 @@ def reset_page():
 def set_state(key, val):
     st.session_state[key] = val
 
-# --- [전체화면 학습 모드 컴포넌트 렌더링 함수] ---
+# --- [전체화면 학습 모드 컴포넌트 렌더링 함수 (심도있는 디자인 개편)] ---
 def render_study_mode(study_data, unique_cats, initial_cat):
     data_json = json.dumps(study_data, ensure_ascii=False)
     cats_json = json.dumps(unique_cats, ensure_ascii=False)
@@ -57,69 +57,154 @@ def render_study_mode(study_data, unique_cats, initial_cat):
     <!DOCTYPE html>
     <html>
     <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        /* 내부 iframe의 여백 완벽 제거 */
-        body {{ margin: 0; padding: 0; background: #0a0a0a; overflow: hidden; font-family: sans-serif; cursor: pointer; user-select: none; -webkit-user-select: none; }}
-        .container {{ width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; align-items: center; position: relative; }}
-        
-        /* 상단 헤더 바 (좌측 컨트롤 그룹) */
-        .header-bar {{ position: absolute; top: 20px; left: 30px; right: 30px; display: flex; justify-content: space-between; align-items: center; z-index: 100; cursor: default; }}
-        .left-controls {{ display: flex; gap: 15px; align-items: center; flex-wrap: wrap; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 15px; }}
-        
-        /* 셀렉터 투명화 및 테두리 제거 */
-        .cat-select {{ background: transparent; color: #FFFFFF; border: none; padding: 8px 10px; font-size: 18px; border-radius: 8px; font-weight: bold; cursor: pointer; outline: none; transition: 0.3s; appearance: none; -webkit-appearance: none; text-align: center; }}
-        .cat-select:hover {{ background: rgba(255,255,255,0.15); }}
-        .cat-select option {{ background: #0a0a0a; color: #FFFFFF; }}
-        
-        /* 재생 컨트롤러 */
-        .playback-controls {{ display: flex; gap: 8px; border-left: 1px solid rgba(255,255,255,0.2); border-right: 1px solid rgba(255,255,255,0.2); padding: 0 15px; }}
-        .playback-controls button {{ background: rgba(255,255,255,0.15); border: none; color: white; font-size: 14px; padding: 8px 14px; border-radius: 8px; cursor: pointer; transition: 0.3s; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }}
-        .playback-controls button:hover {{ background: rgba(255,255,255,0.3); transform: translateY(-2px); }}
-        .playback-controls button:active {{ transform: translateY(0); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }}
+        /* 변수 설정: 통일감 있는 색상 관리 */
+        :root {{
+            --bg-color: #112222;
+            --glass-bg: rgba(20, 40, 40, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #FFFFFF;
+            --text-sub: #A3B8B8;
+            --accent: #FFD700;
+            --accent-glow: rgba(255, 215, 0, 0.2);
+        }}
 
-        /* SIMPLE & 기타 버튼 */
-        .simple-btn {{ background: rgba(255,255,255,0.15); border: none; color: white; font-size: 14px; padding: 8px 14px; border-radius: 8px; cursor: pointer; transition: 0.3s; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); margin-left: 5px; }}
-        .simple-btn:hover {{ background: rgba(255,255,255,0.3); transform: translateY(-2px); }}
-        .simple-btn:active {{ transform: translateY(0); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }}
-        
-        /* 현재 단어의 분류 표시 라벨 */
-        #word-cat-display {{ color: #FFFFFF; font-weight: bold; font-size: 17px; margin-left: 5px; padding-left: 15px; border-left: 1px solid rgba(255,255,255,0.2); opacity: 0.8; letter-spacing: 1px; }}
+        body {{ 
+            margin: 0; padding: 0; background: var(--bg-color); color: var(--text-main);
+            overflow: hidden; font-family: 'Pretendard', -apple-system, sans-serif;
+            user-select: none; -webkit-user-select: none; cursor: pointer;
+            background-image: radial-gradient(circle at center, #1a3636 0%, #0a1414 100%);
+        }}
 
-        /* 메인 컨텐츠 영역 */
-        #rolling-container {{ flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; width: 100%; text-align: center; align-items: center; }}
+        /* 전체를 감싸는 컨테이너 */
+        .container {{ 
+            width: 100vw; height: 100vh; display: flex; flex-direction: column; 
+            position: relative;
+        }}
         
-        /* 하단 푸터 영역 (고정 높이로 흔들림 방지) */
-        .footer {{ width: 100%; padding: 30px 20px; text-align: center; box-sizing: border-box; min-height: 250px; display: flex; flex-direction: column; justify-content: center; align-items: center; }}
+        /* 🌟 세련된 상단 헤더 바 (Glassmorphism) */
+        .header-bar {{ 
+            position: absolute; top: 0; left: 0; right: 0; 
+            display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; 
+            padding: 12px 3vw; z-index: 100; cursor: default;
+            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--glass-border); gap: 10px;
+        }}
+
+        .control-group {{ 
+            display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; 
+        }}
         
-        /* 텍스트 스타일 */
-        #ko-text {{ color: #a08b7a; font-size: 36px; font-weight: bold; margin: 0 0 15px 0; transition: opacity 0.4s; word-break: keep-all; line-height: 1.4; }}
-        #memo-box {{ transition: opacity 0.4s; display: none; width: 100%; }}
-        .memo-text {{ color: #FFFF00; font-size: 24px; font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4; }}
+        /* 공통 버튼 & 셀렉터 스타일 */
+        select, button {{
+            background: rgba(255,255,255,0.05); color: var(--text-main);
+            border: 1px solid var(--glass-border); padding: 8px 14px;
+            font-size: clamp(0.8rem, 1vw, 0.95rem); font-weight: 700; border-radius: 10px;
+            cursor: pointer; outline: none; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex; align-items: center; justify-content: center; gap: 5px;
+        }}
+        select:hover, button:hover {{ 
+            background: rgba(255,255,255,0.15); transform: translateY(-2px); 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.3);
+        }}
+        select option {{ background: #1a3636; color: #FFF; }}
+
+        /* 활성화(ON) 상태 버튼 스타일 */
+        .btn-active {{
+            background: var(--accent-glow) !important;
+            border-color: var(--accent) !important;
+            color: var(--accent) !important;
+            box-shadow: 0 0 10px var(--accent-glow) !important;
+        }}
+
+        /* 카테고리 정보 표시 */
+        .cat-info {{ font-size: 0.85rem; color: var(--text-sub); font-weight: bold; background: rgba(0,0,0,0.3); padding: 6px 12px; border-radius: 8px; }}
+
+        /* 🌟 메인 컨텐츠 영역 (화면 꽉 차게 중앙 정렬) */
+        #rolling-container {{ 
+            flex: 1; display: flex; align-items: center; justify-content: center; 
+            width: 100%; height: 100%; position: relative; padding-top: 70px; /* 헤더 공간 확보 */
+            box-sizing: border-box;
+        }}
+
+        /* 카드의 내용이 넘칠 경우에만 스크롤 (화면 밖으로 나가지 않음) */
+        .card-wrapper {{
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            width: 90vw; max-width: 1200px; max-height: calc(100vh - 90px); 
+            text-align: center; gap: clamp(1.5vh, 2.5vh, 30px);
+            overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;
+            padding: 20px;
+        }}
+        .card-wrapper::-webkit-scrollbar {{ display: none; }}
+        
+        /* 텍스트 시각적 계층화 */
+        .en-text {{ 
+            font-size: min(7.5vw, 5.5vh); /* 창의 너비와 높이 중 작은 쪽에 맞춰 완벽 반응 */
+            font-weight: 900; color: var(--accent); 
+            word-break: keep-all; line-height: 1.2; letter-spacing: -0.5px;
+            text-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            margin: 0;
+        }}
+        
+        .pron-text {{ 
+            font-size: min(3.5vw, 2.8vh); color: var(--text-sub); 
+            font-style: italic; font-weight: 400; margin: 0;
+        }}
+        
+        .ko-text {{ 
+            font-size: min(4.5vw, 3.5vh); font-weight: 700; color: #E8F0F0; 
+            word-break: keep-all; line-height: 1.3; margin: 0;
+            opacity: 0; transition: opacity 0.6s ease;
+        }}
+        
+        .memo-container {{ 
+            display: flex; flex-direction: column; gap: 10px; align-items: center;
+            opacity: 0; transition: opacity 0.6s ease; margin-top: 1vh;
+        }}
+        
+        .memo-badge {{ 
+            font-size: min(2.8vw, 2.2vh); font-weight: 600; color: #FFFACD; 
+            background: rgba(255, 250, 205, 0.1); border: 1px solid rgba(255, 250, 205, 0.2);
+            padding: 8px 18px; border-radius: 12px; word-break: keep-all; line-height: 1.4;
+        }}
+
+        @media (max-width: 768px) {{
+            .header-bar {{ justify-content: center; padding: 10px; }}
+            .cat-info {{ display: none; }} /* 모바일에서는 여백을 위해 텍스트 숨김 */
+        }}
     </style>
     </head>
     <body>
     <div class="container">
         <div class="header-bar">
-            <div class="left-controls">
-                <select id="category-select" class="cat-select" onchange="changeCategory()"></select>
-                <div class="playback-controls">
-                    <button onclick="movePrev()">&lt;</button>
-                    <button onclick="togglePause()" id="pause-btn">멈춤</button>
-                    <button onclick="moveNext()">&gt;</button>
-                </div>
-                <select id="speed-select" class="cat-select" onchange="changeSpeed()">
-                    <option value="2300">2.3초</option>
-                    <option value="4000">4초</option>
-                    <option value="7000">7초</option>
-                    <option value="10000" selected>10초</option>
-                    <option value="15000">15초</option>
-                    <option value="20000">20초</option>
-                    <option value="30000">30초</option>
+            <!-- 1. 좌측: 설정 영역 -->
+            <div class="control-group">
+                <select id="category-select" onchange="changeCategory()"></select>
+                <div class="cat-info" id="word-cat-display"></div>
+            </div>
+            
+            <!-- 2. 중앙: 컨트롤 영역 -->
+            <div class="control-group">
+                <button onclick="movePrev()"><b>&lt;</b> 이전</button>
+                <button onclick="togglePause()" id="pause-btn" class="btn-active">⏸ 일시정지</button>
+                <button onclick="moveNext()">다음 <b>&gt;</b></button>
+            </div>
+            
+            <!-- 3. 우측: 부가 기능 영역 -->
+            <div class="control-group">
+                <select id="speed-select" onchange="changeSpeed()">
+                    <option value="2300">⏱ 2.3초</option>
+                    <option value="4000">⏱ 4초</option>
+                    <option value="7000">⏱ 7초</option>
+                    <option value="10000" selected>⏱ 10초</option>
+                    <option value="15000">⏱ 15초</option>
+                    <option value="20000">⏱ 20초</option>
+                    <option value="30000">⏱ 30초</option>
                 </select>
-                <button id="touch-btn" class="simple-btn" onclick="toggleTouchMode()">👆 TOUCH OFF</button>
-                <button id="simple-btn" class="simple-btn" onclick="toggleSimpleMode()">SIMPLE OFF</button>
-                <button id="tts-btn" class="simple-btn" onclick="toggleTTS()">🔇 소리 끄기</button>
-                <span id="word-cat-display"></span>
+                <button id="touch-btn" onclick="toggleTouchMode()">👆 터치: OFF</button>
+                <button id="simple-btn" onclick="toggleSimpleMode()">✨ 심플: OFF</button>
+                <button id="tts-btn" onclick="toggleTTS()">🔇 소리: OFF</button>
             </div>
         </div>
         
@@ -132,55 +217,38 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         let filteredData = [];
         let currentIndex = 0;
         let intervalId;
+        
+        // 상태 관리 변수들
         let isPaused = false;
         let currentSpeed = 10000;
         let isSimpleMode = false;
         let isTTSEnabled = false;
-        let isTouchMode = false; // ★ 터치 모드 상태 변수
+        let isTouchMode = false; 
         let availableVoices = [];
 
-        // 브라우저에 내장된 고품질 음성 목록 미리 로드
-        function loadVoices() {{
-            availableVoices = window.speechSynthesis.getVoices();
-        }}
+        // 음성 로드
+        function loadVoices() {{ availableVoices = window.speechSynthesis.getVoices(); }}
         loadVoices();
-        if (window.speechSynthesis.onvoiceschanged !== undefined) {{
-            window.speechSynthesis.onvoiceschanged = loadVoices;
-        }}
-
-        // 확실한 창닫기 (iframe 우회하여 최상위 부모 창 닫기 시도)
-        function closeWindow() {{
-            try {{ window.top.close(); }} catch(e) {{}}
-            try {{ window.parent.close(); }} catch(e) {{}}
-            window.close();
-        }}
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {{ window.speechSynthesis.onvoiceschanged = loadVoices; }}
 
         // 카테고리 드롭다운 렌더링
         const selectEl = document.getElementById('category-select');
         let allOpt = document.createElement('option');
         allOpt.value = "ALL";
-        allOpt.innerText = "전체 랜덤";
+        allOpt.innerText = "📁 전체 랜덤";
         selectEl.appendChild(allOpt);
         
         categories.forEach(cat => {{
             let opt = document.createElement('option');
             opt.value = cat;
-            opt.innerText = cat; // 랜덤 글자 제거됨
+            opt.innerText = "📁 " + cat; 
             if (cat === "{initial_cat}") opt.selected = true;
             selectEl.appendChild(opt);
         }});
         
-        if ("{initial_cat}" === "ALL") {{
-            selectEl.value = "ALL";
-        }}
+        if ("{initial_cat}" === "ALL") {{ selectEl.value = "ALL"; }}
 
-        // 속도 변경
-        function changeSpeed() {{
-            currentSpeed = parseInt(document.getElementById('speed-select').value);
-            if(!isPaused && !isTouchMode) resetInterval();
-        }}
-
-        // 배열 셔플
+        // 셔플 함수
         function shuffle(array) {{
             let arr = [...array];
             for (let i = arr.length - 1; i > 0; i--) {{
@@ -190,22 +258,21 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             return arr;
         }}
 
-        // 카테고리 변경 시 실행
+        // 카테고리 & 속도 변경
+        function changeSpeed() {{
+            currentSpeed = parseInt(document.getElementById('speed-select').value);
+            if(!isPaused && !isTouchMode) resetInterval();
+        }}
         function changeCategory() {{
             const selected = selectEl.value;
-            if (selected === "ALL") {{
-                filteredData = shuffle(rawData);
-            }} else {{
-                // 모든 카테고리(시트3 포함) 랜덤 섞기 적용
-                let catData = rawData.filter(d => d.cat === selected);
-                filteredData = shuffle(catData);
-            }}
+            if (selected === "ALL") {{ filteredData = shuffle(rawData); }} 
+            else {{ filteredData = shuffle(rawData.filter(d => d.cat === selected)); }}
             currentIndex = 0;
             renderRolling();
             resetInterval();
         }}
 
-        // 컨트롤러 기능
+        // 버튼 액션: 앞/뒤로 가기
         function movePrev() {{
             if (!filteredData || filteredData.length === 0) return;
             currentIndex = (currentIndex - 1 + filteredData.length) % filteredData.length;
@@ -219,196 +286,161 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             resetInterval();
         }}
         
+        // 토글 액션들 (버튼 UI 업데이트 포함)
         function togglePause() {{
             isPaused = !isPaused;
             const btn = document.getElementById('pause-btn');
             if(isPaused) {{
                 if (intervalId) clearInterval(intervalId);
-                btn.innerText = "재생";
-                btn.style.background = "rgba(255,255,255,0.3)";
+                btn.innerText = "▶ 자동 재생";
+                btn.classList.remove('btn-active');
             }} else {{
                 resetInterval();
-                btn.innerText = "멈춤";
-                btn.style.background = "rgba(255,255,255,0.15)";
+                btn.innerText = "⏸ 일시정지";
+                btn.classList.add('btn-active');
             }}
         }}
 
-        // ★ TOUCH 모드 토글 (터치 시에만 다음으로 넘어가는 수동 모드)
         function toggleTouchMode() {{
             isTouchMode = !isTouchMode;
             const btn = document.getElementById('touch-btn');
             if(isTouchMode) {{
-                btn.style.background = "rgba(230,126,34,0.7)";
-                btn.innerText = "👆 TOUCH ON";
-                // 터치 모드를 켜면 자동 재생 인터벌 해제
+                btn.innerText = "👆 터치: ON";
+                btn.classList.add('btn-active');
                 if (intervalId) clearInterval(intervalId);
             }} else {{
-                btn.style.background = "rgba(255,255,255,0.15)";
-                btn.innerText = "👆 TOUCH OFF";
-                // 터치 모드를 끄면 다시 자동 재생 시작 (일시정지 상태가 아니라면)
+                btn.innerText = "👆 터치: OFF";
+                btn.classList.remove('btn-active');
                 resetInterval();
             }}
         }}
 
-        // SIMPLE 모드 토글
         function toggleSimpleMode() {{
             isSimpleMode = !isSimpleMode;
             const btn = document.getElementById('simple-btn');
             if(isSimpleMode) {{
-                btn.style.background = "rgba(230,126,34,0.7)";
-                btn.innerText = "SIMPLE ON";
+                btn.innerText = "✨ 심플: ON";
+                btn.classList.add('btn-active');
             }} else {{
-                btn.style.background = "rgba(255,255,255,0.15)";
-                btn.innerText = "SIMPLE OFF";
+                btn.innerText = "✨ 심플: OFF";
+                btn.classList.remove('btn-active');
             }}
-            renderRolling(); // 모드 변경 즉시 화면 갱신
+            renderRolling();
         }}
 
-        // TTS 음성 재생 토글
         function toggleTTS() {{
             isTTSEnabled = !isTTSEnabled;
             const btn = document.getElementById('tts-btn');
             if(isTTSEnabled) {{
-                btn.style.background = "rgba(230,126,34,0.7)";
-                btn.innerText = "🔊 소리 켜기";
+                btn.innerText = "🔊 소리: ON";
+                btn.classList.add('btn-active');
                 if(filteredData.length > 0) {{
                     window.speechSynthesis.cancel();
                     speakText(filteredData[currentIndex].en, 'en-US');
                     if(filteredData[currentIndex].ko) speakText(filteredData[currentIndex].ko, 'ko-KR');
                 }}
             }} else {{
-                btn.style.background = "rgba(255,255,255,0.15)";
-                btn.innerText = "🔇 소리 끄기";
+                btn.innerText = "🔇 소리: OFF";
+                btn.classList.remove('btn-active');
                 window.speechSynthesis.cancel();
             }}
         }}
 
-        // 오직 미국식(US) 고품질 원어민 음성을 최우선으로 선택하는 로직
+        // TTS 엔진 로직
         function speakText(text, lang) {{
             if (!window.speechSynthesis) return;
-            
-            // 파이썬 f-string 충돌 방지 및 특수 기호(/, ?, (, ), [, ], ~) 제거 필터링
             const cleanText = text.replace(/[/?()[\\]~]/g, ' ');
-            
             const utterance = new SpeechSynthesisUtterance(cleanText);
             utterance.lang = lang; 
-            
-            // 영어는 연음이 부드럽고 자연스럽게 들리도록 0.95 세팅, 한국어는 0.9 유지
             utterance.rate = lang === 'en-US' ? 0.95 : 0.9; 
             utterance.pitch = 1.0;
 
             if (availableVoices.length > 0) {{
                 let bestVoice = null;
-                
                 if (lang === 'en-US') {{
-                    // 1순위: 크롬 브라우저의 고품질 클라우드 음성 (미국식)
-                    bestVoice = availableVoices.find(voice => voice.name === 'Google US English');
-                    
-                    // 2순위: 엣지 브라우저의 고품질 신경망(Natural) 미국식 음성
-                    if (!bestVoice) {{
-                        bestVoice = availableVoices.find(voice => voice.name.includes('Natural') && voice.lang === 'en-US');
-                    }}
-                    // 3순위: 애플 Mac/iOS의 자연스러운 기본 미국식 음성
-                    if (!bestVoice) {{
-                        bestVoice = availableVoices.find(voice => (voice.name === 'Samantha' || voice.name === 'Alex') && voice.lang === 'en-US');
-                    }}
-                    // 4순위: 기타 고품질 미국 영어
-                    if (!bestVoice) {{
-                        bestVoice = availableVoices.find(voice => voice.lang === 'en-US' && (voice.name.includes('Premium') || voice.name.includes('Enhanced')));
-                    }}
-                    // 5순위: 기본 미국 영어 (영국식 배제 보장)
-                    if (!bestVoice) {{
-                        bestVoice = availableVoices.find(voice => voice.lang === 'en-US');
-                    }}
+                    bestVoice = availableVoices.find(v => v.name === 'Google US English') ||
+                                availableVoices.find(v => v.name.includes('Natural') && v.lang === 'en-US') ||
+                                availableVoices.find(v => (v.name === 'Samantha' || v.name === 'Alex') && v.lang === 'en-US') ||
+                                availableVoices.find(v => v.lang === 'en-US');
                 }} else if (lang === 'ko-KR') {{
-                    bestVoice = availableVoices.find(voice => voice.name === 'Google 한국의');
-                    if (!bestVoice) bestVoice = availableVoices.find(voice => voice.name.includes('Natural') && voice.lang.includes('ko'));
-                    if (!bestVoice) bestVoice = availableVoices.find(voice => voice.lang.includes('ko-KR'));
+                    bestVoice = availableVoices.find(v => v.name === 'Google 한국의') ||
+                                availableVoices.find(v => v.name.includes('Natural') && v.lang.includes('ko')) ||
+                                availableVoices.find(v => v.lang.includes('ko-KR'));
                 }}
-
-                // 가장 좋은 음성 엔진 적용
-                if (bestVoice) {{
-                    utterance.voice = bestVoice;
-                }}
+                if (bestVoice) utterance.voice = bestVoice;
             }}
-            
             window.speechSynthesis.speak(utterance);
         }}
 
-        // 1단 집중 디자인 및 시간차 렌더링
+        // ★ 메인 화면 렌더링 (반응형 카드 스타일)
         function renderRolling() {{
             if (!filteredData || filteredData.length === 0) return;
             const container = document.getElementById('rolling-container');
             
-            // 기존 문장 부드럽게 지우기
+            // 기존 요소 부드럽게 삭제
             const oldItems = container.children;
             for(let i=0; i<oldItems.length; i++) {{
                 oldItems[i].style.opacity = '0';
-                setTimeout((el) => {{ if (container.contains(el)) container.removeChild(el); }}, 600, oldItems[i]);
+                setTimeout((el) => {{ if (container.contains(el)) container.removeChild(el); }}, 500, oldItems[i]);
             }}
 
             const item = filteredData[currentIndex];
-            
-            // 상단 바에 현재 단어의 카테고리 표시
-            document.getElementById('word-cat-display').innerText = item.cat;
+            document.getElementById('word-cat-display').innerText = `현재 분류: ${{item.cat}}`;
 
-            // 새 컨테이너 박스 생성
+            // 새 래퍼 생성
             const div = document.createElement('div');
             div.style.position = 'absolute';
-            div.style.width = '100%';
-            div.style.transition = 'opacity 0.6s ease-in-out';
-            div.style.left = '0';
-            div.style.top = '50%';
-            div.style.transform = 'translateY(-50%)'; 
-            div.style.padding = '0 20px';
-            div.style.boxSizing = 'border-box';
+            div.style.inset = '0';
             div.style.opacity = '0'; 
+            div.style.transition = 'opacity 0.6s cubic-bezier(0.25, 0.8, 0.25, 1)';
+            div.style.display = 'flex';
+            div.style.justifyContent = 'center';
+            div.style.alignItems = 'center';
+            div.style.paddingTop = '70px'; // 헤더 겹침 방지
             div.style.zIndex = '10';
 
-            // 글자수가 25자 초과 시 폰트 크기 50% 축소
-            let enFontSize = item.en.length > 25 ? 'clamp(25px, 4.2vw, 45px)' : 'clamp(50px, 8.4vw, 90px)';
-
-            // 구성 요소들 (발음, 해석, 메모)
-            let pronHtml = (item.pron && item.pron.length <= 60) ? `<p style="font-size: clamp(27px, 4.2vw, 38px); color: #FFFFFF; margin: 15px 0 0 0; font-weight: normal; font-style: italic; text-shadow: none;">${{item.pron}}</p>` : "";
-            
-            let koHtml = item.ko ? `<p class="anim-ko" style="color: #a08b7a; font-size: clamp(31px, 5.2vw, 47px); font-weight: bold; margin: 25px 0 0 0; opacity: 0; transition: opacity 0.5s ease-in-out; word-break: keep-all; line-height: 1.4; text-shadow: none;">${{item.ko}}</p>` : "";
+            // HTML 조합
+            let pronHtml = item.pron ? `<p class="pron-text">${{item.pron}}</p>` : "";
+            let koHtml = item.ko ? `<p class="ko-text anim-ko">${{item.ko}}</p>` : "";
             
             let memoHtml = "";
-            if (!isSimpleMode) {{
-                memoHtml = `<div class="anim-memo" style="opacity: 0; transition: opacity 0.5s ease-in-out; margin-top: 20px; text-shadow: none;">`;
-                if (item.memo1) memoHtml += `<p style="color: #FFFF00; font-size: clamp(23px, 3.9vw, 34px); font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4;">${{item.memo1}}</p>`;
-                if (item.memo2) memoHtml += `<p style="color: #FFFF00; font-size: clamp(23px, 3.9vw, 34px); font-weight: 500; margin: 6px 0; word-break: keep-all; line-height: 1.4;">${{item.memo2}}</p>`;
+            if (!isSimpleMode && (item.memo1 || item.memo2)) {{
+                memoHtml = `<div class="memo-container anim-memo">`;
+                if (item.memo1) memoHtml += `<span class="memo-badge">${{item.memo1}}</span>`;
+                if (item.memo2) memoHtml += `<span class="memo-badge">${{item.memo2}}</span>`;
                 memoHtml += `</div>`;
             }}
 
-            // DOM 병합 (중앙 영역)
-            div.innerHTML = `<div style="color: #E67E22; font-weight: 900; text-shadow: 0 0 20px rgba(230,126,34,0.4);"><p style="font-size: ${{enFontSize}}; margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.3;">${{item.en}}</p></div>` 
-                            + pronHtml 
-                            + koHtml 
-                            + memoHtml; 
+            // 넘치면 알아서 스크롤되도록 감싸는 내부 wrapper
+            div.innerHTML = `
+                <div class="card-wrapper">
+                    <h1 class="en-text">${{item.en}}</h1>
+                    ${{pronHtml}}
+                    ${{koHtml}}
+                    ${{memoHtml}}
+                </div>
+            `;
             
             container.appendChild(div);
 
-            // 전체 프레임 페이드 인
+            // 시간차 애니메이션 효과
             setTimeout(() => {{ div.style.opacity = '1'; }}, 50);
 
-            // 2초 뒤 해석 페이드 인
             if(item.ko) {{
                 setTimeout(() => {{
                     const koEl = div.querySelector('.anim-ko');
                     if(koEl) koEl.style.opacity = '1';
-                }}, 2000);
+                }}, 1500);
             }}
 
-            // 5초 뒤 메모 페이드 인
             if(!isSimpleMode && (item.memo1 || item.memo2)) {{
                 setTimeout(() => {{
                     const memoEl = div.querySelector('.anim-memo');
                     if(memoEl) memoEl.style.opacity = '1';
-                }}, 5000);
+                }}, 3500);
             }}
 
-            // 단어가 바뀔 때마다 영어 -> 한국어 순서대로 재생
+            // 오디오 재생
             if(isTTSEnabled) {{
                 window.speechSynthesis.cancel(); 
                 speakText(item.en, 'en-US');
@@ -416,13 +448,11 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
         }}
 
-        // 다음 단어로 이동
         function step() {{
             currentIndex = (currentIndex + 1) % filteredData.length;
             renderRolling();
         }}
 
-        // 인터벌 설정 로직 (터치 모드나 일시정지 상태일 때는 타이머 작동 안 함)
         function resetInterval() {{
             if (intervalId) clearInterval(intervalId);
             if (!isTouchMode && !isPaused) {{
@@ -430,17 +460,13 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
         }}
 
-        // ★ 터치 모드일 때만 화면 클릭으로 다음 넘어가기 작동
+        // 화면 클릭 시 다음으로 이동 (터치 모드 ON일 때만)
         document.body.addEventListener('click', function(e) {{
-            // 상단 컨트롤 바(버튼, 셀렉터 등) 클릭 시에는 작동하지 않도록 예외 처리
             if (e.target.closest('.header-bar')) return;
-            
-            if (isTouchMode) {{
-                moveNext(); // 터치 모드가 켜져 있을 때만 클릭 시 다음 단어로 이동
-            }}
+            if (isTouchMode) {{ moveNext(); }}
         }});
 
-        // 초기 실행
+        // 초기 시작
         changeCategory();
 
     </script>
@@ -1213,7 +1239,7 @@ else:
             
             st.markdown("<div style='border-bottom:2px solid rgba(255,255,255,0.2); margin-top:-15px; margin-bottom:10px;'></div>", unsafe_allow_html=True)
 
-            # ★ 리스트 내용 출력
+            # 리스트 내용 출력
             for idx, row in d_df.iloc[(curr_p-1)*50 : curr_p*50].iterrows():
                 cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1], vertical_alignment="center")
                 cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold'>{row['분류']}</span>", unsafe_allow_html=True)
