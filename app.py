@@ -1265,7 +1265,7 @@ else:
                     if 'sheet_idx' in d_df.columns and (d_df['sheet_idx'] == "해석").any():
                         d_df = d_df.sort_values(by=['메모2', '단어-문장'], ascending=[True, True])
 
-            total = len(d_df); pages = math.ceil(total/50) if total > 0 else 1
+            total = len(d_df); pages = math.ceil(total/30) if total > 0 else 1
             curr_p = st.session_state.curr_p
             
             # 리스트 카운터 표시
@@ -1286,7 +1286,7 @@ else:
             st.markdown("<div style='border-bottom:2px solid rgba(255,255,255,0.2); margin-top:-15px; margin-bottom:10px;'></div>", unsafe_allow_html=True)
 
             # 리스트 내용 출력
-            for idx, row in d_df.iloc[(curr_p-1)*50 : curr_p*50].iterrows():
+            for idx, row in d_df.iloc[(curr_p-1)*30 : curr_p*30].iterrows():
                 cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1], vertical_alignment="center")
                 cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold'>{row['분류']}</span>", unsafe_allow_html=True)
                 cols[1].markdown(f"<span class='word-text'>{row['단어-문장']}</span>", unsafe_allow_html=True)
