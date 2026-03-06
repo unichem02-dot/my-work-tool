@@ -405,21 +405,19 @@ def _fetch_sheet_concurrently(wb, sheet_name):
         df['sheet_idx'] = sheet_name
         df['row_idx'] = df.index + 2
         
-        if sheet_name == "해석":
-            return df.sort_values(by=['메모2', '단어-문장'], ascending=[True, True])
-        else:
-            # ★ 핵심: 역순([::-1]) 제거 및 행 번호 기준 확실한 오름차순 정렬 적용
-            return df.sort_values(by='row_idx', ascending=True)
+        # ★ 모든 시트에 대해 동일하게 행 번호 오름차순 적용 (해석 시트 예외 로직 제거)
+        return df.sort_values(by='row_idx', ascending=True)
     except Exception:
         return pd.DataFrame()
 
-# ★ 함수명을 변경하여 기존에 저장되어 있던 잘못된 역순 캐시를 강제로 삭제하고 새로 불러옵니다.
+# ★ 함수명을 변경하여 기존에 저장되어 있던 잘못된 정렬 캐시를 강제로 삭제하고 새로 불러옵니다.
 @st.cache_data(ttl=600)
-def get_english_data():
+def get_english_data_v2():
     wb = init_connection().open("English_Sentences")
     sheet_names = ["메인", "해석", "구동사", "TOM-영어", "동사구", "문법", "여행", "단어"]
     
     dfs = []
+    # ★ 핵심: ThreadPoolExecutor를 사용해 모든 시트를 동시에 읽어옴
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(sheet_names)) as executor:
         results = executor.map(lambda name: _fetch_sheet_concurrently(wb, name), sheet_names)
         for res in results:
@@ -433,9 +431,8 @@ def get_english_data():
 def get_links_sheet():
     return init_connection().open("English_Sentences").worksheet("링크")
 
-# ★ 함수명 변경으로 기존 링크 시트 캐시 강제 삭제
 @st.cache_data(ttl=600)
-def get_links_data():
+def get_links_data_v2():
     sheet = get_links_sheet()
     for _ in range(3):
         try:
@@ -466,11 +463,12 @@ if st.query_params.get("study") == "true":
     """, unsafe_allow_html=True)
     
     try:
-        df = get_english_data() # 변경된 캐시 함수 사용
+        df = get_english_data_v2() # 변경된 캐시 함수 사용
         unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
         cat_param = st.query_params.get("cat", "ALL")
         initial_cat = "ALL" if cat_param in ["🔀 랜덤 10", "전체 분류", "ALL"] else cat_param
         
+        # ★ 모바일 에러 방지를 위해 변환 과정을 명시적으로 분리
         study_df = df[['분류', '단어-문장', '해석', '발음', '메모1', '메모2', 'sheet_idx']].rename(
             columns={'분류':'cat', '단어-문장': 'en', '해석': 'ko', '발음': 'pron', '메모1': 'memo1', '메모2': 'memo2'}
         )
@@ -715,7 +713,7 @@ def add_dialog(unique_cats):
                 target_sheet.append_row([final_cat, word_sent, mean, pron, m1, m2])
                 st.success("저장 완료!")
                 time.sleep(1)
-                st.cache_data.clear() # 강제 캐시 초기화
+                st.cache_data.clear() # 강제 캐시 초기화 (데이터 갱신)
                 st.rerun()
                 
     if st.button("❌ 창 닫기 (취소)", use_container_width=True):
@@ -1074,7 +1072,7 @@ else:
     # ==============================================================
     if st.session_state.app_mode == 'English':
         try:
-            df = get_english_data() # ★ 변경된 캐시 함수 연동
+            df = get_english_data_v2() # ★ 변경된 캐시 함수 연동 (강제 갱신)
 
             # 카테고리
             unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
@@ -1114,21 +1112,14 @@ else:
                 elif sel_cat != "전체 분류": d_df = d_df[d_df['분류'] == sel_cat]
                 st.session_state.current_cat = sel_cat
 
-            # 정렬 로직 (해석 시트만 메모2 기준 정렬 반영)
+            # ★ 정렬 로직 (모든 시트를 행 번호 오름차순으로 통일)
             if st.session_state.sort_order == 'asc': 
                 d_df = d_df.sort_values(by='단어-문장', ascending=True)
             elif st.session_state.sort_order == 'desc': 
                 d_df = d_df.sort_values(by='단어-문장', ascending=False)
             else: 
-                if sel_cat not in ["🔀 랜덤 10", "전체 분류"]:
-                    if 'sheet_idx' in d_df.columns and (d_df['sheet_idx'] == "해석").any():
-                        d_df = d_df.sort_values(by=['메모2', '단어-문장'], ascending=[True, True])
-                    else:
-                        # ★ 다른 모든 탭은 행 번호 오름차순 고정 적용
-                        d_df = d_df.sort_values(by='row_idx', ascending=True)
-                else:
-                    if sel_cat != "🔀 랜덤 10":
-                        d_df = d_df.sort_values(by='row_idx', ascending=True)
+                if sel_cat != "🔀 랜덤 10":
+                    d_df = d_df.sort_values(by='row_idx', ascending=True)
 
             total = len(d_df); pages = math.ceil(total/30) if total > 0 else 1
             curr_p = st.session_state.curr_p
@@ -1170,7 +1161,7 @@ else:
     # ==============================================================
     elif st.session_state.app_mode == 'Links':
         try:
-            df_links = get_links_data() # ★ 변경된 캐시 함수 연동
+            df_links = get_links_data_v2() # ★ 변경된 캐시 함수 연동
             
             unique_links_cats1 = sorted([x for x in df_links['대분류'].unique().tolist() if x != ''])
             unique_links_cats2 = sorted([x for x in df_links['소분류'].unique().tolist() if x != ''])
