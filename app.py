@@ -190,7 +190,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             if (selected === "ALL") {{
                 filteredData = shuffle(rawData);
             }} else {{
-                // 모든 카테고리 랜덤 섞기 적용
+                // 모든 카테고리(시트 이름 상관없이) 랜덤 섞기 적용
                 let catData = rawData.filter(d => d.cat === selected);
                 filteredData = shuffle(catData);
             }}
@@ -454,17 +454,22 @@ def init_connection():
 
 def get_english_sheets():
     wb = init_connection().open("English_Sentences")
-    # ★ 시트1, 시트3, 그리고 '구동사' 시트를 함께 반환
-    sheet1 = wb.get_worksheet(0)
-    sheet3 = wb.get_worksheet(2)
-    try:
-        sheet_phrasal = wb.worksheet("구동사")
-    except:
-        sheet_phrasal = None # 혹시 시트가 없을 경우를 대비한 예외 처리
-    return sheet1, sheet3, sheet_phrasal
+    # ★ 시트 이름 변경 반영: 0번 시트 '메인', 2번 시트 '해석'
+    sheet_main = wb.worksheet("메인")
+    sheet_trans = wb.worksheet("해석")
+    
+    # 추가된 시트 연동 ('구동사', 'TOM-영어')
+    try: sheet_phrasal = wb.worksheet("구동사")
+    except: sheet_phrasal = None
+        
+    try: sheet_tom = wb.worksheet("TOM-영어")
+    except: sheet_tom = None
+        
+    return sheet_main, sheet_trans, sheet_phrasal, sheet_tom
 
 def get_links_sheet():
-    return init_connection().open("English_Sentences").get_worksheet(1) # 인덱스 1 (시트2)
+    # ★ 시트 이름 변경 반영: 1번 시트 -> '링크'
+    return init_connection().open("English_Sentences").worksheet("링크")
 
 def _load_single_sheet(sheet):
     for _ in range(3):
@@ -479,29 +484,37 @@ def _load_single_sheet(sheet):
     raise Exception("데이터 로드 실패")
 
 def load_dataframe():
-    sheet1, sheet3, sheet_phrasal = get_english_sheets()
+    sheet_main, sheet_trans, sheet_phrasal, sheet_tom = get_english_sheets()
     
-    # 시트1 로드 및 역순(최신순) 정렬
-    df1 = _load_single_sheet(sheet1)
-    df1['sheet_idx'] = 0
+    # 1. 메인 로드 및 역순(최신순) 정렬
+    df1 = _load_single_sheet(sheet_main)
+    df1['sheet_idx'] = "메인"  # 식별자를 시트명으로 변경
     df1['row_idx'] = df1.index + 2  # 구글 시트의 실제 행 번호 기록
     df1 = df1.iloc[::-1] 
 
-    # 시트3 로드 및 메모2 텍스트 기준 오름차순 정렬 (a,b,c, 가,나,다)
-    df3 = _load_single_sheet(sheet3)
-    df3['sheet_idx'] = 2
+    # 2. 해석 로드 및 메모2 텍스트 기준 오름차순 정렬 (a,b,c, 가,나,다)
+    df3 = _load_single_sheet(sheet_trans)
+    df3['sheet_idx'] = "해석"
     df3['row_idx'] = df3.index + 2
     df3 = df3.sort_values(by=['메모2', '단어-문장'], ascending=[True, True])
 
     dfs = [df1, df3]
     
-    # ★ 구동사 시트 로드 및 역순(최신순) 정렬 병합
+    # 3. 구동사 시트 로드 및 역순(최신순) 정렬
     if sheet_phrasal is not None:
         df_p = _load_single_sheet(sheet_phrasal)
-        df_p['sheet_idx'] = "구동사" # 고유 이름 부여
+        df_p['sheet_idx'] = "구동사"
         df_p['row_idx'] = df_p.index + 2
         df_p = df_p.iloc[::-1]
         dfs.append(df_p)
+        
+    # 4. TOM-영어 시트 로드 및 역순(최신순) 정렬
+    if sheet_tom is not None:
+        df_t = _load_single_sheet(sheet_tom)
+        df_t['sheet_idx'] = "TOM-영어"
+        df_t['row_idx'] = df_t.index + 2
+        df_t = df_t.iloc[::-1]
+        dfs.append(df_t)
 
     # 모든 시트의 데이터를 하나로 합침
     return pd.concat(dfs, ignore_index=True)
@@ -718,11 +731,11 @@ st.markdown("""
     button[kind="tertiary"]:hover p { transform: scale(1.1) !important; color: #FFD700 !important; }
 
     /* 8. 텍스트 스타일 */
-    .header-label { font-size: clamp(1.0rem, 1.4vw, 1.5rem) !important; font-weight: 800 !important; color: #FFFFFF !important; white-space: nowrap !important; }
+    .header-label { font-size: clamp(1.0rem, 1.4vw, 1.5rem) !important; font-weight: 800 !important; color: #FFFFFF !important; white-space: nowrap !important; text-transform: uppercase; letter-spacing: 1px; }
     .word-text { font-size: 1.98em; font-weight: bold; color: #FFD700 !important; word-break: keep-all; display: inline-block !important; margin-bottom: 0px !important; transition: transform 0.2s ease !important; transform-origin: left center !important; }
-    .mean-text { font-size: 1.3em; word-break: keep-all; display: inline-block !important; margin-bottom: 0px !important; }
-    .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; display: inline-block !important; margin-bottom: 0px !important; }
-    div[data-testid="stHorizontalBlock"]:has(.row-marker):hover .word-text { transform: scale(1.1) !important; z-index: 10 !important; }
+    .mean-text { font-size: 1.3em; word-break: keep-all; display: inline-block !important; margin-bottom: 0px !important; color: #E0E0E0 !important; }
+    .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; color: #A3B8B8 !important; display: inline-block !important; margin-bottom: 0px !important; }
+    div[data-testid="stHorizontalBlock"]:has(.row-marker):hover .word-text { transform: scale(1.05) !important; z-index: 10 !important; }
 
     /* 9. Num.ENG 결과물 */
     div[data-testid="stHorizontalBlock"]:has(.num-result) { display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 12px !important; width: 100% !important; margin-top: 10px; background: rgba(0,0,0,0.2); padding: 10px 15px; border-radius: 10px; border-left: 4px solid #FFD700; }
@@ -733,30 +746,12 @@ st.markdown("""
     /* ★ 링크 모음 전용 아이템 스타일 */
     .link-table-cat1 { font-size: 1.8rem !important; color: #FFD700 !important; font-weight: bold; display: inline-block; margin-bottom: 0px; }
     .link-table-cat2 { font-size: 1.2rem !important; color: #FFA500 !important; font-weight: bold; display: inline-block; margin-bottom: 0px; }
-    
-    a.link-table-title { font-size: 2.0em !important; font-weight: bold; color: #FFD700 !important; text-decoration: none !important; border-bottom: none !important; background-image: none !important; display: inline-block; margin-bottom: 0px; transition: opacity 0.2s; }
-    a.link-table-title:hover { opacity: 0.8; text-decoration: none !important; border-bottom: none !important; }
-    
-    /* ★ 복사 가능한 링크 스타일 */
-    span.link-table-url, span.link-table-url a { 
-        cursor: pointer; 
-        font-size: 0.85rem; 
-        color: #9ACD32 !important; 
-        text-decoration: none !important; 
-        border-bottom: none !important; 
-        background-image: none !important; 
-        display: block; 
-        overflow: hidden; 
-        text-overflow: ellipsis; 
-        white-space: nowrap; 
-        max-width: 100%; 
-        transition: all 0.2s; 
-    }
+    a.link-table-title { font-size: 2.0em !important; font-weight: bold; color: #FFFFFF !important; text-decoration: none !important; border-bottom: none !important; background-image: none !important; display: inline-block; margin-bottom: 0px; transition: opacity 0.2s; }
+    a.link-table-title:hover { opacity: 0.8; color: #FFD700 !important; text-decoration: none !important; border-bottom: none !important; }
+    span.link-table-url, span.link-table-url a { cursor: pointer; font-size: 0.85rem; color: #9ACD32 !important; text-decoration: none !important; border-bottom: none !important; background-image: none !important; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; transition: all 0.2s; }
     span.link-table-url:hover, span.link-table-url a:hover { opacity: 0.8; color: #FFD700 !important; }
-    
     div[data-testid="stMarkdownContainer"] a, div[data-testid="stMarkdownContainer"] a:hover { border-bottom: 0px !important; text-decoration: none !important; background-image: none !important; }
-    
-    .link-table-memo { font-size: 1.3em !important; color: #FFFFFF; opacity: 0.9; word-break: keep-all; margin-bottom: 0px; }
+    .link-table-memo { font-size: 1.3em !important; color: rgba(255,255,255,0.9); word-break: keep-all; margin-bottom: 0px; }
 
     @media screen and (max-width: 768px) {
         .word-text { font-size: 1.3rem !important; }
@@ -785,37 +780,33 @@ if st.session_state.is_simple:
 @st.dialog("✨ 새 항목 추가")
 def add_dialog(unique_cats):
     with st.form("add_form", clear_on_submit=True):
-        # 1. 시트 선택 (구동사 추가됨)
+        # 1. 시트 선택 (업데이트된 시트명 반영)
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; color: #FFD700;'>1. 저장할 시트</p>", unsafe_allow_html=True)
-        target_sheet_name = st.radio("저장할 시트", ["시트1", "시트3", "구동사"], horizontal=True, label_visibility="collapsed")
+        target_sheet_name = st.radio("저장할 시트", ["메인", "해석", "구동사", "TOM-영어"], horizontal=True, label_visibility="collapsed")
         
-        # 2. 카테고리 (줄바꿈 배치로 변경)
+        # 2. 카테고리
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>2. 카테고리 분류</p>", unsafe_allow_html=True)
         selected_cat = st.selectbox("기존 분류 선택", ["(새로 입력)"] + unique_cats)
-        new_cat = st.text_input("또는 새 분류 직접 입력", value="") # Placeholder 제거
+        new_cat = st.text_input("또는 새 분류 직접 입력", value="") 
         
         # 3. 학습 데이터
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>3. 학습 데이터</p>", unsafe_allow_html=True)
-        word_sent = st.text_area("단어-문장 (필수)", value="", height=80) # Placeholder 제거
-        mean = st.text_area("해석", value="", height=80) # Placeholder 제거
+        word_sent = st.text_area("단어-문장 (필수)", value="", height=80) 
+        mean = st.text_area("해석", value="", height=80) 
         
-        # 4. 부가 정보 (줄바꿈 배치로 변경)
+        # 4. 부가 정보
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>4. 부가 정보 (선택)</p>", unsafe_allow_html=True)
-        pron = st.text_input("발음", value="") # Placeholder 제거
-        m1 = st.text_area("메모 1", value="", height=80) # text_area로 변경 및 Placeholder 제거
-        m2 = st.text_area("메모 2", value="", height=80) # text_area로 변경 및 Placeholder 제거
+        pron = st.text_input("발음", value="") 
+        m1 = st.text_area("메모 1", value="", height=80) 
+        m2 = st.text_area("메모 2", value="", height=80) 
         
         st.markdown("<br>", unsafe_allow_html=True)
         if st.form_submit_button("💾 저장하기", use_container_width=True, type="primary"):
             final_cat = new_cat.strip() if new_cat.strip() else (selected_cat if selected_cat != "(새로 입력)" else "")
             if word_sent:
                 wb = init_connection().open("English_Sentences")
-                # 시트 이름에 따라 저장 위치 지정
-                if target_sheet_name == "구동사":
-                    target_sheet = wb.worksheet("구동사")
-                else:
-                    sheet_index = 0 if target_sheet_name == "시트1" else 2
-                    target_sheet = wb.get_worksheet(sheet_index)
+                # 선택한 시트명으로 바로 연동
+                target_sheet = wb.worksheet(target_sheet_name)
                 
                 target_sheet.append_row([final_cat, word_sent, mean, pron, m1, m2])
                 st.success("저장 완료!")
@@ -839,7 +830,7 @@ def edit_dialog(row_idx, sheet_idx, row_data, unique_cats):
         with st.form(f"edit_{sheet_idx}_{row_idx}"):
             st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; color: #FFD700;'>1. 카테고리 수정</p>", unsafe_allow_html=True)
             edit_cat = st.selectbox("기존 분류 선택", safe_cats, index=cat_index)
-            new_cat = st.text_input("분류 직접 변경", value="") # Placeholder 제거
+            new_cat = st.text_input("분류 직접 변경", value="")
             
             st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>2. 학습 데이터 수정</p>", unsafe_allow_html=True)
             word_sent = st.text_area("단어-문장", value=row_data.get('단어-문장', ''), height=80)
@@ -847,14 +838,14 @@ def edit_dialog(row_idx, sheet_idx, row_data, unique_cats):
             
             st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>3. 부가 정보 수정</p>", unsafe_allow_html=True)
             pron = st.text_input("발음", value=row_data.get('발음', ''))
-            m1 = st.text_area("메모 1", value=row_data.get('메모1', ''), height=80) # text_area로 변경
-            m2 = st.text_area("메모 2", value=row_data.get('메모2', ''), height=80) # text_area로 변경
+            m1 = st.text_area("메모 1", value=row_data.get('메모1', ''), height=80)
+            m2 = st.text_area("메모 2", value=row_data.get('메모2', ''), height=80)
             
             st.markdown("<br>", unsafe_allow_html=True)
             if st.form_submit_button("💾 수정한 내용 저장", use_container_width=True, type="primary"):
                 final_cat = new_cat.strip() if new_cat.strip() else edit_cat
                 wb = init_connection().open("English_Sentences")
-                # 문자열(구동사)이면 worksheet()로, 숫자(0,2)면 get_worksheet()로 연동
+                # sheet_idx에는 시트 이름 텍스트("메인", "해석" 등)가 들어있음
                 target_sheet = wb.worksheet(sheet_idx) if isinstance(sheet_idx, str) else wb.get_worksheet(sheet_idx)
                 target_sheet.update(f"A{row_idx}:F{row_idx}", [[final_cat, word_sent, mean, pron, m1, m2]])
                 st.rerun()
@@ -887,16 +878,16 @@ def add_link_dialog(unique_cats1, unique_cats2):
     with st.form("add_link_form", clear_on_submit=True):
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; color: #FFD700;'>1. 카테고리 지정</p>", unsafe_allow_html=True)
         selected_cat1 = st.selectbox("기존 대분류", ["(새로 입력)"] + unique_cats1)
-        new_cat1 = st.text_input("새 대분류 직접 입력", value="") # Placeholder 제거
+        new_cat1 = st.text_input("새 대분류 직접 입력", value="") 
         
         st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
         selected_cat2 = st.selectbox("기존 소분류", ["(새로 입력)"] + unique_cats2)
-        new_cat2 = st.text_input("새 소분류 직접 입력", value="") # Placeholder 제거
+        new_cat2 = st.text_input("새 소분류 직접 입력", value="") 
         
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>2. 링크 정보</p>", unsafe_allow_html=True)
-        title = st.text_input("제목 (필수)", value="") # Placeholder 제거
-        link_url = st.text_input("링크 주소(URL) (필수)", value="") # Placeholder 제거
-        memo = st.text_input("메모", value="") # Placeholder 제거
+        title = st.text_input("제목 (필수)", value="") 
+        link_url = st.text_input("링크 주소(URL) (필수)", value="") 
+        memo = st.text_input("메모", value="") 
         
         st.markdown("<br>", unsafe_allow_html=True)
         if st.form_submit_button("💾 저장하기", use_container_width=True, type="primary"):
@@ -933,11 +924,11 @@ def edit_link_dialog(row_idx, row_data, unique_cats1, unique_cats2):
         with st.form(f"edit_link_{row_idx}"):
             st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; color: #FFD700;'>1. 카테고리 수정</p>", unsafe_allow_html=True)
             edit_cat1 = st.selectbox("대분류", safe_cats1, index=cat1_index)
-            new_cat1 = st.text_input("대분류 직접 수정", value="") # Placeholder 제거
+            new_cat1 = st.text_input("대분류 직접 수정", value="") 
             
             st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
             edit_cat2 = st.selectbox("소분류", safe_cats2, index=cat2_index)
-            new_cat2 = st.text_input("소분류 직접 수정", value="") # Placeholder 제거
+            new_cat2 = st.text_input("소분류 직접 수정", value="") 
             
             st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>2. 링크 정보 수정</p>", unsafe_allow_html=True)
             title = st.text_input("제목", value=row_data.get('제목', ''))
@@ -1017,7 +1008,7 @@ if not st.session_state.authenticated and st.session_state.logging_in:
         st.rerun()
 else:
     # ==========================================
-    # 🌟 메인 앱 상단 UI 개편 (더욱 깔끔하고 편리하게)
+    # 🌟 메인 앱 상단 UI (세련되고 편리한 대시보드 구조 복구)
     # ==========================================
     kst = timezone(timedelta(hours=9))
     now_kst = datetime.now(kst)
@@ -1204,7 +1195,7 @@ else:
             if st.session_state.authenticated:
                 cb[3].download_button("📥 CSV 추출", df.to_csv(index=False).encode('utf-8-sig'), f"English_Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
             else:
-                cb[2].download_button("📥 CSV 추출", df.to_csv(index=False).encode('utf-8-sig'), f"English_Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
+                cb[2].download_button("📥 CSV 추출", df.to.csv(index=False).encode('utf-8-sig'), f"English_Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
             
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -1220,14 +1211,14 @@ else:
                 elif sel_cat != "전체 분류": d_df = d_df[d_df['분류'] == sel_cat]
                 st.session_state.current_cat = sel_cat
 
-            # 정렬 로직
+            # 정렬 로직 (해석 시트만 메모2 기준 정렬 반영)
             if st.session_state.sort_order == 'asc': 
                 d_df = d_df.sort_values(by='단어-문장', ascending=True)
             elif st.session_state.sort_order == 'desc': 
                 d_df = d_df.sort_values(by='단어-문장', ascending=False)
             else: 
                 if sel_cat not in ["🔀 랜덤 10", "전체 분류"]:
-                    if 'sheet_idx' in d_df.columns and (d_df['sheet_idx'] == 2).any():
+                    if 'sheet_idx' in d_df.columns and (d_df['sheet_idx'] == "해석").any():
                         d_df = d_df.sort_values(by=['메모2', '단어-문장'], ascending=[True, True])
 
             total = len(d_df); pages = math.ceil(total/50) if total > 0 else 1
