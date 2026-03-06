@@ -302,7 +302,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                     if (!bestVoice) {{
                         bestVoice = availableVoices.find(voice => voice.name.includes('Natural') && voice.lang === 'en-US');
                     }}
-                    // 3순위: 애플 Mac/iOS의 자연스러운 기본 미국식 음성
+                    // 3순위: 애플 Mac/iOS의 자연스러운 기본 식 음성
                     if (!bestVoice) {{
                         bestVoice = availableVoices.find(voice => (voice.name === 'Samantha' || voice.name === 'Alex') && voice.lang === 'en-US');
                     }}
@@ -458,7 +458,7 @@ def get_english_sheets():
     sheet_main = wb.worksheet("메인")
     sheet_trans = wb.worksheet("해석")
     
-    # 추가된 시트 연동 ('구동사', 'TOM-영어', '동사구', '문법')
+    # 추가된 시트 연동 ('구동사', 'TOM-영어', '동사구', '문법', '여행', '단어')
     try: sheet_phrasal = wb.worksheet("구동사")
     except: sheet_phrasal = None
         
@@ -471,7 +471,13 @@ def get_english_sheets():
     try: sheet_grammar = wb.worksheet("문법")
     except: sheet_grammar = None
         
-    return sheet_main, sheet_trans, sheet_phrasal, sheet_tom, sheet_verb_phrase, sheet_grammar
+    try: sheet_travel = wb.worksheet("여행")
+    except: sheet_travel = None
+
+    try: sheet_words = wb.worksheet("단어")
+    except: sheet_words = None
+        
+    return sheet_main, sheet_trans, sheet_phrasal, sheet_tom, sheet_verb_phrase, sheet_grammar, sheet_travel, sheet_words
 
 def get_links_sheet():
     # ★ 시트 이름 변경 반영: 1번 시트 -> '링크'
@@ -490,7 +496,7 @@ def _load_single_sheet(sheet):
     raise Exception("데이터 로드 실패")
 
 def load_dataframe():
-    sheet_main, sheet_trans, sheet_phrasal, sheet_tom, sheet_verb_phrase, sheet_grammar = get_english_sheets()
+    sheet_main, sheet_trans, sheet_phrasal, sheet_tom, sheet_verb_phrase, sheet_grammar, sheet_travel, sheet_words = get_english_sheets()
     
     # 1. 메인 로드 및 역순(최신순) 정렬
     df1 = _load_single_sheet(sheet_main)
@@ -537,6 +543,22 @@ def load_dataframe():
         df_g['row_idx'] = df_g.index + 2
         df_g = df_g.iloc[::-1]
         dfs.append(df_g)
+        
+    # 7. 여행 시트 로드 및 역순(최신순) 정렬
+    if sheet_travel is not None:
+        df_tr = _load_single_sheet(sheet_travel)
+        df_tr['sheet_idx'] = "여행"
+        df_tr['row_idx'] = df_tr.index + 2
+        df_tr = df_tr.iloc[::-1]
+        dfs.append(df_tr)
+
+    # 8. 단어 시트 로드 및 역순(최신순) 정렬
+    if sheet_words is not None:
+        df_w = _load_single_sheet(sheet_words)
+        df_w['sheet_idx'] = "단어"
+        df_w['row_idx'] = df_w.index + 2
+        df_w = df_w.iloc[::-1]
+        dfs.append(df_w)
 
     # 모든 시트의 데이터를 하나로 합침
     return pd.concat(dfs, ignore_index=True)
@@ -802,9 +824,9 @@ if st.session_state.is_simple:
 @st.dialog("✨ 새 항목 추가")
 def add_dialog(unique_cats):
     with st.form("add_form", clear_on_submit=True):
-        # 1. 시트 선택 (업데이트된 시트명 반영)
+        # 1. 시트 선택 (단어 추가)
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; color: #FFD700;'>1. 저장할 시트</p>", unsafe_allow_html=True)
-        target_sheet_name = st.radio("저장할 시트", ["메인", "해석", "구동사", "TOM-영어", "동사구", "문법"], horizontal=True, label_visibility="collapsed")
+        target_sheet_name = st.radio("저장할 시트", ["메인", "해석", "단어", "구동사", "TOM-영어", "동사구", "문법", "여행"], horizontal=True, label_visibility="collapsed")
         
         # 2. 카테고리
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>2. 카테고리 분류</p>", unsafe_allow_html=True)
