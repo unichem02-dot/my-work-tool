@@ -676,7 +676,7 @@ st.markdown("""
     div.element-container:has(.row-marker) { width: 100% !important; min-width: 100% !important; }
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
         transition: background-color 0.3s ease;
-        padding: 12px 10px !important; 
+        padding: 12px 10px 16px 10px !important; /* 상하 여백 밸런스 조정 (하단을 약간 더 주어 중앙에 맞춤) */
         border-radius: 0px !important; 
         margin-bottom: 0px !important; border-bottom: 1px dotted rgba(255, 255, 255, 0.2) !important; 
         width: 100% !important; min-width: 100% !important; flex: 1 1 100% !important;
@@ -776,8 +776,8 @@ st.markdown("""
 
     /* 8. 텍스트 스타일 */
     .header-label { font-size: clamp(1.0rem, 1.4vw, 1.5rem) !important; font-weight: 800 !important; color: #FFFFFF !important; white-space: nowrap !important; text-transform: uppercase; letter-spacing: 1px; }
-    .word-text { font-size: 1.98em; font-weight: bold; color: #FFD700 !important; word-break: keep-all; display: inline-block !important; margin-bottom: 0px !important; transition: transform 0.2s ease !important; transform-origin: left center !important; }
-    .mean-text { font-size: 1.3em; word-break: keep-all; display: inline-block !important; margin-bottom: 0px !important; color: #E0E0E0 !important; }
+    .word-text { font-size: 1.98em; font-weight: bold; color: #FFD700 !important; word-break: keep-all; display: inline-block !important; margin-bottom: 0px !important; margin-top: -2px !important; transition: transform 0.2s ease !important; transform-origin: left center !important; }
+    .mean-text { font-size: 1.3em; word-break: keep-all; display: inline-block !important; margin-bottom: 0px !important; }
     .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; color: #A3B8B8 !important; display: inline-block !important; margin-bottom: 0px !important; }
     div[data-testid="stHorizontalBlock"]:has(.row-marker):hover .word-text { transform: scale(1.05) !important; z-index: 10 !important; }
 
@@ -1068,7 +1068,7 @@ else:
                 body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
                 .date-wrapper {{ display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; font-family: sans-serif; width: 100%; height: 100%; padding-bottom: 5px; }}
                 .date-text {{ color: #A3B8B8; font-weight: bold; font-size: clamp(1.0rem, 1.8vw, 1.8rem); white-space: nowrap; margin-bottom: 2px; }}
-                .copy-btn {{ background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.1)); border: 1px solid rgba(255,255,255,0.2); color: #FFF; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight:bold; transition: 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }}
+                .copy-btn {{ background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.1)); border: 1px solid rgba(255,255,255,0.2); color: #FFF; padding: 6px 14px; border-radius: 8px; cursor: font-size: 0.9rem; font-weight:bold; transition: 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }}
                 .copy-btn:hover {{ background: rgba(255,255,255,0.2) !important; transform: translateY(-2px); border-color: #FFD700; color: #FFD700; }}
             </style>
             <div class="date-wrapper">
