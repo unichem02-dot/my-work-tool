@@ -601,21 +601,25 @@ st.markdown("""
         font-weight: bold !important;
     }
 
-    /* 4. 컨텐츠 행(Row) 호버 효과 및 레이아웃 보정 */
+    /* 4. 리스트 카드 디자인 (대폭 개편) */
     div.element-container:has(.row-marker) { width: 100% !important; min-width: 100% !important; }
     div[data-testid="stHorizontalBlock"]:has(.row-marker) {
-        transition: background-color 0.3s ease;
-        padding: 12px 10px !important; 
-        border-radius: 10px !important; 
-        margin-bottom: 5px !important; 
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important; 
+        background: linear-gradient(145deg, rgba(20, 42, 42, 0.7), rgba(30, 60, 60, 0.4)) !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        border-radius: 16px !important; 
+        padding: 16px 20px !important; 
+        margin-bottom: 12px !important; 
         width: 100% !important; min-width: 100% !important; flex: 1 1 100% !important;
         display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important;
         align-items: center !important; overflow: visible !important;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.row-marker):hover { 
-        background-color: rgba(255, 255, 255, 0.05) !important; 
-        border-bottom-color: rgba(255, 215, 0, 0.3) !important;
+        background: linear-gradient(145deg, rgba(30, 60, 60, 0.9), rgba(40, 80, 80, 0.6)) !important;
+        border-color: rgba(255, 215, 0, 0.4) !important;
+        transform: translateY(-3px) !important;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3) !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.row-marker) > div[data-testid="column"] {
         display: flex !important; flex-direction: column !important; justify-content: center !important; 
@@ -707,12 +711,15 @@ st.markdown("""
     button[kind="tertiary"] p { font-size: 1.1rem !important; color: rgba(255,215,0,0.7) !important; font-weight: bold !important; margin: 0 !important; padding: 0 !important; transition: transform 0.2s ease !important; }
     button[kind="tertiary"]:hover p { transform: scale(1.1) !important; color: #FFD700 !important; }
 
-    /* 8. 텍스트 스타일 */
-    .header-label { font-size: clamp(1.0rem, 1.4vw, 1.3rem) !important; font-weight: 800 !important; color: rgba(255,255,255,0.6) !important; white-space: nowrap !important; text-transform: uppercase; letter-spacing: 1px; }
-    .word-text { font-size: 1.98em; font-weight: bold; color: #FFD700 !important; word-break: keep-all; display: inline-block !important; margin-bottom: 0px !important; transition: transform 0.2s ease !important; transform-origin: left center !important; }
-    .mean-text { font-size: 1.3em; word-break: keep-all; display: inline-block !important; margin-bottom: 0px !important; color: #E0E0E0 !important; }
-    .cat-text-bold { font-weight: bold !important; font-size: 0.95rem; color: #A3B8B8 !important; display: inline-block !important; margin-bottom: 0px !important; }
-    div[data-testid="stHorizontalBlock"]:has(.row-marker):hover .word-text { transform: scale(1.05) !important; z-index: 10 !important; }
+    /* 8. 텍스트 및 뱃지 스타일 (카드 내부용) */
+    .header-label { font-size: 0.9rem !important; font-weight: 700 !important; color: #8da9a7 !important; white-space: nowrap !important; text-transform: uppercase; letter-spacing: 1.5px; padding-bottom: 5px; display: block; text-align: center; }
+    .word-text { font-size: 1.8em; font-weight: 900; color: #FFD700 !important; word-break: keep-all; display: inline-block !important; margin-bottom: 0px !important; letter-spacing: -0.5px; transition: transform 0.2s ease !important; transform-origin: left center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+    .mean-text { font-size: 1.25em; font-weight: 500; word-break: keep-all; display: inline-block !important; margin-bottom: 0px !important; color: #E8F0F0 !important; }
+    .cat-badge { background: rgba(255,255,255,0.1); color: #A3B8B8; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 800; display: inline-block; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .sub-text { color: #8da9a7; font-size: 0.95em; font-style: italic; display: inline-block; word-break: keep-all; }
+    .memo-text-item { color: #FFFACD; font-size: 0.95em; display: inline-block; word-break: keep-all; background: rgba(255, 250, 205, 0.05); padding: 4px 8px; border-radius: 6px; }
+    
+    div[data-testid="stHorizontalBlock"]:has(.row-marker):hover .word-text { transform: scale(1.03) !important; z-index: 10 !important; }
 
     /* 9. Num.ENG 결과물 */
     div[data-testid="stHorizontalBlock"]:has(.num-result) { display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 12px !important; width: 100% !important; margin-top: 10px; background: rgba(0,0,0,0.2); padding: 10px 15px; border-radius: 10px; border-left: 4px solid #FFD700; }
@@ -720,14 +727,32 @@ st.markdown("""
     .num-result { color: #FFD700 !important; font-weight: bold; font-size: clamp(1.4rem, 1.8vw, 2.0rem) !important; margin: 0 !important; line-height: 1.1; white-space: normal !important; word-break: break-word; }
     div[data-testid="stHorizontalBlock"]:has(.num-result) button { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; margin-top: 2px !important; }
 
-    /* ★ 링크 모음 전용 아이템 스타일 */
-    .link-table-cat1 { font-size: 1.5rem !important; color: #FFD700 !important; font-weight: bold; display: inline-block; margin-bottom: 0px; }
-    .link-table-cat2 { font-size: 1.1rem !important; color: #FFA500 !important; font-weight: bold; display: inline-block; margin-bottom: 0px; }
+    /* ★ 링크 모음 전용 아이템 스타일 (뱃지 추가) */
+    .link-cat1-badge { background: rgba(255, 215, 0, 0.15); color: #FFD700; padding: 5px 12px; border-radius: 8px; font-size: 0.9rem; font-weight: 800; border: 1px solid rgba(255, 215, 0, 0.3); display: inline-block; }
+    .link-cat2-badge { background: rgba(255, 165, 0, 0.15); color: #FFA500; padding: 4px 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; border: 1px solid rgba(255, 165, 0, 0.3); display: inline-block; }
+    
     a.link-table-title { font-size: 1.8em !important; font-weight: bold; color: #FFFFFF !important; text-decoration: none !important; border-bottom: none !important; background-image: none !important; display: inline-block; margin-bottom: 0px; transition: opacity 0.2s; }
     a.link-table-title:hover { opacity: 0.8; color: #FFD700 !important; text-decoration: none !important; border-bottom: none !important; }
-    span.link-table-url, span.link-table-url a { cursor: pointer; font-size: 0.85rem; color: #9ACD32 !important; text-decoration: none !important; border-bottom: none !important; background-image: none !important; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; transition: all 0.2s; }
+    
+    /* ★ 복사 가능한 링크 스타일 */
+    span.link-table-url, span.link-table-url a { 
+        cursor: pointer; 
+        font-size: 0.85rem; 
+        color: #9ACD32 !important; 
+        text-decoration: none !important; 
+        border-bottom: none !important; 
+        background-image: none !important; 
+        display: block; 
+        overflow: hidden; 
+        text-overflow: ellipsis; 
+        white-space: nowrap; 
+        max-width: 100%; 
+        transition: all 0.2s; 
+    }
     span.link-table-url:hover, span.link-table-url a:hover { opacity: 0.8; color: #FFD700 !important; }
+    
     div[data-testid="stMarkdownContainer"] a, div[data-testid="stMarkdownContainer"] a:hover { border-bottom: 0px !important; text-decoration: none !important; background-image: none !important; }
+    
     .link-table-memo { font-size: 1.1em !important; color: rgba(255,255,255,0.7); word-break: keep-all; margin-bottom: 0px; }
 
     @media screen and (max-width: 768px) {
@@ -1023,7 +1048,7 @@ else:
                 st.session_state.app_mode = 'Links'
                 st.rerun()
         else:
-            if st.button("🇬🇧 영어 모음으로 전환", use_container_width=True, type="secondary"):
+            if st.button("영어 모음으로 전환", use_container_width=True, type="secondary"):
                 st.session_state.app_mode = 'English'
                 st.rerun()
                 
@@ -1213,17 +1238,19 @@ else:
             
             st.markdown("<div style='border-bottom:2px solid rgba(255,255,255,0.2); margin-top:-15px; margin-bottom:10px;'></div>", unsafe_allow_html=True)
 
-            # 리스트 내용 출력
+            # ★ 리스트 내용 출력 (카드 스타일 적용)
             for idx, row in d_df.iloc[(curr_p-1)*50 : curr_p*50].iterrows():
                 cols = st.columns(ratio if st.session_state.authenticated else ratio[:-1], vertical_alignment="center")
-                cols[0].markdown(f"<span class='row-marker'></span><span class='cat-text-bold'>{row['분류']}</span>", unsafe_allow_html=True)
+                cols[0].markdown(f"<span class='row-marker'></span><div class='cat-badge'>{row['분류']}</div>", unsafe_allow_html=True)
                 cols[1].markdown(f"<span class='word-text'>{row['단어-문장']}</span>", unsafe_allow_html=True)
                 cols[2].markdown(f"<span class='mean-text'>{row['해석']}</span>", unsafe_allow_html=True)
                 
                 btn_label = f"✏️ {row.get('row_idx', '')}"
                 
                 if not is_simple:
-                    cols[3].write(row['발음']); cols[4].write(row['메모1']); cols[5].write(row['메모2'])
+                    cols[3].markdown(f"<span class='sub-text'>{row['발음']}</span>", unsafe_allow_html=True)
+                    cols[4].markdown(f"<span class='memo-text-item'>{row['메모1']}</span>" if row['메모1'] else "", unsafe_allow_html=True)
+                    cols[5].markdown(f"<span class='memo-text-item'>{row['메모2']}</span>" if row['메모2'] else "", unsafe_allow_html=True)
                     if st.session_state.authenticated and cols[6].button(btn_label, key=f"e_{row['sheet_idx']}_{row['row_idx']}", type="tertiary"): 
                         edit_dialog(row['row_idx'], row['sheet_idx'], row.to_dict(), unique_cats)
                 elif st.session_state.authenticated and cols[3].button(btn_label, key=f"es_{row['sheet_idx']}_{row['row_idx']}", type="tertiary"): 
@@ -1300,8 +1327,8 @@ else:
             else:
                 for idx, row in df_links.iterrows():
                     cols = st.columns(l_ratio, vertical_alignment="center")
-                    cols[0].markdown(f"<span class='row-marker'></span><span class='link-table-cat1'>{row['대분류']}</span>", unsafe_allow_html=True)
-                    cols[1].markdown(f"<span class='link-table-cat2'>{row['소분류']}</span>", unsafe_allow_html=True)
+                    cols[0].markdown(f"<span class='row-marker'></span><div class='link-cat1-badge'>{row['대분류']}</div>", unsafe_allow_html=True)
+                    cols[1].markdown(f"<div class='link-cat2-badge'>{row['소분류']}</div>", unsafe_allow_html=True)
                     
                     title_html = f"<a href='{row['링크']}' target='_blank' class='link-table-title'>{row['제목']}</a>"
                     cols[2].markdown(title_html, unsafe_allow_html=True)
