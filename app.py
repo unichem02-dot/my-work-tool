@@ -294,25 +294,25 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         function renderRolling() {{
             if (!filteredData || filteredData.length === 0) return;
             const container = document.getElementById('rolling-container');
-            const oldItems = container.children;
-            for(let i=0; i<oldItems.length; i++) {{ 
-                oldItems[i].style.opacity = '0'; 
-                setTimeout((el) => {{ if (container.contains(el)) container.removeChild(el); }}, 600, oldItems[i]); 
+            
+            // ★ 이전 아이템 즉시 삭제 (지연 없음)
+            while (container.firstChild) {{
+                container.removeChild(container.firstChild);
             }}
 
             const item = filteredData[currentIndex];
             document.getElementById('word-cat-display').innerText = item.cat;
 
             const div = document.createElement('div');
+            // ★ transition 애니메이션 코드 완전 제거
             div.style.position = 'absolute'; 
             div.style.width = '100%'; 
-            div.style.transition = 'opacity 0.6s ease-in-out'; 
             div.style.left = '0'; 
             div.style.top = '50%'; 
             div.style.transform = 'translateY(-50%)'; 
             div.style.padding = '0 20px'; 
             div.style.boxSizing = 'border-box'; 
-            div.style.opacity = '1';  // 초기 투명도를 1로 설정하여 바로 보이게 함
+            div.style.opacity = '1';  // 초기부터 투명도 1
             div.style.zIndex = '10';
 
             let enFontSize = item.en.length > 25 ? 'min(7vw, 9vh)' : 'min(10vw, 13vh)';
@@ -322,7 +322,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
 
             let pronHtml = (item.pron && item.pron.length <= 60) ? `<p style="font-size: ` + pronSize + `; color: #FFFFFF; margin: 2vh 0 0 0; font-weight: normal; font-style: italic; text-shadow: none;">${{item.pron}}</p>` : "";
             
-            // 해석 및 메모의 opacity를 기본적으로 1로 설정 (시간차 제거)
+            // ★ 해석 및 메모의 opacity를 1로 고정하고 애니메이션(transition) 제거
             let koHtml = item.ko ? `<p class="anim-ko" style="color: #a08b7a; font-size: ` + koSize + `; font-weight: bold; margin: 3vh 0 0 0; opacity: 1; word-break: keep-all; line-height: 1.4; text-shadow: none;">${{item.ko}}</p>` : "";
             let memoHtml = "";
             if (!isSimpleMode) {{
@@ -333,8 +333,10 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
 
             div.innerHTML = `<div style="color: #E67E22; font-weight: 900; text-shadow: 0 0 20px rgba(230,126,34,0.4);"><p style="font-size: ` + enFontSize + `; margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.2;">${{item.en}}</p></div>` + pronHtml + koHtml + memoHtml; 
+            
             container.appendChild(div);
 
+            // ★ 불필요한 setTimeout 지연 렌더링 삭제
             if(isTTSEnabled) {{ window.speechSynthesis.cancel(); speakText(item.en, 'en-US'); if(item.ko) speakText(item.ko, 'ko-KR'); }}
         }}
 
