@@ -115,44 +115,54 @@ st.markdown("""
     
     /* 🖨️ A4 인쇄(프린트) 전용 완벽 솔루션 CSS */
     @media print {
-        /* 1. 스트림릿 시스템 상하단 메뉴 및 툴바 완전 삭재 */
+        /* 1. 스트림릿 상하단 메뉴, 기본 여백 완전 제거 */
         header, footer, [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"], [data-testid="stSidebar"] { 
             display: none !important; opacity: 0 !important; visibility: hidden !important; 
         }
         
-        /* 2. 검색창, 입력칸, 라디오버튼, 셀렉트박스 등 모든 UI 컨트롤러 싹 숨김 */
-        [data-testid="stButton"], [data-testid="stTextInput"], [data-testid="stSelectbox"], 
-        [data-testid="stDateInput"], [data-testid="stRadio"], [data-testid="stCheckbox"],
-        iframe, hr { 
-            display: none !important; 
-        }
-        
-        /* 3. 앱 배경을 완벽한 흰색으로 & 불필요한 여백 제거 */
+        /* 2. 앱 배경을 완벽한 흰색으로 만들고 패딩 제거 */
         [data-testid="stAppViewContainer"], .main .block-container {
             background-color: white !important;
             padding: 0 !important;
             margin: 0 !important;
             max-width: 100% !important;
         }
+
+        /* 3. 💡 핵심: 일단 화면의 모든 블록(element-container)을 무조건 숨김 (검색창 찌꺼기 완벽 제거) */
+        .element-container { 
+            display: none !important; 
+        }
         
-        /* 4. A4 용지 가로 방향(Landscape) 및 기본 여백 세팅 */
-        @page { size: A4 landscape; margin: 10mm; }
+        /* 4. 💡 표 제목(table-title-box)과 표 내용(custom-table-container)이 들어있는 블록만 핀셋으로 다시 표시 */
+        .element-container:has(.table-title-box),
+        .element-container:has(.custom-table-container) {
+            display: block !important;
+        }
         
-        /* 5. 💡 'NO' 열 데이터 인쇄 시 완벽 숨김 */
+        /* 5. 💡 표 제목 옆에 붙어있는 버튼 그룹들 (엑셀 다운로드, 프린트 버튼 등) 숨김 */
+        div[data-testid="stHorizontalBlock"]:has(.table-title-box) > div[data-testid="column"]:nth-of-type(n+2) {
+            display: none !important;
+        }
+        
+        /* 6. 💡 A4 용지 세로 방향(Portrait) 강제 지정 및 기본 여백 세팅 */
+        @page { size: A4 portrait; margin: 10mm; }
+        
+        /* 7. 'NO' 열 데이터 인쇄 시 완벽 숨김 */
         .print-hide-col { display: none !important; }
         
-        /* 6. 💡 푸터(자료수, 총수익 등) 매 페이지 반복되는 현상 방지 -> 맨 마지막에만 1회 출력 */
+        /* 8. 맨 마지막에만 푸터(총액) 1회 출력 */
         tfoot { display: table-row-group !important; }
         
-        /* 표 크기 A4 규격에 맞게 축소(zoom) 적용 및 행 잘림 방지 */
+        /* 9. 세로 너비에 맞게 표 배율 축소 (가로 짤림 방지) */
         .custom-table-container {
             width: 100% !important;
-            zoom: 85%;
+            zoom: 65%; /* 💡 세로 용지에 데이터가 다 들어가도록 65%로 축소 */
             page-break-inside: auto;
+            margin-top: 0 !important;
         }
         .custom-table tr { page-break-inside: avoid; page-break-after: auto; }
         
-        /* 인쇄 시 글자색을 검정색으로 또렷하게 통일 */
+        /* 인쇄 시 글자색을 검정색으로 뚜렷하게 통일 */
         .custom-table th, .custom-table td, .txt-in-bold, .txt-out-bold, .txt-in, .txt-out, .txt-gray, .txt-black, .tc a {
             color: black !important;
             text-decoration: none !important;
@@ -164,9 +174,9 @@ st.markdown("""
             print-color-adjust: exact !important;
         }
         
-        /* 상단 테이블 제목 디자인 깔끔하게 처리 */
+        /* 상단 테이블 제목 디자인 투명하게 깔끔히 처리 */
         .table-title-box {
-            background-color: white !important;
+            background-color: transparent !important;
             border: none !important;
             padding: 0px 0px 10px 0px !important;
         }
@@ -441,7 +451,6 @@ try:
                             <span class="rt-op blue">/</span>
                             <input type="number" class="rt-in" id="rt-d2" oninput="rtCalc()" placeholder="0">
                             <span class="rt-op blue">=</span>
-                            <!-- 변경됨: input 대신 div 사용 -->
                             <div class="rt-out" id="rt-dr">0</div>
                         </div>
                         <div class="rt-group">
@@ -465,7 +474,6 @@ try:
                         let parts = num.toString().split('.');
                         let intPart = parseInt(parts[0], 10).toLocaleString('ko-KR');
                         
-                        // 💡 정수는 굵게(bold), 소수점 이하는 얇게(normal) 처리
                         if (parts[1]) { 
                             let decPart = parts[1].length > 4 ? parts[1].substring(0, 4) : parts[1]; 
                             return '<span style="font-weight: bold;">' + intPart + '</span><span style="font-weight: normal; opacity: 0.85;">.' + decPart + '</span>';
@@ -475,7 +483,6 @@ try:
                     function rtCalc() {
                         let d1 = parseFloat(document.getElementById('rt-d1').value) || 0;
                         let d2 = parseFloat(document.getElementById('rt-d2').value) || 0;
-                        // value 대신 innerHTML로 태그 적용
                         document.getElementById('rt-dr').innerHTML = d2 !== 0 ? rtFmt(d1 / d2) : '<span style="font-weight: bold;">0</span>';
                         
                         let v1 = parseFloat(document.getElementById('rt-v1').value) || 0;
