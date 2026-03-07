@@ -519,6 +519,9 @@ try:
                 t_car = f_df['carprice_val'].sum()
                 t_profit = t_out_a - t_in_a - t_car
                 
+                # 💡 행별 순수익(profit) 계산: 매출액 - 매입액 - 운송비
+                f_df['profit'] = f_df['out_total'] - f_df['in_total'] - f_df['carprice_val']
+                
                 print_title = params.get("title", "검색결과")
 
                 # 💡 [모드 분기] 결산 버튼 클릭 시 대시보드 화면 렌더링
@@ -548,7 +551,8 @@ try:
                         if not daily_df.empty:
                             daily_df.set_index('date', inplace=True)
                             daily_df.columns = ['매출액', '매입액']
-                            st.bar_chart(daily_df, height=350)
+                            # 💡 우측 표 3개의 높이에 맞춰 차트 세로 길이 조정 (450)
+                            st.bar_chart(daily_df, height=450)
                         else:
                             st.info("해당 월의 데이터가 없습니다.")
                             
@@ -561,6 +565,15 @@ try:
                             st.dataframe(top_out.style.format({'매출액': '{:,.0f}'}), use_container_width=True, hide_index=True)
                         else:
                             st.caption("매출 내역이 없습니다.")
+                            
+                        # 💡 최고 이익 거래처 Top 5 신규 추가
+                        st.markdown("<br><h4 style='color: #f8fafc;'>💎 최고 이익 거래처 Top 5</h4>", unsafe_allow_html=True)
+                        if not valid_outcom.empty:
+                            top_profit = valid_outcom.groupby('outcom')['profit'].sum().sort_values(ascending=False).head(5).reset_index()
+                            top_profit.columns = ['거래처명', '순이익']
+                            st.dataframe(top_profit.style.format({'순이익': '{:,.0f}'}), use_container_width=True, hide_index=True)
+                        else:
+                            st.caption("수익 내역이 없습니다.")
                             
                         st.markdown("<br><h4 style='color: #f8fafc;'>📦 베스트셀러 품목 Top 5</h4>", unsafe_allow_html=True)
                         valid_item = f_df[f_df['outitem'].astype(str).str.strip() != '']
