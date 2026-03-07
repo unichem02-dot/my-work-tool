@@ -553,14 +553,20 @@ if st.query_params.get("study") == "true":
 # --- [사용자 정의 디자인 (CSS) - 디자인 대폭 개편 및 기존 폼 유지] ---
 st.markdown("""
     <style>
+    /* ★ 스트림릿 기본 상하단 메뉴 완벽 제거 */
+    [data-testid="stHeader"], 
+    [data-testid="stToolbar"], 
+    #MainMenu, 
+    footer {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
     /* 1. 배경 설정: 짙은 다크그린 */
     [data-testid="stAppViewContainer"],
     div[data-testid="stDialog"] > div,
     div[role="dialog"] > div {
         background-color: #224343 !important;
-    }
-    [data-testid="stHeader"] {
-        background-color: transparent !important;
     }
 
     /* 2. 글자색 화이트 강제화 및 타이틀 하단 여백 제거 */
