@@ -315,22 +315,31 @@ def _fetch_sheet_concurrently(wb, sheet_name):
         data = sheet.get_all_values()
         if not data: 
             return pd.DataFrame()
-        rows = [row + [""] * (6 - len(row)) for row in data[1:]]
+            
+        # ★ 핵심 보완: 시트의 열 개수가 6개(메모2까지)보다 많더라도 무조건 앞의 6개만 자르고, 모자라면 빈칸으로 채웁니다.
+        # 구동사/동사구 시트의 '메모3' 같은 불필요한 추가 열 때문에 에러나 누락이 발생하는 것을 원천 차단합니다.
+        rows = [row[:6] + [""] * (6 - len(row[:6])) for row in data[1:]]
+        
         df = pd.DataFrame(rows, columns=['분류', '단어-문장', '해석', '발음', '메모1', '메모2'])
         for col in df.columns: df[col] = df[col].astype(str).str.strip()
+        
+        # 빈 행 제거 (분류나 단어가 없는 빈 줄 쓰레기 데이터 정리)
+        df = df[df['단어-문장'] != ""]
+        
         df['sheet_idx'] = sheet_name
         df['row_idx'] = df.index + 2
         return df.sort_values(by='row_idx', ascending=True)
-    except Exception:
+    except Exception as e:
+        print(f"Error loading sheet {sheet_name}: {e}")
         return pd.DataFrame()
 
-# ★ 핵심 업데이트: 구글 시트에 있는 모든 탭을 자동으로 찾아내어 로드합니다! (v5로 갱신)
+# ★ v6로 변경하여 이전 캐시를 강제로 비우고 새로운 로직으로 데이터를 불러옵니다.
 @st.cache_data(ttl=600)
-def get_english_data_v5():
+def get_english_data_v6():
     wb = init_connection().open("English_Sentences")
     all_sheets = wb.worksheets()
     
-    # '링크' 탭은 따로 관리하므로 제외하고, 나머지 모든 탭 이름을 추출
+    # '링크' 탭을 제외한 모든 탭의 이름을 자동으로 추출하여 순회
     sheet_names = [ws.title for ws in all_sheets if ws.title != "링크"]
     
     dfs = []
@@ -348,7 +357,7 @@ def get_links_sheet():
     return init_connection().open("English_Sentences").worksheet("링크")
 
 @st.cache_data(ttl=600)
-def get_links_data_v5():
+def get_links_data_v6():
     sheet = get_links_sheet()
     for _ in range(3):
         try:
@@ -378,7 +387,7 @@ if st.query_params.get("study") == "true":
     """, unsafe_allow_html=True)
     
     try:
-        df = get_english_data_v5()
+        df = get_english_data_v6()
         unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
         cat_param = st.query_params.get("cat", "ALL")
         initial_cat = "ALL" if cat_param in ["🔀 랜덤 10", "전체 분류", "ALL"] else cat_param
@@ -996,11 +1005,10 @@ else:
     # ==============================================================
     if st.session_state.app_mode == 'English':
         try:
-            df = get_english_data_v5() # ★ 모든 시트 동적 감지 (v5 연동)
+            df = get_english_data_v6() # ★ 변경된 로직으로 캐시 갱신 (v6 연동)
 
             unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
             
-            # ★ 현재 존재하는 모든 시트 이름을 "저장할 시트" 옵션에 자동으로 뿌려줌
             available_sheets = df['sheet_idx'].unique().tolist() if not df.empty else ["메인"]
             
             sel_cat = st.radio("카테고리 선택", ["🔀 랜덤 10", "전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed", key="cat_radio", on_change=clear_search)
@@ -1096,7 +1104,7 @@ else:
     # ==============================================================
     elif st.session_state.app_mode == 'Links':
         try:
-            df_links_raw = get_links_data_v5()
+            df_links_raw = get_links_data_v6()
             
             unique_links_cats1 = sorted([x for x in df_links_raw['대분류'].unique().tolist() if x != ''])
             unique_links_cats2 = sorted([x for x in df_links_raw['소분류'].unique().tolist() if x != ''])
@@ -1123,7 +1131,6 @@ else:
                     if sel_link_cat2 != "전체":
                         filtered_df_links = filtered_df_links[filtered_df_links['소분류'] == sel_link_cat2]
 
-            # 액션 툴바 (버튼 레이아웃 분할)
             st.markdown("<div style='background-color: rgba(0,0,0,0.25); padding: 15px 20px; border-radius: 15px; margin: 20px 0; border: 1px solid rgba(255,255,255,0.05);'>", unsafe_allow_html=True)
             cb_cols = [2.5, 2, 1.5, 1.5, 1.2] if st.session_state.authenticated else [3.5, 1.5, 1.5, 1.2]
             cb = st.columns(cb_cols, vertical_alignment="center")
@@ -1138,10 +1145,8 @@ else:
                 if cb[1].button("➕ 새 링크 추가", type="primary", use_container_width=True):
                     add_link_dialog(unique_links_cats1, unique_links_cats2)
                     
-            # 다운로드 버튼
             cb[csv_idx].download_button("📥 CSV 추출", data=convert_df_to_csv(filtered_df_links), file_name=f"Links_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
             
-            # ★ 신규 A4 인쇄 버튼
             if cb[prt_idx].button("🖨️ A4 인쇄", use_container_width=True):
                 print_table(filtered_df_links, "TOmBOy94 링크 모음")
                 
