@@ -322,11 +322,11 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             let koSize = 'min(4.5vw, 6vh)';
             let memoSize = 'min(2.5vw, 3.5vh)';
 
-            // 1. 발음 (서브 텍스트)
-            let pronHtml = (item.pron && item.pron.length <= 60) ? `<p style="font-size: ${pronSize}; color: #A3B8B8; margin: 0 0 2vh 0; font-weight: 500; font-style: italic;">[ ${{item.pron}} ]</p>` : "";
+            // 1. 발음 (서브 텍스트) - f-string 이스케이프({{}})를 올바르게 적용!
+            let pronHtml = (item.pron && item.pron.length <= 60) ? `<p style="font-size: ${{pronSize}}; color: #A3B8B8; margin: 0 0 2vh 0; font-weight: 500; font-style: italic;">[ ${{item.pron}} ]</p>` : "";
             
             // 2. 한국어 해석 (중간 강조)
-            let koHtml = item.ko ? `<p style="color: #FFFFFF; font-size: ${koSize}; font-weight: 700; margin: 2vh 0 0 0; word-break: keep-all; line-height: 1.4; letter-spacing: -0.5px;">${{item.ko}}</p>` : "";
+            let koHtml = item.ko ? `<p style="color: #FFFFFF; font-size: ${{koSize}}; font-weight: 700; margin: 2vh 0 0 0; word-break: keep-all; line-height: 1.4; letter-spacing: -0.5px;">${{item.ko}}</p>` : "";
             
             // 3. 부가 메모 영역 (팁 형태의 박스로 시각적 분리)
             let memoHtml = "";
@@ -344,8 +344,8 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                     box-sizing: border-box;
                     display: inline-block;
                 ">
-                    ${item.memo1 ? `<p style="color: #E0E0E0; font-size: ${memoSize}; font-weight: 500; margin: 0 0 1vh 0; word-break: keep-all; line-height: 1.5;">💡 ${{item.memo1}}</p>` : ''}
-                    ${item.memo2 ? `<p style="color: #E0E0E0; font-size: ${memoSize}; font-weight: 500; margin: 0; word-break: keep-all; line-height: 1.5;">📌 ${{item.memo2}}</p>` : ''}
+                    ${{item.memo1 ? `<p style="color: #E0E0E0; font-size: ${{memoSize}}; font-weight: 500; margin: 0 0 1vh 0; word-break: keep-all; line-height: 1.5;">💡 ${{item.memo1}}</p>` : ''}}
+                    ${{item.memo2 ? `<p style="color: #E0E0E0; font-size: ${{memoSize}}; font-weight: 500; margin: 0; word-break: keep-all; line-height: 1.5;">📌 ${{item.memo2}}</p>` : ''}}
                 </div>`;
             }}
 
@@ -367,18 +367,18 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                 ">
                     <!-- 가장 중요한 영어 문장 -->
                     <div style="color: #FFD700; font-weight: 900; text-shadow: 0 4px 15px rgba(255, 215, 0, 0.3); width: 100%;">
-                        <p style="font-size: ${enFontSize}; margin: 0; padding-bottom: 1vh; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.2;">${{item.en}}</p>
+                        <p style="font-size: ${{enFontSize}}; margin: 0; padding-bottom: 1vh; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.2;">${{item.en}}</p>
                     </div>
                     
                     <!-- 발음 기호 -->
-                    ${pronHtml}
+                    ${{pronHtml}}
                     
                     <!-- 시각적 구분을 위한 라인 -->
-                    ${item.ko ? `<div style="width: 80%; height: 2px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent); margin: 1vh 0;"></div>` : ''}
+                    ${{item.ko ? `<div style="width: 80%; height: 2px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent); margin: 1vh 0;"></div>` : ''}}
                     
                     <!-- 해석 및 메모 -->
-                    ${koHtml}
-                    ${memoHtml}
+                    ${{koHtml}}
+                    ${{memoHtml}}
                 </div>
             `;
 
