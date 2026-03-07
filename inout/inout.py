@@ -113,26 +113,21 @@ st.markdown("""
     .alert-title { background-color: #cc0000; color: white; text-align: center; padding: 6px; font-weight: bold; }
     .alert-ul { padding-left: 20px; margin: 10px 10px 10px 0; } .alert-ul li { margin-bottom: 5px; }
     
-    /* 🖨️ A4 인쇄(프린트) 전용 스마트 설정 (검색창, 메뉴 완벽 숨김) */
+    /* 🖨️ A4 인쇄(프린트) 전용 완벽 솔루션 CSS */
     @media print {
-        /* 스트림릿 기본 헤더, 사이드바 등 불필요 요소 숨김 */
-        header, footer, [data-testid="stSidebar"] { display: none !important; }
-        
-        /* 💡 핵심: 메인 영역의 모든 블록을 일단 전부 숨김 */
-        .main .element-container { display: none !important; }
-        
-        /* 💡 오직 '표 제목'과 '표 내용'이 들어있는 블록만 다시 나타나게 강제 설정 */
-        .main .element-container:has(.table-title-box),
-        .main .element-container:has(.custom-table-container) {
-            display: block !important;
+        /* 1. 스트림릿 시스템 상하단 메뉴 및 툴바 완전 삭재 */
+        header, footer, [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"], [data-testid="stSidebar"] { 
+            display: none !important; opacity: 0 !important; visibility: hidden !important; 
         }
         
-        /* 표 제목 옆에 있는 버튼 3개(정렬 전환, 인쇄, 엑셀) 영역만 핀셋으로 제거 */
-        div[data-testid="stHorizontalBlock"]:has(.table-title-box) > div:nth-child(n+2) {
-            display: none !important;
+        /* 2. 검색창, 입력칸, 라디오버튼, 셀렉트박스 등 모든 UI 컨트롤러 싹 숨김 */
+        [data-testid="stButton"], [data-testid="stTextInput"], [data-testid="stSelectbox"], 
+        [data-testid="stDateInput"], [data-testid="stRadio"], [data-testid="stCheckbox"],
+        iframe, hr { 
+            display: none !important; 
         }
         
-        /* 앱 배경을 흰색으로 강제 초기화 */
+        /* 3. 앱 배경을 완벽한 흰색으로 & 불필요한 여백 제거 */
         [data-testid="stAppViewContainer"], .main .block-container {
             background-color: white !important;
             padding: 0 !important;
@@ -140,13 +135,16 @@ st.markdown("""
             max-width: 100% !important;
         }
         
-        /* A4 용지 가로(Landscape) 방향 여백 설정 */
-        @page {
-            size: A4 landscape;
-            margin: 10mm;
-        }
+        /* 4. A4 용지 가로 방향(Landscape) 및 기본 여백 세팅 */
+        @page { size: A4 landscape; margin: 10mm; }
         
-        /* 표 크기 A4 규격에 맞게 축소(zoom) 적용 및 페이지 잘림 방지 */
+        /* 5. 💡 'NO' 열 데이터 인쇄 시 완벽 숨김 */
+        .print-hide-col { display: none !important; }
+        
+        /* 6. 💡 푸터(자료수, 총수익 등) 매 페이지 반복되는 현상 방지 -> 맨 마지막에만 1회 출력 */
+        tfoot { display: table-row-group !important; }
+        
+        /* 표 크기 A4 규격에 맞게 축소(zoom) 적용 및 행 잘림 방지 */
         .custom-table-container {
             width: 100% !important;
             zoom: 85%;
@@ -160,7 +158,7 @@ st.markdown("""
             text-decoration: none !important;
         }
         
-        /* 테이블 헤더 배경색 강제 인쇄 */
+        /* 테이블 헤더 배경색 브라우저 설정 무시하고 강제 인쇄 */
         .th-base, .th-in, .th-out, .sum-profit {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -637,14 +635,18 @@ try:
                     csv = f_df.to_csv(index=False).encode('utf-8-sig')
                     st.download_button("💾 엑셀 다운로드", data=csv, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
 
-                html = '<div class="custom-table-container"><table class="custom-table"><thead><tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
+                # 💡 테이블 헤더 및 본문에 'NO' 열을 인쇄 시 숨기는 클래스(print-hide-col) 추가
+                html = '<div class="custom-table-container"><table class="custom-table"><thead><tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
                 pwd_token = str(st.secrets["tom_password"])
                 for _, r in f_df.iterrows():
                     rid, dt = safe_str(r['id']), r[date_col].strftime('%Y-%m-%d')
                     s_cls = "txt-green" if "제일" in str(r['s']) else "txt-purple"
                     v_link = f'<a href="?copy_id={rid}&token={pwd_token}" target="_self" style="text-decoration:none;"><span class="{s_cls}">{r["s"]}</span></a>'
                     d_link = f'<a href="?edit_id={rid}&token={pwd_token}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
-                    html += f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl txt-in-bold">{r["incom"]}</td><td class="tl txt-in">{r["initem"]}</td><td class="tr txt-in">{r["inq_val"]:,.0f}</td><td class="tr txt-in">{r["inprice_val"]:,.0f}</td><td class="tl txt-out-bold">{r["outcom"]}</td><td class="tl txt-out">{r["outitem"]}</td><td class="tr txt-out">{r["outq_val"]:,.0f}</td><td class="tr txt-out">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray">{rid}</td><td class="tc txt-gray">{r["carno"]}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
+                    # 💡 NO 열 (rid) 출력 부분에 print-hide-col 적용
+                    html += f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl txt-in-bold">{r["incom"]}</td><td class="tl txt-in">{r["initem"]}</td><td class="tr txt-in">{r["inq_val"]:,.0f}</td><td class="tr txt-in">{r["inprice_val"]:,.0f}</td><td class="tl txt-out-bold">{r["outcom"]}</td><td class="tl txt-out">{r["outitem"]}</td><td class="tr txt-out">{r["outq_val"]:,.0f}</td><td class="tr txt-out">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray print-hide-col">{rid}</td><td class="tc txt-gray">{r["carno"]}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
+                
+                # 💡 푸터는 그대로 유지 (인쇄 시 CSS tfoot { display: table-row-group } 설정에 의해 마지막 페이지에만 출력됨)
                 html += f'</tbody><tfoot><tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr><tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr></tfoot></table></div>'
                 st.markdown(html, unsafe_allow_html=True)
 
