@@ -113,19 +113,10 @@ st.markdown("""
     .alert-title { background-color: #cc0000; color: white; text-align: center; padding: 6px; font-weight: bold; }
     .alert-ul { padding-left: 20px; margin: 10px 10px 10px 0; } .alert-ul li { margin-bottom: 5px; }
     
-    /* 🖨️ 인쇄 버튼 커스텀 스타일 */
-    .btn-print {
-        width: 100%; height: 38px;
-        background-color: #4e8cff; color: white;
-        border: none; border-radius: 4px; 
-        font-weight: bold; cursor: pointer; font-size: 15px;
-    }
-    .btn-print:hover { background-color: #3b76e5; }
-    
     /* 🖨️ A4 인쇄(프린트) 전용 설정 */
     @media print {
-        /* 불필요한 검색 패널, 버튼, 계산기 등 화면 요소 완벽 숨김 */
-        header, footer, .search-panel-container, form, .stButton, .stDownloadButton, .rt-calc-wrap, .btn-print {
+        /* 불필요한 검색 패널, 버튼, 계산기, 독립 프레임(iframe) 완벽 숨김 */
+        header, footer, .search-panel-container, form, .stButton, .stDownloadButton, .rt-calc-wrap, iframe {
             display: none !important;
         }
         /* 앱 배경을 흰색으로 강제 초기화 */
@@ -597,8 +588,33 @@ try:
                     if st.button("🔄 날짜 정렬 전환", use_container_width=True, type="primary"):
                         st.session_state.sort_desc = not st.session_state.sort_desc; st.rerun()
                 with col_t3:
-                    # 💡 스트림릿 iframe 차단 우회: parent.print() 강제 호출 및 예외 처리
-                    st.markdown('<button class="btn-print" onclick="try { window.parent.print(); } catch(e) { window.print(); }">🖨️ A4 인쇄</button>', unsafe_allow_html=True)
+                    # 💡 마크다운 필터에 의해 onclick이 삭제되는 버그를 해결하기 위해 독립된 프레임(components)으로 인쇄 버튼 생성
+                    components.html(
+                        """
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                        <style>
+                        body { margin: 0; padding: 0; overflow: hidden; background-color: transparent; }
+                        .btn-print {
+                            width: 100%; height: 35px;
+                            background-color: #4e8cff; color: white;
+                            border: none; border-radius: 4px; 
+                            font-weight: bold; cursor: pointer; font-size: 15px;
+                            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+                            display: flex; align-items: center; justify-content: center;
+                            box-sizing: border-box;
+                        }
+                        .btn-print:hover { background-color: #3b76e5; }
+                        </style>
+                        </head>
+                        <body>
+                        <button class="btn-print" onclick="try { window.parent.print(); } catch(e) { alert('현재 브라우저 보안 설정으로 인해 직접 인쇄가 제한되었습니다. 키보드에서 [Ctrl + P] 를 눌러 인쇄해 주세요.'); }">🖨️ A4 인쇄</button>
+                        </body>
+                        </html>
+                        """,
+                        height=35
+                    )
                 with col_t4:
                     csv = f_df.to_csv(index=False).encode('utf-8-sig')
                     st.download_button("💾 엑셀 다운로드", data=csv, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
