@@ -376,12 +376,14 @@ def _fetch_sheet_concurrently(wb, sheet_name):
         print(f"Error loading sheet {sheet_name}: {e}")
         return pd.DataFrame()
 
+# ★ v7로 변경하여 이전 캐시를 강제로 비우고 '임시' 시트 제외 로직을 적용합니다.
 @st.cache_data(ttl=600)
-def get_english_data_v6():
+def get_english_data_v7():
     wb = init_connection().open("English_Sentences")
     all_sheets = wb.worksheets()
     
-    sheet_names = [ws.title for ws in all_sheets if ws.title != "링크"]
+    # ★ '링크' 탭과 이름에 '임시'가 포함된 탭을 모두 제외하고 추출
+    sheet_names = [ws.title for ws in all_sheets if ws.title != "링크" and "임시" not in ws.title]
     
     dfs = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(sheet_names))) as executor:
@@ -428,7 +430,7 @@ if st.query_params.get("study") == "true":
     """, unsafe_allow_html=True)
     
     try:
-        df = get_english_data_v6()
+        df = get_english_data_v7()
         unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
         cat_param = st.query_params.get("cat", "ALL")
         initial_cat = "ALL" if cat_param in ["🔀 랜덤 10", "전체 분류", "ALL"] else cat_param
@@ -1046,7 +1048,7 @@ else:
     # ==============================================================
     if st.session_state.app_mode == 'English':
         try:
-            df = get_english_data_v6() 
+            df = get_english_data_v7() 
 
             unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
             
