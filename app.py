@@ -53,7 +53,7 @@ def set_state(key, val):
 def convert_df_to_csv(df_to_convert):
     return df_to_convert.to_csv(index=False).encode('utf-8-sig')
 
-# ★ 초고속 인쇄용 HTML 텍스트 생성기 (기존 to_html보다 10배 이상 빠름)
+# ★ 초고속 인쇄용 HTML 텍스트 생성기 
 @st.cache_data(show_spinner=False)
 def generate_print_html(df, title):
     print_df = df.drop(columns=['sheet_idx', 'row_idx'], errors='ignore')
@@ -75,10 +75,9 @@ def generate_print_html(df, title):
     parts.append("</tbody></table>")
     table_html = "".join(parts)
     
-    # JS 템플릿 리터럴을 위한 특수문자 이스케이프
     return table_html.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$'), len(print_df)
 
-# ★ 네이티브 렌더링 인쇄 함수 (비율 깨짐 및 딜레이 완벽 해결)
+# ★ 네이티브 렌더링 인쇄 함수 
 def print_table(df, title):
     html_table, count = generate_print_html(df, title)
     if not html_table: return
@@ -86,19 +85,15 @@ def print_table(df, title):
     js = f"""
     <script>
         const parentDoc = window.parent.document;
-        // 기존 인쇄 찌꺼기 제거
         let existingPrint = parentDoc.getElementById('lyc-print-section');
         if (existingPrint) existingPrint.remove();
         
-        // 현재 브라우저(부모 창)에 인쇄 전용 영역을 직접 생성
         let printDiv = parentDoc.createElement('div');
         printDiv.id = 'lyc-print-section';
         printDiv.innerHTML = `
             <style>
                 @media print {{
-                    /* 앱의 원래 화면은 모두 숨김 */
                     body > *:not(#lyc-print-section) {{ display: none !important; }}
-                    /* 인쇄 영역만 활성화 */
                     #lyc-print-section {{ display: block !important; position: absolute; left: 0; top: 0; width: 100%; padding: 0; margin: 0; background: white; }}
                     @page {{ size: A4 portrait; margin: 15mm; }}
                     h2 {{ text-align: center; font-size: 18pt; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; color: black; font-family: sans-serif; }}
@@ -107,7 +102,6 @@ def print_table(df, title):
                     th {{ background-color: #f2f2f2 !important; font-weight: bold; text-align: center; -webkit-print-color-adjust: exact; }}
                     tr {{ page-break-inside: avoid; page-break-after: auto; }}
                 }}
-                /* 평소(화면)에는 보이지 않도록 처리 */
                 @media screen {{
                     #lyc-print-section {{ display: none !important; }}
                 }}
@@ -118,10 +112,8 @@ def print_table(df, title):
         
         parentDoc.body.appendChild(printDiv);
         
-        // 렌더링이 완료될 수 있도록 아주 짧은 대기 후 네이티브 인쇄 실행
         setTimeout(() => {{
             window.parent.print();
-            // 인쇄 창이 뜨고 난 후 깔끔하게 흔적 지우기
             setTimeout(() => {{
                 let p = window.parent.document.getElementById('lyc-print-section');
                 if(p) p.remove();
@@ -203,7 +195,6 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         function loadVoices() {{ availableVoices = window.speechSynthesis.getVoices(); }}
         loadVoices();
         if (window.speechSynthesis.onvoiceschanged !== undefined) {{ window.speechSynthesis.onvoiceschanged = loadVoices; }}
-        function closeWindow() {{ try {{ window.top.close(); }} catch(e) {{}} try {{ window.parent.close(); }} catch(e) {{}} window.close(); }}
 
         const selectEl = document.getElementById('category-select');
         let allOpt = document.createElement('option');
@@ -218,6 +209,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         if ("{initial_cat}" === "ALL") {{ selectEl.value = "ALL"; }}
 
         function changeSpeed() {{ currentSpeed = parseInt(document.getElementById('speed-select').value); if(!isPaused && !isTouchMode) resetInterval(); }}
+        
         function shuffle(array) {{
             let arr = [...array];
             for (let i = arr.length - 1; i > 0; i--) {{ const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }}
@@ -291,44 +283,27 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             window.speechSynthesis.speak(utterance);
         }}
 
-        // ★ 학습 효율 극대화: 플래시카드(Flashcard) 기반의 시각적 계층화 디자인 적용
+        // ★ 학습 효율 극대화: 깔끔한 플래시카드 디자인 (겹침 오류 완벽 방지)
         function renderRolling() {{
             if (!filteredData || filteredData.length === 0) return;
             const container = document.getElementById('rolling-container');
             
-            // 이전 아이템 즉시 삭제 (지연 없음)
-            while (container.firstChild) {{
-                container.removeChild(container.firstChild);
-            }}
+            // ★ 이전 요소를 완전히 비우고 렌더링하여 겹침 문제 100% 차단
+            container.innerHTML = '';
 
             const item = filteredData[currentIndex];
             document.getElementById('word-cat-display').innerText = item.cat;
 
-            const div = document.createElement('div');
-            // 부드러운 전환 효과 제거 후 즉각 표시 설정
-            div.style.position = 'absolute'; 
-            div.style.width = '100%'; 
-            div.style.left = '0'; 
-            div.style.top = '50%'; 
-            div.style.transform = 'translateY(-50%)'; 
-            div.style.padding = '0 2vw'; 
-            div.style.boxSizing = 'border-box'; 
-            div.style.opacity = '1';  
-            div.style.zIndex = '10';
-
-            // 화면 크기에 맞춘 유동적 폰트 사이즈 (너무 커지지 않도록 한계 설정)
+            // 화면 크기에 맞춘 유동적 폰트 사이즈
             let enFontSize = item.en.length > 25 ? 'min(6vw, 8vh)' : 'min(8vw, 11vh)';
             let pronSize = 'min(3vw, 4vh)';
             let koSize = 'min(4.5vw, 6vh)';
             let memoSize = 'min(2.5vw, 3.5vh)';
 
-            // 1. 발음 (서브 텍스트) - f-string 이스케이프({{}})를 올바르게 적용!
             let pronHtml = (item.pron && item.pron.length <= 60) ? `<p style="font-size: ${{pronSize}}; color: #A3B8B8; margin: 0 0 2vh 0; font-weight: 500; font-style: italic;">[ ${{item.pron}} ]</p>` : "";
             
-            // 2. 한국어 해석 (중간 강조)
             let koHtml = item.ko ? `<p style="color: #FFFFFF; font-size: ${{koSize}}; font-weight: 700; margin: 2vh 0 0 0; word-break: keep-all; line-height: 1.4; letter-spacing: -0.5px;">${{item.ko}}</p>` : "";
             
-            // 3. 부가 메모 영역 (이모티콘, 배경색, 왼쪽 선 제거 / 메모1,2 색상 분리)
             let memoHtml = "";
             if (!isSimpleMode && (item.memo1 || item.memo2)) {{
                 memoHtml = `
@@ -344,38 +319,48 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                 </div>`;
             }}
 
-            // ★ 메인 플래시카드(Flashcard) 컨테이너 조립 - 녹색 배경 제거, 투명/블랙 모던 스타일
+            // 부드러운 전환 효과 없이 즉각 표시되는 컨테이너
             const cardHtml = `
                 <div style="
-                    background: transparent;
-                    padding: min(5vh, 40px) min(4vw, 40px);
-                    width: 95%;
-                    max-width: 1200px;
-                    margin: 0 auto;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    text-align: center;
+                    position: absolute; 
+                    width: 100%; 
+                    left: 0; 
+                    top: 50%; 
+                    transform: translateY(-50%); 
+                    padding: 0 2vw; 
+                    box-sizing: border-box; 
+                    z-index: 10;
                 ">
-                    <!-- 가장 중요한 영어 문장 -->
-                    <div style="color: #FFD700; font-weight: 900; text-shadow: 0 4px 15px rgba(255, 215, 0, 0.2); width: 100%;">
-                        <p style="font-size: ${{enFontSize}}; margin: 0; padding-bottom: 1vh; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.2;">${{item.en}}</p>
+                    <div style="
+                        background: transparent;
+                        padding: min(5vh, 40px) min(4vw, 40px);
+                        width: 95%;
+                        max-width: 1200px;
+                        margin: 0 auto;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        text-align: center;
+                    ">
+                        <!-- 가장 중요한 영어 문장 -->
+                        <div style="color: #FFD700; font-weight: 900; text-shadow: 0 4px 15px rgba(255, 215, 0, 0.2); width: 100%;">
+                            <p style="font-size: ${{enFontSize}}; margin: 0; padding-bottom: 1vh; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.2;">${{item.en}}</p>
+                        </div>
+                        
+                        <!-- 발음 기호 -->
+                        ${{pronHtml}}
+                        
+                        <!-- 시각적 구분을 위한 라인 -->
+                        ${{item.ko ? `<div style="width: 80%; height: 2px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent); margin: 1vh 0;"></div>` : ''}}
+                        
+                        <!-- 해석 및 메모 -->
+                        ${{koHtml}}
+                        ${{memoHtml}}
                     </div>
-                    
-                    <!-- 발음 기호 -->
-                    ${{pronHtml}}
-                    
-                    <!-- 시각적 구분을 위한 라인 -->
-                    ${{item.ko ? `<div style="width: 80%; height: 2px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent); margin: 1vh 0;"></div>` : ''}}
-                    
-                    <!-- 해석 및 메모 -->
-                    ${{koHtml}}
-                    ${{memoHtml}}
                 </div>
             `;
 
-            div.innerHTML = cardHtml; 
-            container.appendChild(div);
+            container.innerHTML = cardHtml;
 
             // 음성 재생 로직 (지연 없음)
             if(isTTSEnabled) {{ window.speechSynthesis.cancel(); speakText(item.en, 'en-US'); if(item.ko) speakText(item.ko, 'ko-KR'); }}
