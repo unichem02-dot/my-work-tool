@@ -334,7 +334,7 @@ try:
         else:
             with st.container():
                 
-                # 💡 실시간 계산기 렌더링 유지
+                # 💡 실시간 계산기 렌더링 유지 (소수점 폰트 두께 변경 적용)
                 components.html(
                     """
                     <!DOCTYPE html>
@@ -349,15 +349,22 @@ try:
                     }
                     .rt-group { display: flex; align-items: center; gap: 8px; }
                     .rt-in {
-                        width: 100px; padding: 6px 8px; border-radius: 4px; border: 1px solid #64748b;
+                        width: 100px; height: 32px; box-sizing: border-box;
+                        padding: 0 8px; border-radius: 4px; border: 1px solid #64748b;
                         background: #dbeafe; color: #0f172a; text-align: right; font-weight: bold; outline: none; font-size: 14px;
                     }
                     .rt-in:focus { border-color: #4e8cff; box-shadow: 0 0 0 2px rgba(78,140,255,0.2); background: #ffffff; }
+                    
+                    /* 💡 결과창을 div로 변경하여 내부 HTML 태그 지원 및 디자인 일치 */
                     .rt-out {
-                        width: 100px; padding: 6px 8px; border-radius: 4px; border: 1px solid #4a5568;
-                        background: #e2e8f0; color: #1e293b; text-align: right; font-weight: bold; cursor: default; font-size: 14px;
+                        width: 100px; height: 32px; box-sizing: border-box;
+                        padding: 0 8px; border-radius: 4px; border: 1px solid #4a5568;
+                        background: #e2e8f0; color: #1e293b; font-size: 14px;
+                        display: flex; align-items: center; justify-content: flex-end;
+                        cursor: default; overflow: hidden; white-space: nowrap;
                     }
                     .rt-out.orange { background: #ffedd5; border-color: #fdba74; color: #9a3412; }
+                    
                     .rt-txt { font-size: 13px; font-weight: bold; }
                     .rt-txt.blue { color: #60a5fa; }
                     .rt-txt.yellow { color: #fbbf24; }
@@ -374,41 +381,50 @@ try:
                             <span class="rt-op blue">/</span>
                             <input type="number" class="rt-in" id="rt-d2" oninput="rtCalc()" placeholder="0">
                             <span class="rt-op blue">=</span>
-                            <input type="text" class="rt-out" id="rt-dr" readonly placeholder="0">
+                            <!-- 변경됨: input 대신 div 사용 -->
+                            <div class="rt-out" id="rt-dr">0</div>
                         </div>
                         <div class="rt-group">
                             <input type="number" class="rt-in" id="rt-v1" oninput="rtCalc()" placeholder="기준금액">
                             <span class="rt-txt blue">VAT-10%</span>
-                            <input type="text" class="rt-out" id="rt-vm" readonly placeholder="0">
+                            <div class="rt-out" id="rt-vm">0</div>
                             <span class="rt-txt yellow">VAT+10%</span>
-                            <input type="text" class="rt-out orange" id="rt-vp" readonly placeholder="0">
+                            <div class="rt-out orange" id="rt-vp">0</div>
                         </div>
                         <div class="rt-group">
                             <input type="number" class="rt-in" id="rt-m1" oninput="rtCalc()" placeholder="0">
                             <span class="rt-op yellow">X</span>
                             <input type="number" class="rt-in" id="rt-m2" oninput="rtCalc()" placeholder="0">
                             <span class="rt-op yellow">=</span>
-                            <input type="text" class="rt-out" id="rt-mr" readonly placeholder="0">
+                            <div class="rt-out" id="rt-mr">0</div>
                         </div>
                     </div>
                     <script>
                     function rtFmt(num) {
-                        if (!num || isNaN(num) || !isFinite(num)) return "0";
+                        if (!num || isNaN(num) || !isFinite(num)) return '<span style="font-weight: bold;">0</span>';
                         let parts = num.toString().split('.');
-                        parts[0] = parseInt(parts[0], 10).toLocaleString('ko-KR');
-                        if (parts[1] && parts[1].length > 4) { parts[1] = parts[1].substring(0, 4); }
-                        return parts.join('.');
+                        let intPart = parseInt(parts[0], 10).toLocaleString('ko-KR');
+                        
+                        // 💡 정수는 굵게(bold), 소수점 이하는 얇게(normal) 처리
+                        if (parts[1]) { 
+                            let decPart = parts[1].length > 4 ? parts[1].substring(0, 4) : parts[1]; 
+                            return '<span style="font-weight: bold;">' + intPart + '</span><span style="font-weight: normal; opacity: 0.85;">.' + decPart + '</span>';
+                        }
+                        return '<span style="font-weight: bold;">' + intPart + '</span>';
                     }
                     function rtCalc() {
                         let d1 = parseFloat(document.getElementById('rt-d1').value) || 0;
                         let d2 = parseFloat(document.getElementById('rt-d2').value) || 0;
-                        document.getElementById('rt-dr').value = d2 !== 0 ? rtFmt(d1 / d2) : "0";
+                        // value 대신 innerHTML로 태그 적용
+                        document.getElementById('rt-dr').innerHTML = d2 !== 0 ? rtFmt(d1 / d2) : '<span style="font-weight: bold;">0</span>';
+                        
                         let v1 = parseFloat(document.getElementById('rt-v1').value) || 0;
-                        document.getElementById('rt-vm').value = rtFmt(v1 / 1.1);
-                        document.getElementById('rt-vp').value = rtFmt(v1 * 1.1);
+                        document.getElementById('rt-vm').innerHTML = rtFmt(v1 / 1.1);
+                        document.getElementById('rt-vp').innerHTML = rtFmt(v1 * 1.1);
+                        
                         let m1 = parseFloat(document.getElementById('rt-m1').value) || 0;
                         let m2 = parseFloat(document.getElementById('rt-m2').value) || 0;
-                        document.getElementById('rt-mr').value = rtFmt(m1 * m2);
+                        document.getElementById('rt-mr').innerHTML = rtFmt(m1 * m2);
                     }
                     </script>
                     </body>
