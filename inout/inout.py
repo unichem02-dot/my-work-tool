@@ -113,12 +113,25 @@ st.markdown("""
     .alert-title { background-color: #cc0000; color: white; text-align: center; padding: 6px; font-weight: bold; }
     .alert-ul { padding-left: 20px; margin: 10px 10px 10px 0; } .alert-ul li { margin-bottom: 5px; }
     
-    /* 🖨️ A4 인쇄(프린트) 전용 설정 */
+    /* 🖨️ A4 인쇄(프린트) 전용 스마트 설정 (검색창, 메뉴 완벽 숨김) */
     @media print {
-        /* 불필요한 검색 패널, 버튼, 계산기, 독립 프레임(iframe) 완벽 숨김 */
-        header, footer, .search-panel-container, form, .stButton, .stDownloadButton, .rt-calc-wrap, iframe {
+        /* 스트림릿 기본 헤더, 사이드바 등 불필요 요소 숨김 */
+        header, footer, [data-testid="stSidebar"] { display: none !important; }
+        
+        /* 💡 핵심: 메인 영역의 모든 블록을 일단 전부 숨김 */
+        .main .element-container { display: none !important; }
+        
+        /* 💡 오직 '표 제목'과 '표 내용'이 들어있는 블록만 다시 나타나게 강제 설정 */
+        .main .element-container:has(.table-title-box),
+        .main .element-container:has(.custom-table-container) {
+            display: block !important;
+        }
+        
+        /* 표 제목 옆에 있는 버튼 3개(정렬 전환, 인쇄, 엑셀) 영역만 핀셋으로 제거 */
+        div[data-testid="stHorizontalBlock"]:has(.table-title-box) > div:nth-child(n+2) {
             display: none !important;
         }
+        
         /* 앱 배경을 흰색으로 강제 초기화 */
         [data-testid="stAppViewContainer"], .main .block-container {
             background-color: white !important;
@@ -126,28 +139,33 @@ st.markdown("""
             margin: 0 !important;
             max-width: 100% !important;
         }
+        
         /* A4 용지 가로(Landscape) 방향 여백 설정 */
         @page {
             size: A4 landscape;
             margin: 10mm;
         }
-        /* 표 크기 A4 규격에 맞게 100% + 살짝 축소(zoom) 적용 */
+        
+        /* 표 크기 A4 규격에 맞게 축소(zoom) 적용 및 페이지 잘림 방지 */
         .custom-table-container {
             width: 100% !important;
-            zoom: 85%; /* 데이터가 많고 길어서 A4에 꽉 차게 축소 */
+            zoom: 85%;
             page-break-inside: auto;
         }
         .custom-table tr { page-break-inside: avoid; page-break-after: auto; }
+        
         /* 인쇄 시 글자색을 검정색으로 또렷하게 통일 */
         .custom-table th, .custom-table td, .txt-in-bold, .txt-out-bold, .txt-in, .txt-out, .txt-gray, .txt-black, .tc a {
             color: black !important;
             text-decoration: none !important;
         }
-        /* 테이블 헤더 배경색 강제 인쇄(브라우저 설정 무시하고 무조건 출력) */
+        
+        /* 테이블 헤더 배경색 강제 인쇄 */
         .th-base, .th-in, .th-out, .sum-profit {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
         }
+        
         /* 상단 테이블 제목 디자인 깔끔하게 처리 */
         .table-title-box {
             background-color: white !important;
