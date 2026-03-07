@@ -17,9 +17,27 @@ st.set_page_config(layout="wide", page_title="입출력 관리 시스템 (inout)
 # 커스텀 CSS 주입 (디자인 통일 및 레이아웃 정돈)
 st.markdown("""
     <style>
+    /* 💡 스트림릿 기본 UI 요소를 완벽하게 숨기기 (메뉴, 푸터, Manage app 버튼) */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden !important;}
+    [data-testid="stHeader"] {display: none !important;}
+    [data-testid="manage-app-button"] {display: none !important;}
+    [data-testid="stAppDeployButton"] {display: none !important;}
+    .stDeployButton {display: none !important;}
+
     [data-testid="stAppViewContainer"] { background-color: #2b323c; }
     .main .block-container { padding-top: 1rem; max-width: 98%; }
     h1, h2, h3, p, span { color: #ffffff !important; }
+    
+    /* 검색 패널 컨테이너 */
+    .search-panel-container {
+        background-color: #353b48;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #4a5568;
+        margin-bottom: 20px;
+    }
     
     /* 버튼 공통 스타일 */
     div.stButton > button {
@@ -422,7 +440,7 @@ try:
 
                 st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
-                # 💡 Row 3: 각종 유틸리티 버튼 (어제오늘내일 & 용차 버튼 추가 및 레이아웃 정밀 조정)
+                # Row 3: 각종 유틸리티 버튼 (어제오늘내일 & 용차 버튼 추가 및 레이아웃 정밀 조정)
                 u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15 = st.columns([0.7, 1.0, 0.8, 0.8, 1.0, 0.8, 0.8, 1.3, 0.8, 1.1, 0.7, 1.0, 0.8, 0.9, 0.9])
                 with u1: st.selectbox("s3", ["ALL"], label_visibility="collapsed")
                 with u2: y3 = st.selectbox("y3", years, label_visibility="collapsed", format_func=lambda x: f"{x}년")
