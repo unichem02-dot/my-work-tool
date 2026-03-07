@@ -597,7 +597,8 @@ try:
                     if st.button("🔄 날짜 정렬 전환", use_container_width=True, type="primary"):
                         st.session_state.sort_desc = not st.session_state.sort_desc; st.rerun()
                 with col_t3:
-                    st.markdown('<button class="btn-print" onclick="window.print()">🖨️ A4 인쇄</button>', unsafe_allow_html=True)
+                    # 💡 스트림릿 iframe 차단 우회: parent.print() 강제 호출 및 예외 처리
+                    st.markdown('<button class="btn-print" onclick="try { window.parent.print(); } catch(e) { window.print(); }">🖨️ A4 인쇄</button>', unsafe_allow_html=True)
                 with col_t4:
                     csv = f_df.to_csv(index=False).encode('utf-8-sig')
                     st.download_button("💾 엑셀 다운로드", data=csv, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
