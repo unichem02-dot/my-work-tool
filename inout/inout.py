@@ -68,6 +68,9 @@ st.markdown("""
     .custom-table tr:nth-child(even) { background-color: #f8f9fa; }
     .custom-table tr:hover { background-color: #e2e6ea; }
     
+    /* 💡 인쇄용 가짜 상하단 여백 (웹 화면에서는 보이지 않도록 처리) */
+    .fake-margin { display: none !important; }
+    
     /* 테이블 구역별 색상 */
     .th-base { background-color: #353b48; color: white; }
     .th-in { background-color: #3b5b88; color: white; } 
@@ -531,8 +534,12 @@ try:
                 
                 print_title = params.get("title", "검색결과")
 
-                # 💡 [핵심] 파이썬에서 미리 표 HTML을 만들고 저장
-                html = '<div class="custom-table-container"><table class="custom-table"><thead><tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
+                # 💡 [핵심] 테이블 작성 시, 2페이지부터의 상하단 여백을 위해 투명 행(fake-margin) 삽입
+                html = '<div class="custom-table-container"><table class="custom-table"><thead>'
+                # 가짜 상단 여백 (프린트 시에만 보임)
+                html += '<tr class="fake-margin"><td colspan="13"></td></tr>'
+                html += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
+                
                 pwd_token = str(st.secrets["tom_password"])
                 for _, r in f_df.iterrows():
                     rid, dt = safe_str(r['id']), r[date_col].strftime('%Y-%m-%d')
@@ -541,36 +548,53 @@ try:
                     d_link = f'<a href="?edit_id={rid}&token={pwd_token}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
                     html += f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl txt-in-bold">{r["incom"]}</td><td class="tl txt-in">{r["initem"]}</td><td class="tr txt-in">{r["inq_val"]:,.0f}</td><td class="tr txt-in">{r["inprice_val"]:,.0f}</td><td class="tl txt-out-bold">{r["outcom"]}</td><td class="tl txt-out">{r["outitem"]}</td><td class="tr txt-out">{r["outq_val"]:,.0f}</td><td class="tr txt-out">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray print-hide-col">{rid}</td><td class="tc txt-gray">{r["carno"]}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
                 
-                html += f'</tbody><tfoot><tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr><tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr></tfoot></table></div>'
+                # 💡 합계 데이터를 맨 마지막 장에만 1번 출력하기 위해 tbody 끝부분에 추가
+                html += f'<tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr>'
+                html += f'<tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr>'
+                html += '</tbody>'
+                
+                # 가짜 하단 여백 (프린트 시에만 보임)
+                html += '<tfoot style="display: table-footer-group;"><tr class="fake-margin"><td colspan="13"></td></tr></tfoot>'
+                html += '</table></div>'
 
-                # 💡 인쇄소(가상 프레임)에 통째로 던져줄 전용 HTML 문서 조립
+                # 인쇄소(가상 프레임)에 통째로 던져줄 전용 HTML 문서 조립
                 print_html_content = f"""
                 <!DOCTYPE html>
                 <html><head><title>인쇄 미리보기</title>
                 <meta charset="utf-8">
                 <style>
-                    /* 1. 브라우저 상하단 기본 텍스트(URL, 날짜 등) 제거를 위해 margin: 0 설정 */
+                    /* 1. 브라우저 상하단 기본 텍스트(URL, 날짜 등) 제거를 위해 여백을 0으로 만듭니다. */
                     @page {{ size: A4 portrait; margin: 0mm; }}
+                    
                     /* 2. 잘려나간 여백을 안쪽 padding으로 대체하여 안전하게 보존 */
-                    body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; padding: 10mm; box-sizing: border-box; }}
-                    /* 3. 표 제목 스타일 */
-                    .print-header {{ font-size: 18px; font-weight: bold; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 2px solid #555; display: flex; align-items: baseline; }}
+                    body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; padding: 0 10mm; box-sizing: border-box; }}
+                    
+                    /* 3. 첫 페이지 상단 제목에 여백 부여 */
+                    .print-header {{ font-size: 18px; font-weight: bold; padding-bottom: 10px; margin-bottom: 0px; border-bottom: 2px solid #555; display: flex; align-items: baseline; padding-top: 15mm; }}
+                    
                     /* 4. 표 전체를 65%로 축소하여 세로 용지에 맞춤 */
                     .custom-table-container {{ width: 100%; zoom: 65%; }}
                     .custom-table {{ width: 100%; border-collapse: collapse; font-size: 15px; background-color: white; }}
                     .custom-table th, .custom-table td {{ border: 1px solid #aaa; padding: 8px 10px; color: black !important; }}
                     .custom-table th {{ text-align: center; font-weight: bold; padding: 10px 6px; }}
-                    /* 5. 컬러 인쇄 강제 옵션 */
+                    
+                    /* 5. 💡 2페이지부터 상하단 여백을 만들어주는 투명 행(fake-margin) 활성화 */
+                    .fake-margin {{ display: table-row !important; }}
+                    .fake-margin td {{ height: 15mm; border: none !important; background-color: white !important; }}
+                    
+                    /* 컬러 인쇄 강제 옵션 */
                     .th-base {{ background-color: #e2e8f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
                     .th-in {{ background-color: #dbeafe !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
                     .th-out {{ background-color: #ffedd5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
                     .sum-profit {{ background-color: #f1f5f9 !important; text-align: right; padding: 12px 20px; font-weight: bold; border-top: 1px solid #444; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                    /* 6. 기타 정렬 및 'NO' 열 숨김 */
+                    
+                    /* 기타 정렬 및 'NO' 열 숨김 */
                     .tc {{ text-align: center; }} .tl {{ text-align: left; }} .tr {{ text-align: right; }}
                     a {{ color: black !important; text-decoration: none !important; pointer-events: none; }}
                     .print-hide-col {{ display: none !important; }}
-                    /* 7. 합계를 맨 마지막 페이지 하단에만 출력 */
-                    tfoot {{ display: table-row-group !important; }}
+                    
+                    /* 합계를 위해 만들어둔 tfoot 가짜 여백이 모든 페이지 바닥에 나오도록 설정 */
+                    tfoot {{ display: table-footer-group !important; }}
                     .custom-table tr {{ page-break-inside: avoid; }}
                 </style>
                 </head><body>
@@ -586,7 +610,7 @@ try:
                     if st.button("🔄 날짜 정렬 전환", use_container_width=True, type="primary"):
                         st.session_state.sort_desc = not st.session_state.sort_desc; st.rerun()
                 with col_t3:
-                    # 💡 [초고속 프린트 엔진] JSON을 통해 화면 뒤의 '투명 1픽셀 프레임'에 표를 던져넣어 즉시 인쇄 (프리징 완벽 차단)
+                    # 💡 [초고속 프린트 엔진] 프레임 렌더링 복사 방식으로 변경하여 프리징 없음
                     components.html(
                         f"""
                         <!DOCTYPE html>
@@ -611,7 +635,6 @@ try:
                             
                             iframe = document.createElement('iframe');
                             iframe.id = 'print-frame';
-                            // 브라우저에서 무시되지 않도록 보이지 않는 1픽셀로 생성
                             iframe.style.position = 'absolute';
                             iframe.style.width = '1px';
                             iframe.style.height = '1px';
