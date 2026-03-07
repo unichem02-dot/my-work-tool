@@ -260,13 +260,25 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             if (!filteredData || filteredData.length === 0) return;
             const container = document.getElementById('rolling-container');
             const oldItems = container.children;
-            for(let i=0; i<oldItems.length; i++) {{ oldItems[i].style.opacity = '0'; setTimeout((el) => {{ if (container.contains(el)) container.removeChild(el); }}, 600, oldItems[i]); }}
+            for(let i=0; i<oldItems.length; i++) {{ 
+                oldItems[i].style.opacity = '0'; 
+                setTimeout((el) => {{ if (container.contains(el)) container.removeChild(el); }}, 600, oldItems[i]); 
+            }}
 
             const item = filteredData[currentIndex];
             document.getElementById('word-cat-display').innerText = item.cat;
 
             const div = document.createElement('div');
-            div.style.position = 'absolute'; div.style.width = '100%'; div.style.transition = 'opacity 0.6s ease-in-out'; div.style.left = '0'; div.style.top = '50%'; div.style.transform = 'translateY(-50%)'; div.style.padding = '0 20px'; div.style.boxSizing = 'border-box'; div.style.opacity = '0'; div.style.zIndex = '10';
+            div.style.position = 'absolute'; 
+            div.style.width = '100%'; 
+            div.style.transition = 'opacity 0.6s ease-in-out'; 
+            div.style.left = '0'; 
+            div.style.top = '50%'; 
+            div.style.transform = 'translateY(-50%)'; 
+            div.style.padding = '0 20px'; 
+            div.style.boxSizing = 'border-box'; 
+            div.style.opacity = '1';  // 초기 투명도를 1로 설정하여 바로 보이게 함
+            div.style.zIndex = '10';
 
             let enFontSize = item.en.length > 25 ? 'min(7vw, 9vh)' : 'min(10vw, 13vh)';
             let pronSize = 'min(3.5vw, 4.5vh)';
@@ -274,10 +286,12 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             let memoSize = 'min(3vw, 4vh)';
 
             let pronHtml = (item.pron && item.pron.length <= 60) ? `<p style="font-size: ` + pronSize + `; color: #FFFFFF; margin: 2vh 0 0 0; font-weight: normal; font-style: italic; text-shadow: none;">${{item.pron}}</p>` : "";
-            let koHtml = item.ko ? `<p class="anim-ko" style="color: #a08b7a; font-size: ` + koSize + `; font-weight: bold; margin: 3vh 0 0 0; opacity: 0; transition: opacity 0.5s ease-in-out; word-break: keep-all; line-height: 1.4; text-shadow: none;">${{item.ko}}</p>` : "";
+            
+            // 해석 및 메모의 opacity를 기본적으로 1로 설정 (시간차 제거)
+            let koHtml = item.ko ? `<p class="anim-ko" style="color: #a08b7a; font-size: ` + koSize + `; font-weight: bold; margin: 3vh 0 0 0; opacity: 1; word-break: keep-all; line-height: 1.4; text-shadow: none;">${{item.ko}}</p>` : "";
             let memoHtml = "";
             if (!isSimpleMode) {{
-                memoHtml = `<div class="anim-memo" style="opacity: 0; transition: opacity 0.5s ease-in-out; margin-top: 2.5vh; text-shadow: none;">`;
+                memoHtml = `<div class="anim-memo" style="opacity: 1; margin-top: 2.5vh; text-shadow: none;">`;
                 if (item.memo1) memoHtml += `<p style="color: #FFFF00; font-size: ` + memoSize + `; font-weight: 500; margin: 1vh 0; word-break: keep-all; line-height: 1.4;">${{item.memo1}}</p>`;
                 if (item.memo2) memoHtml += `<p style="color: #FFFF00; font-size: ` + memoSize + `; font-weight: 500; margin: 1vh 0; word-break: keep-all; line-height: 1.4;">${{item.memo2}}</p>`;
                 memoHtml += `</div>`;
@@ -286,9 +300,6 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             div.innerHTML = `<div style="color: #E67E22; font-weight: 900; text-shadow: 0 0 20px rgba(230,126,34,0.4);"><p style="font-size: ` + enFontSize + `; margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.2;">${{item.en}}</p></div>` + pronHtml + koHtml + memoHtml; 
             container.appendChild(div);
 
-            setTimeout(() => {{ div.style.opacity = '1'; }}, 50);
-            if(item.ko) {{ setTimeout(() => {{ const koEl = div.querySelector('.anim-ko'); if(koEl) koEl.style.opacity = '1'; }}, 2000); }}
-            if(!isSimpleMode && (item.memo1 || item.memo2)) {{ setTimeout(() => {{ const memoEl = div.querySelector('.anim-memo'); if(memoEl) memoEl.style.opacity = '1'; }}, 5000); }}
             if(isTTSEnabled) {{ window.speechSynthesis.cancel(); speakText(item.en, 'en-US'); if(item.ko) speakText(item.ko, 'ko-KR'); }}
         }}
 
@@ -1005,7 +1016,7 @@ else:
     # ==============================================================
     if st.session_state.app_mode == 'English':
         try:
-            df = get_english_data_v6() # ★ 변경된 로직으로 캐시 갱신 (v6 연동)
+            df = get_english_data_v6() 
 
             unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
             
