@@ -1028,7 +1028,7 @@ else:
                     d_df = d_df.sort_values(by='row_idx', ascending=True)
 
             st.markdown("<div style='background-color: rgba(0,0,0,0.25); padding: 15px 20px; border-radius: 15px; margin: 20px 0; border: 1px solid rgba(255,255,255,0.05);'>", unsafe_allow_html=True)
-            cb_cols = [2.5, 2, 1.5, 1.5, 1.5] if st.session_state.authenticated else [3.5, 1.5, 1.5, 1.5]
+            cb_cols = [2.5, 2, 1.5, 1.5, 1.2, 1.2] if st.session_state.authenticated else [3.5, 1.5, 1.5, 1.2, 1.2]
             cb = st.columns(cb_cols, vertical_alignment="center")
             
             cb[0].text_input("🔍 목록 내 검색", key="search_input", on_change=handle_search, label_visibility="collapsed")
@@ -1036,6 +1036,7 @@ else:
             btn_idx = 2 if st.session_state.authenticated else 1
             csv_idx = 3 if st.session_state.authenticated else 2
             prt_idx = 4 if st.session_state.authenticated else 3
+            sync_idx = 5 if st.session_state.authenticated else 4
             
             if st.session_state.authenticated:
                 if cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(unique_cats, available_sheets)
@@ -1048,6 +1049,10 @@ else:
             
             if cb[prt_idx].button("🖨️ A4 인쇄", use_container_width=True):
                 print_table(d_df, "TOmBOy94 영어 단어장")
+                
+            if cb[sync_idx].button("🔄 갱신", use_container_width=True):
+                st.cache_data.clear()
+                st.rerun()
                 
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -1118,23 +1123,31 @@ else:
                     if sel_link_cat2 != "전체":
                         filtered_df_links = filtered_df_links[filtered_df_links['소분류'] == sel_link_cat2]
 
+            # 액션 툴바 (버튼 레이아웃 분할)
             st.markdown("<div style='background-color: rgba(0,0,0,0.25); padding: 15px 20px; border-radius: 15px; margin: 20px 0; border: 1px solid rgba(255,255,255,0.05);'>", unsafe_allow_html=True)
-            cb_cols = [2.5, 2, 1.5, 1.5] if st.session_state.authenticated else [3.5, 1.5, 1.5]
+            cb_cols = [2.5, 2, 1.5, 1.5, 1.2] if st.session_state.authenticated else [3.5, 1.5, 1.5, 1.2]
             cb = st.columns(cb_cols, vertical_alignment="center")
             
             cb[0].text_input("🔍 링크 검색", key="search_input", on_change=handle_search, label_visibility="collapsed")
             
             csv_idx = 2 if st.session_state.authenticated else 1
             prt_idx = 3 if st.session_state.authenticated else 2
+            sync_idx = 4 if st.session_state.authenticated else 3
 
             if st.session_state.authenticated:
                 if cb[1].button("➕ 새 링크 추가", type="primary", use_container_width=True):
                     add_link_dialog(unique_links_cats1, unique_links_cats2)
                     
+            # 다운로드 버튼
             cb[csv_idx].download_button("📥 CSV 추출", data=convert_df_to_csv(filtered_df_links), file_name=f"Links_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
             
+            # ★ 신규 A4 인쇄 버튼
             if cb[prt_idx].button("🖨️ A4 인쇄", use_container_width=True):
                 print_table(filtered_df_links, "TOmBOy94 링크 모음")
+                
+            if cb[sync_idx].button("🔄 갱신", use_container_width=True):
+                st.cache_data.clear()
+                st.rerun()
                 
             st.markdown("</div>", unsafe_allow_html=True)
             
