@@ -112,6 +112,41 @@ st.markdown("""
     .alert-box { background-color: white; color: black; margin: 10px; border: 1px solid #ccc; font-size: 13px; }
     .alert-title { background-color: #cc0000; color: white; text-align: center; padding: 6px; font-weight: bold; }
     .alert-ul { padding-left: 20px; margin: 10px 10px 10px 0; } .alert-ul li { margin-bottom: 5px; }
+    
+    /* 🖨️ A4 인쇄(프린트) 전용 완벽 솔루션 CSS */
+    @media print {
+        /* 스트림릿 상하단 메뉴, 기본 여백 완전 제거 */
+        header, footer, [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"], [data-testid="stSidebar"] { 
+            display: none !important; opacity: 0 !important; visibility: hidden !important; 
+        }
+        
+        /* 앱 배경을 완벽한 흰색으로 만들고 패딩 제거 */
+        [data-testid="stAppViewContainer"], .main .block-container {
+            background-color: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+        }
+
+        /* 💡 핵심: 화면의 모든 블록 숨김 */
+        .element-container { 
+            display: none !important; 
+        }
+        
+        /* 표 제목과 내용 블록만 표시 */
+        .element-container:has(.table-title-box),
+        .element-container:has(.custom-table-container) {
+            display: block !important;
+        }
+        
+        /* 버튼 그룹들(엑셀 등) 숨김 */
+        div[data-testid="stHorizontalBlock"]:has(.table-title-box) > div[data-testid="column"]:nth-of-type(n+2) {
+            display: none !important;
+        }
+        
+        /* 'NO' 열 데이터 인쇄 시 숨김 */
+        .print-hide-col { display: none !important; }
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -530,22 +565,6 @@ try:
                 
                 print_title = params.get("title", "검색결과")
 
-                # 💡 [핵심 최적화] 무거운 CSS 우회! 미리 파이썬에서 표(HTML)를 다 만들고, 이 표만 핀셋처럼 뽑아서 인쇄 프레임으로 넘깁니다.
-                html = '<div class="custom-table-container"><table class="custom-table"><thead><tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
-                pwd_token = str(st.secrets["tom_password"])
-                for _, r in f_df.iterrows():
-                    rid, dt = safe_str(r['id']), r[date_col].strftime('%Y-%m-%d')
-                    s_cls = "txt-green" if "제일" in str(r['s']) else "txt-purple"
-                    v_link = f'<a href="?copy_id={rid}&token={pwd_token}" target="_self" style="text-decoration:none;"><span class="{s_cls}">{r["s"]}</span></a>'
-                    d_link = f'<a href="?edit_id={rid}&token={pwd_token}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
-                    html += f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl txt-in-bold">{r["incom"]}</td><td class="tl txt-in">{r["initem"]}</td><td class="tr txt-in">{r["inq_val"]:,.0f}</td><td class="tr txt-in">{r["inprice_val"]:,.0f}</td><td class="tl txt-out-bold">{r["outcom"]}</td><td class="tl txt-out">{r["outitem"]}</td><td class="tr txt-out">{r["outq_val"]:,.0f}</td><td class="tr txt-out">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray print-hide-col">{rid}</td><td class="tc txt-gray">{r["carno"]}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
-                
-                # 푸터는 마지막에만 출력됨
-                html += f'</tbody><tfoot><tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr><tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr></tfoot></table></div>'
-                
-                # 자바스크립트로 넘기기 위해 문자열 정리
-                escaped_html = html.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
-
                 # 상단 헤더 및 버튼 렌더링
                 col_t1, col_t2, col_t3, col_t4 = st.columns([5.3, 1.7, 1.5, 1.5])
                 with col_t1: st.markdown(f'<div class="table-title-box"><span style="font-size:16px; font-weight:bold; color:#f8fafc;">{print_title}</span> <span style="font-size:13px; color:#cbd5e1; margin-left:10px;">| 출력 개수: {len(f_df)}</span></div>', unsafe_allow_html=True)
@@ -553,15 +572,15 @@ try:
                     if st.button("🔄 날짜 정렬 전환", use_container_width=True, type="primary"):
                         st.session_state.sort_desc = not st.session_state.sort_desc; st.rerun()
                 with col_t3:
-                    # 💡 0.1초 초고속 독립 프린트 프레임 (프리징 절대 없음)
+                    # 💡 [핵심 최적화] 무거운 파이썬 데이터 전송을 없애고, 브라우저에서 0.1초 만에 직접 화면을 복사(Clone)하여 프린트하는 혁신적인 방식!
                     components.html(
-                        f"""
+                        """
                         <!DOCTYPE html>
                         <html>
                         <head>
                         <style>
-                        body {{ margin: 0; padding: 0; overflow: hidden; background-color: transparent; }}
-                        .btn-print {{
+                        body { margin: 0; padding: 0; overflow: hidden; background-color: transparent; }
+                        .btn-print {
                             width: 100%; height: 35px;
                             background-color: #4e8cff; color: white;
                             border: none; border-radius: 4px; 
@@ -569,65 +588,75 @@ try:
                             font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
                             display: flex; align-items: center; justify-content: center;
                             box-sizing: border-box;
-                        }}
-                        .btn-print:hover {{ background-color: #3b76e5; }}
+                        }
+                        .btn-print:hover { background-color: #3b76e5; }
                         </style>
                         <script>
-                        function fastPrint() {{
-                            let frame = document.getElementById('print-frame');
-                            if (!frame) {{
-                                frame = document.createElement('iframe');
-                                frame.id = 'print-frame';
-                                frame.style.display = 'none';
-                                document.body.appendChild(frame);
-                            }}
-                            const doc = frame.contentWindow.document;
-                            doc.open();
-                            doc.write(`
-                                <html><head><title>인쇄 미리보기</title>
-                                <style>
-                                    /* 💡 브라우저 상하단 기본 텍스트(URL, 날짜 등) 제거를 위해 margin: 0 설정 */
-                                    @page {{ size: A4 portrait; margin: 0mm; }}
-                                    
-                                    /* 💡 잘려나간 여백을 안쪽 padding으로 대체하여 기존 레이아웃 완벽 보존 */
-                                    body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; padding: 10mm; box-sizing: border-box; }}
-                                    
-                                    .print-header {{ font-size: 18px; font-weight: bold; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 2px solid #555; }}
-                                    
-                                    /* 표 전체를 65%로 축소하여 세로 용지에 맞춤 */
-                                    .custom-table-container {{ width: 100%; zoom: 65%; }}
-                                    .custom-table {{ width: 100%; border-collapse: collapse; font-size: 15px; }}
-                                    .custom-table th, .custom-table td {{ border: 1px solid #aaa; padding: 8px 10px; color: black !important; }}
-                                    .custom-table th {{ text-align: center; font-weight: bold; padding: 10px 6px; }}
-                                    
-                                    /* 컬러 인쇄 강제 옵션 */
-                                    .th-base {{ background-color: #e2e8f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                                    .th-in {{ background-color: #dbeafe !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                                    .th-out {{ background-color: #ffedd5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                                    .sum-profit {{ background-color: #f1f5f9 !important; text-align: right; padding: 12px 20px; font-weight: bold; border-top: 1px solid #444; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                                    
-                                    .tc {{ text-align: center; }} .tl {{ text-align: left; }} .tr {{ text-align: right; }}
-                                    a {{ color: black !important; text-decoration: none !important; pointer-events: none; }}
-                                    
-                                    /* NO 열 인쇄 시 숨김 */
-                                    .print-hide-col {{ display: none !important; }}
-                                    
-                                    /* 합계를 맨 마지막 페이지 하단에만 출력 */
-                                    tfoot {{ display: table-row-group !important; }}
-                                    .custom-table tr {{ page-break-inside: avoid; }}
-                                </style>
-                                </head><body>
-                                <div class="print-header">{print_title} &nbsp; <span style="font-size: 14px; color: #555; font-weight: normal;">| 출력 개수: {len(f_df)}개</span></div>
-                                {escaped_html}
-                                </body></html>
-                            `);
-                            doc.close();
-                            
-                            setTimeout(function() {{
-                                frame.contentWindow.focus();
-                                frame.contentWindow.print();
-                            }}, 100);
-                        }}
+                        function fastPrint() {
+                            try {
+                                // 부모 창(현재 화면)에서 표 제목과 표 내용 DOM HTML을 그대로 복사해옵니다. (딜레이 0초)
+                                const parentDoc = window.parent.document;
+                                const titleHTML = parentDoc.querySelector('.table-title-box').outerHTML;
+                                const tableHTML = parentDoc.querySelector('.custom-table-container').outerHTML;
+                                
+                                let frame = document.getElementById('print-frame');
+                                if (!frame) {
+                                    frame = document.createElement('iframe');
+                                    frame.id = 'print-frame';
+                                    frame.style.display = 'none';
+                                    document.body.appendChild(frame);
+                                }
+                                const doc = frame.contentWindow.document;
+                                doc.open();
+                                doc.write(`
+                                    <html><head><title>인쇄 미리보기</title>
+                                    <style>
+                                        /* 💡 브라우저 상하단 기본 텍스트(URL, 날짜 등) 제거를 위해 margin: 0 설정 */
+                                        @page { size: A4 portrait; margin: 0mm; }
+                                        
+                                        /* 💡 잘려나간 여백을 안쪽 padding으로 대체하여 기존 레이아웃 완벽 보존 */
+                                        body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; padding: 10mm; box-sizing: border-box; }
+                                        
+                                        .table-title-box { font-size: 18px; font-weight: bold; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 2px solid #555; display: flex; align-items: baseline; }
+                                        .table-title-box span { color: black !important; }
+                                        
+                                        /* 표 전체를 65%로 축소하여 세로 용지에 맞춤 */
+                                        .custom-table-container { width: 100%; zoom: 65%; }
+                                        .custom-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+                                        .custom-table th, .custom-table td { border: 1px solid #aaa; padding: 8px 10px; color: black !important; }
+                                        .custom-table th { text-align: center; font-weight: bold; padding: 10px 6px; }
+                                        
+                                        /* 컬러 인쇄 강제 옵션 */
+                                        .th-base { background-color: #e2e8f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                                        .th-in { background-color: #dbeafe !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                                        .th-out { background-color: #ffedd5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                                        .sum-profit { background-color: #f1f5f9 !important; text-align: right; padding: 12px 20px; font-weight: bold; border-top: 1px solid #444; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                                        
+                                        .tc { text-align: center; } .tl { text-align: left; } .tr { text-align: right; }
+                                        a { color: black !important; text-decoration: none !important; pointer-events: none; }
+                                        
+                                        /* NO 열 인쇄 시 숨김 */
+                                        .print-hide-col { display: none !important; }
+                                        
+                                        /* 합계를 맨 마지막 페이지 하단에만 출력 */
+                                        tfoot { display: table-row-group !important; }
+                                        .custom-table tr { page-break-inside: avoid; }
+                                    </style>
+                                    </head><body>
+                                    ${titleHTML}
+                                    ${tableHTML}
+                                    </body></html>
+                                `);
+                                doc.close();
+                                
+                                setTimeout(function() {
+                                    frame.contentWindow.focus();
+                                    frame.contentWindow.print();
+                                }, 100);
+                            } catch(e) {
+                                alert('데이터가 너무 많거나 브라우저 권한 문제로 창을 띄울 수 없습니다. (Ctrl + P를 이용해 주세요)');
+                            }
+                        }
                         </script>
                         </head>
                         <body>
@@ -641,6 +670,18 @@ try:
                     csv = f_df.to_csv(index=False).encode('utf-8-sig')
                     st.download_button("💾 엑셀 다운로드", data=csv, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
 
+                html = '<div class="custom-table-container"><table class="custom-table"><thead><tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
+                pwd_token = str(st.secrets["tom_password"])
+                for _, r in f_df.iterrows():
+                    rid, dt = safe_str(r['id']), r[date_col].strftime('%Y-%m-%d')
+                    s_cls = "txt-green" if "제일" in str(r['s']) else "txt-purple"
+                    v_link = f'<a href="?copy_id={rid}&token={pwd_token}" target="_self" style="text-decoration:none;"><span class="{s_cls}">{r["s"]}</span></a>'
+                    d_link = f'<a href="?edit_id={rid}&token={pwd_token}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
+                    html += f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl txt-in-bold">{r["incom"]}</td><td class="tl txt-in">{r["initem"]}</td><td class="tr txt-in">{r["inq_val"]:,.0f}</td><td class="tr txt-in">{r["inprice_val"]:,.0f}</td><td class="tl txt-out-bold">{r["outcom"]}</td><td class="tl txt-out">{r["outitem"]}</td><td class="tr txt-out">{r["outq_val"]:,.0f}</td><td class="tr txt-out">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray print-hide-col">{rid}</td><td class="tc txt-gray">{r["carno"]}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
+                
+                # 푸터는 마지막에만 출력됨
+                html += f'</tbody><tfoot><tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr><tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr></tfoot></table></div>'
+                
                 # 생성된 HTML 렌더링
                 st.markdown(html, unsafe_allow_html=True)
 
