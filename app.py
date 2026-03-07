@@ -10,6 +10,7 @@ import re
 import json
 import urllib.parse
 import concurrent.futures
+import base64
 from datetime import datetime, timedelta, timezone
 
 # --- [페이지 기본 설정] ---
@@ -53,7 +54,7 @@ def set_state(key, val):
 def convert_df_to_csv(df_to_convert):
     return df_to_convert.to_csv(index=False).encode('utf-8-sig')
 
-# ★ A4 인쇄용 HTML 생성 및 JS 호출 함수
+# ★ A4 인쇄용 HTML 생성 및 JS 호출 함수 (Base64 압축 초고속 렌더링 적용)
 def print_table(df, title):
     print_df = df.drop(columns=['sheet_idx', 'row_idx'], errors='ignore')
     if print_df.empty: return
@@ -80,18 +81,43 @@ def print_table(df, title):
     </body>
     </html>
     """
-    safe_html = html_content.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
+    
+    # 대량의 데이터를 브라우저 부하 없이 넘기기 위해 Base64로 인코딩
+    b64_html = base64.b64encode(html_content.encode('utf-8')).decode('utf-8')
+    
     js = f"""
-    <iframe id="print_frame" style="position:absolute; width:0; height:0; border:none; top:-1000px; left:-1000px;"></iframe>
     <script>
-        const frame = document.getElementById('print_frame');
-        frame.contentDocument.open();
-        frame.contentDocument.write(`{safe_html}`);
-        frame.contentDocument.close();
+        const doc = window.parent.document;
+        let oldFrame = doc.getElementById('print_frame');
+        if (oldFrame) oldFrame.remove();
+
+        const frame = doc.createElement('iframe');
+        frame.id = 'print_frame';
+        frame.style.position = 'fixed';
+        frame.style.right = '0';
+        frame.style.bottom = '0';
+        frame.style.width = '0';
+        frame.style.height = '0';
+        frame.style.border = 'none';
+        doc.body.appendChild(frame);
+
+        // Base64 디코딩으로 브라우저 문자열 파싱 부하 극복
+        const binaryString = window.atob('{b64_html}');
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {{
+            bytes[i] = binaryString.charCodeAt(i);
+        }}
+        const decodedHtml = new TextDecoder('utf-8').decode(bytes);
+
+        frame.contentWindow.document.open();
+        frame.contentWindow.document.write(decodedHtml);
+        frame.contentWindow.document.close();
+
+        // 렌더링 안정성을 위해 800ms 대기 후 인쇄 트리거
         setTimeout(() => {{
             frame.contentWindow.focus();
             frame.contentWindow.print();
-        }}, 500);
+        }}, 800);
     </script>
     """
     components.html(js, height=0)
@@ -327,14 +353,11 @@ def _fetch_sheet_concurrently(wb, sheet_name):
         if not data: 
             return pd.DataFrame()
             
-        # ★ 핵심 보완: 시트의 열 개수가 6개(메모2까지)보다 많더라도 무조건 앞의 6개만 자르고, 모자라면 빈칸으로 채웁니다.
-        # 구동사/동사구 시트의 '메모3' 같은 불필요한 추가 열 때문에 에러나 누락이 발생하는 것을 원천 차단합니다.
         rows = [row[:6] + [""] * (6 - len(row[:6])) for row in data[1:]]
         
         df = pd.DataFrame(rows, columns=['분류', '단어-문장', '해석', '발음', '메모1', '메모2'])
         for col in df.columns: df[col] = df[col].astype(str).str.strip()
         
-        # 빈 행 제거 (분류나 단어가 없는 빈 줄 쓰레기 데이터 정리)
         df = df[df['단어-문장'] != ""]
         
         df['sheet_idx'] = sheet_name
@@ -344,13 +367,11 @@ def _fetch_sheet_concurrently(wb, sheet_name):
         print(f"Error loading sheet {sheet_name}: {e}")
         return pd.DataFrame()
 
-# ★ v6로 변경하여 이전 캐시를 강제로 비우고 새로운 로직으로 데이터를 불러옵니다.
 @st.cache_data(ttl=600)
 def get_english_data_v6():
     wb = init_connection().open("English_Sentences")
     all_sheets = wb.worksheets()
     
-    # '링크' 탭을 제외한 모든 탭의 이름을 자동으로 추출하여 순회
     sheet_names = [ws.title for ws in all_sheets if ws.title != "링크"]
     
     dfs = []
@@ -803,7 +824,7 @@ def edit_link_dialog(row_idx, row_data, unique_cats1, unique_cats2):
             st.rerun()
             
     else:
-        st.error("⚠️ 정말 이 링크를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.")
+        st.error("⚠️ 정말 이 링크를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 테 없습니다.")
         st.info(f"선택 링크: {row_data.get('제목', '')}")
         
         c1, c2 = st.columns(2)
@@ -1067,7 +1088,8 @@ else:
             cb[csv_idx].download_button("📥 CSV 추출", data=convert_df_to_csv(d_df), file_name=f"English_Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
             
             if cb[prt_idx].button("🖨️ A4 인쇄", use_container_width=True):
-                print_table(d_df, "TOmBOy94 영어 단어장")
+                with st.spinner("🖨️ 인쇄 미리보기를 준비 중입니다... (데이터가 많을 경우 수 초가 소요됩니다)"):
+                    print_table(d_df, "TOmBOy94 영어 단어장")
                 
             if cb[sync_idx].button("🔄 갱신", use_container_width=True):
                 st.cache_data.clear()
@@ -1159,7 +1181,8 @@ else:
             cb[csv_idx].download_button("📥 CSV 추출", data=convert_df_to_csv(filtered_df_links), file_name=f"Links_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
             
             if cb[prt_idx].button("🖨️ A4 인쇄", use_container_width=True):
-                print_table(filtered_df_links, "TOmBOy94 링크 모음")
+                with st.spinner("🖨️ 인쇄 미리보기를 준비 중입니다... (데이터가 많을 경우 수 초가 소요됩니다)"):
+                    print_table(filtered_df_links, "TOmBOy94 링크 모음")
                 
             if cb[sync_idx].button("🔄 갱신", use_container_width=True):
                 st.cache_data.clear()
