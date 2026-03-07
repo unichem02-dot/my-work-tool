@@ -328,13 +328,13 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             // 2. 한국어 해석 (중간 강조)
             let koHtml = item.ko ? `<p style="color: #FFFFFF; font-size: ${{koSize}}; font-weight: 700; margin: 2vh 0 0 0; word-break: keep-all; line-height: 1.4; letter-spacing: -0.5px;">${{item.ko}}</p>` : "";
             
-            // 3. 부가 메모 영역 (팁 형태의 박스로 시각적 분리)
+            // 3. 부가 메모 영역 (팁 형태의 박스로 시각적 분리) - 배경색 어두운 회색조로 변경
             let memoHtml = "";
             if (!isSimpleMode && (item.memo1 || item.memo2)) {{
                 memoHtml = `
                 <div style="
                     margin-top: 4vh; 
-                    background: rgba(0, 0, 0, 0.3); 
+                    background: rgba(255, 255, 255, 0.05); 
                     border-left: 4px solid #E67E22; 
                     border-radius: 8px; 
                     padding: 2vh 3vw; 
@@ -349,14 +349,11 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                 </div>`;
             }}
 
-            // ★ 메인 플래시카드(Flashcard) 컨테이너 조립
+            // ★ 메인 플래시카드(Flashcard) 컨테이너 조립 - 녹색 배경 제거, 투명/블랙 모던 스타일
             const cardHtml = `
                 <div style="
-                    background: linear-gradient(145deg, rgba(34, 67, 67, 0.9), rgba(26, 47, 47, 0.95));
-                    border: 1px solid rgba(255, 215, 0, 0.2);
-                    border-radius: 30px;
+                    background: transparent;
                     padding: min(5vh, 40px) min(4vw, 40px);
-                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
                     width: 95%;
                     max-width: 1200px;
                     margin: 0 auto;
@@ -366,7 +363,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                     text-align: center;
                 ">
                     <!-- 가장 중요한 영어 문장 -->
-                    <div style="color: #FFD700; font-weight: 900; text-shadow: 0 4px 15px rgba(255, 215, 0, 0.3); width: 100%;">
+                    <div style="color: #FFD700; font-weight: 900; text-shadow: 0 4px 15px rgba(255, 215, 0, 0.2); width: 100%;">
                         <p style="font-size: ${{enFontSize}}; margin: 0; padding-bottom: 1vh; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.2;">${{item.en}}</p>
                     </div>
                     
