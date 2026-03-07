@@ -51,7 +51,7 @@ st.components.v1.html(html_code, height=50)
 # [수정됨] 2. 메인 제목 (이모티콘 제거)
 st.title("송장텍스트변환 <LYC> lodus11st@naver.com")
 
-# [수정됨] 업로드하신 이미지의 다크 틸(Dark Teal) & 캡슐 테두리 스타일 적용
+# [수정됨] 업로드하신 이미지의 다크 틸(Dark Teal) & 캡슐 테두리 스타일 적용 및 UI 숨김 추가
 st.markdown("""
 <style>
     /* 전체 배경을 다크 청록색으로 변경 */
@@ -124,6 +124,21 @@ st.markdown("""
     }
     .stAlert p {
         color: #FFFFFF !important;
+    }
+
+    /* 5. ★추가됨★ Streamlit 기본 UI 숨기기 */
+    #MainMenu {visibility: hidden !important;} /* 우측 상단 햄버거 메뉴 숨김 */
+    header {visibility: hidden !important;} /* 상단 헤더 영역 숨김 */
+    footer {visibility: hidden !important;} /* 하단 Made with Streamlit 워터마크 숨김 */
+    .stDeployButton {display: none !important;} /* Deploy 버튼 숨김 */
+    [data-testid="stToolbar"] {visibility: hidden !important;} /* 툴바 숨김 */
+    
+    /* 우측 하단 < Manage app 버튼 완벽 숨김 */
+    .viewerBadge_container__1QSob,
+    .styles_viewerBadge__1yB5_,
+    .viewerBadge_link__1S137,
+    [data-testid="manage-app-button"] {
+        display: none !important;
     }
 </style>
 """, unsafe_allow_html=True)
