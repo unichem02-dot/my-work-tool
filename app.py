@@ -489,10 +489,13 @@ if st.query_params.get("study") == "true":
 st.markdown("""
     <style>
     /* ★ 스트림릿 기본 상하단 메뉴 및 Manage app 버튼 완벽 제거 */
+    header,
     [data-testid="stHeader"], 
     [data-testid="stToolbar"], 
     [data-testid="stAppDeployButton"],
+    [data-testid="viewerBadge"],
     .viewerBadge_container, 
+    .viewerBadge_link,
     .stDeployButton,
     #MainMenu, 
     footer {
@@ -1016,9 +1019,11 @@ else:
             st.markdown("<div class='num-result' style='border-left-color:#FF4B4B;'><span style='color:#FF4B4B!important; font-size:1.2rem!important;'>⚠️ 숫자만 입력 가능합니다.</span></div>", unsafe_allow_html=True)
 
     # 상단 메뉴 구성용 JS 트릭 로드 (공통)
+    # ★ 추가: Manage app 버튼 강제 숨김 (CSS가 안 먹힐 경우 대비 JS 주기적 체크)
     components.html("""
         <script>
         const doc = window.parent.document;
+        // 복사 이벤트
         if (doc.copyLinkHandler) { doc.removeEventListener('click', doc.copyLinkHandler, true); }
         doc.copyLinkHandler = function(e) {
             let target = e.target.closest('.copyable-link');
@@ -1035,6 +1040,7 @@ else:
         };
         doc.addEventListener('click', doc.copyLinkHandler, true);
 
+        // 학습 모드 팝업
         if (doc.studyPopupHandler) { doc.removeEventListener('click', doc.studyPopupHandler, true); }
         doc.studyPopupHandler = function(e) {
             let target = e.target.closest('.study-popup-link');
@@ -1046,6 +1052,7 @@ else:
         };
         doc.addEventListener('click', doc.studyPopupHandler, true);
         
+        // 팝업창 외곽 클릭 방지
         if (doc.preventDialogCloseHandler) { doc.removeEventListener('mousedown', doc.preventDialogCloseHandler, true); doc.removeEventListener('click', doc.preventDialogCloseHandler, true); }
         doc.preventDialogCloseHandler = function(e) {
             let isDialogBg = false;
@@ -1057,6 +1064,7 @@ else:
         };
         doc.addEventListener('mousedown', doc.preventDialogCloseHandler, true); doc.addEventListener('click', doc.preventDialogCloseHandler, true);
 
+        // Num.ENG 자동 콤마
         if (doc.liveCommaHandler) { doc.removeEventListener('input', doc.liveCommaHandler, true); }
         doc.liveCommaHandler = function(e) {
             if (e.target && e.target.tagName === 'INPUT') {
@@ -1072,6 +1080,12 @@ else:
             }
         };
         doc.addEventListener('input', doc.liveCommaHandler, true);
+
+        // ★ Manage app 버튼 강제 숨김 처리 (1초마다 감시)
+        setInterval(function() {
+            let badges = doc.querySelectorAll('.viewerBadge_container, [data-testid="viewerBadge"], [data-testid="stAppDeployButton"]');
+            badges.forEach(b => b.style.display = 'none');
+        }, 1000);
         </script>
     """, height=0)
 
