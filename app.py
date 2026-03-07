@@ -48,10 +48,61 @@ def reset_page():
 def set_state(key, val):
     st.session_state[key] = val
 
-# ★ 안전한 CSV 변환 전용 함수 (모바일 에러 방지용)
+# ★ 안전한 CSV 변환 전용 함수
 @st.cache_data(show_spinner=False)
 def convert_df_to_csv(df_to_convert):
     return df_to_convert.to_csv(index=False).encode('utf-8-sig')
+
+# ★ A4 인쇄용 HTML 생성 및 JS 호출 함수
+def print_table(df, title):
+    # 인쇄에 불필요한 시스템 컬럼 제거
+    print_df = df.drop(columns=['sheet_idx', 'row_idx'], errors='ignore')
+    
+    if print_df.empty:
+        return
+
+    # A4 인쇄에 최적화된 HTML 템플릿
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="utf-8">
+    <title>{title}</title>
+    <style>
+        @page {{ size: A4 portrait; margin: 15mm; }}
+        body {{ font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; font-size: 11pt; color: #000; background: #fff; }}
+        h2 {{ text-align: center; font-size: 18pt; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }}
+        table {{ width: 100%; border-collapse: collapse; font-size: 10pt; table-layout: auto; }}
+        th, td {{ border: 1px solid #000; padding: 8px; text-align: left; vertical-align: middle; word-break: keep-all; }}
+        th {{ background-color: #f2f2f2; font-weight: bold; text-align: center; }}
+        tr {{ page-break-inside: avoid; page-break-after: auto; }}
+    </style>
+    </head>
+    <body>
+        <h2>{title} (총 {len(print_df)}건)</h2>
+        {print_df.to_html(index=False, border=0)}
+    </body>
+    </html>
+    """
+    # 자바스크립트 내에 삽입하기 위한 이스케이프 처리
+    safe_html = html_content.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
+    
+    # 숨겨진 iframe을 생성하여 브라우저 인쇄 창을 띄우는 스크립트
+    js = f"""
+    <iframe id="print_frame" style="position:absolute; width:0; height:0; border:none; top:-1000px; left:-1000px;"></iframe>
+    <script>
+        const frame = document.getElementById('print_frame');
+        frame.contentDocument.open();
+        frame.contentDocument.write(`{safe_html}`);
+        frame.contentDocument.close();
+        setTimeout(() => {{
+            frame.contentWindow.focus();
+            frame.contentWindow.print();
+        }}, 500);
+    </script>
+    """
+    components.html(js, height=0)
+
 
 # --- [전체화면 학습 모드 컴포넌트 렌더링 함수] ---
 def render_study_mode(study_data, unique_cats, initial_cat):
@@ -392,7 +443,6 @@ def init_connection():
     creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
     return gspread.authorize(creds)
 
-# 개별 시트를 안전하게 가져오는 헬퍼 함수
 def _fetch_sheet_concurrently(wb, sheet_name):
     try:
         sheet = wb.worksheet(sheet_name)
@@ -404,20 +454,15 @@ def _fetch_sheet_concurrently(wb, sheet_name):
         for col in df.columns: df[col] = df[col].astype(str).str.strip()
         df['sheet_idx'] = sheet_name
         df['row_idx'] = df.index + 2
-        
-        # ★ 모든 시트에 대해 동일하게 행 번호 오름차순 적용 (해석 시트 예외 로직 제거)
         return df.sort_values(by='row_idx', ascending=True)
     except Exception:
         return pd.DataFrame()
 
-# ★ 함수명을 변경하여 기존에 저장되어 있던 잘못된 정렬 캐시를 강제로 삭제하고 새로 불러옵니다.
 @st.cache_data(ttl=600)
 def get_english_data_v2():
     wb = init_connection().open("English_Sentences")
     sheet_names = ["메인", "해석", "구동사", "TOM-영어", "동사구", "문법", "여행", "단어"]
-    
     dfs = []
-    # ★ 핵심: ThreadPoolExecutor를 사용해 모든 시트를 동시에 읽어옴
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(sheet_names)) as executor:
         results = executor.map(lambda name: _fetch_sheet_concurrently(wb, name), sheet_names)
         for res in results:
@@ -442,7 +487,6 @@ def get_links_data_v2():
             df = pd.DataFrame(rows, columns=['대분류', '소분류', '제목', '메모', '링크'])
             for col in df.columns: df[col] = df[col].astype(str).str.strip()
             df['row_idx'] = df.index + 2
-            # ★ 링크도 행 번호 오름차순으로 명시적 정렬
             return df.sort_values(by='row_idx', ascending=True)
         except: time.sleep(1)
     raise Exception("링크 데이터 로드 실패")
@@ -463,12 +507,11 @@ if st.query_params.get("study") == "true":
     """, unsafe_allow_html=True)
     
     try:
-        df = get_english_data_v2() # 변경된 캐시 함수 사용
+        df = get_english_data_v2() 
         unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
         cat_param = st.query_params.get("cat", "ALL")
         initial_cat = "ALL" if cat_param in ["🔀 랜덤 10", "전체 분류", "ALL"] else cat_param
         
-        # ★ 모바일 에러 방지를 위해 변환 과정을 명시적으로 분리
         study_df = df[['분류', '단어-문장', '해석', '발음', '메모1', '메모2', 'sheet_idx']].rename(
             columns={'분류':'cat', '단어-문장': 'en', '해석': 'ko', '발음': 'pron', '메모1': 'memo1', '메모2': 'memo2'}
         )
@@ -1019,7 +1062,6 @@ else:
             st.markdown("<div class='num-result' style='border-left-color:#FF4B4B;'><span style='color:#FF4B4B!important; font-size:1.2rem!important;'>⚠️ 숫자만 입력 가능합니다.</span></div>", unsafe_allow_html=True)
 
     # 상단 메뉴 구성용 JS 트릭 로드 (공통)
-    # ★ 추가: Manage app 버튼 강제 숨김 (CSS가 안 먹힐 경우 대비 JS 주기적 체크)
     components.html("""
         <script>
         const doc = window.parent.document;
@@ -1125,27 +1167,31 @@ else:
                 if sel_cat != "🔀 랜덤 10":
                     d_df = d_df.sort_values(by='row_idx', ascending=True)
 
-            # 액션 툴바
+            # 액션 툴바 (버튼 레이아웃 분할)
             st.markdown("<div style='background-color: rgba(0,0,0,0.25); padding: 15px 20px; border-radius: 15px; margin: 20px 0; border: 1px solid rgba(255,255,255,0.05);'>", unsafe_allow_html=True)
-            cb_cols = [3, 2, 1.5, 1.5] if st.session_state.authenticated else [4, 2, 2]
+            cb_cols = [2.5, 2, 1.5, 1.5, 1.5] if st.session_state.authenticated else [3.5, 1.5, 1.5, 1.5]
             cb = st.columns(cb_cols, vertical_alignment="center")
             
             cb[0].text_input("🔍 목록 내 검색", key="search_input", on_change=handle_search, label_visibility="collapsed")
             
+            btn_idx = 2 if st.session_state.authenticated else 1
+            csv_idx = 3 if st.session_state.authenticated else 2
+            prt_idx = 4 if st.session_state.authenticated else 3
+            
             if st.session_state.authenticated:
                 if cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(unique_cats)
                 
-            btn_idx = 2 if st.session_state.authenticated else 1
             btn_text = "🔄 전체 정보 보기" if st.session_state.is_simple else "✨ 핵심만 보기"
             if cb[btn_idx].button(btn_text, type="primary" if not st.session_state.is_simple else "secondary", use_container_width=True):
                 st.session_state.is_simple = not st.session_state.is_simple; st.rerun()
 
-            if st.session_state.authenticated:
-                # ★ 다운로드 버튼에 필터링 및 정렬이 완료된 d_df 전달
-                cb[3].download_button("📥 CSV 추출", data=convert_df_to_csv(d_df), file_name=f"English_Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
-            else:
-                cb[2].download_button("📥 CSV 추출", data=convert_df_to_csv(d_df), file_name=f"English_Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
+            # 다운로드 버튼
+            cb[csv_idx].download_button("📥 CSV 추출", data=convert_df_to_csv(d_df), file_name=f"English_Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
             
+            # ★ 신규 A4 인쇄 버튼
+            if cb[prt_idx].button("🖨️ A4 인쇄", use_container_width=True):
+                print_table(d_df, "TOmBOy94 영어 단어장")
+                
             st.markdown("</div>", unsafe_allow_html=True)
 
             total = len(d_df); pages = math.ceil(total/30) if total > 0 else 1
@@ -1218,20 +1264,26 @@ else:
                     if sel_link_cat2 != "전체":
                         filtered_df_links = filtered_df_links[filtered_df_links['소분류'] == sel_link_cat2]
 
-            # 액션 툴바
+            # 액션 툴바 (버튼 레이아웃 분할)
             st.markdown("<div style='background-color: rgba(0,0,0,0.25); padding: 15px 20px; border-radius: 15px; margin: 20px 0; border: 1px solid rgba(255,255,255,0.05);'>", unsafe_allow_html=True)
-            cb_cols = [3, 2, 1.5] if st.session_state.authenticated else [4, 2]
+            cb_cols = [2.5, 2, 1.5, 1.5] if st.session_state.authenticated else [3.5, 1.5, 1.5]
             cb = st.columns(cb_cols, vertical_alignment="center")
             
             cb[0].text_input("🔍 링크 검색", key="search_input", on_change=handle_search, label_visibility="collapsed")
             
+            csv_idx = 2 if st.session_state.authenticated else 1
+            prt_idx = 3 if st.session_state.authenticated else 2
+
             if st.session_state.authenticated:
                 if cb[1].button("➕ 새 링크 추가", type="primary", use_container_width=True):
                     add_link_dialog(unique_links_cats1, unique_links_cats2)
-                # ★ 다운로드 버튼에 필터링된 filtered_df_links 전달
-                cb[2].download_button("📥 CSV 추출", data=convert_df_to_csv(filtered_df_links), file_name=f"Links_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
-            else:
-                cb[1].download_button("📥 CSV 추출", data=convert_df_to_csv(filtered_df_links), file_name=f"Links_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
+                    
+            # 다운로드 버튼
+            cb[csv_idx].download_button("📥 CSV 추출", data=convert_df_to_csv(filtered_df_links), file_name=f"Links_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
+            
+            # ★ 신규 A4 인쇄 버튼
+            if cb[prt_idx].button("🖨️ A4 인쇄", use_container_width=True):
+                print_table(filtered_df_links, "TOmBOy94 링크 모음")
                 
             st.markdown("</div>", unsafe_allow_html=True)
             
