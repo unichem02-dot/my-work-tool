@@ -92,8 +92,6 @@ def render_study_mode(study_data, unique_cats, initial_cat):
 
         /* 메인 컨텐츠 영역 */
         #rolling-container {{ flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; width: 100%; text-align: center; align-items: center; padding: 0 20px; }}
-        
-        /* 텍스트 스타일 관련 클래스 제거 및 인라인 적용 (자바스크립트에서 관리) */
     </style>
     </head>
     <body>
@@ -135,10 +133,9 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         let currentSpeed = 10000;
         let isSimpleMode = false;
         let isTTSEnabled = false;
-        let isTouchMode = false; // ★ 터치 모드 상태 변수
+        let isTouchMode = false; 
         let availableVoices = [];
 
-        // 브라우저에 내장된 고품질 음성 목록 미리 로드
         function loadVoices() {{
             availableVoices = window.speechSynthesis.getVoices();
         }}
@@ -147,14 +144,12 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             window.speechSynthesis.onvoiceschanged = loadVoices;
         }}
 
-        // 확실한 창닫기 (iframe 우회하여 최상위 부모 창 닫기 시도)
         function closeWindow() {{
             try {{ window.top.close(); }} catch(e) {{}}
             try {{ window.parent.close(); }} catch(e) {{}}
             window.close();
         }}
 
-        // 카테고리 드롭다운 렌더링
         const selectEl = document.getElementById('category-select');
         let allOpt = document.createElement('option');
         allOpt.value = "ALL";
@@ -164,7 +159,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         categories.forEach(cat => {{
             let opt = document.createElement('option');
             opt.value = cat;
-            opt.innerText = cat; // 랜덤 글자 제거됨
+            opt.innerText = cat;
             if (cat === "{initial_cat}") opt.selected = true;
             selectEl.appendChild(opt);
         }});
@@ -173,13 +168,11 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             selectEl.value = "ALL";
         }}
 
-        // 속도 변경
         function changeSpeed() {{
             currentSpeed = parseInt(document.getElementById('speed-select').value);
             if(!isPaused && !isTouchMode) resetInterval();
         }}
 
-        // 배열 셔플
         function shuffle(array) {{
             let arr = [...array];
             for (let i = arr.length - 1; i > 0; i--) {{
@@ -189,13 +182,11 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             return arr;
         }}
 
-        // 카테고리 변경 시 실행
         function changeCategory() {{
             const selected = selectEl.value;
             if (selected === "ALL") {{
                 filteredData = shuffle(rawData);
             }} else {{
-                // 모든 카테고리(시트 이름 상관없이) 랜덤 섞기 적용
                 let catData = rawData.filter(d => d.cat === selected);
                 filteredData = shuffle(catData);
             }}
@@ -204,7 +195,6 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             resetInterval();
         }}
 
-        // 컨트롤러 기능
         function movePrev() {{
             if (!filteredData || filteredData.length === 0) return;
             currentIndex = (currentIndex - 1 + filteredData.length) % filteredData.length;
@@ -232,24 +222,20 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
         }}
 
-        // ★ TOUCH 모드 토글 (터치 시에만 다음으로 넘어가는 수동 모드)
         function toggleTouchMode() {{
             isTouchMode = !isTouchMode;
             const btn = document.getElementById('touch-btn');
             if(isTouchMode) {{
                 btn.style.background = "rgba(230,126,34,0.7)";
                 btn.innerText = "👆 TOUCH ON";
-                // 터치 모드를 켜면 자동 재생 인터벌 해제
                 if (intervalId) clearInterval(intervalId);
             }} else {{
                 btn.style.background = "rgba(255,255,255,0.15)";
                 btn.innerText = "👆 TOUCH OFF";
-                // 터치 모드를 끄면 다시 자동 재생 시작 (일시정지 상태가 아니라면)
                 resetInterval();
             }}
         }}
 
-        // SIMPLE 모드 토글
         function toggleSimpleMode() {{
             isSimpleMode = !isSimpleMode;
             const btn = document.getElementById('simple-btn');
@@ -260,10 +246,9 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                 btn.style.background = "rgba(255,255,255,0.15)";
                 btn.innerText = "SIMPLE OFF";
             }}
-            renderRolling(); // 모드 변경 즉시 화면 갱신
+            renderRolling(); 
         }}
 
-        // TTS 음성 재생 토글
         function toggleTTS() {{
             isTTSEnabled = !isTTSEnabled;
             const btn = document.getElementById('tts-btn');
@@ -282,64 +267,36 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
         }}
 
-        // 오직 미국식(US) 고품질 원어민 음성을 최우선으로 선택하는 로직
         function speakText(text, lang) {{
             if (!window.speechSynthesis) return;
-            
-            // 파이썬 f-string 충돌 방지 및 특수 기호(/, ?, (, ), [, ], ~) 제거 필터링
             const cleanText = text.replace(/[/?()[\\]~]/g, ' ');
-            
             const utterance = new SpeechSynthesisUtterance(cleanText);
             utterance.lang = lang; 
-            
-            // 영어는 연음이 부드럽고 자연스럽게 들리도록 0.95 세팅, 한국어는 0.9 유지
             utterance.rate = lang === 'en-US' ? 0.95 : 0.9; 
             utterance.pitch = 1.0;
 
             if (availableVoices.length > 0) {{
                 let bestVoice = null;
-                
                 if (lang === 'en-US') {{
-                    // 1순위: 크롬 브라우저의 고품질 클라우드 음성 (미국식)
                     bestVoice = availableVoices.find(voice => voice.name === 'Google US English');
-                    
-                    // 2순위: 엣지 브라우저의 고품질 신경망(Natural) 미국식 음성
-                    if (!bestVoice) {{
-                        bestVoice = availableVoices.find(voice => voice.name.includes('Natural') && voice.lang === 'en-US');
-                    }}
-                    // 3순위: 애플 Mac/iOS의 자연스러운 기본 식 음성
-                    if (!bestVoice) {{
-                        bestVoice = availableVoices.find(voice => (voice.name === 'Samantha' || voice.name === 'Alex') && voice.lang === 'en-US');
-                    }}
-                    // 4순위: 기타 고품질 미국 영어
-                    if (!bestVoice) {{
-                        bestVoice = availableVoices.find(voice => voice.lang === 'en-US' && (voice.name.includes('Premium') || voice.name.includes('Enhanced')));
-                    }}
-                    // 5순위: 기본 미국 영어 (영국식 배제 보장)
-                    if (!bestVoice) {{
-                        bestVoice = availableVoices.find(voice => voice.lang === 'en-US');
-                    }}
+                    if (!bestVoice) bestVoice = availableVoices.find(voice => voice.name.includes('Natural') && voice.lang === 'en-US');
+                    if (!bestVoice) bestVoice = availableVoices.find(voice => (voice.name === 'Samantha' || voice.name === 'Alex') && voice.lang === 'en-US');
+                    if (!bestVoice) bestVoice = availableVoices.find(voice => voice.lang === 'en-US' && (voice.name.includes('Premium') || voice.name.includes('Enhanced')));
+                    if (!bestVoice) bestVoice = availableVoices.find(voice => voice.lang === 'en-US');
                 }} else if (lang === 'ko-KR') {{
                     bestVoice = availableVoices.find(voice => voice.name === 'Google 한국의');
                     if (!bestVoice) bestVoice = availableVoices.find(voice => voice.name.includes('Natural') && voice.lang.includes('ko'));
                     if (!bestVoice) bestVoice = availableVoices.find(voice => voice.lang.includes('ko-KR'));
                 }}
-
-                // 가장 좋은 음성 엔진 적용
-                if (bestVoice) {{
-                    utterance.voice = bestVoice;
-                }}
+                if (bestVoice) utterance.voice = bestVoice;
             }}
-            
             window.speechSynthesis.speak(utterance);
         }}
 
-        // 1단 집중 디자인 및 시간차 렌더링
         function renderRolling() {{
             if (!filteredData || filteredData.length === 0) return;
             const container = document.getElementById('rolling-container');
             
-            // 기존 문장 부드럽게 지우기
             const oldItems = container.children;
             for(let i=0; i<oldItems.length; i++) {{
                 oldItems[i].style.opacity = '0';
@@ -347,11 +304,8 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
 
             const item = filteredData[currentIndex];
-            
-            // 상단 바에 현재 단어의 카테고리 표시
             document.getElementById('word-cat-display').innerText = item.cat;
 
-            // 새 컨테이너 박스 생성
             const div = document.createElement('div');
             div.style.position = 'absolute';
             div.style.width = '100%';
@@ -364,17 +318,13 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             div.style.opacity = '0'; 
             div.style.zIndex = '10';
 
-            // ★ 창 크기(vw, vh)에 비례하여 화면에 완벽하게 꽉 차도록 사이즈 동적 계산
             let enFontSize = item.en.length > 25 ? 'min(7vw, 9vh)' : 'min(10vw, 13vh)';
             let pronSize = 'min(3.5vw, 4.5vh)';
             let koSize = 'min(5.5vw, 7vh)';
             let memoSize = 'min(3vw, 4vh)';
 
-            // 구성 요소들 (발음, 해석, 메모) - 높이 비율에 맞춘 여백(vh) 적용
             let pronHtml = (item.pron && item.pron.length <= 60) ? `<p style="font-size: ` + pronSize + `; color: #FFFFFF; margin: 2vh 0 0 0; font-weight: normal; font-style: italic; text-shadow: none;">${{item.pron}}</p>` : "";
-            
             let koHtml = item.ko ? `<p class="anim-ko" style="color: #a08b7a; font-size: ` + koSize + `; font-weight: bold; margin: 3vh 0 0 0; opacity: 0; transition: opacity 0.5s ease-in-out; word-break: keep-all; line-height: 1.4; text-shadow: none;">${{item.ko}}</p>` : "";
-            
             let memoHtml = "";
             if (!isSimpleMode) {{
                 memoHtml = `<div class="anim-memo" style="opacity: 0; transition: opacity 0.5s ease-in-out; margin-top: 2.5vh; text-shadow: none;">`;
@@ -383,18 +333,13 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                 memoHtml += `</div>`;
             }}
 
-            // DOM 병합 (중앙 영역)
             div.innerHTML = `<div style="color: #E67E22; font-weight: 900; text-shadow: 0 0 20px rgba(230,126,34,0.4);"><p style="font-size: ` + enFontSize + `; margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.2;">${{item.en}}</p></div>` 
-                            + pronHtml 
-                            + koHtml 
-                            + memoHtml; 
+                            + pronHtml + koHtml + memoHtml; 
             
             container.appendChild(div);
 
-            // 전체 프레임 페이드 인
             setTimeout(() => {{ div.style.opacity = '1'; }}, 50);
 
-            // 2초 뒤 해석 페이드 인
             if(item.ko) {{
                 setTimeout(() => {{
                     const koEl = div.querySelector('.anim-ko');
@@ -402,7 +347,6 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                 }}, 2000);
             }}
 
-            // 5초 뒤 메모 페이드 인
             if(!isSimpleMode && (item.memo1 || item.memo2)) {{
                 setTimeout(() => {{
                     const memoEl = div.querySelector('.anim-memo');
@@ -410,7 +354,6 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                 }}, 5000);
             }}
 
-            // 단어가 바뀔 때마다 영어 -> 한국어 순서대로 재생
             if(isTTSEnabled) {{
                 window.speechSynthesis.cancel(); 
                 speakText(item.en, 'en-US');
@@ -418,13 +361,11 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
         }}
 
-        // 다음 단어로 이동
         function step() {{
             currentIndex = (currentIndex + 1) % filteredData.length;
             renderRolling();
         }}
 
-        // 인터벌 설정 로직 (터치 모드나 일시정지 상태일 때는 타이머 작동 안 함)
         function resetInterval() {{
             if (intervalId) clearInterval(intervalId);
             if (!isTouchMode && !isPaused) {{
@@ -432,17 +373,11 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             }}
         }}
 
-        // ★ 터치 모드일 때만 화면 클릭으로 다음 넘어가기 작동
         document.body.addEventListener('click', function(e) {{
-            // 상단 컨트롤 바(버튼, 셀렉터 등) 클릭 시에는 작동하지 않도록 예외 처리
             if (e.target.closest('.header-bar')) return;
-            
-            if (isTouchMode) {{
-                moveNext(); // 터치 모드가 켜져 있을 때만 클릭 시 다음 단어로 이동
-            }}
+            if (isTouchMode) {{ moveNext(); }}
         }});
 
-        // 초기 시작
         changeCategory();
 
     </script>
@@ -553,9 +488,12 @@ if st.query_params.get("study") == "true":
 # --- [사용자 정의 디자인 (CSS) - 디자인 대폭 개편 및 기존 폼 유지] ---
 st.markdown("""
     <style>
-    /* ★ 스트림릿 기본 상하단 메뉴 완벽 제거 */
+    /* ★ 스트림릿 기본 상하단 메뉴 및 Manage app 버튼 완벽 제거 */
     [data-testid="stHeader"], 
     [data-testid="stToolbar"], 
+    [data-testid="stAppDeployButton"],
+    .viewerBadge_container, 
+    .stDeployButton,
     #MainMenu, 
     footer {
         display: none !important;
