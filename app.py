@@ -55,13 +55,9 @@ def convert_df_to_csv(df_to_convert):
 
 # ★ A4 인쇄용 HTML 생성 및 JS 호출 함수
 def print_table(df, title):
-    # 인쇄에 불필요한 시스템 컬럼 제거
     print_df = df.drop(columns=['sheet_idx', 'row_idx'], errors='ignore')
-    
-    if print_df.empty:
-        return
+    if print_df.empty: return
 
-    # A4 인쇄에 최적화된 HTML 템플릿
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -84,10 +80,7 @@ def print_table(df, title):
     </body>
     </html>
     """
-    # 자바스크립트 내에 삽입하기 위한 이스케이프 처리
     safe_html = html_content.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
-    
-    # 숨겨진 iframe을 생성하여 브라우저 인쇄 창을 띄우는 스크립트
     js = f"""
     <iframe id="print_frame" style="position:absolute; width:0; height:0; border:none; top:-1000px; left:-1000px;"></iframe>
     <script>
@@ -114,34 +107,21 @@ def render_study_mode(study_data, unique_cats, initial_cat):
     <html>
     <head>
     <style>
-        /* 내부 iframe의 여백 완벽 제거 */
         body {{ margin: 0; padding: 0; background: #0a0a0a; overflow: hidden; font-family: sans-serif; cursor: pointer; user-select: none; -webkit-user-select: none; }}
         .container {{ width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; align-items: center; position: relative; }}
-        
-        /* 상단 헤더 바 (좌측 컨트롤 그룹) */
         .header-bar {{ position: absolute; top: 20px; left: 30px; right: 30px; display: flex; justify-content: space-between; align-items: center; z-index: 100; cursor: default; }}
         .left-controls {{ display: flex; gap: 15px; align-items: center; flex-wrap: wrap; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 15px; }}
-        
-        /* 셀렉터 투명화 및 테두리 제거 */
         .cat-select {{ background: transparent; color: #FFFFFF; border: none; padding: 8px 10px; font-size: 18px; border-radius: 8px; font-weight: bold; cursor: pointer; outline: none; transition: 0.3s; appearance: none; -webkit-appearance: none; text-align: center; }}
         .cat-select:hover {{ background: rgba(255,255,255,0.15); }}
         .cat-select option {{ background: #0a0a0a; color: #FFFFFF; }}
-        
-        /* 재생 컨트롤러 */
         .playback-controls {{ display: flex; gap: 8px; border-left: 1px solid rgba(255,255,255,0.2); border-right: 1px solid rgba(255,255,255,0.2); padding: 0 15px; }}
         .playback-controls button {{ background: rgba(255,255,255,0.15); border: none; color: white; font-size: 14px; padding: 8px 14px; border-radius: 8px; cursor: pointer; transition: 0.3s; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }}
         .playback-controls button:hover {{ background: rgba(255,255,255,0.3); transform: translateY(-2px); }}
         .playback-controls button:active {{ transform: translateY(0); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }}
-
-        /* SIMPLE & 기타 버튼 */
         .simple-btn {{ background: rgba(255,255,255,0.15); border: none; color: white; font-size: 14px; padding: 8px 14px; border-radius: 8px; cursor: pointer; transition: 0.3s; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); margin-left: 5px; }}
         .simple-btn:hover {{ background: rgba(255,255,255,0.3); transform: translateY(-2px); }}
         .simple-btn:active {{ transform: translateY(0); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }}
-        
-        /* 현재 단어의 분류 표시 라벨 */
         #word-cat-display {{ color: #FFFFFF; font-weight: bold; font-size: 17px; margin-left: 5px; padding-left: 15px; border-left: 1px solid rgba(255,255,255,0.2); opacity: 0.8; letter-spacing: 1px; }}
-
-        /* 메인 컨텐츠 영역 */
         #rolling-container {{ flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; width: 100%; text-align: center; align-items: center; padding: 0 20px; }}
     </style>
     </head>
@@ -170,10 +150,8 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                 <span id="word-cat-display"></span>
             </div>
         </div>
-        
         <div id="rolling-container"></div>
     </div>
-
     <script>
         const rawData = {data_json};
         const categories = {cats_json};
@@ -187,116 +165,59 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         let isTouchMode = false; 
         let availableVoices = [];
 
-        function loadVoices() {{
-            availableVoices = window.speechSynthesis.getVoices();
-        }}
+        function loadVoices() {{ availableVoices = window.speechSynthesis.getVoices(); }}
         loadVoices();
-        if (window.speechSynthesis.onvoiceschanged !== undefined) {{
-            window.speechSynthesis.onvoiceschanged = loadVoices;
-        }}
-
-        function closeWindow() {{
-            try {{ window.top.close(); }} catch(e) {{}}
-            try {{ window.parent.close(); }} catch(e) {{}}
-            window.close();
-        }}
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {{ window.speechSynthesis.onvoiceschanged = loadVoices; }}
+        function closeWindow() {{ try {{ window.top.close(); }} catch(e) {{}} try {{ window.parent.close(); }} catch(e) {{}} window.close(); }}
 
         const selectEl = document.getElementById('category-select');
         let allOpt = document.createElement('option');
-        allOpt.value = "ALL";
-        allOpt.innerText = "전체 랜덤";
-        selectEl.appendChild(allOpt);
+        allOpt.value = "ALL"; allOpt.innerText = "전체 랜덤"; selectEl.appendChild(allOpt);
         
         categories.forEach(cat => {{
             let opt = document.createElement('option');
-            opt.value = cat;
-            opt.innerText = cat;
+            opt.value = cat; opt.innerText = cat;
             if (cat === "{initial_cat}") opt.selected = true;
             selectEl.appendChild(opt);
         }});
-        
-        if ("{initial_cat}" === "ALL") {{
-            selectEl.value = "ALL";
-        }}
+        if ("{initial_cat}" === "ALL") {{ selectEl.value = "ALL"; }}
 
-        function changeSpeed() {{
-            currentSpeed = parseInt(document.getElementById('speed-select').value);
-            if(!isPaused && !isTouchMode) resetInterval();
-        }}
-
+        function changeSpeed() {{ currentSpeed = parseInt(document.getElementById('speed-select').value); if(!isPaused && !isTouchMode) resetInterval(); }}
         function shuffle(array) {{
             let arr = [...array];
-            for (let i = arr.length - 1; i > 0; i--) {{
-                const j = Math.floor(Math.random() * (i + 1));
-                [arr[i], arr[j]] = [arr[j], arr[i]];
-            }}
+            for (let i = arr.length - 1; i > 0; i--) {{ const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }}
             return arr;
         }}
 
         function changeCategory() {{
             const selected = selectEl.value;
-            if (selected === "ALL") {{
-                filteredData = shuffle(rawData);
-            }} else {{
-                let catData = rawData.filter(d => d.cat === selected);
-                filteredData = shuffle(catData);
-            }}
-            currentIndex = 0;
-            renderRolling();
-            resetInterval();
+            if (selected === "ALL") {{ filteredData = shuffle(rawData); }} 
+            else {{ let catData = rawData.filter(d => d.cat === selected); filteredData = shuffle(catData); }}
+            currentIndex = 0; renderRolling(); resetInterval();
         }}
 
-        function movePrev() {{
-            if (!filteredData || filteredData.length === 0) return;
-            currentIndex = (currentIndex - 1 + filteredData.length) % filteredData.length;
-            renderRolling();
-            resetInterval();
-        }}
-        function moveNext() {{
-            if (!filteredData || filteredData.length === 0) return;
-            currentIndex = (currentIndex + 1) % filteredData.length;
-            renderRolling();
-            resetInterval();
-        }}
+        function movePrev() {{ if (!filteredData || filteredData.length === 0) return; currentIndex = (currentIndex - 1 + filteredData.length) % filteredData.length; renderRolling(); resetInterval(); }}
+        function moveNext() {{ if (!filteredData || filteredData.length === 0) return; currentIndex = (currentIndex + 1) % filteredData.length; renderRolling(); resetInterval(); }}
         
         function togglePause() {{
             isPaused = !isPaused;
             const btn = document.getElementById('pause-btn');
-            if(isPaused) {{
-                if (intervalId) clearInterval(intervalId);
-                btn.innerText = "재생";
-                btn.style.background = "rgba(255,255,255,0.3)";
-            }} else {{
-                resetInterval();
-                btn.innerText = "멈춤";
-                btn.style.background = "rgba(255,255,255,0.15)";
-            }}
+            if(isPaused) {{ if (intervalId) clearInterval(intervalId); btn.innerText = "재생"; btn.style.background = "rgba(255,255,255,0.3)"; }} 
+            else {{ resetInterval(); btn.innerText = "멈춤"; btn.style.background = "rgba(255,255,255,0.15)"; }}
         }}
 
         function toggleTouchMode() {{
             isTouchMode = !isTouchMode;
             const btn = document.getElementById('touch-btn');
-            if(isTouchMode) {{
-                btn.style.background = "rgba(230,126,34,0.7)";
-                btn.innerText = "👆 TOUCH ON";
-                if (intervalId) clearInterval(intervalId);
-            }} else {{
-                btn.style.background = "rgba(255,255,255,0.15)";
-                btn.innerText = "👆 TOUCH OFF";
-                resetInterval();
-            }}
+            if(isTouchMode) {{ btn.style.background = "rgba(230,126,34,0.7)"; btn.innerText = "👆 TOUCH ON"; if (intervalId) clearInterval(intervalId); }} 
+            else {{ btn.style.background = "rgba(255,255,255,0.15)"; btn.innerText = "👆 TOUCH OFF"; resetInterval(); }}
         }}
 
         function toggleSimpleMode() {{
             isSimpleMode = !isSimpleMode;
             const btn = document.getElementById('simple-btn');
-            if(isSimpleMode) {{
-                btn.style.background = "rgba(230,126,34,0.7)";
-                btn.innerText = "SIMPLE ON";
-            }} else {{
-                btn.style.background = "rgba(255,255,255,0.15)";
-                btn.innerText = "SIMPLE OFF";
-            }}
+            if(isSimpleMode) {{ btn.style.background = "rgba(230,126,34,0.7)"; btn.innerText = "SIMPLE ON"; }} 
+            else {{ btn.style.background = "rgba(255,255,255,0.15)"; btn.innerText = "SIMPLE OFF"; }}
             renderRolling(); 
         }}
 
@@ -304,17 +225,10 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             isTTSEnabled = !isTTSEnabled;
             const btn = document.getElementById('tts-btn');
             if(isTTSEnabled) {{
-                btn.style.background = "rgba(230,126,34,0.7)";
-                btn.innerText = "🔊 소리 켜기";
-                if(filteredData.length > 0) {{
-                    window.speechSynthesis.cancel();
-                    speakText(filteredData[currentIndex].en, 'en-US');
-                    if(filteredData[currentIndex].ko) speakText(filteredData[currentIndex].ko, 'ko-KR');
-                }}
+                btn.style.background = "rgba(230,126,34,0.7)"; btn.innerText = "🔊 소리 켜기";
+                if(filteredData.length > 0) {{ window.speechSynthesis.cancel(); speakText(filteredData[currentIndex].en, 'en-US'); if(filteredData[currentIndex].ko) speakText(filteredData[currentIndex].ko, 'ko-KR'); }}
             }} else {{
-                btn.style.background = "rgba(255,255,255,0.15)";
-                btn.innerText = "🔇 소리 끄기";
-                window.speechSynthesis.cancel();
+                btn.style.background = "rgba(255,255,255,0.15)"; btn.innerText = "🔇 소리 끄기"; window.speechSynthesis.cancel();
             }}
         }}
 
@@ -322,9 +236,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             if (!window.speechSynthesis) return;
             const cleanText = text.replace(/[/?()[\\]~]/g, ' ');
             const utterance = new SpeechSynthesisUtterance(cleanText);
-            utterance.lang = lang; 
-            utterance.rate = lang === 'en-US' ? 0.95 : 0.9; 
-            utterance.pitch = 1.0;
+            utterance.lang = lang; utterance.rate = lang === 'en-US' ? 0.95 : 0.9; utterance.pitch = 1.0;
 
             if (availableVoices.length > 0) {{
                 let bestVoice = null;
@@ -347,27 +259,14 @@ def render_study_mode(study_data, unique_cats, initial_cat):
         function renderRolling() {{
             if (!filteredData || filteredData.length === 0) return;
             const container = document.getElementById('rolling-container');
-            
             const oldItems = container.children;
-            for(let i=0; i<oldItems.length; i++) {{
-                oldItems[i].style.opacity = '0';
-                setTimeout((el) => {{ if (container.contains(el)) container.removeChild(el); }}, 600, oldItems[i]);
-            }}
+            for(let i=0; i<oldItems.length; i++) {{ oldItems[i].style.opacity = '0'; setTimeout((el) => {{ if (container.contains(el)) container.removeChild(el); }}, 600, oldItems[i]); }}
 
             const item = filteredData[currentIndex];
             document.getElementById('word-cat-display').innerText = item.cat;
 
             const div = document.createElement('div');
-            div.style.position = 'absolute';
-            div.style.width = '100%';
-            div.style.transition = 'opacity 0.6s ease-in-out';
-            div.style.left = '0';
-            div.style.top = '50%';
-            div.style.transform = 'translateY(-50%)'; 
-            div.style.padding = '0 20px';
-            div.style.boxSizing = 'border-box';
-            div.style.opacity = '0'; 
-            div.style.zIndex = '10';
+            div.style.position = 'absolute'; div.style.width = '100%'; div.style.transition = 'opacity 0.6s ease-in-out'; div.style.left = '0'; div.style.top = '50%'; div.style.transform = 'translateY(-50%)'; div.style.padding = '0 20px'; div.style.boxSizing = 'border-box'; div.style.opacity = '0'; div.style.zIndex = '10';
 
             let enFontSize = item.en.length > 25 ? 'min(7vw, 9vh)' : 'min(10vw, 13vh)';
             let pronSize = 'min(3.5vw, 4.5vh)';
@@ -384,53 +283,20 @@ def render_study_mode(study_data, unique_cats, initial_cat):
                 memoHtml += `</div>`;
             }}
 
-            div.innerHTML = `<div style="color: #E67E22; font-weight: 900; text-shadow: 0 0 20px rgba(230,126,34,0.4);"><p style="font-size: ` + enFontSize + `; margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.2;">${{item.en}}</p></div>` 
-                            + pronHtml + koHtml + memoHtml; 
-            
+            div.innerHTML = `<div style="color: #E67E22; font-weight: 900; text-shadow: 0 0 20px rgba(230,126,34,0.4);"><p style="font-size: ` + enFontSize + `; margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.2;">${{item.en}}</p></div>` + pronHtml + koHtml + memoHtml; 
             container.appendChild(div);
 
             setTimeout(() => {{ div.style.opacity = '1'; }}, 50);
-
-            if(item.ko) {{
-                setTimeout(() => {{
-                    const koEl = div.querySelector('.anim-ko');
-                    if(koEl) koEl.style.opacity = '1';
-                }}, 2000);
-            }}
-
-            if(!isSimpleMode && (item.memo1 || item.memo2)) {{
-                setTimeout(() => {{
-                    const memoEl = div.querySelector('.anim-memo');
-                    if(memoEl) memoEl.style.opacity = '1';
-                }}, 5000);
-            }}
-
-            if(isTTSEnabled) {{
-                window.speechSynthesis.cancel(); 
-                speakText(item.en, 'en-US');
-                if(item.ko) speakText(item.ko, 'ko-KR');
-            }}
+            if(item.ko) {{ setTimeout(() => {{ const koEl = div.querySelector('.anim-ko'); if(koEl) koEl.style.opacity = '1'; }}, 2000); }}
+            if(!isSimpleMode && (item.memo1 || item.memo2)) {{ setTimeout(() => {{ const memoEl = div.querySelector('.anim-memo'); if(memoEl) memoEl.style.opacity = '1'; }}, 5000); }}
+            if(isTTSEnabled) {{ window.speechSynthesis.cancel(); speakText(item.en, 'en-US'); if(item.ko) speakText(item.ko, 'ko-KR'); }}
         }}
 
-        function step() {{
-            currentIndex = (currentIndex + 1) % filteredData.length;
-            renderRolling();
-        }}
-
-        function resetInterval() {{
-            if (intervalId) clearInterval(intervalId);
-            if (!isTouchMode && !isPaused) {{
-                intervalId = setInterval(step, currentSpeed);
-            }}
-        }}
-
-        document.body.addEventListener('click', function(e) {{
-            if (e.target.closest('.header-bar')) return;
-            if (isTouchMode) {{ moveNext(); }}
-        }});
+        function step() {{ currentIndex = (currentIndex + 1) % filteredData.length; renderRolling(); }}
+        function resetInterval() {{ if (intervalId) clearInterval(intervalId); if (!isTouchMode && !isPaused) {{ intervalId = setInterval(step, currentSpeed); }} }}
+        document.body.addEventListener('click', function(e) {{ if (e.target.closest('.header-bar')) return; if (isTouchMode) {{ moveNext(); }} }});
 
         changeCategory();
-
     </script>
     </body>
     </html>
@@ -458,12 +324,17 @@ def _fetch_sheet_concurrently(wb, sheet_name):
     except Exception:
         return pd.DataFrame()
 
+# ★ 핵심 업데이트: 구글 시트에 있는 모든 탭을 자동으로 찾아내어 로드합니다! (v5로 갱신)
 @st.cache_data(ttl=600)
-def get_english_data_v2():
+def get_english_data_v5():
     wb = init_connection().open("English_Sentences")
-    sheet_names = ["메인", "해석", "구동사", "TOM-영어", "동사구", "문법", "여행", "단어"]
+    all_sheets = wb.worksheets()
+    
+    # '링크' 탭은 따로 관리하므로 제외하고, 나머지 모든 탭 이름을 추출
+    sheet_names = [ws.title for ws in all_sheets if ws.title != "링크"]
+    
     dfs = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=len(sheet_names)) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(sheet_names))) as executor:
         results = executor.map(lambda name: _fetch_sheet_concurrently(wb, name), sheet_names)
         for res in results:
             if not res.empty:
@@ -477,7 +348,7 @@ def get_links_sheet():
     return init_connection().open("English_Sentences").worksheet("링크")
 
 @st.cache_data(ttl=600)
-def get_links_data_v2():
+def get_links_data_v5():
     sheet = get_links_sheet()
     for _ in range(3):
         try:
@@ -507,7 +378,7 @@ if st.query_params.get("study") == "true":
     """, unsafe_allow_html=True)
     
     try:
-        df = get_english_data_v2() 
+        df = get_english_data_v5()
         unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
         cat_param = st.query_params.get("cat", "ALL")
         initial_cat = "ALL" if cat_param in ["🔀 랜덤 10", "전체 분류", "ALL"] else cat_param
@@ -741,10 +612,11 @@ if st.session_state.is_simple:
 
 # --- [다이얼로그 설정 (영어 단어장)] ---
 @st.dialog("✨ 새 항목 추가")
-def add_dialog(unique_cats):
+def add_dialog(unique_cats, available_sheets):
     with st.form("add_form", clear_on_submit=True):
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; color: #FFD700;'>1. 저장할 시트</p>", unsafe_allow_html=True)
-        target_sheet_name = st.radio("저장할 시트", ["메인", "해석", "단어", "구동사", "TOM-영어", "동사구", "문법", "여행"], horizontal=True, label_visibility="collapsed")
+        # ★ 구글 시트에서 자동으로 가져온 시트 이름들을 선택 옵션으로 제공합니다!
+        target_sheet_name = st.radio("저장할 시트", available_sheets, horizontal=True, label_visibility="collapsed")
         
         st.markdown("<p style='font-size: 1.1rem; font-weight: bold; margin-top: 15px; margin-bottom: 5px; color: #FFD700;'>2. 카테고리 분류</p>", unsafe_allow_html=True)
         selected_cat = st.selectbox("기존 분류 선택", ["(새로 입력)"] + unique_cats)
@@ -768,7 +640,7 @@ def add_dialog(unique_cats):
                 target_sheet.append_row([final_cat, word_sent, mean, pron, m1, m2])
                 st.success("저장 완료!")
                 time.sleep(1)
-                st.cache_data.clear() # 강제 캐시 초기화 (데이터 갱신)
+                st.cache_data.clear() # 강제 캐시 초기화
                 st.rerun()
                 
     if st.button("❌ 창 닫기 (취소)", use_container_width=True):
@@ -950,7 +822,6 @@ def num_to_eng(num):
 
 # --- [메인 로직] ---
 
-# 1. 로그인 화면
 if not st.session_state.authenticated and st.session_state.logging_in:
     st.write("## 🔐 Security Login")
     with st.form("login_form", clear_on_submit=False):
@@ -969,14 +840,10 @@ if not st.session_state.authenticated and st.session_state.logging_in:
         st.session_state.logging_in = False
         st.rerun()
 else:
-    # ==========================================
-    # 🌟 메인 앱 상단 UI 
-    # ==========================================
     kst = timezone(timedelta(hours=9))
     now_kst = datetime.now(kst)
     date_str = now_kst.strftime("%A, %B %d, %Y")
     
-    # [Row 1] 타이틀 및 우측 날짜 영역
     h_col1, h_col2 = st.columns([6, 4], vertical_alignment="bottom")
     with h_col1:
         st.markdown("<h1 style='color:#FFD700; font-size: clamp(2.2rem, 3.5vw, 3.5rem); line-height: 1.1; margin:0; padding:0; letter-spacing:-0.5px;'>TOmBOy94 <span style='font-size:0.7em; color:#FFFFFF;'>ENG+LINK</span></h1>", unsafe_allow_html=True)
@@ -1004,7 +871,6 @@ else:
         
     st.markdown("<hr style='border: 0; height: 1px; background-image: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0)); margin: 10px 0 20px 0;'/>", unsafe_allow_html=True)
 
-    # [Row 2] 글로벌 네비게이션 컨트롤 패널
     n_col1, n_col2, n_col3, n_col4 = st.columns([2.5, 2.5, 4.0, 1.5], vertical_alignment="center")
     
     with n_col1:
@@ -1048,7 +914,6 @@ else:
                 if "auth" in st.query_params: del st.query_params["auth"]
                 st.rerun()
 
-    # Num.ENG 결과값 출력
     if st.session_state.num_input:
         clean_num = st.session_state.num_input.replace(",", "").strip()
         if clean_num.isdigit():
@@ -1061,11 +926,9 @@ else:
         else:
             st.markdown("<div class='num-result' style='border-left-color:#FF4B4B;'><span style='color:#FF4B4B!important; font-size:1.2rem!important;'>⚠️ 숫자만 입력 가능합니다.</span></div>", unsafe_allow_html=True)
 
-    # 상단 메뉴 구성용 JS 트릭 로드 (공통)
     components.html("""
         <script>
         const doc = window.parent.document;
-        // 복사 이벤트
         if (doc.copyLinkHandler) { doc.removeEventListener('click', doc.copyLinkHandler, true); }
         doc.copyLinkHandler = function(e) {
             let target = e.target.closest('.copyable-link');
@@ -1082,7 +945,6 @@ else:
         };
         doc.addEventListener('click', doc.copyLinkHandler, true);
 
-        // 학습 모드 팝업
         if (doc.studyPopupHandler) { doc.removeEventListener('click', doc.studyPopupHandler, true); }
         doc.studyPopupHandler = function(e) {
             let target = e.target.closest('.study-popup-link');
@@ -1094,7 +956,6 @@ else:
         };
         doc.addEventListener('click', doc.studyPopupHandler, true);
         
-        // 팝업창 외곽 클릭 방지
         if (doc.preventDialogCloseHandler) { doc.removeEventListener('mousedown', doc.preventDialogCloseHandler, true); doc.removeEventListener('click', doc.preventDialogCloseHandler, true); }
         doc.preventDialogCloseHandler = function(e) {
             let isDialogBg = false;
@@ -1106,7 +967,6 @@ else:
         };
         doc.addEventListener('mousedown', doc.preventDialogCloseHandler, true); doc.addEventListener('click', doc.preventDialogCloseHandler, true);
 
-        // Num.ENG 자동 콤마
         if (doc.liveCommaHandler) { doc.removeEventListener('input', doc.liveCommaHandler, true); }
         doc.liveCommaHandler = function(e) {
             if (e.target && e.target.tagName === 'INPUT') {
@@ -1123,7 +983,6 @@ else:
         };
         doc.addEventListener('input', doc.liveCommaHandler, true);
 
-        // ★ Manage app 버튼 강제 숨김 처리 (1초마다 감시)
         setInterval(function() {
             let badges = doc.querySelectorAll('.viewerBadge_container, [data-testid="viewerBadge"], [data-testid="stAppDeployButton"]');
             badges.forEach(b => b.style.display = 'none');
@@ -1137,13 +996,15 @@ else:
     # ==============================================================
     if st.session_state.app_mode == 'English':
         try:
-            df = get_english_data_v2() # ★ 변경된 캐시 함수 연동 (강제 갱신)
+            df = get_english_data_v5() # ★ 모든 시트 동적 감지 (v5 연동)
 
-            # 카테고리
             unique_cats = sorted([x for x in df['분류'].unique().tolist() if x != ''])
+            
+            # ★ 현재 존재하는 모든 시트 이름을 "저장할 시트" 옵션에 자동으로 뿌려줌
+            available_sheets = df['sheet_idx'].unique().tolist() if not df.empty else ["메인"]
+            
             sel_cat = st.radio("카테고리 선택", ["🔀 랜덤 10", "전체 분류"] + unique_cats, horizontal=True, label_visibility="collapsed", key="cat_radio", on_change=clear_search)
             
-            # ★ 데이터 필터링 로직을 다운로드 버튼 위로 이동하여 현재 화면과 동일한 데이터 추출
             is_simple = st.session_state.is_simple
             search = st.session_state.active_search
             d_df = df.copy()
@@ -1158,7 +1019,6 @@ else:
                     d_df = d_df[d_df['분류'] == sel_cat]
                 st.session_state.current_cat = sel_cat
 
-            # ★ 정렬 로직 (모든 시트를 행 번호 오름차순으로 통일, 대소문자 구분 없이 정렬)
             if st.session_state.sort_order == 'asc': 
                 d_df = d_df.sort_values(by='단어-문장', ascending=True, key=lambda col: col.str.lower())
             elif st.session_state.sort_order == 'desc': 
@@ -1167,7 +1027,6 @@ else:
                 if sel_cat != "🔀 랜덤 10":
                     d_df = d_df.sort_values(by='row_idx', ascending=True)
 
-            # 액션 툴바 (버튼 레이아웃 분할)
             st.markdown("<div style='background-color: rgba(0,0,0,0.25); padding: 15px 20px; border-radius: 15px; margin: 20px 0; border: 1px solid rgba(255,255,255,0.05);'>", unsafe_allow_html=True)
             cb_cols = [2.5, 2, 1.5, 1.5, 1.5] if st.session_state.authenticated else [3.5, 1.5, 1.5, 1.5]
             cb = st.columns(cb_cols, vertical_alignment="center")
@@ -1179,16 +1038,14 @@ else:
             prt_idx = 4 if st.session_state.authenticated else 3
             
             if st.session_state.authenticated:
-                if cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(unique_cats)
+                if cb[1].button("➕ 새 항목 추가", type="primary", use_container_width=True): add_dialog(unique_cats, available_sheets)
                 
             btn_text = "🔄 전체 정보 보기" if st.session_state.is_simple else "✨ 핵심만 보기"
             if cb[btn_idx].button(btn_text, type="primary" if not st.session_state.is_simple else "secondary", use_container_width=True):
                 st.session_state.is_simple = not st.session_state.is_simple; st.rerun()
 
-            # 다운로드 버튼
             cb[csv_idx].download_button("📥 CSV 추출", data=convert_df_to_csv(d_df), file_name=f"English_Data_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
             
-            # ★ 신규 A4 인쇄 버튼
             if cb[prt_idx].button("🖨️ A4 인쇄", use_container_width=True):
                 print_table(d_df, "TOmBOy94 영어 단어장")
                 
@@ -1234,15 +1091,13 @@ else:
     # ==============================================================
     elif st.session_state.app_mode == 'Links':
         try:
-            df_links_raw = get_links_data_v2() # ★ 변경된 캐시 함수 연동
+            df_links_raw = get_links_data_v5()
             
             unique_links_cats1 = sorted([x for x in df_links_raw['대분류'].unique().tolist() if x != ''])
             unique_links_cats2 = sorted([x for x in df_links_raw['소분류'].unique().tolist() if x != ''])
             
-            # 대분류
             sel_link_cat1 = st.radio("대분류 필터", ["전체 링크", "✨ 최근 5개"] + unique_links_cats1, horizontal=True, label_visibility="collapsed")
             
-            # 소분류
             sel_link_cat2 = "전체"
             if sel_link_cat1 not in ["전체 링크", "✨ 최근 5개"]:
                 subset_cat2 = sorted([x for x in df_links_raw[df_links_raw['대분류'] == sel_link_cat1]['소분류'].unique().tolist() if x != ''])
@@ -1251,20 +1106,18 @@ else:
                     st.markdown("<div style='margin-top:-15px;'></div>", unsafe_allow_html=True)
                     sel_link_cat2 = st.radio("소분류 필터", display_cat2, horizontal=True, label_visibility="collapsed", key="cat2_radio")
 
-            # ★ 데이터 필터링 로직을 다운로드 버튼 위로 이동하여 현재 화면과 동일한 데이터 추출
             search = st.session_state.active_search
             filtered_df_links = df_links_raw.copy()
             if search:
                 filtered_df_links = filtered_df_links[filtered_df_links['제목'].str.contains(search, case=False, na=False) | filtered_df_links['메모'].str.contains(search, case=False, na=False) | filtered_df_links['링크'].str.contains(search, case=False, na=False)]
             else:
                 if sel_link_cat1 == "✨ 최근 5개":
-                    filtered_df_links = filtered_df_links.tail(5) # 마지막 5개를 시트 순서대로 추출
+                    filtered_df_links = filtered_df_links.tail(5) 
                 elif sel_link_cat1 != "전체 링크":
                     filtered_df_links = filtered_df_links[filtered_df_links['대분류'] == sel_link_cat1]
                     if sel_link_cat2 != "전체":
                         filtered_df_links = filtered_df_links[filtered_df_links['소분류'] == sel_link_cat2]
 
-            # 액션 툴바 (버튼 레이아웃 분할)
             st.markdown("<div style='background-color: rgba(0,0,0,0.25); padding: 15px 20px; border-radius: 15px; margin: 20px 0; border: 1px solid rgba(255,255,255,0.05);'>", unsafe_allow_html=True)
             cb_cols = [2.5, 2, 1.5, 1.5] if st.session_state.authenticated else [3.5, 1.5, 1.5]
             cb = st.columns(cb_cols, vertical_alignment="center")
@@ -1278,10 +1131,8 @@ else:
                 if cb[1].button("➕ 새 링크 추가", type="primary", use_container_width=True):
                     add_link_dialog(unique_links_cats1, unique_links_cats2)
                     
-            # 다운로드 버튼
             cb[csv_idx].download_button("📥 CSV 추출", data=convert_df_to_csv(filtered_df_links), file_name=f"Links_{time.strftime('%Y%m%d')}.csv", use_container_width=True)
             
-            # ★ 신규 A4 인쇄 버튼
             if cb[prt_idx].button("🖨️ A4 인쇄", use_container_width=True):
                 print_table(filtered_df_links, "TOmBOy94 링크 모음")
                 
@@ -1289,7 +1140,6 @@ else:
             
             st.markdown(f"<div style='display:flex; justify-content:flex-end; padding-right:10px;'><span style='color:#A3B8B8; font-weight:bold; font-size:1.0rem;'>{('🔍 검색: ' + search + ' | ') if search else ''}총 {len(filtered_df_links)}개 링크</span></div>", unsafe_allow_html=True)
 
-            # --- 표 형식 헤더 ---
             l_ratio = [1.2, 1.2, 2.5, 2.0, 2.5, 1.2] if st.session_state.authenticated else [1.2, 1.2, 2.5, 2.0, 2.5]
             l_labels = ["대분류", "소분류", "제목", "메모", "링크", "수정"] if st.session_state.authenticated else ["대분류", "소분류", "제목", "메모", "링크"]
             
@@ -1299,7 +1149,6 @@ else:
             
             st.markdown("<div style='border-bottom:2px solid rgba(255,255,255,0.2); margin-top:-15px; margin-bottom:10px;'></div>", unsafe_allow_html=True)
 
-            # --- 표 내용 출력 ---
             if filtered_df_links.empty:
                 st.info("등록된 링크가 없습니다.")
             else:
@@ -1324,7 +1173,6 @@ else:
         except Exception as e: st.error(f"링크 데이터 오류 발생: {e}")
 
     # --- 공통 푸터 (페이지 네비게이션 포함) ---
-    # 영어 모드일 때만 공통 푸터 위에 페이지네이션 표시
     if st.session_state.app_mode == 'English' and 'pages' in locals() and pages > 1:
         st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
         
