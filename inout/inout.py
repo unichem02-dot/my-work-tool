@@ -112,6 +112,59 @@ st.markdown("""
     .alert-box { background-color: white; color: black; margin: 10px; border: 1px solid #ccc; font-size: 13px; }
     .alert-title { background-color: #cc0000; color: white; text-align: center; padding: 6px; font-weight: bold; }
     .alert-ul { padding-left: 20px; margin: 10px 10px 10px 0; } .alert-ul li { margin-bottom: 5px; }
+    
+    /* 🖨️ 인쇄 버튼 커스텀 스타일 */
+    .btn-print {
+        width: 100%; height: 38px;
+        background-color: #4e8cff; color: white;
+        border: none; border-radius: 4px; 
+        font-weight: bold; cursor: pointer; font-size: 15px;
+    }
+    .btn-print:hover { background-color: #3b76e5; }
+    
+    /* 🖨️ A4 인쇄(프린트) 전용 설정 */
+    @media print {
+        /* 불필요한 검색 패널, 버튼, 계산기 등 화면 요소 완벽 숨김 */
+        header, footer, .search-panel-container, form, .stButton, .stDownloadButton, .rt-calc-wrap, .btn-print {
+            display: none !important;
+        }
+        /* 앱 배경을 흰색으로 강제 초기화 */
+        [data-testid="stAppViewContainer"], .main .block-container {
+            background-color: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+        }
+        /* A4 용지 가로(Landscape) 방향 여백 설정 */
+        @page {
+            size: A4 landscape;
+            margin: 10mm;
+        }
+        /* 표 크기 A4 규격에 맞게 100% + 살짝 축소(zoom) 적용 */
+        .custom-table-container {
+            width: 100% !important;
+            zoom: 85%; /* 데이터가 많고 길어서 A4에 꽉 차게 축소 */
+            page-break-inside: auto;
+        }
+        .custom-table tr { page-break-inside: avoid; page-break-after: auto; }
+        /* 인쇄 시 글자색을 검정색으로 또렷하게 통일 */
+        .custom-table th, .custom-table td, .txt-in-bold, .txt-out-bold, .txt-in, .txt-out, .txt-gray, .txt-black, .tc a {
+            color: black !important;
+            text-decoration: none !important;
+        }
+        /* 테이블 헤더 배경색 강제 인쇄(브라우저 설정 무시하고 무조건 출력) */
+        .th-base, .th-in, .th-out, .sum-profit {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        /* 상단 테이블 제목 디자인 깔끔하게 처리 */
+        .table-title-box {
+            background-color: white !important;
+            border: none !important;
+            padding: 0px 0px 10px 0px !important;
+        }
+        .table-title-box span { color: black !important; }
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -538,12 +591,14 @@ try:
                 t_car = f_df['carprice_val'].sum()
                 t_profit = t_out_a - t_in_a - t_car
 
-                col_t1, col_t2, col_t3 = st.columns([6.5, 1.8, 1.7])
+                col_t1, col_t2, col_t3, col_t4 = st.columns([5.3, 1.7, 1.5, 1.5])
                 with col_t1: st.markdown(f'<div class="table-title-box"><span style="font-size:16px; font-weight:bold; color:#f8fafc;">{params.get("title","검색결과")}</span> <span style="font-size:13px; color:#cbd5e1; margin-left:10px;">| 출력 개수: {len(f_df)}</span></div>', unsafe_allow_html=True)
                 with col_t2: 
                     if st.button("🔄 날짜 정렬 전환", use_container_width=True, type="primary"):
                         st.session_state.sort_desc = not st.session_state.sort_desc; st.rerun()
                 with col_t3:
+                    st.markdown('<button class="btn-print" onclick="window.print()">🖨️ A4 인쇄</button>', unsafe_allow_html=True)
+                with col_t4:
                     csv = f_df.to_csv(index=False).encode('utf-8-sig')
                     st.download_button("💾 엑셀 다운로드", data=csv, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
 
