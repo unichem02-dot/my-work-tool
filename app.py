@@ -328,24 +328,19 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             // 2. 한국어 해석 (중간 강조)
             let koHtml = item.ko ? `<p style="color: #FFFFFF; font-size: ${{koSize}}; font-weight: 700; margin: 2vh 0 0 0; word-break: keep-all; line-height: 1.4; letter-spacing: -0.5px;">${{item.ko}}</p>` : "";
             
-            // 3. 부가 메모 영역 (팁 형태의 박스로 시각적 분리) - 배경색 어두운 회색조로 변경
+            // 3. 부가 메모 영역 (이모티콘, 배경색, 왼쪽 선 제거 / 메모1,2 색상 분리)
             let memoHtml = "";
             if (!isSimpleMode && (item.memo1 || item.memo2)) {{
                 memoHtml = `
                 <div style="
                     margin-top: 4vh; 
-                    background: rgba(255, 255, 255, 0.05); 
-                    border-left: 4px solid #E67E22; 
-                    border-radius: 8px; 
-                    padding: 2vh 3vw; 
                     width: 100%;
                     max-width: 900px;
-                    text-align: left;
-                    box-sizing: border-box;
+                    text-align: center;
                     display: inline-block;
                 ">
-                    ${{item.memo1 ? `<p style="color: #E0E0E0; font-size: ${{memoSize}}; font-weight: 500; margin: 0 0 1vh 0; word-break: keep-all; line-height: 1.5;">💡 ${{item.memo1}}</p>` : ''}}
-                    ${{item.memo2 ? `<p style="color: #E0E0E0; font-size: ${{memoSize}}; font-weight: 500; margin: 0; word-break: keep-all; line-height: 1.5;">📌 ${{item.memo2}}</p>` : ''}}
+                    ${{item.memo1 ? `<p style="color: #FFFACD; font-size: ${{memoSize}}; font-weight: 500; margin: 0 0 1vh 0; word-break: keep-all; line-height: 1.5;">${{item.memo1}}</p>` : ''}}
+                    ${{item.memo2 ? `<p style="color: #E0FFFF; font-size: ${{memoSize}}; font-weight: 500; margin: 0; word-break: keep-all; line-height: 1.5;">${{item.memo2}}</p>` : ''}}
                 </div>`;
             }}
 
