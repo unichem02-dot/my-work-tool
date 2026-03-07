@@ -586,9 +586,11 @@ try:
                             doc.write(`
                                 <html><head><title>인쇄 미리보기</title>
                                 <style>
-                                    /* A4 세로(Portrait) 방향 지정 및 여백 설정 */
-                                    @page {{ size: A4 portrait; margin: 10mm; }}
-                                    body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; }}
+                                    /* 💡 브라우저 상하단 기본 텍스트(URL, 날짜 등) 제거를 위해 margin: 0 설정 */
+                                    @page {{ size: A4 portrait; margin: 0mm; }}
+                                    
+                                    /* 💡 잘려나간 여백을 안쪽 padding으로 대체하여 기존 레이아웃 완벽 보존 */
+                                    body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; padding: 10mm; box-sizing: border-box; }}
                                     
                                     .print-header {{ font-size: 18px; font-weight: bold; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 2px solid #555; }}
                                     
