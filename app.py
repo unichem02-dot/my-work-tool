@@ -291,11 +291,12 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             window.speechSynthesis.speak(utterance);
         }}
 
+        // ★ 학습 효율 극대화: 플래시카드(Flashcard) 기반의 시각적 계층화 디자인 적용
         function renderRolling() {{
             if (!filteredData || filteredData.length === 0) return;
             const container = document.getElementById('rolling-container');
             
-            // ★ 이전 아이템 즉시 삭제 (지연 없음)
+            // 이전 아이템 즉시 삭제 (지연 없음)
             while (container.firstChild) {{
                 container.removeChild(container.firstChild);
             }}
@@ -304,39 +305,87 @@ def render_study_mode(study_data, unique_cats, initial_cat):
             document.getElementById('word-cat-display').innerText = item.cat;
 
             const div = document.createElement('div');
-            // ★ transition 애니메이션 코드 완전 제거
+            // 부드러운 전환 효과 제거 후 즉각 표시 설정
             div.style.position = 'absolute'; 
             div.style.width = '100%'; 
             div.style.left = '0'; 
             div.style.top = '50%'; 
             div.style.transform = 'translateY(-50%)'; 
-            div.style.padding = '0 20px'; 
+            div.style.padding = '0 2vw'; 
             div.style.boxSizing = 'border-box'; 
-            div.style.opacity = '1';  // 초기부터 투명도 1
+            div.style.opacity = '1';  
             div.style.zIndex = '10';
 
-            let enFontSize = item.en.length > 25 ? 'min(7vw, 9vh)' : 'min(10vw, 13vh)';
-            let pronSize = 'min(3.5vw, 4.5vh)';
-            let koSize = 'min(5.5vw, 7vh)';
-            let memoSize = 'min(3vw, 4vh)';
+            // 화면 크기에 맞춘 유동적 폰트 사이즈 (너무 커지지 않도록 한계 설정)
+            let enFontSize = item.en.length > 25 ? 'min(6vw, 8vh)' : 'min(8vw, 11vh)';
+            let pronSize = 'min(3vw, 4vh)';
+            let koSize = 'min(4.5vw, 6vh)';
+            let memoSize = 'min(2.5vw, 3.5vh)';
 
-            let pronHtml = (item.pron && item.pron.length <= 60) ? `<p style="font-size: ` + pronSize + `; color: #FFFFFF; margin: 2vh 0 0 0; font-weight: normal; font-style: italic; text-shadow: none;">${{item.pron}}</p>` : "";
+            // 1. 발음 (서브 텍스트)
+            let pronHtml = (item.pron && item.pron.length <= 60) ? `<p style="font-size: ${pronSize}; color: #A3B8B8; margin: 0 0 2vh 0; font-weight: 500; font-style: italic;">[ ${{item.pron}} ]</p>` : "";
             
-            // ★ 해석 및 메모의 opacity를 1로 고정하고 애니메이션(transition) 제거
-            let koHtml = item.ko ? `<p class="anim-ko" style="color: #a08b7a; font-size: ` + koSize + `; font-weight: bold; margin: 3vh 0 0 0; opacity: 1; word-break: keep-all; line-height: 1.4; text-shadow: none;">${{item.ko}}</p>` : "";
+            // 2. 한국어 해석 (중간 강조)
+            let koHtml = item.ko ? `<p style="color: #FFFFFF; font-size: ${koSize}; font-weight: 700; margin: 2vh 0 0 0; word-break: keep-all; line-height: 1.4; letter-spacing: -0.5px;">${{item.ko}}</p>` : "";
+            
+            // 3. 부가 메모 영역 (팁 형태의 박스로 시각적 분리)
             let memoHtml = "";
-            if (!isSimpleMode) {{
-                memoHtml = `<div class="anim-memo" style="opacity: 1; margin-top: 2.5vh; text-shadow: none;">`;
-                if (item.memo1) memoHtml += `<p style="color: #FFFF00; font-size: ` + memoSize + `; font-weight: 500; margin: 1vh 0; word-break: keep-all; line-height: 1.4;">${{item.memo1}}</p>`;
-                if (item.memo2) memoHtml += `<p style="color: #FFFF00; font-size: ` + memoSize + `; font-weight: 500; margin: 1vh 0; word-break: keep-all; line-height: 1.4;">${{item.memo2}}</p>`;
-                memoHtml += `</div>`;
+            if (!isSimpleMode && (item.memo1 || item.memo2)) {{
+                memoHtml = `
+                <div style="
+                    margin-top: 4vh; 
+                    background: rgba(0, 0, 0, 0.3); 
+                    border-left: 4px solid #E67E22; 
+                    border-radius: 8px; 
+                    padding: 2vh 3vw; 
+                    width: 100%;
+                    max-width: 900px;
+                    text-align: left;
+                    box-sizing: border-box;
+                    display: inline-block;
+                ">
+                    ${item.memo1 ? `<p style="color: #E0E0E0; font-size: ${memoSize}; font-weight: 500; margin: 0 0 1vh 0; word-break: keep-all; line-height: 1.5;">💡 ${{item.memo1}}</p>` : ''}
+                    ${item.memo2 ? `<p style="color: #E0E0E0; font-size: ${memoSize}; font-weight: 500; margin: 0; word-break: keep-all; line-height: 1.5;">📌 ${{item.memo2}}</p>` : ''}
+                </div>`;
             }}
 
-            div.innerHTML = `<div style="color: #E67E22; font-weight: 900; text-shadow: 0 0 20px rgba(230,126,34,0.4);"><p style="font-size: ` + enFontSize + `; margin: 0; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.2;">${{item.en}}</p></div>` + pronHtml + koHtml + memoHtml; 
-            
+            // ★ 메인 플래시카드(Flashcard) 컨테이너 조립
+            const cardHtml = `
+                <div style="
+                    background: linear-gradient(145deg, rgba(34, 67, 67, 0.9), rgba(26, 47, 47, 0.95));
+                    border: 1px solid rgba(255, 215, 0, 0.2);
+                    border-radius: 30px;
+                    padding: min(5vh, 40px) min(4vw, 40px);
+                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+                    width: 95%;
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    text-align: center;
+                ">
+                    <!-- 가장 중요한 영어 문장 -->
+                    <div style="color: #FFD700; font-weight: 900; text-shadow: 0 4px 15px rgba(255, 215, 0, 0.3); width: 100%;">
+                        <p style="font-size: ${enFontSize}; margin: 0; padding-bottom: 1vh; letter-spacing: 0.5px; word-break: keep-all; line-height: 1.2;">${{item.en}}</p>
+                    </div>
+                    
+                    <!-- 발음 기호 -->
+                    ${pronHtml}
+                    
+                    <!-- 시각적 구분을 위한 라인 -->
+                    ${item.ko ? `<div style="width: 80%; height: 2px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent); margin: 1vh 0;"></div>` : ''}
+                    
+                    <!-- 해석 및 메모 -->
+                    ${koHtml}
+                    ${memoHtml}
+                </div>
+            `;
+
+            div.innerHTML = cardHtml; 
             container.appendChild(div);
 
-            // ★ 불필요한 setTimeout 지연 렌더링 삭제
+            // 음성 재생 로직 (지연 없음)
             if(isTTSEnabled) {{ window.speechSynthesis.cancel(); speakText(item.en, 'en-US'); if(item.ko) speakText(item.ko, 'ko-KR'); }}
         }}
 
@@ -378,13 +427,11 @@ def _fetch_sheet_concurrently(wb, sheet_name):
         print(f"Error loading sheet {sheet_name}: {e}")
         return pd.DataFrame()
 
-# ★ v7로 변경하여 이전 캐시를 강제로 비우고 '임시' 시트 제외 로직을 적용합니다.
 @st.cache_data(ttl=600)
 def get_english_data_v7():
     wb = init_connection().open("English_Sentences")
     all_sheets = wb.worksheets()
     
-    # ★ '링크' 탭과 이름에 '임시'가 포함된 탭을 모두 제외하고 추출
     sheet_names = [ws.title for ws in all_sheets if ws.title != "링크" and "임시" not in ws.title]
     
     dfs = []
