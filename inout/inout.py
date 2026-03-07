@@ -26,6 +26,9 @@ st.markdown("""
     [data-testid="manage-app-button"] {display: none !important;}
     [data-testid="stAppDeployButton"] {display: none !important;}
     .stDeployButton {display: none !important;}
+    
+    /* 💡 표 우측 상단에 나타나는 기본 툴바(흰색 빈 박스 버그) 완전 숨김 처리 */
+    [data-testid="stElementToolbar"] {display: none !important;}
 
     [data-testid="stAppViewContainer"] { background-color: #2b323c; }
     .main .block-container { padding-top: 1rem; max-width: 98%; }
