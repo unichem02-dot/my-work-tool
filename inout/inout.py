@@ -524,11 +524,11 @@ try:
                 
                 print_title = params.get("title", "검색결과")
 
-                # 💡 [모드 분기] 결산 버튼 클릭 시 대시보드 화면 렌더링
+                # 💡 [모드 분기] 결산 버튼 클릭 시 프리미엄 대시보드 화면 렌더링
                 if params["mode"] == "결산":
                     st.markdown(f"<h2 style='text-align: center; color: #4e8cff; margin-bottom: 20px;'>📊 {params['year']}년 {params['month']}월 결산 종합 대시보드</h2>", unsafe_allow_html=True)
                     
-                    # 1. 4대 핵심 지표 (카드 UI)
+                    # [섹션 1] 4대 핵심 지표 (카드 UI)
                     col1, col2, col3, col4 = st.columns(4)
                     with col1:
                         st.metric("총 매출액 (A) ↗", f"{t_out_a:,.0f} 원")
@@ -542,22 +542,24 @@ try:
                     
                     st.markdown("<hr style='border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
                     
-                    # 2. 일별 흐름 및 Top 5 차트
-                    c_left, c_right = st.columns([2, 1])
+                    # [섹션 2] 일별 흐름 차트 (넓게 배치)
+                    st.markdown("<h4 style='color: #f8fafc;'>📈 일별 매출 및 매입 흐름</h4>", unsafe_allow_html=True)
+                    daily_df = f_df.groupby('date')[['out_total', 'in_total']].sum().reset_index()
+                    if not daily_df.empty:
+                        daily_df.set_index('date', inplace=True)
+                        daily_df.columns = ['매출액', '매입액']
+                        st.bar_chart(daily_df, height=350, use_container_width=True)
+                    else:
+                        st.info("해당 월의 차트 데이터가 없습니다.")
+
+                    st.markdown("<br>", unsafe_allow_html=True)
                     
-                    with c_left:
-                        st.markdown("<h4 style='color: #f8fafc;'>📈 일별 매출 및 매입 흐름</h4>", unsafe_allow_html=True)
-                        daily_df = f_df.groupby('date')[['out_total', 'in_total']].sum().reset_index()
-                        if not daily_df.empty:
-                            daily_df.set_index('date', inplace=True)
-                            daily_df.columns = ['매출액', '매입액']
-                            # 💡 우측 표 3개의 높이에 맞춰 차트 세로 길이 조정 (450)
-                            st.bar_chart(daily_df, height=450)
-                        else:
-                            st.info("해당 월의 데이터가 없습니다.")
-                            
-                    with c_right:
-                        st.markdown("<h4 style='color: #f8fafc;'>🏆 최고 매출 거래처 Top 5</h4>", unsafe_allow_html=True)
+                    # [섹션 3] 3단 랭킹 분석표 (매출/지출/품목)
+                    rank_col1, rank_col2, rank_col3 = st.columns(3)
+                    
+                    # --- 1열: 매출 & 이익 분석 ---
+                    with rank_col1:
+                        st.markdown("<h4 style='color: #60a5fa;'>🏆 최고 매출 거래처 Top 5</h4>", unsafe_allow_html=True)
                         valid_outcom = f_df[f_df['outcom'].astype(str).str.strip() != '']
                         if not valid_outcom.empty:
                             top_out = valid_outcom.groupby('outcom')['out_total'].sum().sort_values(ascending=False).head(5).reset_index()
@@ -566,23 +568,53 @@ try:
                         else:
                             st.caption("매출 내역이 없습니다.")
                             
-                        # 💡 최고 이익 거래처 Top 5 신규 추가
-                        st.markdown("<br><h4 style='color: #f8fafc;'>💎 최고 이익 거래처 Top 5</h4>", unsafe_allow_html=True)
+                        st.markdown("<br><h4 style='color: #fbbf24;'>💎 최고 이익 거래처 Top 5</h4>", unsafe_allow_html=True)
                         if not valid_outcom.empty:
                             top_profit = valid_outcom.groupby('outcom')['profit'].sum().sort_values(ascending=False).head(5).reset_index()
                             top_profit.columns = ['거래처명', '순이익']
                             st.dataframe(top_profit.style.format({'순이익': '{:,.0f}'}), use_container_width=True, hide_index=True)
                         else:
                             st.caption("수익 내역이 없습니다.")
+                    
+                    # --- 2열: 매입 & 지출 분석 ---
+                    with rank_col2:
+                        st.markdown("<h4 style='color: #f472b6;'>📉 최고 매입 거래처 Top 5</h4>", unsafe_allow_html=True)
+                        valid_incom = f_df[f_df['incom'].astype(str).str.strip() != '']
+                        if not valid_incom.empty:
+                            top_in = valid_incom.groupby('incom')['in_total'].sum().sort_values(ascending=False).head(5).reset_index()
+                            top_in.columns = ['거래처명', '매입액']
+                            st.dataframe(top_in.style.format({'매입액': '{:,.0f}'}), use_container_width=True, hide_index=True)
+                        else:
+                            st.caption("매입 내역이 없습니다.")
                             
-                        st.markdown("<br><h4 style='color: #f8fafc;'>📦 베스트셀러 품목 Top 5</h4>", unsafe_allow_html=True)
+                        st.markdown("<br><h4 style='color: #a78bfa;'>🚚 운송비 지출(배송) Top 5</h4>", unsafe_allow_html=True)
+                        valid_car = f_df[f_df['carno'].astype(str).str.strip() != '']
+                        if not valid_car.empty:
+                            top_car = valid_car.groupby('carno')['carprice_val'].sum().sort_values(ascending=False).head(5).reset_index()
+                            top_car.columns = ['배송수단', '운송비총액']
+                            st.dataframe(top_car.style.format({'운송비총액': '{:,.0f}'}), use_container_width=True, hide_index=True)
+                        else:
+                            st.caption("운송비 내역이 없습니다.")
+
+                    # --- 3열: 품목 동향 분석 ---
+                    with rank_col3:
+                        st.markdown("<h4 style='color: #34d399;'>📦 베스트셀러 품목 Top 5</h4>", unsafe_allow_html=True)
                         valid_item = f_df[f_df['outitem'].astype(str).str.strip() != '']
                         if not valid_item.empty:
                             top_item = valid_item.groupby('outitem')['outq_val'].sum().sort_values(ascending=False).head(5).reset_index()
-                            top_item.columns = ['품목명', '수량']
-                            st.dataframe(top_item.style.format({'수량': '{:,.0f}'}), use_container_width=True, hide_index=True)
+                            top_item.columns = ['품목명', '판매수량']
+                            st.dataframe(top_item.style.format({'판매수량': '{:,.0f}'}), use_container_width=True, hide_index=True)
                         else:
-                            st.caption("판매 내역이 없습니다.")
+                            st.caption("판매 품목 내역이 없습니다.")
+                            
+                        st.markdown("<br><h4 style='color: #818cf8;'>📥 최다 매입 품목 Top 5</h4>", unsafe_allow_html=True)
+                        valid_initem = f_df[f_df['initem'].astype(str).str.strip() != '']
+                        if not valid_initem.empty:
+                            top_initem = valid_initem.groupby('initem')['inq_val'].sum().sort_values(ascending=False).head(5).reset_index()
+                            top_initem.columns = ['품목명', '매입수량']
+                            st.dataframe(top_initem.style.format({'매입수량': '{:,.0f}'}), use_container_width=True, hide_index=True)
+                        else:
+                            st.caption("매입 품목 내역이 없습니다.")
 
                 # 💡 그 외 검색 버튼 클릭 시 (기존 테이블 + 인쇄 모드)
                 else:
