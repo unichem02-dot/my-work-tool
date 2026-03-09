@@ -177,7 +177,8 @@ st.session_state.last_activity = get_kst_now()
 col_t, col_u, col_r, col_l = st.columns([5.5, 1.5, 1.5, 1.5])
 with col_t: st.markdown("<h3 style='margin:0;'>📦 입출력 통합 관리 시스템</h3>", unsafe_allow_html=True)
 with col_u:
-    if st.button("📤 DB 업로드" if not st.session_state.show_uploader else "❌ 업로드 닫기", use_container_width=True):
+    # 💡 업로드 버튼을 파란색(type="primary")으로 변경
+    if st.button("📤 DB 업로드" if not st.session_state.show_uploader else "❌ 업로드 닫기", use_container_width=True, type="primary"):
         st.session_state.show_uploader = not st.session_state.show_uploader
         st.rerun()
 with col_r:
@@ -200,9 +201,14 @@ if st.session_state.show_uploader:
     
     if uploaded_file is not None:
         try:
-            # 💡 3중 방어막: csv -> openpyxl(xlsx) -> xlrd(xls) -> 자체 HTML 파서(lxml 우회)
+            # 💡 3중 방어막: csv -> openpyxl(xlsx) -> xlrd(xls) -> 자체 HTML 파서(lxml 우회 + cp949 인코딩 처리)
             if uploaded_file.name.endswith('.csv'):
-                upload_df = pd.read_csv(uploaded_file)
+                # CSV 파일도 한글 인코딩 에러 방지
+                try:
+                    upload_df = pd.read_csv(uploaded_file, encoding='utf-8')
+                except UnicodeDecodeError:
+                    uploaded_file.seek(0)
+                    upload_df = pd.read_csv(uploaded_file, encoding='cp949')
             else:
                 try:
                     upload_df = pd.read_excel(uploaded_file, engine='openpyxl')
@@ -211,9 +217,15 @@ if st.session_state.show_uploader:
                         uploaded_file.seek(0)
                         upload_df = pd.read_excel(uploaded_file, engine='xlrd')
                     except Exception:
-                        # 💡 [핵심 해결] lxml 라이브러리가 없을 때를 대비한 자체 정규식 HTML 파서
+                        # 💡 [핵심 해결] lxml 라이브러리가 없을 때를 대비한 자체 정규식 HTML 파서 + 한글(cp949) 방어막
                         uploaded_file.seek(0)
-                        html_content = uploaded_file.getvalue().decode('utf-8', errors='ignore')
+                        raw_bytes = uploaded_file.getvalue()
+                        try:
+                            # 먼저 utf-8로 시도
+                            html_content = raw_bytes.decode('utf-8')
+                        except UnicodeDecodeError:
+                            # 💡 실패 시 국내 ERP에서 많이 쓰이는 euc-kr / cp949로 강제 해독
+                            html_content = raw_bytes.decode('cp949', errors='ignore')
                         
                         # <table> 안의 <tr> 태그들을 모두 찾음
                         trs = re.findall(r'<tr[^>]*>(.*?)</tr>', html_content, re.IGNORECASE | re.DOTALL)
