@@ -665,13 +665,13 @@ try:
             with u14: b_mon = st.button("월별검색", use_container_width=True, type="primary")
             with u15: b_yong = st.button("용차", use_container_width=True, type="primary")
 
-        # --- 버튼 액션 라우팅 ---
-        if b1: st.session_state.search_params = {"mode":"기간","title":"기간검색","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0]}
-        elif b2: st.session_state.search_params = {"mode":"월별상세","title":"월별상세검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2}
-        elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3}
+        # 💡 [핵심 버그 해결] 버튼 누르는 즉시 강제 새로고침(st.rerun)을 발생시켜 옛날 데이터가 불려오는 현상 차단
+        if b1: st.session_state.search_params = {"mode":"기간","title":"기간검색","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0]}; st.rerun()
+        elif b2: st.session_state.search_params = {"mode":"월별상세","title":"월별상세검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2}; st.rerun()
+        elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3}; st.rerun()
         elif b_new: st.session_state.search_params = {"mode":"신규입력"}; st.session_state.copy_id = None; st.rerun()
-        elif b_rec: st.session_state.search_params = {"mode":"최근","title":"최근입력순서","limit":lmt}
-        elif b_day: st.session_state.search_params = {"mode":"일","title":f"{d_day} 검색","date":d_day}
+        elif b_rec: st.session_state.search_params = {"mode":"최근","title":"최근입력순서","limit":lmt}; st.rerun()
+        elif b_day: st.session_state.search_params = {"mode":"일","title":f"{d_day} 검색","date":d_day}; st.rerun()
         elif b_ayt:
             st.session_state.search_params = {
                 "mode":"기간",
@@ -683,8 +683,9 @@ try:
                 "start": d_day - timedelta(days=1),
                 "end": d_day + timedelta(days=1)
             }
-        elif b_mon: st.session_state.search_params = {"mode":"월별","title":f"{y4}년 {m4}월 검색","year":y4,"month":m4}
-        elif b_yong: st.session_state.search_params = {"mode":"용차","title":f"{y4}년 {m4}월 용차(용/다) 검색","year":y4,"month":m4}
+            st.rerun()
+        elif b_mon: st.session_state.search_params = {"mode":"월별","title":f"{y4}년 {m4}월 검색","year":y4,"month":m4}; st.rerun()
+        elif b_yong: st.session_state.search_params = {"mode":"용차","title":f"{y4}년 {m4}월 용차(용/다) 검색","year":y4,"month":m4}; st.rerun()
 
         params = st.session_state.search_params
         if params["mode"] != "init":
