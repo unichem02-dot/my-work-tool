@@ -194,7 +194,6 @@ st.session_state.last_activity = get_kst_now()
 col_t, col_u, col_r, col_l = st.columns([5.5, 1.5, 1.5, 1.5])
 with col_t: st.markdown("<h3 style='margin:0;'>📦 입출력 통합 관리 시스템</h3>", unsafe_allow_html=True)
 with col_u:
-    # 💡 업로드 버튼을 파란색(type="primary")으로 변경
     if st.button("📤 DB 업로드" if not st.session_state.show_uploader else "❌ 업로드 닫기", use_container_width=True, type="primary"):
         st.session_state.show_uploader = not st.session_state.show_uploader
         st.rerun()
@@ -218,9 +217,7 @@ if st.session_state.show_uploader:
     
     if uploaded_file is not None:
         try:
-            # 💡 3중 방어막: csv -> openpyxl(xlsx) -> xlrd(xls) -> 자체 HTML 파서(lxml 우회 + cp949 인코딩 처리)
             if uploaded_file.name.endswith('.csv'):
-                # CSV 파일도 한글 인코딩 에러 방지
                 try:
                     upload_df = pd.read_csv(uploaded_file, encoding='utf-8')
                 except UnicodeDecodeError:
@@ -234,28 +231,22 @@ if st.session_state.show_uploader:
                         uploaded_file.seek(0)
                         upload_df = pd.read_excel(uploaded_file, engine='xlrd')
                     except Exception:
-                        # 💡 [핵심 해결] lxml 라이브러리가 없을 때를 대비한 자체 정규식 HTML 파서 + 한글(cp949) 방어막
                         uploaded_file.seek(0)
                         raw_bytes = uploaded_file.getvalue()
                         try:
-                            # 먼저 utf-8로 시도
                             html_content = raw_bytes.decode('utf-8')
                         except UnicodeDecodeError:
-                            # 💡 실패 시 국내 ERP에서 많이 쓰이는 euc-kr / cp949로 강제 해독
                             html_content = raw_bytes.decode('cp949', errors='ignore')
                         
-                        # <table> 안의 <tr> 태그들을 모두 찾음
                         trs = re.findall(r'<tr[^>]*>(.*?)</tr>', html_content, re.IGNORECASE | re.DOTALL)
                         if not trs:
                             raise ValueError("표 데이터를 찾을 수 없습니다. 진짜 엑셀(.xlsx)로 '다른 이름으로 저장' 후 시도해주세요.")
                         
                         data = []
                         for tr in trs:
-                            # <tr> 안의 <td> 또는 <th> 태그들을 찾음
                             tds = re.findall(r'<t[dh][^>]*>(.*?)</t[dh]>', tr, re.IGNORECASE | re.DOTALL)
-                            # 태그 안의 불필요한 HTML 요소 및 공백 제거
                             tds = [re.sub(r'<[^>]+>', '', td).replace('&nbsp;', ' ').strip() for td in tds]
-                            if any(tds):  # 완전히 비어있는 줄은 제외
+                            if any(tds):
                                 data.append(tds)
                                 
                         if len(data) > 1:
@@ -266,9 +257,59 @@ if st.session_state.show_uploader:
             st.success(f"✅ 파일 읽기 성공! 총 {len(upload_df):,}개의 데이터를 가져왔습니다.")
             st.dataframe(upload_df.head(5), use_container_width=True)
             
+            # 💡 본격적인 구글 시트 연도별 분할 자동화 로직
             if st.button("🚀 구글 시트에 연도별로 분할 저장하기", type="primary"):
-                st.warning("데이터 연도 분석 및 구글 시트 분할 생성 기능을 곧 연결해 드릴 예정입니다!")
-                
+                # 필수 날짜(date) 열 존재 확인
+                target_date_col = 'date' if 'date' in upload_df.columns else None
+                if not target_date_col:
+                    # '날짜' 등 다른 이름으로 되어 있을 수 있으므로 탐색
+                    for col in upload_df.columns:
+                        if 'date' in str(col).lower() or '날짜' in str(col):
+                            target_date_col = col
+                            break
+
+                if not target_date_col:
+                    st.error("⚠️ 업로드한 파일에 'date' 또는 '날짜' 열을 찾을 수 없어 연도별 분석이 불가능합니다.")
+                else:
+                    with st.spinner("⏳ 데이터를 연도별로 분석하여 구글 시트에 분할 업로드 중입니다... (데이터량에 따라 1~2분 소요될 수 있습니다)"):
+                        try:
+                            client = init_connection()
+                            spreadsheet = client.open('SQL백업260211-jeilinout')
+                            
+                            # 날짜 데이터 정제 및 연도(year) 추출
+                            temp_df = upload_df.copy()
+                            temp_df[target_date_col] = pd.to_datetime(temp_df[target_date_col], errors='coerce')
+                            valid_df = temp_df.dropna(subset=[target_date_col]).copy()
+                            valid_df['분할연도'] = valid_df[target_date_col].dt.year.astype(int)
+                            
+                            years_found = valid_df['분할연도'].unique()
+                            
+                            for y in sorted(years_found, reverse=True):
+                                year_str = f"{y}년"
+                                year_df = valid_df[valid_df['분할연도'] == y].drop(columns=['분할연도'])
+                                
+                                # JSON 변환을 위해 날짜를 다시 문자열로 바꾸고, NaN(빈칸) 처리
+                                year_df[target_date_col] = year_df[target_date_col].dt.strftime('%Y-%m-%d')
+                                year_df = year_df.fillna("")
+                                
+                                # 시트(탭) 찾기, 없으면 새로 만들기
+                                try:
+                                    worksheet = spreadsheet.worksheet(year_str)
+                                    worksheet.clear() # 기존 데이터 포맷팅
+                                except gspread.exceptions.WorksheetNotFound:
+                                    worksheet = spreadsheet.add_worksheet(title=year_str, rows=str(len(year_df)+100), cols=str(len(year_df.columns)))
+                                
+                                # 구글 시트에 쓸 데이터 배열 만들기
+                                data_to_upload = [year_df.columns.tolist()] + year_df.values.tolist()
+                                worksheet.update("A1", data_to_upload)
+                            
+                            st.success(f"🎉 성공! 총 {len(years_found)}개의 연도별 탭({', '.join(f'{y}년' for y in sorted(years_found, reverse=True))})으로 깔끔하게 분할 저장이 완료되었습니다!")
+                            st.balloons()
+                            st.cache_data.clear() # 기존에 불러왔던 시스템 캐시 삭제
+                            
+                        except Exception as e:
+                            st.error(f"⚠️ 구글 시트 전송 중 오류가 발생했습니다: {e}")
+                            
         except Exception as e:
             st.error(f"⚠️ 파일을 읽는 중 오류가 발생했습니다: {e}")
             
