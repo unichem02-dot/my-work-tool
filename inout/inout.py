@@ -109,29 +109,30 @@ st.markdown("""
     [data-testid="stMetricValue"] { color: #ffffff !important; }
     [data-testid="stMetricLabel"] { color: #cbd5e1 !important; font-size: 16px !important; }
     
-    /* 💡 파일 업로드 창(Drag & Drop 존) 가시성 완벽 해결 */
-    [data-testid="stFileUploadDropzone"] {
-        background-color: #f1f5f9 !important; /* 밝은 회색 배경 */
-        border: 2px dashed #94a3b8 !important;
+    /* 💡 파일 업로드 창 전체 가시성 완벽 해결 (상위 컨테이너 강제 적용) */
+    div[data-testid="stFileUploader"] {
+        background-color: #f1f5f9 !important; /* 밝은 회색 바탕 */
         border-radius: 8px !important;
+        padding: 10px !important;
     }
-    /* 드롭존 안의 모든 글자 강제 검은색 적용 */
-    [data-testid="stFileUploadDropzone"] * {
-        color: #1e293b !important;
-        font-weight: 600 !important;
+    div[data-testid="stFileUploader"] * {
+        color: #1e293b !important; /* 모든 내부 글자 진한 블랙 강제 */
+        font-weight: bold !important;
     }
-    /* 구름 아이콘 색상 블랙 강제 적용 */
-    [data-testid="stFileUploadDropzone"] svg {
+    div[data-testid="stFileUploadDropzone"] {
+        background-color: transparent !important;
+        border: 2px dashed #94a3b8 !important;
+    }
+    div[data-testid="stFileUploader"] svg {
         fill: #1e293b !important;
         color: #1e293b !important;
     }
-    /* 업로드 박스 안의 버튼 (Browse files) 디자인 눈에 띄게 */
-    [data-testid="stFileUploadDropzone"] button {
+    div[data-testid="stFileUploader"] button {
         background-color: #ffffff !important;
         border: 1px solid #1e293b !important;
         color: #1e293b !important; 
     }
-    [data-testid="stFileUploadDropzone"] button:hover {
+    div[data-testid="stFileUploader"] button:hover {
         background-color: #e2e8f0 !important;
     }
     </style>
