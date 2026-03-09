@@ -109,21 +109,30 @@ st.markdown("""
     [data-testid="stMetricValue"] { color: #ffffff !important; }
     [data-testid="stMetricLabel"] { color: #cbd5e1 !important; font-size: 16px !important; }
     
-    /* 💡 파일 업로드 창(Drag & Drop 존) 텍스트를 검은색으로 변경 */
+    /* 💡 파일 업로드 창(Drag & Drop 존) 가시성 완벽 해결 */
     [data-testid="stFileUploadDropzone"] {
         background-color: #f1f5f9 !important; /* 밝은 회색 배경 */
         border: 2px dashed #94a3b8 !important;
         border-radius: 8px !important;
     }
-    [data-testid="stFileUploadDropzone"] div,
-    [data-testid="stFileUploadDropzone"] span,
-    [data-testid="stFileUploadDropzone"] small {
-        color: #1e293b !important; /* 선명한 블랙(진회색) 텍스트 */
-        font-weight: 600;
+    /* 드롭존 안의 모든 글자 강제 검은색 적용 */
+    [data-testid="stFileUploadDropzone"] * {
+        color: #1e293b !important;
+        font-weight: 600 !important;
     }
-    /* 업로드 박스 안의 버튼 (Browse files) 글자색도 진하게 */
+    /* 구름 아이콘 색상 블랙 강제 적용 */
+    [data-testid="stFileUploadDropzone"] svg {
+        fill: #1e293b !important;
+        color: #1e293b !important;
+    }
+    /* 업로드 박스 안의 버튼 (Browse files) 디자인 눈에 띄게 */
     [data-testid="stFileUploadDropzone"] button {
+        background-color: #ffffff !important;
+        border: 1px solid #1e293b !important;
         color: #1e293b !important; 
+    }
+    [data-testid="stFileUploadDropzone"] button:hover {
+        background-color: #e2e8f0 !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -198,7 +207,6 @@ def init_connection():
 
 @st.cache_data(ttl=600)
 def get_available_years():
-    # 💡 구글 시트에 어떤 연도 탭들이 있는지 싹 다 조사해서 리스트로 만듭니다.
     client = init_connection()
     spreadsheet = client.open('SQL백업260211-jeilinout')
     years = []
@@ -214,7 +222,6 @@ def get_available_years():
 
 @st.cache_data(ttl=300)
 def load_data_for_years(target_years):
-    # 💡 검색에 필요한 연도의 시트만 콕 집어서 다운로드합니다 (로딩 속도 폭발적 향상)
     client = init_connection()
     spreadsheet = client.open('SQL백업260211-jeilinout')
     all_data = []
@@ -228,7 +235,7 @@ def load_data_for_years(target_years):
                 df_y = pd.DataFrame(raw[1:], columns=header)
                 all_data.append(df_y)
         except:
-            pass # 해당 연도의 시트가 없으면 패스
+            pass
             
     if not all_data: return pd.DataFrame()
     return pd.concat(all_data, ignore_index=True)
@@ -370,12 +377,11 @@ try:
     years = available_years
     months = list(range(1, 13))
     
-    # 💡 [핵심 최적화] 검색 모드에 따라 10년 치 전체가 아닌 '필요한 연도'만 타겟팅하여 로드합니다.
     params = st.session_state.search_params
     target_years = []
     
     if st.session_state.edit_id or st.session_state.copy_id:
-        target_years = available_years # 수정 모드일 때는 ID를 찾기 위해 전체 조회 (추후 최적화 가능)
+        target_years = available_years 
     elif params["mode"] == "기간":
         start_y = params["start"].year
         end_y = params["end"].year
@@ -387,11 +393,9 @@ try:
     elif params["mode"] == "신규입력":
         target_years = [get_kst_now().year]
         
-    # 만약 타겟 연도가 없다면 가장 최근 연도만 로드
     if not target_years: 
         target_years = [available_years[0]] if available_years else [get_kst_now().year]
 
-    # 선택된 연도의 시트만 초고속 병합 로드
     df = load_data_for_years(target_years)
     
     date_col = 'date'
@@ -404,7 +408,6 @@ try:
             df[f'{c}_val'] = df[c].apply(clean_numeric)
         df['in_total'], df['out_total'] = df['inq_val'] * df['inprice_val'], df['outq_val'] * df['outprice_val']
     else:
-        # 빈 데이터프레임 초기화
         df = pd.DataFrame(columns=['id', 'date', 'year', 'month', 'incom', 'initem', 'inq_val', 'inprice_val', 'outcom', 'outitem', 'outq_val', 'outprice_val', 'carno', 'carprice_val', 'in_total', 'out_total', 's'])
 
     # ---------------------------------------------------------
@@ -416,7 +419,6 @@ try:
         if not target.empty:
             t = target.iloc[0]
             def_date = pd.to_datetime(t['date']).date() if pd.notnull(t['date']) else get_kst_now().date()
-            # 💡 수정할 때 원본 데이터가 있던 '연도' 탭을 찾아서 업데이트/삭제
             orig_year = def_date.year
             s_idx = 1 if '중부' in safe_str(t.get('s')) else 0
             
@@ -511,13 +513,11 @@ try:
                 spreadsheet = client.open('SQL백업260211-jeilinout')
                 target_year_str = f"{n_date.year}년"
                 
-                # 💡 초고속 ID 생성기 (현재 시간을 숫자로 변환하여 절대 중복되지 않음. 과거 10년치 뒤질 필요 없음)
                 next_id = int(get_kst_now().strftime("%y%m%d%H%M%S"))
                 
                 try:
                     sheet = spreadsheet.worksheet(target_year_str)
                 except gspread.exceptions.WorksheetNotFound:
-                    # 해당 연도 시트가 없으면 알아서 새로 만듦
                     sheet = spreadsheet.add_worksheet(title=target_year_str, rows="1000", cols="15")
                     sheet.append_row(['id', 'date', 'incom', 'initem', 'inq', 'inprice', 'outcom', 'outitem', 'outq', 'outprice', 'memo', 's', 'carno', 'carprice'])
                 
@@ -533,7 +533,6 @@ try:
     else:
         with st.container():
             
-            # 💡 실시간 계산기 렌더링
             components.html(
                 """
                 <!DOCTYPE html>
