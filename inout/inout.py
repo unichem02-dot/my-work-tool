@@ -108,6 +108,23 @@ st.markdown("""
     /* 결산 뷰 전용 대시보드 폰트 오버라이드 */
     [data-testid="stMetricValue"] { color: #ffffff !important; }
     [data-testid="stMetricLabel"] { color: #cbd5e1 !important; font-size: 16px !important; }
+    
+    /* 💡 파일 업로드 창(Drag & Drop 존) 텍스트를 검은색으로 변경 */
+    [data-testid="stFileUploadDropzone"] {
+        background-color: #f1f5f9 !important; /* 밝은 회색 배경 */
+        border: 2px dashed #94a3b8 !important;
+        border-radius: 8px !important;
+    }
+    [data-testid="stFileUploadDropzone"] div,
+    [data-testid="stFileUploadDropzone"] span,
+    [data-testid="stFileUploadDropzone"] small {
+        color: #1e293b !important; /* 선명한 블랙(진회색) 텍스트 */
+        font-weight: 600;
+    }
+    /* 업로드 박스 안의 버튼 (Browse files) 글자색도 진하게 */
+    [data-testid="stFileUploadDropzone"] button {
+        color: #1e293b !important; 
+    }
     </style>
     """, unsafe_allow_html=True)
 
