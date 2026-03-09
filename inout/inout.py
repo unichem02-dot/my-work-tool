@@ -189,11 +189,45 @@ if not st.session_state.authenticated:
                         st.error("❌ 비밀번호 오류")
     st.stop()
 
+# 💡 [핵심 조치] 에러 방지를 위해 데이터 유틸리티 함수들을 상단으로 끌어올림
+# --- [3.5. 데이터 유틸리티 (위치 변경)] ---
+@st.cache_resource
+def init_connection():
+    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
+    return gspread.authorize(creds)
+
+@st.cache_data(ttl=300)
+def load_data():
+    client = init_connection()
+    sheet = client.open('SQL백업260211-jeilinout').sheet1
+    raw_data = sheet.get_all_values()
+    if not raw_data: return pd.DataFrame()
+    header = [n.strip() if n.strip() else f"col_{i}" for i, n in enumerate(raw_data[0])]
+    return pd.DataFrame(raw_data[1:], columns=header)
+
+def clean_numeric(val):
+    if pd.isna(val) or val == '': return 0
+    try: return float(re.sub(r'[^\d.-]', '', str(val)))
+    except: return 0
+
+def safe_str(val):
+    if pd.isna(val) or str(val).lower() == 'nan': return ""
+    if isinstance(val, float) and val.is_integer(): return str(int(val))
+    return str(val)
+
+def make_ul_list(items):
+    html = '<ul class="ul-list">'
+    for idx, item in enumerate(items):
+        html += f'<li><div class="li-num">{idx+1}</div><div class="li-name">{item}</div><div class="li-icon">📄</div></li>'
+    return html + '</ul>'
+
 # --- [4. 상단 상태바] ---
 st.session_state.last_activity = get_kst_now()
 col_t, col_u, col_r, col_l = st.columns([5.5, 1.5, 1.5, 1.5])
 with col_t: st.markdown("<h3 style='margin:0;'>📦 입출력 통합 관리 시스템</h3>", unsafe_allow_html=True)
 with col_u:
+    # 💡 업로드 버튼을 파란색(type="primary")으로 변경
     if st.button("📤 DB 업로드" if not st.session_state.show_uploader else "❌ 업로드 닫기", use_container_width=True, type="primary"):
         st.session_state.show_uploader = not st.session_state.show_uploader
         st.rerun()
@@ -217,7 +251,9 @@ if st.session_state.show_uploader:
     
     if uploaded_file is not None:
         try:
+            # 💡 3중 방어막: csv -> openpyxl(xlsx) -> xlrd(xls) -> 자체 HTML 파서(lxml 우회 + cp949 인코딩 처리)
             if uploaded_file.name.endswith('.csv'):
+                # CSV 파일도 한글 인코딩 에러 방지
                 try:
                     upload_df = pd.read_csv(uploaded_file, encoding='utf-8')
                 except UnicodeDecodeError:
@@ -316,37 +352,6 @@ if st.session_state.show_uploader:
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("<hr style='margin: 10px 0px 20px 0px; border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
-# --- [5. 데이터 유틸리티] ---
-@st.cache_resource
-def init_connection():
-    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
-    return gspread.authorize(creds)
-
-@st.cache_data(ttl=300)
-def load_data():
-    client = init_connection()
-    sheet = client.open('SQL백업260211-jeilinout').sheet1
-    raw_data = sheet.get_all_values()
-    if not raw_data: return pd.DataFrame()
-    header = [n.strip() if n.strip() else f"col_{i}" for i, n in enumerate(raw_data[0])]
-    return pd.DataFrame(raw_data[1:], columns=header)
-
-def clean_numeric(val):
-    if pd.isna(val) or val == '': return 0
-    try: return float(re.sub(r'[^\d.-]', '', str(val)))
-    except: return 0
-
-def safe_str(val):
-    if pd.isna(val) or str(val).lower() == 'nan': return ""
-    if isinstance(val, float) and val.is_integer(): return str(int(val))
-    return str(val)
-
-def make_ul_list(items):
-    html = '<ul class="ul-list">'
-    for idx, item in enumerate(items):
-        html += f'<li><div class="li-num">{idx+1}</div><div class="li-name">{item}</div><div class="li-icon">📄</div></li>'
-    return html + '</ul>'
 
 # --- [6. 메인 로직] ---
 try:
