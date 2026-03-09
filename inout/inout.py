@@ -200,10 +200,20 @@ if st.session_state.show_uploader:
     
     if uploaded_file is not None:
         try:
+            # 💡 [수정] 3중 방어막: csv -> openpyxl(xlsx) -> xlrd(xls) -> html(가짜 xls) 순차적 파싱
             if uploaded_file.name.endswith('.csv'):
                 upload_df = pd.read_csv(uploaded_file)
             else:
-                upload_df = pd.read_excel(uploaded_file)
+                try:
+                    upload_df = pd.read_excel(uploaded_file, engine='openpyxl')
+                except Exception:
+                    try:
+                        uploaded_file.seek(0)
+                        upload_df = pd.read_excel(uploaded_file, engine='xlrd')
+                    except Exception:
+                        # 국내 ERP 등에서 받은 가짜 엑셀(HTML 포맷)인 경우 강제 추출
+                        uploaded_file.seek(0)
+                        upload_df = pd.read_html(uploaded_file, encoding='utf-8')[0]
                 
             st.success(f"✅ 파일 읽기 성공! 총 {len(upload_df):,}개의 데이터를 가져왔습니다.")
             st.dataframe(upload_df.head(5), use_container_width=True)
@@ -212,7 +222,7 @@ if st.session_state.show_uploader:
                 st.warning("데이터 연도 분석 및 구글 시트 분할 생성 기능을 곧 연결해 드릴 예정입니다!")
                 
         except Exception as e:
-            st.error(f"⚠️ 파일을 읽는 중 오류가 발생했습니다: {e}")
+            st.error(f"⚠️ 파일을 읽는 중 오류가 발생했습니다: 파일 형식이 올바르지 않거나 손상되었습니다. ({e})")
             
     st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("<hr style='margin: 10px 0px 20px 0px; border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
