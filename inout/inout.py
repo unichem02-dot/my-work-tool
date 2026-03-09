@@ -67,6 +67,27 @@ st.markdown("""
         background-color: #8ba966 !important;
         border-color: #8ba966 !important;
     }
+    
+    /* 💡 업로드 창(Drag and drop) 강제 화이트 배경 & 블랙 텍스트 설정 */
+    [data-testid="stFileUploadDropzone"] {
+        background-color: #ffffff !important;
+        border: 2px dashed #94a3b8 !important;
+    }
+    [data-testid="stFileUploadDropzone"] div, 
+    [data-testid="stFileUploadDropzone"] span, 
+    [data-testid="stFileUploadDropzone"] small, 
+    [data-testid="stFileUploadDropzone"] p {
+        color: #000000 !important;
+    }
+    [data-testid="stFileUploadDropzone"] button {
+        background-color: #f1f5f9 !important;
+        color: #000000 !important;
+        border: 1px solid #475569 !important;
+    }
+    [data-testid="stFileUploadDropzone"] svg {
+        fill: #000000 !important;
+        color: #000000 !important;
+    }
 
     /* 메인 데이터 테이블 스타일 */
     .custom-table-container { width: 100%; margin-top: 5px; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; }
@@ -177,7 +198,6 @@ st.session_state.last_activity = get_kst_now()
 col_t, col_u, col_r, col_l = st.columns([5.5, 1.5, 1.5, 1.5])
 with col_t: st.markdown("<h3 style='margin:0;'>📦 입출력 통합 관리 시스템</h3>", unsafe_allow_html=True)
 with col_u:
-    # 💡 업로드 버튼을 파란색(type="primary")으로 변경
     if st.button("📤 DB 업로드" if not st.session_state.show_uploader else "❌ 업로드 닫기", use_container_width=True, type="primary"):
         st.session_state.show_uploader = not st.session_state.show_uploader
         st.rerun()
@@ -201,14 +221,14 @@ if st.session_state.show_uploader:
     
     if uploaded_file is not None:
         try:
-            # 💡 3중 방어막: csv -> openpyxl(xlsx) -> xlrd(xls) -> 자체 HTML 파서(lxml 우회 + cp949 인코딩 처리)
+            # 💡 3중 방어막: csv -> openpyxl(xlsx) -> xlrd(xls) -> 자체 HTML 파서(lxml 우회 + cp949 인코딩 무시 처리)
             if uploaded_file.name.endswith('.csv'):
-                # CSV 파일도 한글 인코딩 에러 방지
                 try:
                     upload_df = pd.read_csv(uploaded_file, encoding='utf-8')
                 except UnicodeDecodeError:
                     uploaded_file.seek(0)
-                    upload_df = pd.read_csv(uploaded_file, encoding='cp949')
+                    # 💡 에러 발생 시 cp949로 읽되, 해독 불가 특수문자는 무시(ignore)하여 에러 차단
+                    upload_df = pd.read_csv(uploaded_file, encoding='cp949', encoding_errors='ignore')
             else:
                 try:
                     upload_df = pd.read_excel(uploaded_file, engine='openpyxl')
@@ -217,28 +237,23 @@ if st.session_state.show_uploader:
                         uploaded_file.seek(0)
                         upload_df = pd.read_excel(uploaded_file, engine='xlrd')
                     except Exception:
-                        # 💡 [핵심 해결] lxml 라이브러리가 없을 때를 대비한 자체 정규식 HTML 파서 + 한글(cp949) 방어막
                         uploaded_file.seek(0)
                         raw_bytes = uploaded_file.getvalue()
                         try:
-                            # 먼저 utf-8로 시도
                             html_content = raw_bytes.decode('utf-8')
                         except UnicodeDecodeError:
-                            # 💡 실패 시 국내 ERP에서 많이 쓰이는 euc-kr / cp949로 강제 해독
+                            # 💡 HTML 파싱 시에도 에러 문자는 살짝 건너뛰고 표 전체를 안전하게 가져옴
                             html_content = raw_bytes.decode('cp949', errors='ignore')
                         
-                        # <table> 안의 <tr> 태그들을 모두 찾음
                         trs = re.findall(r'<tr[^>]*>(.*?)</tr>', html_content, re.IGNORECASE | re.DOTALL)
                         if not trs:
                             raise ValueError("표 데이터를 찾을 수 없습니다. 진짜 엑셀(.xlsx)로 '다른 이름으로 저장' 후 시도해주세요.")
                         
                         data = []
                         for tr in trs:
-                            # <tr> 안의 <td> 또는 <th> 태그들을 찾음
                             tds = re.findall(r'<t[dh][^>]*>(.*?)</t[dh]>', tr, re.IGNORECASE | re.DOTALL)
-                            # 태그 안의 불필요한 HTML 요소 및 공백 제거
                             tds = [re.sub(r'<[^>]+>', '', td).replace('&nbsp;', ' ').strip() for td in tds]
-                            if any(tds):  # 완전히 비어있는 줄은 제외
+                            if any(tds):
                                 data.append(tds)
                                 
                         if len(data) > 1:
@@ -688,117 +703,4 @@ try:
                         if not valid_initem.empty:
                             top_initem = valid_initem.groupby('initem')['inq_val'].sum().sort_values(ascending=False).head(5).reset_index()
                             top_initem.columns = ['품목명', '매입수량']
-                            st.dataframe(top_initem.style.format({'매입수량': '{:,.0f}'}), use_container_width=True, hide_index=True)
-                        else:
-                            st.caption("매입 품목 내역이 없습니다.")
-
-                # 💡 그 외 검색 버튼 클릭 시 (기존 테이블 + 인쇄 모드)
-                else:
-                    html = '<div class="custom-table-container"><table class="custom-table"><thead>'
-                    html += '<tr class="fake-margin"><td colspan="13"></td></tr>'
-                    html += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
-                    
-                    pwd_token = str(st.secrets["tom_password"])
-                    for _, r in f_df.iterrows():
-                        rid, dt = safe_str(r['id']), r[date_col].strftime('%Y-%m-%d')
-                        s_cls = "txt-green" if "제일" in str(r['s']) else "txt-purple"
-                        v_link = f'<a href="?copy_id={rid}&token={pwd_token}" target="_self" style="text-decoration:none;"><span class="{s_cls}">{r["s"]}</span></a>'
-                        d_link = f'<a href="?edit_id={rid}&token={pwd_token}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
-                        html += f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl txt-in-bold">{r["incom"]}</td><td class="tl txt-in">{r["initem"]}</td><td class="tr txt-in">{r["inq_val"]:,.0f}</td><td class="tr txt-in">{r["inprice_val"]:,.0f}</td><td class="tl txt-out-bold">{r["outcom"]}</td><td class="tl txt-out">{r["outitem"]}</td><td class="tr txt-out">{r["outq_val"]:,.0f}</td><td class="tr txt-out">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray print-hide-col">{rid}</td><td class="tc txt-gray">{r["carno"]}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
-                    
-                    html += f'<tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr>'
-                    html += f'<tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr>'
-                    html += '</tbody>'
-                    html += '<tfoot style="display: table-footer-group;"><tr class="fake-margin"><td colspan="13"></td></tr></tfoot>'
-                    html += '</table></div>'
-
-                    print_html_content = f"""
-                    <!DOCTYPE html>
-                    <html><head><title>인쇄 미리보기</title>
-                    <meta charset="utf-8">
-                    <style>
-                        @page {{ size: A4 portrait; margin: 0mm; }}
-                        body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; padding: 0 10mm; box-sizing: border-box; }}
-                        .print-header {{ font-size: 18px; font-weight: bold; padding-bottom: 10px; margin-bottom: 0px; border-bottom: 2px solid #555; display: flex; align-items: baseline; padding-top: 15mm; }}
-                        .custom-table-container {{ width: 100%; zoom: 65%; }}
-                        .custom-table {{ width: 100%; border-collapse: collapse; font-size: 15px; background-color: white; }}
-                        .custom-table th, .custom-table td {{ border: 1px solid #aaa; padding: 8px 10px; color: black !important; }}
-                        .custom-table th {{ text-align: center; font-weight: bold; padding: 10px 6px; }}
-                        .fake-margin {{ display: table-row !important; }}
-                        .fake-margin td {{ height: 15mm; border: none !important; background-color: white !important; }}
-                        .th-base {{ background-color: #e2e8f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                        .th-in {{ background-color: #dbeafe !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                        .th-out {{ background-color: #ffedd5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                        .sum-profit {{ background-color: #f1f5f9 !important; text-align: right; padding: 12px 20px; font-weight: bold; border-top: 1px solid #444; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                        .tc {{ text-align: center; }} .tl {{ text-align: left; }} .tr {{ text-align: right; }}
-                        a {{ color: black !important; text-decoration: none !important; pointer-events: none; }}
-                        .print-hide-col {{ display: none !important; }}
-                        tfoot {{ display: table-footer-group !important; }}
-                        .custom-table tr {{ page-break-inside: avoid; }}
-                    </style>
-                    </head><body>
-                    <div class="print-header">{print_title} &nbsp; <span style="font-size: 14px; color: #555; font-weight: normal;">| 출력 개수: {len(f_df)}개</span></div>
-                    {html}
-                    </body></html>
-                    """
-                    
-                    col_t1, col_t2, col_t3, col_t4 = st.columns([5.3, 1.7, 1.5, 1.5])
-                    with col_t1: st.markdown(f'<div class="table-title-box"><span style="font-size:16px; font-weight:bold; color:#f8fafc;">{print_title}</span> <span style="font-size:13px; color:#cbd5e1; margin-left:10px;">| 출력 개수: {len(f_df)}</span></div>', unsafe_allow_html=True)
-                    with col_t2: 
-                        if st.button("🔄 날짜 정렬 전환", use_container_width=True, type="primary"):
-                            st.session_state.sort_desc = not st.session_state.sort_desc; st.rerun()
-                    with col_t3:
-                        components.html(
-                            f"""
-                            <!DOCTYPE html>
-                            <html>
-                            <head>
-                            <style>
-                            body {{ margin: 0; padding: 0; overflow: hidden; background-color: transparent; }}
-                            .btn-print {{
-                                width: 100%; height: 35px; background-color: #4e8cff; color: white;
-                                border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 15px;
-                                font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
-                                display: flex; align-items: center; justify-content: center; box-sizing: border-box;
-                            }}
-                            .btn-print:hover {{ background-color: #3b76e5; }}
-                            </style>
-                            <script>
-                            function fastPrint() {{
-                                const htmlContent = {json.dumps(print_html_content)};
-                                let iframe = document.getElementById('print-frame');
-                                if (iframe) {{ document.body.removeChild(iframe); }}
-                                iframe = document.createElement('iframe');
-                                iframe.id = 'print-frame';
-                                iframe.style.position = 'absolute';
-                                iframe.style.width = '1px';
-                                iframe.style.height = '1px';
-                                iframe.style.opacity = '0';
-                                iframe.style.pointerEvents = 'none';
-                                document.body.appendChild(iframe);
-                                const doc = iframe.contentWindow.document;
-                                doc.open();
-                                doc.write(htmlContent);
-                                doc.close();
-                                setTimeout(function() {{
-                                    iframe.contentWindow.focus();
-                                    iframe.contentWindow.print();
-                                }}, 150);
-                            }}
-                            </script>
-                            </head>
-                            <body>
-                            <button class="btn-print" onclick="fastPrint()">🖨️ A4 인쇄</button>
-                            </body>
-                            </html>
-                            """,
-                            height=35
-                        )
-                    with col_t4:
-                        csv = f_df.to_csv(index=False).encode('utf-8-sig')
-                        st.download_button("💾 엑셀 다운로드", data=csv, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
-
-                    st.markdown(html, unsafe_allow_html=True)
-
-except Exception as e: st.error(f"⚠️ 시스템 오류: {e}")
-st.markdown("<br><p style='text-align:center; color:#64748b;'>© 2026 UNICHEM02-DOT. ALL RIGHTS RESERVED.</p>", unsafe_allow_html=True)
+                            st.dataframe(top_
