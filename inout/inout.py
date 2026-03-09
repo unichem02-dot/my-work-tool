@@ -120,6 +120,7 @@ if "copy_id" not in st.session_state: st.session_state.copy_id = None
 if "last_activity" not in st.session_state: st.session_state.last_activity = None
 if "failed_attempts" not in st.session_state: st.session_state.failed_attempts = 0
 if "lockout_until" not in st.session_state: st.session_state.lockout_until = None
+if "show_uploader" not in st.session_state: st.session_state.show_uploader = False
 
 # URL 파라미터 감지 및 자동 로그인 (복사/수정 연동)
 if "edit_id" in st.query_params or "copy_id" in st.query_params:
@@ -173,8 +174,12 @@ if not st.session_state.authenticated:
 
 # --- [4. 상단 상태바] ---
 st.session_state.last_activity = get_kst_now()
-col_t, col_r, col_l = st.columns([7, 1.5, 1.5])
+col_t, col_u, col_r, col_l = st.columns([5.5, 1.5, 1.5, 1.5])
 with col_t: st.markdown("<h3 style='margin:0;'>📦 입출력 통합 관리 시스템</h3>", unsafe_allow_html=True)
+with col_u:
+    if st.button("📤 DB 업로드" if not st.session_state.show_uploader else "❌ 업로드 닫기", use_container_width=True):
+        st.session_state.show_uploader = not st.session_state.show_uploader
+        st.rerun()
 with col_r:
     if st.button("🔄 데이터 갱신", use_container_width=True, type="primary"):
         st.cache_data.clear()
@@ -184,6 +189,33 @@ with col_l:
         st.session_state.authenticated = False
         st.rerun()
 st.markdown("<hr style='margin: 10px 0px 20px 0px; border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
+
+# 💡 [파일 업로드 UI] DB 업로드 버튼 클릭 시 열림
+if st.session_state.show_uploader:
+    st.markdown("<div class='search-panel-container'>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #4e8cff; margin-bottom: 10px;'>📂 과거 통합 데이터 연도별 분할 업로드</h4>", unsafe_allow_html=True)
+    st.info("💡 과거의 모든 데이터가 들어있는 엑셀(또는 CSV) 파일을 올리시면, 연도별로 탭(시트)을 자동으로 쪼개서 구글 시트에 저장합니다.")
+    
+    uploaded_file = st.file_uploader("여기에 엑셀/CSV 파일을 끌어다 놓거나 클릭하여 업로드하세요.", type=["xlsx", "xls", "csv"])
+    
+    if uploaded_file is not None:
+        try:
+            if uploaded_file.name.endswith('.csv'):
+                upload_df = pd.read_csv(uploaded_file)
+            else:
+                upload_df = pd.read_excel(uploaded_file)
+                
+            st.success(f"✅ 파일 읽기 성공! 총 {len(upload_df):,}개의 데이터를 가져왔습니다.")
+            st.dataframe(upload_df.head(5), use_container_width=True)
+            
+            if st.button("🚀 구글 시트에 연도별로 분할 저장하기", type="primary"):
+                st.warning("데이터 연도 분석 및 구글 시트 분할 생성 기능을 곧 연결해 드릴 예정입니다!")
+                
+        except Exception as e:
+            st.error(f"⚠️ 파일을 읽는 중 오류가 발생했습니다: {e}")
+            
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin: 10px 0px 20px 0px; border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
 # --- [5. 데이터 유틸리티] ---
 @st.cache_resource
