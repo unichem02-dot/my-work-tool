@@ -152,7 +152,7 @@ st.markdown("""
         transition: opacity 0.2s;
         line-height: 1.5;
     }
-    /* 💡 메모장 내부의 모든 텍스트를 완벽한 블랙으로 강제 */
+    /* 💡 메모장 내부의 모든 텍스트를 완벽한 블랙으로 강제 (색상 덮어쓰기 방지) */
     .memo-tooltip-in .memo-text *, .memo-tooltip-out .memo-text * {
         color: #000000 !important;
         font-weight: bold !important;
@@ -908,19 +908,24 @@ try:
                     v_link = f'<a href="?copy_id={rid}&token={pwd_token}" target="_self" style="text-decoration:none;"><span class="{s_cls}">{r["s"]}</span></a>'
                     d_link = f'<a href="?edit_id={rid}&token={pwd_token}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
                     
-                    # 💡 [핵심 기술 1] 매입 수량 툴팁 (부가세 포함 가격 반영 & 올블랙 텍스트)
+                    # 💡 [핵심 기술 1] 부가세 연동 및 이익금 산출용 데이터 미리 계산
                     in_tot = r["in_total"] if pd.notnull(r["in_total"]) else 0
-                    in_tot_vat = in_tot * 1.1
+                    in_tot_vat = in_tot * 1.1       # 매입액 부가세 포함
+                    in_vat_only = in_tot * 0.1      # 매입액 순수 부가세
+                    
+                    out_tot = r["out_total"] if pd.notnull(r["out_total"]) else 0
+                    out_tot_vat = out_tot * 1.1     # 매출액 부가세 포함
+                    
+                    profit_tot_vat = out_tot_vat - in_tot_vat # 부가세 포함 기준 이익금 산출
+                    
+                    # 💡 [핵심 기술 2] 매입 툴팁 조립 (올블랙 적용 & 공급가+부가세 상세 표시)
                     inq_val_str = f'{r["inq_val"]:,.0f}' if pd.notnull(r["inq_val"]) else '0'
-                    in_memo = f"<div style='text-align:right; color:#000000 !important;'>매입액 : {in_tot:,.0f} 원<br><span style='font-size:12px; color:#000000 !important;'>(VAT포함: {in_tot_vat:,.0f} 원)</span></div>"
+                    in_memo = f"<div style='text-align:right;'>공급가액 : {in_tot:,.0f} 원<br>+ 부가세 : {in_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px solid #000000;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</div>"
                     inq_html = f'<div class="memo-tooltip-in">{inq_val_str}<span class="memo-text">{in_memo}</span></div>'
                     
-                    # 💡 [핵심 기술 2] 매출 수량 툴팁 (이익금 계산 및 부가세 포함 가격 반영 & 올블랙 텍스트)
-                    out_tot = r["out_total"] if pd.notnull(r["out_total"]) else 0
-                    out_tot_vat = out_tot * 1.1
-                    profit_tot = out_tot - in_tot
+                    # 💡 [핵심 기술 3] 매출 툴팁 조립 (올블랙 적용 & 부가세 포함 매출-매입=이익금 계산식 표시)
                     outq_val_str = f'{r["outq_val"]:,.0f}' if pd.notnull(r["outq_val"]) else '0'
-                    out_memo = f"<div style='text-align:right; color:#000000 !important;'>매출액 : {out_tot:,.0f} 원<br><span style='font-size:12px; color:#000000 !important;'>(VAT포함: {out_tot_vat:,.0f} 원)</span><br>- 매입액 : {in_tot:,.0f} 원<br><hr style='margin:4px 0; border:0.5px solid #000000;'><span style='color:#000000 !important; font-weight:bold;'>= 이익금 : {profit_tot:,.0f} 원</span></div>"
+                    out_memo = f"<div style='text-align:right;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원<br>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원<br><hr style='margin:4px 0; border:0.5px solid #000000;'>= 이익금(VAT포함) : {profit_tot_vat:,.0f} 원</div>"
                     outq_html = f'<div class="memo-tooltip-out">{outq_val_str}<span class="memo-text">{out_memo}</span></div>'
                     
                     row_html = f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl txt-in-bold">{r["incom"]}</td><td class="tl txt-in">{r["initem"]}</td><td class="tr txt-in">{inq_html}</td><td class="tr txt-in">{r["inprice_val"]:,.0f}</td><td class="tl txt-out-bold">{r["outcom"]}</td><td class="tl txt-out">{r["outitem"]}</td><td class="tr txt-out">{outq_html}</td><td class="tr txt-out">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray print-hide-col">{rid}</td><td class="tc txt-gray">{r["carno"]}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
