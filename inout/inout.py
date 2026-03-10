@@ -78,10 +78,10 @@ st.markdown("""
     .custom-table tr:nth-child(even) { background-color: #f8f9fa; }
     .custom-table tr:hover { background-color: #e2e6ea; }
     
-    /* 💡 인쇄용 가짜 상하단 여백 (웹 화면에서는 보이지 않도록 숨김) */
+    /* 인쇄용 가짜 상하단 여백 (웹 화면에서는 보이지 않도록 숨김) */
     .print-fake-margin { display: none !important; }
     
-    /* 💡 인쇄 전용 타이틀 숨김 처리 (웹 화면에서는 안보이게 분리) */
+    /* 인쇄 전용 타이틀 숨김 처리 (웹 화면에서는 안보이게 분리) */
     .print-only-title { display: none !important; }
     
     /* 테이블 구역별 색상 */
@@ -113,30 +113,32 @@ st.markdown("""
     [data-testid="stMetricValue"] { color: #ffffff !important; }
     [data-testid="stMetricLabel"] { color: #cbd5e1 !important; font-size: 16px !important; }
     
-    /* 검색 메뉴의 연도, 월, 날짜 등 선택 및 입력 텍스트를 굵게(Bold) 변경 */
+    /* 💡 검색 메뉴의 연도, 월, 날짜 등 선택 및 입력 텍스트를 굵게(Bold) 변경 */
     div[data-baseweb="select"] > div { font-weight: bold !important; }
     div[data-baseweb="input"] > input { font-weight: bold !important; }
+    /* 💡 일검색 등 Date Input 창의 글씨도 완벽하게 굵게 처리 */
+    div[data-testid="stDateInput"] input { font-weight: bold !important; }
     
     /* Form 테두리 및 여백 제거 (검색창 엔터 적용을 위한 래핑용) */
     div[data-testid="stForm"] { border: none !important; padding: 0 !important; margin-bottom: -15px !important; }
     
-    /* 💡 매입 및 매출 수량 툴팁 (메모장 팝업) 전용 CSS */
+    /* 매입 및 매출 수량 툴팁 (메모장 팝업) 전용 CSS */
     .memo-tooltip-in {
         position: relative;
         display: inline-block;
         cursor: pointer;
-        color: #1e3a8a; /* 매입 파란색 텍스트 유지 */
+        color: #1e3a8a; 
     }
     .memo-tooltip-out {
         position: relative;
         display: inline-block;
         cursor: pointer;
-        color: #9a3412; /* 매출 주황색 텍스트 유지 */
+        color: #9a3412; 
     }
     .memo-tooltip-in .memo-text, .memo-tooltip-out .memo-text {
         visibility: hidden;
         width: max-content;
-        background-color: #fffbeb !important; /* 연한 노란색(포스트잇 느낌) */
+        background-color: #fffbeb !important; 
         text-align: right;
         border-radius: 6px;
         padding: 8px 12px;
@@ -152,7 +154,7 @@ st.markdown("""
         transition: opacity 0.2s;
         line-height: 1.5;
     }
-    /* 메모장 내부의 모든 텍스트를 완벽한 블랙으로 강제 (색상 덮어쓰기 방지) */
+    /* 메모장 내부의 모든 텍스트를 완벽한 블랙으로 강제 */
     .memo-tooltip-in .memo-text *, .memo-tooltip-out .memo-text * {
         color: #000000 !important;
         font-weight: bold !important;
@@ -206,7 +208,8 @@ st.markdown("""
 # --- [2. 보안 및 세션 상태 관리] ---
 if "authenticated" not in st.session_state: st.session_state.authenticated = False
 if "search_params" not in st.session_state: st.session_state.search_params = {"mode": "init"}
-if "sort_desc" not in st.session_state: st.session_state.sort_desc = True 
+# 💡 [정렬 기본값 변경] True(최신순) ➔ False(과거순)으로 기본값을 변경하여 날짜가 적은 순부터 보여줌
+if "sort_desc" not in st.session_state: st.session_state.sort_desc = False 
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
 if "copy_id" not in st.session_state: st.session_state.copy_id = None
 if "last_activity" not in st.session_state: st.session_state.last_activity = None
@@ -644,13 +647,16 @@ try:
                         <span class="rt-op blue">=</span>
                         <div class="rt-out" id="rt-dr">0</div>
                     </div>
+                    
+                    <!-- 💡 [계산기 레이아웃 재배치] VAT-10% ➔ 기준금액(입력창) ➔ VAT+10% 순서로 변경 -->
                     <div class="rt-group">
-                        <input type="number" class="rt-in" id="rt-v1" oninput="rtCalc()" placeholder="기준금액">
                         <span class="rt-txt blue">VAT-10%</span>
                         <div class="rt-out" id="rt-vm">0</div>
+                        <input type="number" class="rt-in" id="rt-v1" oninput="rtCalc()" placeholder="기준금액" style="text-align: center; margin: 0 5px;">
                         <span class="rt-txt yellow">VAT+10%</span>
                         <div class="rt-out orange" id="rt-vp">0</div>
                     </div>
+                    
                     <div class="rt-group">
                         <input type="number" class="rt-in" id="rt-m1" oninput="rtCalc()" placeholder="0">
                         <span class="rt-op yellow">X</span>
@@ -688,29 +694,27 @@ try:
                 height=75
             )
 
-            # 💡 [엔터 검색 기술 1] 기간 검색창을 투명 폼(Form)으로 묶어 엔터 즉시 검색 지원
+            # 💡 [엔터 검색 기술 1] 기간 검색창 (라디오버튼 순서 변경: ALL > 매입 > 매출)
             with st.form(key="form_row1", border=False):
                 r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
-                with r1_1: t1 = st.radio("t1", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
+                with r1_1: t1 = st.radio("t1", ["ALL", "매입", "매출"], index=0, horizontal=True, label_visibility="collapsed")
                 with r1_2: dr1 = st.date_input("dr1", [datetime(2014,1,1).date(), get_kst_now().date()], format="YYYY-MM-DD", label_visibility="collapsed")
                 with r1_3: s1 = st.selectbox("s1", ["ALL", "제일", "중부"], label_visibility="collapsed")
                 with r1_4: c1 = st.text_input("c1", placeholder="거래처 검색", label_visibility="collapsed")
                 with r1_5: i1 = st.text_input("i1", placeholder="품목 검색", label_visibility="collapsed")
-                # 💡 버튼명 수정
                 with r1_6: b1 = st.form_submit_button("기간 거래처&품목", use_container_width=True, type="primary")
 
             st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
-            # 💡 [엔터 검색 기술 2] 월별 검색창을 투명 폼(Form)으로 묶어 엔터 즉시 검색 지원
+            # 💡 [엔터 검색 기술 2] 월별 검색창 (라디오버튼 순서 변경: ALL > 매입 > 매출)
             with st.form(key="form_row2", border=False):
                 r2_1, r2_2, r2_3, r2_4, r2_5, r2_6, r2_7 = st.columns([1.5, 1.2, 1.3, 1, 2, 2, 2.5])
-                with r2_1: t2 = st.radio("t2", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
+                with r2_1: t2 = st.radio("t2", ["ALL", "매입", "매출"], index=0, horizontal=True, label_visibility="collapsed")
                 with r2_2: y2 = st.selectbox("y2", years, label_visibility="collapsed", format_func=lambda x: f"{x}년")
                 with r2_3: m2 = st.selectbox("m2", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
                 with r2_4: s2 = st.selectbox("s2", ["ALL", "제일", "중부"], label_visibility="collapsed")
                 with r2_5: c2 = st.text_input("c2", placeholder="거래처 검색", label_visibility="collapsed")
                 with r2_6: i2 = st.text_input("i2", placeholder="품목 검색", label_visibility="collapsed")
-                # 💡 버튼명 수정
                 with r2_7: b2 = st.form_submit_button("월별 거래처&품목", use_container_width=True, type="primary")
 
             st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
@@ -722,11 +726,9 @@ try:
             with u3: m3 = st.selectbox("m3", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
             with u4: b_set = st.button("결산", use_container_width=True, type="primary")
             
-            # 💡 버튼명 수정: 신규
             with u5: b_new = st.button("신규", use_container_width=True, type="primary")
             
             with u6: lmt = st.selectbox("l4", ["20개", "50개", "100개"], index=0, label_visibility="collapsed")
-            # 💡 버튼명 수정: 최근
             with u7: b_rec = st.button("최근", use_container_width=True, type="primary")
             
             with u8: d_day = st.date_input("d2", get_kst_now().date(), format="YYYY-MM-DD", label_visibility="collapsed")
@@ -736,11 +738,10 @@ try:
             with u11: s5 = st.selectbox("s5", ["ALL", "제일", "중부"], label_visibility="collapsed")
             with u12: y4 = st.selectbox("y4", years, key="y4_sel", label_visibility="collapsed", format_func=lambda x: f"{x}년")
             with u13: m4 = st.selectbox("m4", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", key="m4_sel", label_visibility="collapsed")
-            # 💡 버튼명 수정: 월별
             with u14: b_mon = st.button("월별", use_container_width=True, type="primary")
             with u15: b_yong = st.button("용차", use_container_width=True, type="primary")
 
-        # 💡 [검색 버튼 액션]
+        # 검색 버튼 액션
         if b1: st.session_state.search_params = {"mode":"기간","title":f"기간 검색 ({dr1[0]} ~ {dr1[1] if len(dr1)>1 else dr1[0]})","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0], "s_filter": s1}; st.rerun()
         elif b2: st.session_state.search_params = {"mode":"월별상세","title":f"{y2}년 {m2}월 상세 검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2, "s_filter": s2}; st.rerun()
         elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3, "s_filter": s3}; st.rerun()
@@ -791,13 +792,14 @@ try:
             if params.get("company"): f_df = f_df[f_df['incom'].str.contains(params["company"], na=False)|f_df['outcom'].str.contains(params["company"], na=False)]
             if params.get("item"): f_df = f_df[f_df['initem'].str.contains(params["item"], na=False)|f_df['outitem'].str.contains(params["item"], na=False)]
             
-            # 4. 정렬
+            # 💡 [정렬 기술] 기본값을 '과거 날짜 순(오름차순)'으로 처리
             f_df = f_df.sort_values(by=[date_col, 'id_val'], ascending=[not st.session_state.sort_desc, not st.session_state.sort_desc])
             
             # 5. 표시 개수 리미트
             limit_str = str(params.get("limit", "ALL"))
             if "개" in limit_str:
                 num = int(limit_str.replace("개", ""))
+                # 💡 기본 정렬이 오름차순(False)이면 최신 자료를 원할 때 위에서부터 자르는 방식 유지
                 if st.session_state.sort_desc: f_df = f_df.head(num)
                 else: f_df = f_df.tail(num)
 
@@ -913,7 +915,7 @@ try:
                     v_link = f'<a href="?copy_id={rid}&token={pwd_token}" target="_self" style="text-decoration:none;"><span class="{s_cls}">{r["s"]}</span></a>'
                     d_link = f'<a href="?edit_id={rid}&token={pwd_token}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
                     
-                    # 💡 부가세 연동 및 이익금 산출용 데이터 미리 계산
+                    # 부가세 연동 및 이익금 산출용 데이터 미리 계산
                     in_tot = r["in_total"] if pd.notnull(r["in_total"]) else 0
                     in_tot_vat = in_tot * 1.1       
                     in_vat_only = in_tot * 0.1      
@@ -924,12 +926,12 @@ try:
                     
                     profit_tot_vat = out_tot_vat - in_tot_vat 
                     
-                    # 💡 매입 툴팁 조립
+                    # 매입 툴팁 조립
                     inq_val_str = f'{r["inq_val"]:,.0f}' if pd.notnull(r["inq_val"]) else '0'
                     in_memo = f"<div style='text-align:right; color:#000000 !important;'>공급가액(VAT별도) : {in_tot:,.0f} 원<br>+ 부가세(10%) : {in_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</div>"
                     inq_html = f'<div class="memo-tooltip-in">{inq_val_str}<span class="memo-text">{in_memo}</span></div>'
                     
-                    # 💡 매출 툴팁 조립
+                    # 매출 툴팁 조립
                     outq_val_str = f'{r["outq_val"]:,.0f}' if pd.notnull(r["outq_val"]) else '0'
                     out_memo = f"<div style='text-align:right; color:#000000 !important;'>매출액(VAT별도) : {out_tot:,.0f} 원<br>+ 부가세(10%) : {out_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원<br>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원<br><hr style='margin:4px 0; border:0.5px solid #000000 !important;'><span style='color:#000000 !important; font-weight:bold;'>= 순이익(VAT포함) : {profit_tot_vat:,.0f} 원</span></div>"
                     outq_html = f'<div class="memo-tooltip-out">{outq_val_str}<span class="memo-text">{out_memo}</span></div>'
@@ -1001,12 +1003,12 @@ try:
                 col_t1, col_t2, col_t3, col_t4 = st.columns([5.3, 1.7, 1.5, 1.5])
                 with col_t1: st.markdown(f'<div class="table-title-box"><span style="font-size:16px; font-weight:bold; color:#f8fafc;">{print_title}</span> <span style="font-size:13px; color:#cbd5e1; margin-left:10px;">| 출력 개수: {len(f_df)}개</span></div>', unsafe_allow_html=True)
                 
-                # 💡 버튼명 수정: 날짜정렬
+                # 버튼명 수정: 날짜정렬
                 with col_t2: 
                     if st.button("🔄 날짜정렬", use_container_width=True, type="primary"):
                         st.session_state.sort_desc = not st.session_state.sort_desc; st.rerun()
                 
-                # 💡 버튼명 수정: PRINT
+                # 버튼명 수정: PRINT
                 with col_t3:
                     components.html(
                         f"""
@@ -1055,7 +1057,7 @@ try:
                         height=35
                     )
                 
-                # 💡 버튼명 수정: EXCEL
+                # 버튼명 수정: EXCEL
                 with col_t4:
                     csv = f_df.to_csv(index=False).encode('utf-8-sig')
                     st.download_button("💾 EXCEL", data=csv, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
