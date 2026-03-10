@@ -408,7 +408,10 @@ try:
     elif params["mode"] == "일": 
         target_years.add(params["date"].year)
     elif params["mode"] == "최근":
-        target_years.add(available_years[0]) if available_years else target_years.add(get_kst_now().year)
+        if available_years:
+            target_years.add(available_years[0])
+        else:
+            target_years.add(get_kst_now().year)
 
     if st.session_state.edit_id or st.session_state.copy_id:
         if hasattr(st.session_state, 'target_year_from_url'):
@@ -417,7 +420,10 @@ try:
             target_years.update(available_years)
             
     if not target_years:
-        target_years.add(available_years[0] if available_years else get_kst_now().year)
+        if available_years:
+            target_years.add(available_years[0])
+        else:
+            target_years.add(get_kst_now().year)
 
     df = load_data_for_years(sorted(list(target_years), reverse=True))
     
@@ -575,16 +581,15 @@ try:
                 spreadsheet = client.open('SQL백업260211-jeilinout')
                 target_year_str = f"{n_date.year}년"
                 
-                # 💡 [핵심 기술] 전체 넘버 중 가장 높은 수 + 1 산출 로직
+                # 💡 [핵심 기술] 전체 데이터 중 가장 높은 id 값을 찾아내어 +1 적용! (순차적 넘버링)
                 max_id = 0
                 for y in available_years:
                     temp_df = load_data_for_years([y])
                     if not temp_df.empty and 'id' in temp_df.columns:
                         temp_max = temp_df['id'].apply(clean_numeric).max()
                         if pd.notna(temp_max) and temp_max > 0:
-                            max_id = int(temp_max)
-                            break
-                next_id = max_id + 1 if max_id > 0 else 1
+                            max_id = max(max_id, int(temp_max))
+                next_id = max_id + 1 if max_id > 0 else int(get_kst_now().strftime("%y%m%d%H%M%S"))
                 
                 try:
                     sheet = spreadsheet.worksheet(target_year_str)
