@@ -859,34 +859,59 @@ try:
                 footer_html = f'<tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr>'
                 footer_html += f'<tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr>'
 
-                # 2. 공용 HTML 껍데기 생성 (웹화면용과 인쇄용으로 공통 사용)
-                html = '<div class="custom-table-container"><table class="custom-table">'
+                # 💡 [투트랙 기술 1] 웹 화면용 1개짜리 연결된 표 생성
+                est_pages = max(1, math.ceil(len(f_df) / 35)) # 웹 화면에는 총 페이지수만 안내
                 
-                # 💡 [핵심 조치] 인쇄 시 매 페이지 제목 반복을 위한 thead 요소 구성, 1페이지당 데이터량은 CSS 패딩과 줌으로 컨트롤
-                est_pages = max(1, math.ceil(len(f_df) / 38))
-                
-                html += f'<thead><tr class="print-only-title"><th colspan="13" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border: none !important; border-bottom: 2px solid #555 !important; padding: 15mm 0px 10px 0px !important;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개 &nbsp;|&nbsp; 예상 인쇄 분량: 약 {est_pages}페이지</span></th></tr>'
-                html += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
-                
-                html += "".join(row_html_list)
-                html += footer_html
-                html += '</tbody><tfoot style="display: table-footer-group;"><tr class="fake-margin"><td colspan="13"></td></tr></tfoot></table></div>'
+                web_html = '<div class="custom-table-container"><table class="custom-table">'
+                web_html += f'<thead><tr class="print-only-title"><th colspan="13" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border: none !important; border-bottom: 2px solid #555 !important; padding: 15px 0px 10px 0px !important;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개 &nbsp;|&nbsp; 총 {est_pages}페이지 분량</span></th></tr>'
+                web_html += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
+                web_html += "".join(row_html_list)
+                web_html += footer_html
+                web_html += '</tbody></table></div>'
 
-                # 💡 [핵심 기술] CSS @page margin을 0으로 주어 브라우저 기본 글씨(날짜, 주소 등) 완벽 차단!
+                # 💡 [투트랙 기술 2] 인쇄 전용 분할(Chunking) HTML 생성 (PAGE: 1/3 형식 구현)
+                # 붕 뜨는 현상을 막기 위해 한 페이지에 확실히 들어가는 35줄씩 끊고, page-break-before를 사용합니다.
+                CHUNK_SIZE = 35 
+                total_rows = len(row_html_list)
+                
+                print_html_table = ""
+                for p in range(est_pages):
+                    start_idx = p * CHUNK_SIZE
+                    end_idx = min((p + 1) * CHUNK_SIZE, total_rows)
+                    chunk_rows = row_html_list[start_idx:end_idx]
+                    
+                    # 💡 첫 번째 페이지를 제외하고는 다음 표가 무조건 새 종이 맨 위에서 시작하도록 강제
+                    page_break = 'style="page-break-before: always;"' if p > 0 else ''
+                    
+                    print_html_table += f'<div class="custom-table-container" {page_break}><table class="custom-table"><thead>'
+                    
+                    # 💡 여기가 핵심! 매 장마다 표의 최상단에 고유한 'PAGE : 1/3' 번호를 꽂아넣음
+                    print_html_table += f'<tr><th colspan="13" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border: none !important; border-bottom: 2px solid #555 !important; padding: 15px 0px 10px 0px !important;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개 &nbsp;|&nbsp; PAGE : {p+1}/{est_pages}</span></th></tr>'
+                    print_html_table += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
+                    
+                    print_html_table += "".join(chunk_rows)
+                    
+                    # 마지막 페이지 맨 밑에만 합계 기록
+                    if p == est_pages - 1:
+                        print_html_table += footer_html
+                        
+                    print_html_table += '</tbody></table></div>'
+
+                # 💡 [브라우저 기본글씨 제거 기술] @page margin을 0으로 만들고 표 자체 여백으로 숨구멍 확보
                 print_html_content = f"""
                 <!DOCTYPE html>
                 <html><head><title>인쇄 미리보기</title>
                 <meta charset="utf-8">
                 <style>
-                    /* 💡 브라우저 기본 머리글/바닥글(날짜, URL, 페이지 번호) 완벽 제거 */
+                    /* 브라우저 상하단 기본 글씨(주소, 날짜 등) 싹 지우기 */
                     @page {{ size: A4 portrait; margin: 0mm; }} 
-                    /* 💡 상하 여백은 표(thead, tfoot)에서 자체 확보하므로 본문 여백은 좌우만 10mm 부여 */
+                    /* 종이 끝에 표가 안 닿게 좌우만 여백을 주고 상하 여백은 표(thead)의 padding으로 처리 */
                     body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; padding: 0 10mm; box-sizing: border-box; }}
-                    /* 💡 한 페이지에 2줄 정도 더 들어가도록 줌 축소(67%) 및 패딩 다이어트 */
-                    .custom-table-container {{ width: 100%; zoom: 67%; }} 
-                    .custom-table {{ width: 100%; border-collapse: collapse; font-size: 15px; background-color: white; }}
+                    /* zoom 배율 제거로 페이지 자르기 오류 완벽 방지, 대신 폰트를 줄임 */
+                    .custom-table-container {{ width: 100%; }} 
+                    .custom-table {{ width: 100%; border-collapse: collapse; font-size: 11.5px; background-color: white; }}
                     .custom-table th, .custom-table td {{ border: 1px solid #aaa; padding: 6px 8px; color: black !important; }}
-                    .custom-table th {{ text-align: center; font-weight: bold; padding: 10px 6px; }}
+                    .custom-table th {{ text-align: center; font-weight: bold; padding: 8px 6px; }}
                     .fake-margin {{ display: table-row !important; }}
                     .fake-margin td {{ height: 15mm; border: none !important; background-color: white !important; }}
                     .print-only-title {{ display: table-row !important; }}
@@ -897,12 +922,11 @@ try:
                     .tc {{ text-align: center; }} .tl {{ text-align: left; }} .tr {{ text-align: right; }}
                     a {{ color: black !important; text-decoration: none !important; pointer-events: none; }}
                     .print-hide-col {{ display: none !important; }}
-                    thead {{ display: table-header-group !important; }}
-                    tfoot {{ display: table-footer-group !important; }}
+                    /* 페이지가 찢어질 때 표 내부에서 마음대로 줄바꿈 되는 것 방지 */
                     .custom-table tr {{ page-break-inside: avoid; }}
                 </style>
                 </head><body>
-                {html}
+                {print_html_table}
                 </body></html>
                 """
                 
@@ -962,7 +986,8 @@ try:
                     csv = f_df.to_csv(index=False).encode('utf-8-sig')
                     st.download_button("💾 엑셀 다운로드", data=csv, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
 
-                st.markdown(html, unsafe_allow_html=True)
+                # 웹 화면용 HTML 출력
+                st.markdown(web_html, unsafe_allow_html=True)
 
 except Exception as e: st.error(f"⚠️ 시스템 오류: {e}")
 st.markdown("<br><p style='text-align:center; color:#64748b;'>© 2026 UNICHEM02-DOT. ALL RIGHTS RESERVED.</p>", unsafe_allow_html=True)
