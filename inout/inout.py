@@ -8,6 +8,8 @@ import re
 import io
 import json
 import math
+import base64
+import urllib.parse
 
 # 💡 한국 표준시(KST) 기준 시간 반환 함수
 def get_kst_now():
@@ -19,7 +21,7 @@ st.set_page_config(layout="wide", page_title="TOmBOy's INOUT")
 # 커스텀 CSS 주입 (디자인 통일 및 레이아웃 정돈)
 st.markdown("""
     <style>
-    /* 💡 스트림릿 기본 UI 요소를 완벽하게 숨기기 (메뉴, 푸터, Manage app 버튼) */
+    /* 스트림릿 기본 UI 요소를 완벽하게 숨기기 (메뉴, 푸터, Manage app 버튼) */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden !important;}
@@ -28,7 +30,7 @@ st.markdown("""
     [data-testid="stAppDeployButton"] {display: none !important;}
     .stDeployButton {display: none !important;}
     
-    /* 💡 표 우측 상단에 나타나는 기본 툴바(흰색 빈 박스 버그) 완전 숨김 처리 */
+    /* 표 우측 상단에 나타나는 기본 툴바(흰색 빈 박스 버그) 완전 숨김 처리 */
     [data-testid="stElementToolbar"] {display: none !important;}
 
     [data-testid="stAppViewContainer"] { background-color: #2b323c; }
@@ -83,6 +85,18 @@ st.markdown("""
     }
     [data-testid="stFormSubmitButton"] > button:hover {
         background-color: #00796B !important; /* 마우스 오버시 진한 청록색 */
+        border-color: #00796B !important;
+        color: white !important;
+    }
+    
+    /* 💡 [취소] 버튼 청록색 분리 적용 (Form 내부 Secondary 버튼) */
+    div[data-testid="stForm"] button[kind="secondary"] {
+        background-color: #009688 !important; /* 청록색 */
+        border-color: #009688 !important;
+        color: white !important;
+    }
+    div[data-testid="stForm"] button[kind="secondary"]:hover {
+        background-color: #00796B !important; /* 진한 청록색 */
         border-color: #00796B !important;
         color: white !important;
     }
@@ -146,7 +160,7 @@ st.markdown("""
     /* Form 테두리 및 여백 제거 (검색창 엔터 적용을 위한 래핑용) */
     div[data-testid="stForm"] { border: none !important; padding: 0 !important; margin-bottom: -15px !important; }
     
-    /* 매입/매출 수량 및 품목/배송 툴팁 (메모장 팝업) 완전 불투명(Solid) 적용 CSS */
+    /* 💡 매입/매출 수량 및 품목/배송 툴팁 (메모장 팝업) 완전 불투명(Solid) 적용 CSS */
     .memo-tooltip-in, .memo-tooltip-out, .memo-tooltip-base {
         position: relative;
         display: inline-block;
@@ -159,7 +173,7 @@ st.markdown("""
     .memo-tooltip-in .memo-text, .memo-tooltip-out .memo-text, .memo-tooltip-base .memo-text {
         visibility: hidden;
         width: max-content;
-        background-color: #fffbeb !important; /* 투명도 완전히 없앰 (Solid Yellow) */
+        background-color: #fffbeb !important; /* 💡 투명도 완전히 없앰 (Solid Yellow) */
         text-align: right;
         border-radius: 6px;
         padding: 8px 12px;
@@ -174,11 +188,16 @@ st.markdown("""
         opacity: 0;
         transition: opacity 0.2s;
         line-height: 1.5;
+        /* 💡 툴팁 컨테이너 자체도 올블랙 고정 */
+        color: #000000 !important; 
     }
-    /* 메모장 내부의 모든 텍스트를 완벽한 블랙으로 강제 고정 */
-    .memo-tooltip-in .memo-text *, .memo-tooltip-out .memo-text *, .memo-tooltip-base .memo-text * {
+    /* 💡 메모장 내부의 모든 텍스트를 완벽한 블랙으로 강제 (초강력 적용) */
+    .memo-tooltip-in .memo-text, .memo-tooltip-in .memo-text *, 
+    .memo-tooltip-out .memo-text, .memo-tooltip-out .memo-text *, 
+    .memo-tooltip-base .memo-text, .memo-tooltip-base .memo-text * {
         color: #000000 !important;
         font-weight: bold !important;
+        text-shadow: none !important;
     }
     /* 말풍선 아래쪽 화살표 */
     .memo-tooltip-in .memo-text::after, .memo-tooltip-out .memo-text::after, .memo-tooltip-base .memo-text::after {
@@ -227,6 +246,31 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+# 💡 [검색 조건 URL 동기화 기술] 상태를 암호화하여 URL로 넘기고 받는 함수
+def encode_sp(sp):
+    try:
+        sp_copy = sp.copy()
+        for k, v in sp_copy.items():
+            if isinstance(v, datetime.date) or hasattr(v, 'strftime'):
+                sp_copy[k] = v.strftime('%Y-%m-%d')
+        j = json.dumps(sp_copy)
+        return urllib.parse.quote(base64.urlsafe_b64encode(j.encode('utf-8')).decode('utf-8'))
+    except Exception as e:
+        return ""
+
+def decode_sp(s):
+    try:
+        if not s: return None
+        s = urllib.parse.unquote(s)
+        j = base64.urlsafe_b64decode(s.encode('utf-8')).decode('utf-8')
+        sp = json.loads(j)
+        for k in ['start', 'end', 'date']:
+            if k in sp and sp[k]:
+                sp[k] = pd.to_datetime(sp[k]).date()
+        return sp
+    except Exception as e:
+        return None
+
 # --- [2. 보안 및 세션 상태 관리] ---
 if "authenticated" not in st.session_state: st.session_state.authenticated = False
 if "sort_desc" not in st.session_state: st.session_state.sort_desc = False 
@@ -240,8 +284,29 @@ if "show_uploader" not in st.session_state: st.session_state.show_uploader = Fal
 if "sql_ready" not in st.session_state: st.session_state.sql_ready = False
 if "sql_content" not in st.session_state: st.session_state.sql_content = ""
 
-# 처음 접속 시 '어제오늘내일' 데이터 자동 출력
-if "search_params" not in st.session_state:
+# 💡 URL 파라미터 감지 및 자동 로그인 (검색 결과 복구 포함!)
+if "edit_id" in st.query_params or "copy_id" in st.query_params:
+    token = str(st.secrets.get("tom_password", ""))
+    if st.query_params.get("token") == token:
+        st.session_state.authenticated = True
+        st.session_state.last_activity = get_kst_now()
+        
+        # 💡 [핵심] URL에 숨겨둔 검색 조건(sp)을 복호화하여 세션에 완벽 복구
+        sp_encoded = st.query_params.get("sp", "")
+        if sp_encoded:
+            restored_sp = decode_sp(sp_encoded)
+            if restored_sp:
+                st.session_state.search_params = restored_sp
+                
+        if "edit_id" in st.query_params: st.session_state.edit_id = st.query_params["edit_id"]
+        if "copy_id" in st.query_params:
+            st.session_state.copy_id = st.query_params["copy_id"]
+            st.session_state.search_params = {"mode": "신규입력"}
+    st.query_params.clear()
+    st.rerun()
+
+# 💡 [처음 접속 시 '어제오늘내일' 데이터 자동 출력]
+if "search_params" not in st.session_state or st.session_state.search_params.get("mode") == "init":
     d_day = get_kst_now().date()
     st.session_state.search_params = {
         "mode": "기간",
@@ -254,19 +319,6 @@ if "search_params" not in st.session_state:
         "end": d_day + timedelta(days=1),
         "s_filter": "ALL"
     }
-
-# URL 파라미터 감지 및 자동 로그인 (복사/수정 연동)
-if "edit_id" in st.query_params or "copy_id" in st.query_params:
-    token = str(st.secrets.get("tom_password", ""))
-    if st.query_params.get("token") == token:
-        st.session_state.authenticated = True
-        st.session_state.last_activity = get_kst_now()
-        if "edit_id" in st.query_params: st.session_state.edit_id = st.query_params["edit_id"]
-        if "copy_id" in st.query_params:
-            st.session_state.copy_id = st.query_params["copy_id"]
-            st.session_state.search_params = {"mode": "신규입력"}
-    st.query_params.clear()
-    st.rerun()
 
 now_kst = get_kst_now()
 
@@ -419,6 +471,7 @@ with col_sql:
                 except Exception as e:
                     st.error("생성 실패")
     else:
+        # 생성 완료 상태일 때 버튼을 'Secondary' 타입으로 출력하여 CSS에서 지정해둔 빨간색이 완벽하게 씌워지도록 함!
         st.download_button("💾 생성완료! 다운로드", data=st.session_state.sql_content.encode('utf-8-sig'), file_name=f"db_backup_{get_kst_now().strftime('%Y%m%d')}.sql", mime="application/sql", use_container_width=True, type="secondary")
 
 with col_r:
@@ -541,10 +594,9 @@ try:
     years = available_years
     months = list(range(1, 13))
     
-    # params 변수 정의를 명확하게 추가
     params = st.session_state.search_params
     
-    # 검색 조건 동기화 바인딩
+    # 검색 조건 동기화 바인딩 (메모 클릭 후 돌아와도 폼 값이 그대로 유지)
     sp = params
     p_type = sp.get("type", "ALL")
     t_idx = ["ALL", "매입", "매출"].index(p_type) if p_type in ["ALL", "매입", "매출"] else 0
@@ -565,7 +617,6 @@ try:
     
     target_years = []
     
-    # 💡 memo_edit_id 로직은 삭제되고 오직 edit_id와 copy_id 로직만 남김
     if st.session_state.edit_id or st.session_state.copy_id:
         target_years = available_years 
     elif params["mode"] == "기간":
@@ -650,7 +701,6 @@ try:
                     try:
                         sheet = client.open('SQL백업260211-jeilinout').worksheet(f"{orig_year}년")
                         headers = sheet.row_values(1)
-                        # 💡 열이 없으면 구글 시트 헤더에 새로 추가하여 에러 방지 (A~Q열 동기화)
                         for req_col in ['memoin', 'memoout', 'memocar']:
                             if req_col not in headers:
                                 headers.append(req_col)
@@ -658,9 +708,7 @@ try:
                         
                         cell = sheet.find(str(st.session_state.edit_id), in_column=1)
                         if cell:
-                            # 💡 17개 데이터를 모두 업데이트하여 메모가 완벽하게 저장되도록 구현
                             new_row = [st.session_state.edit_id, e_date.strftime('%Y-%m-%d'), e_incom, e_initem, e_inq, e_inprice, e_outcom, e_outitem, e_outq, e_outprice, "", e_s, e_carno, e_carprice, e_memoin, e_memoout, e_memocar]
-                            # 데이터 길이에 맞춰 동적으로 끝 열을 지정 (ex: Q열)
                             end_col_alpha = gspread.utils.rowcol_to_a1(cell.row, len(new_row))
                             sheet.update(f"A{cell.row}:{end_col_alpha}", [new_row])
                         st.cache_data.clear(); st.session_state.edit_id = None; st.rerun()
@@ -677,7 +725,8 @@ try:
                     except Exception as e:
                         st.error(f"삭제 오류: {e}")
                         
-                if bc4.form_submit_button("취소", use_container_width=True, type="primary"):
+                # 💡 취소 버튼은 CSS에서 '청록색'으로 타겟팅되도록 'secondary' 타입으로 분리
+                if bc4.form_submit_button("취소", use_container_width=True, type="secondary"):
                     st.session_state.edit_id = None; st.rerun()
 
     # ---------------------------------------------------------
@@ -715,7 +764,6 @@ try:
             n_outprice = c11.text_input("outprice", def_v.get("outprice",""), label_visibility="collapsed")
             n_carprice = c12.text_input("carprice", def_v.get("carprice",""), label_visibility="collapsed")
 
-            # 💡 [핵심 기술 1] 신규/복사입력 폼 하단에도 메모 입력창 추가
             st.markdown("<hr style='margin: 15px 0 10px 0; border: 0.5px dashed #555;'>", unsafe_allow_html=True)
             m1, m2, m3 = st.columns(3)
             m1.markdown('<div class="nh-box nh-in" style="font-size:13px;">📝 매입품목 메모</div>', unsafe_allow_html=True)
@@ -750,7 +798,8 @@ try:
                 sheet.append_row([next_id, n_date.strftime('%Y-%m-%d'), n_incom, n_initem, n_inq, n_inprice, n_outcom, n_outitem, n_outq, n_outprice, "", n_s, n_carno, n_carprice, n_memoin, n_memoout, n_memocar])
                 st.cache_data.clear(); st.session_state.copy_id = None; st.session_state.search_params = {"mode":"최근","title":"최근입력순서","limit":"20개"}; st.rerun()
                 
-            if bc3.form_submit_button("취소", use_container_width=True, type="primary"):
+            # 💡 취소 버튼은 CSS에서 '청록색'으로 타겟팅되도록 'secondary' 타입으로 분리
+            if bc3.form_submit_button("취소", use_container_width=True, type="secondary"):
                 st.session_state.copy_id = None; st.session_state.search_params = {"mode":"init"}; st.rerun()
 
     # ---------------------------------------------------------
@@ -1053,13 +1102,17 @@ try:
             # 💡 그 외 검색 버튼 클릭 시 (테이블 렌더링)
             else:
                 pwd_token = str(st.secrets["tom_password"])
+                # 현재 검색 조건을 인코딩하여 URL에 붙여놓음으로써, 수정 클릭 시 검색 상태 보존!
+                current_sp_encoded = encode_sp(st.session_state.search_params)
                 
                 row_html_list = []
                 for _, r in f_df.iterrows():
                     rid, dt = safe_str(r['id']), r[date_col].strftime('%Y-%m-%d')
                     s_cls = "txt-green" if "제일" in str(r['s']) else "txt-purple"
-                    v_link = f'<a href="?copy_id={rid}&token={pwd_token}" target="_self" style="text-decoration:none;"><span class="{s_cls}">{r["s"]}</span></a>'
-                    d_link = f'<a href="?edit_id={rid}&token={pwd_token}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
+                    
+                    v_link = f'<a href="?copy_id={rid}&token={pwd_token}&sp={current_sp_encoded}" target="_self" style="text-decoration:none;"><span class="{s_cls}">{r["s"]}</span></a>'
+                    edit_link_target = f"?edit_id={rid}&token={pwd_token}&sp={current_sp_encoded}"
+                    d_link = f'<a href="{edit_link_target}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
                     
                     in_tot = r["in_total"] if pd.notnull(r["in_total"]) else 0
                     in_tot_vat = in_tot * 1.1       
@@ -1071,17 +1124,13 @@ try:
                     
                     profit_tot_vat = out_tot_vat - in_tot_vat 
                     
-                    # 💡 [핵심 기술 2] 텍스트 클릭 시 느린 팝업 대신 즉시 '메인 수정 폼(edit_id)'을 열도록 연동!
-                    # "✏️수정"이나 "📝" 텍스트를 아예 지우고 오직 품목 글씨 자체만 클릭하도록 깔끔하게 변경
                     memoin_val = safe_str(r.get("memoin", ""))
                     initem_val = safe_str(r.get("initem", ""))
                     in_disp = initem_val if initem_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                     
-                    # 메모를 클릭하면 전체 행을 수정할 수 있는 상단 폼이 즉시 열림
-                    edit_link_target = f"?edit_id={rid}&token={pwd_token}"
-                    
+                    # 💡 [초강력 올블랙 CSS] span 태그 자체에 color 속성 삽입
                     if memoin_val:
-                        initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;"><a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{in_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memoin_val}</span></div>'
+                        initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;"><a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{in_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important;">{memoin_val}</span></span></div>'
                     else:
                         initem_html = f'<a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{in_disp}</a>'
 
@@ -1089,7 +1138,7 @@ try:
                     outitem_val = safe_str(r.get("outitem", ""))
                     out_disp = outitem_val if outitem_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                     if memoout_val:
-                        outitem_html = f'<div class="memo-tooltip-out" style="font-weight: bold;"><a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{out_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memoout_val}</span></div>'
+                        outitem_html = f'<div class="memo-tooltip-out" style="font-weight: bold;"><a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{out_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important;">{memoout_val}</span></span></div>'
                     else:
                         outitem_html = f'<a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{out_disp}</a>'
 
@@ -1097,16 +1146,17 @@ try:
                     carno_val = safe_str(r.get("carno", ""))
                     car_disp = carno_val if carno_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                     if memocar_val:
-                        carno_html = f'<div class="memo-tooltip-base" style="font-weight: bold; color: inherit;"><a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{car_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memocar_val}</span></div>'
+                        carno_html = f'<div class="memo-tooltip-base" style="font-weight: bold; color: inherit;"><a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{car_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important;">{memocar_val}</span></span></div>'
                     else:
                         carno_html = f'<a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{car_disp}</a>'
                     
+                    # 💡 수량 메모창도 완벽한 블랙 강제!
                     inq_val_str = f'{r["inq_val"]:,.0f}' if pd.notnull(r["inq_val"]) else '0'
-                    in_memo = f"<div style='text-align:right; color:#000000 !important;'>공급가액(VAT별도) : {in_tot:,.0f} 원<br>+ 부가세(10%) : {in_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</div>"
+                    in_memo = f"<div style='text-align:right;'><span style='color:#000000 !important;'>공급가액(VAT별도) : {in_tot:,.0f} 원</span><br><span style='color:#000000 !important;'>+ 부가세(10%) : {in_vat_only:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'><span style='color:#000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</span></div>"
                     inq_html = f'<div class="memo-tooltip-in">{inq_val_str}<span class="memo-text">{in_memo}</span></div>'
                     
                     outq_val_str = f'{r["outq_val"]:,.0f}' if pd.notnull(r["outq_val"]) else '0'
-                    out_memo = f"<div style='text-align:right; color:#000000 !important;'>매출액(VAT별도) : {out_tot:,.0f} 원<br>+ 부가세(10%) : {out_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원<br>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원<br><hr style='margin:4px 0; border:0.5px solid #000000 !important;'><span style='color:#000000 !important; font-weight:bold;'>= 순이익(VAT포함) : {profit_tot_vat:,.0f} 원</span></div>"
+                    out_memo = f"<div style='text-align:right;'><span style='color:#000000 !important;'>매출액(VAT별도) : {out_tot:,.0f} 원</span><br><span style='color:#000000 !important;'>+ 부가세(10%) : {out_vat_only:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'><span style='color:#000000 !important;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원</span><br><span style='color:#000000 !important;'>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px solid #000000 !important;'><span style='color:#000000 !important; font-weight:bold;'>= 순이익(VAT포함) : {profit_tot_vat:,.0f} 원</span></div>"
                     outq_html = f'<div class="memo-tooltip-out">{outq_val_str}<span class="memo-text">{out_memo}</span></div>'
                     
                     row_html = f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl txt-in-bold">{r["incom"]}</td><td class="tl txt-in">{initem_html}</td><td class="tr txt-in">{inq_html}</td><td class="tr txt-in">{r["inprice_val"]:,.0f}</td><td class="tl txt-out-bold">{r["outcom"]}</td><td class="tl txt-out">{outitem_html}</td><td class="tr txt-out">{outq_html}</td><td class="tr txt-out">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray print-hide-col">{rid}</td><td class="tc txt-gray">{carno_html}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
@@ -1167,7 +1217,6 @@ try:
                         st.session_state.sort_desc = not st.session_state.sort_desc; st.rerun()
                 
                 with col_t3:
-                    # 💡 [핵심 기술 3] Print 버튼 크기 완벽 동기화 (iframe 높이와 내부 padding을 Streamlit 버튼과 100% 일치시킴)
                     components.html(
                         f"""
                         <!DOCTYPE html>
@@ -1176,15 +1225,10 @@ try:
                         <style>
                         body {{ margin: 0; padding: 0; overflow: hidden; background-color: transparent; }}
                         .btn-print {{
-                            width: 100%; 
-                            min-height: 2.5rem; /* 40px */
-                            padding: 0.25rem 0.75rem; /* Streamlit 기본 버튼 패딩 */
-                            background-color: #4e8cff; color: white;
-                            border: 1px solid #4e8cff; border-radius: 0.5rem; /* 8px 둥글기 일치 */
-                            font-weight: bold; cursor: pointer; font-size: 15px;
+                            width: 100%; height: 40px; background-color: #4e8cff; color: white;
+                            border: 1px solid #4e8cff; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px;
                             font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
                             display: flex; align-items: center; justify-content: center; box-sizing: border-box;
-                            line-height: 1.6;
                         }}
                         .btn-print:hover {{ background-color: #3b76e5; border-color: #3b76e5; }}
                         </style>
