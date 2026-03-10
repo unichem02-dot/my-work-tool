@@ -110,12 +110,12 @@ st.markdown("""
     [data-testid="stMetricValue"] { color: #ffffff !important; }
     [data-testid="stMetricLabel"] { color: #cbd5e1 !important; font-size: 16px !important; }
     
-    /* 💡 검색 메뉴의 연도, 월, 날짜 등 선택 및 입력 텍스트를 굵게(Bold) 변경 (여백 다이어트 취소) */
+    /* 💡 검색 메뉴의 연도, 월, 날짜 등 선택 및 입력 텍스트를 굵게(Bold) 변경 */
     div[data-baseweb="select"] > div { font-weight: bold !important; }
     div[data-baseweb="input"] > input { font-weight: bold !important; }
     
     /* 💡 Form 테두리 및 여백 제거 (검색창 엔터 적용을 위한 래핑용) */
-    div[data-testid="stForm"] { border: none !important; padding: 0 !important; }
+    div[data-testid="stForm"] { border: none !important; padding: 0 !important; margin-bottom: -15px !important; }
     
     /* 💡 파일 업로드 창 전체 가시성 완벽 해결 (상위 컨테이너 강제 적용) */
     div[data-testid="stFileUploader"] {
@@ -631,7 +631,7 @@ try:
                 height=75
             )
 
-            # 💡 [엔터 검색 기술 1] 기간 검색창을 Form으로 묶어 엔터 입력 지원
+            # 💡 [엔터 검색 기술 1] 기간 검색창을 투명 폼(Form)으로 묶어 엔터 즉시 검색 지원
             with st.form(key="form_row1", border=False):
                 r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
                 with r1_1: t1 = st.radio("t1", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
@@ -643,7 +643,7 @@ try:
 
             st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
-            # 💡 [엔터 검색 기술 2] 월별 검색창을 Form으로 묶어 엔터 입력 지원
+            # 💡 [엔터 검색 기술 2] 월별 검색창을 투명 폼(Form)으로 묶어 엔터 즉시 검색 지원
             with st.form(key="form_row2", border=False):
                 r2_1, r2_2, r2_3, r2_4, r2_5, r2_6, r2_7 = st.columns([1.5, 1.2, 1.3, 1, 2, 2, 2.5])
                 with r2_1: t2 = st.radio("t2", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
@@ -678,7 +678,7 @@ try:
             with u14: b_mon = st.button("월별검색", use_container_width=True, type="primary")
             with u15: b_yong = st.button("용차", use_container_width=True, type="primary")
 
-        # 💡 [검색 버튼 액션] 제목을 더 상세하게 기록하도록 title 수정
+        # 💡 [검색 버튼 액션]
         if b1: st.session_state.search_params = {"mode":"기간","title":f"기간 검색 ({dr1[0]} ~ {dr1[1] if len(dr1)>1 else dr1[0]})","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0], "s_filter": s1}; st.rerun()
         elif b2: st.session_state.search_params = {"mode":"월별상세","title":f"{y2}년 {m2}월 상세 검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2, "s_filter": s2}; st.rerun()
         elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3, "s_filter": s3}; st.rerun()
@@ -748,7 +748,7 @@ try:
             # 행별 순수익(profit) 계산
             f_df['profit'] = f_df['out_total'] - f_df['in_total'] - f_df['carprice_val']
             
-            # 💡 [핵심] 사용자가 검색한 세부 조건(거래처, 품목, 매입/매출 여부)을 파악하여 인쇄용 제목으로 조립
+            # 💡 사용자가 검색한 세부 조건 조립
             print_title = params.get("title", "검색결과")
             
             cond_texts = []
@@ -839,7 +839,7 @@ try:
                         st.dataframe(top_initem.style.format({'매입수량': '{:,.0f}'}), use_container_width=True, hide_index=True)
                     else: st.caption("매입 품목 내역이 없습니다.")
 
-            # 💡 그 외 검색 버튼 클릭 시 (기존 테이블 + 인쇄 모드 투트랙 분리)
+            # 💡 그 외 검색 버튼 클릭 시 (기존 테이블 + 인쇄 모드)
             else:
                 pwd_token = str(st.secrets["tom_password"])
                 
@@ -856,50 +856,29 @@ try:
                 footer_html = f'<tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr>'
                 footer_html += f'<tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr>'
 
-                # 2. 웹 화면용 HTML 생성 (끊김 없이 하나의 표로 렌더링)
-                web_html = '<div class="custom-table-container"><table class="custom-table"><thead>'
-                web_html += '<tr class="fake-margin"><td colspan="13"></td></tr>'
-                web_html += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
-                web_html += "".join(row_html_list)
-                web_html += footer_html
-                web_html += '</tbody><tfoot style="display: table-footer-group;"><tr class="fake-margin"><td colspan="13"></td></tr></tfoot></table></div>'
-
-                # 💡 [핵심 기술 1] 인쇄 페이지 분할 밸런스 조정 (25줄 -> 36줄로 확장하여 하단 여백 채움)
-                CHUNK_SIZE = 36 
-                total_rows = len(row_html_list)
-                est_pages = max(1, math.ceil(total_rows / CHUNK_SIZE))
+                # 2. 웹 화면 및 인쇄 공용 HTML 생성 (끊김 없는 완벽한 하나의 표)
+                html = '<div class="custom-table-container"><table class="custom-table">'
                 
-                print_html_table = ""
-                for p in range(est_pages):
-                    start_idx = p * CHUNK_SIZE
-                    end_idx = min((p + 1) * CHUNK_SIZE, total_rows)
-                    chunk_rows = row_html_list[start_idx:end_idx]
-                    
-                    page_break = 'style="page-break-after: always;"' if p < est_pages - 1 else ''
-                    
-                    print_html_table += f'<div class="custom-table-container" {page_break}><table class="custom-table"><thead>'
-                    
-                    print_html_table += f'<tr><th colspan="13" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border: none !important; border-bottom: 2px solid #555 !important; padding: 0px 0px 10px 0px !important;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개 &nbsp;|&nbsp; PAGE : {p+1}/{est_pages}</span></th></tr>'
-                    
-                    print_html_table += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
-                    
-                    print_html_table += "".join(chunk_rows)
-                    
-                    # 마지막 페이지에만 합계 푸터 삽입
-                    if p == est_pages - 1:
-                        print_html_table += footer_html
-                        
-                    print_html_table += '</tbody></table></div>'
+                # 💡 [핵심 기술 1] 인쇄 페이지 레이아웃 붕 뜸 방지를 위해 '하나의 표'로 원상복구! 
+                est_pages = max(1, math.ceil(len(f_df) / 36))
+                
+                # 💡 [핵심 기술 2] 브라우저가 알아서 매 페이지 넘길 때마다 반복해서 찍어주는 thead 요소 안에 제목 삽입!
+                html += f'<thead><tr><th colspan="13" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border: none !important; border-bottom: 2px solid #555 !important; padding: 5px 0px 10px 0px !important;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개 &nbsp;|&nbsp; 예상 인쇄 분량: 약 {est_pages}페이지</span></th></tr>'
+                
+                html += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
+                html += "".join(row_html_list)
+                html += footer_html
+                html += '</tbody><tfoot style="display: table-footer-group;"><tr class="fake-margin"><td colspan="13"></td></tr></tfoot></table></div>'
 
-                # 💡 [핵심 기술 2] 종이 상하 여백 밸런스 조정 (@page margin 적용)
+                # 💡 [핵심 기술 3] 종이 상하 여백을 균형있게 재조정하여 표가 끝에 닿지 않도록 마진(@page margin) 설정
                 print_html_content = f"""
                 <!DOCTYPE html>
                 <html><head><title>인쇄 미리보기</title>
                 <meta charset="utf-8">
                 <style>
-                    @page {{ size: A4 portrait; margin: 15mm 10mm 15mm 10mm; }} /* 상 15mm, 우 10mm, 하 15mm, 좌 10mm 로 상단 여백 확보 및 하단 밸런스 조정 */
+                    @page {{ size: A4 portrait; margin: 15mm 10mm; }} /* 상하 15mm 여백을 주어 자연스러운 출력 화면 확보 */
                     body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; box-sizing: border-box; }}
-                    .custom-table-container {{ width: 100%; zoom: 68%; }} /* 줌을 살짝 키워 하단 여백 채움 효과 극대화 */
+                    .custom-table-container {{ width: 100%; zoom: 70%; }} /* 줌을 70%로 고정하여 A4 세로 비율 최적화 */
                     .custom-table {{ width: 100%; border-collapse: collapse; font-size: 15px; background-color: white; }}
                     .custom-table th, .custom-table td {{ border: 1px solid #aaa; padding: 8px 10px; color: black !important; }}
                     .custom-table th {{ text-align: center; font-weight: bold; padding: 10px 6px; }}
@@ -912,11 +891,12 @@ try:
                     .tc {{ text-align: center; }} .tl {{ text-align: left; }} .tr {{ text-align: right; }}
                     a {{ color: black !important; text-decoration: none !important; pointer-events: none; }}
                     .print-hide-col {{ display: none !important; }}
+                    thead {{ display: table-header-group !important; }}
                     tfoot {{ display: table-footer-group !important; }}
                     .custom-table tr {{ page-break-inside: avoid; }}
                 </style>
                 </head><body>
-                {print_html_table}
+                {html}
                 </body></html>
                 """
                 
@@ -976,7 +956,7 @@ try:
                     csv = f_df.to_csv(index=False).encode('utf-8-sig')
                     st.download_button("💾 엑셀 다운로드", data=csv, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
 
-                st.markdown(web_html, unsafe_allow_html=True)
+                st.markdown(html, unsafe_allow_html=True)
 
 except Exception as e: st.error(f"⚠️ 시스템 오류: {e}")
 st.markdown("<br><p style='text-align:center; color:#64748b;'>© 2026 UNICHEM02-DOT. ALL RIGHTS RESERVED.</p>", unsafe_allow_html=True)
