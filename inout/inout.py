@@ -114,6 +114,9 @@ st.markdown("""
     div[data-baseweb="select"] > div { font-weight: bold !important; }
     div[data-baseweb="input"] > input { font-weight: bold !important; }
     
+    /* 💡 Form 테두리 및 여백 제거 (검색창 엔터 적용을 위한 래핑용) */
+    div[data-testid="stForm"] { border: none !important; padding: 0 !important; }
+    
     /* 💡 파일 업로드 창 전체 가시성 완벽 해결 (상위 컨테이너 강제 적용) */
     div[data-testid="stFileUploader"] {
         background-color: #f1f5f9 !important; /* 밝은 회색 바탕 */
@@ -628,30 +631,31 @@ try:
                 height=75
             )
 
-            # 💡 [조치 완료] 이전의 안정적인 폭(비율)으로 원상복구
-            r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
-            with r1_1: t1 = st.radio("t1", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
-            with r1_2: dr1 = st.date_input("dr1", [datetime(2014,1,1).date(), get_kst_now().date()], format="YYYY-MM-DD", label_visibility="collapsed")
-            with r1_3: s1 = st.selectbox("s1", ["ALL", "제일", "중부"], label_visibility="collapsed")
-            with r1_4: c1 = st.text_input("c1", placeholder="거래처 검색", label_visibility="collapsed")
-            with r1_5: i1 = st.text_input("i1", placeholder="품목 검색", label_visibility="collapsed")
-            with r1_6: b1 = st.button("기간 거래처&품목", use_container_width=True, type="primary")
+            # 💡 [엔터 검색 기술 1] 기간 검색창을 Form으로 묶어 엔터 입력 지원
+            with st.form(key="form_row1", border=False):
+                r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
+                with r1_1: t1 = st.radio("t1", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
+                with r1_2: dr1 = st.date_input("dr1", [datetime(2014,1,1).date(), get_kst_now().date()], format="YYYY-MM-DD", label_visibility="collapsed")
+                with r1_3: s1 = st.selectbox("s1", ["ALL", "제일", "중부"], label_visibility="collapsed")
+                with r1_4: c1 = st.text_input("c1", placeholder="거래처 검색", label_visibility="collapsed")
+                with r1_5: i1 = st.text_input("i1", placeholder="품목 검색", label_visibility="collapsed")
+                with r1_6: b1 = st.form_submit_button("기간 거래처&품목", use_container_width=True, type="primary")
 
             st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
-            # 💡 [조치 완료] 이전의 안정적인 폭(비율)으로 원상복구
-            r2_1, r2_2, r2_3, r2_4, r2_5, r2_6, r2_7 = st.columns([1.5, 1.2, 1.3, 1, 2, 2, 2.5])
-            with r2_1: t2 = st.radio("t2", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
-            with r2_2: y2 = st.selectbox("y2", years, label_visibility="collapsed", format_func=lambda x: f"{x}년")
-            with r2_3: m2 = st.selectbox("m2", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
-            with r2_4: s2 = st.selectbox("s2", ["ALL", "제일", "중부"], label_visibility="collapsed")
-            with r2_5: c2 = st.text_input("c2", placeholder="거래처 검색", label_visibility="collapsed")
-            with r2_6: i2 = st.text_input("i2", placeholder="품목 검색", label_visibility="collapsed")
-            with r2_7: b2 = st.button("월별 거래처&품목", use_container_width=True, type="primary")
+            # 💡 [엔터 검색 기술 2] 월별 검색창을 Form으로 묶어 엔터 입력 지원
+            with st.form(key="form_row2", border=False):
+                r2_1, r2_2, r2_3, r2_4, r2_5, r2_6, r2_7 = st.columns([1.5, 1.2, 1.3, 1, 2, 2, 2.5])
+                with r2_1: t2 = st.radio("t2", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
+                with r2_2: y2 = st.selectbox("y2", years, label_visibility="collapsed", format_func=lambda x: f"{x}년")
+                with r2_3: m2 = st.selectbox("m2", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
+                with r2_4: s2 = st.selectbox("s2", ["ALL", "제일", "중부"], label_visibility="collapsed")
+                with r2_5: c2 = st.text_input("c2", placeholder="거래처 검색", label_visibility="collapsed")
+                with r2_6: i2 = st.text_input("i2", placeholder="품목 검색", label_visibility="collapsed")
+                with r2_7: b2 = st.form_submit_button("월별 거래처&품목", use_container_width=True, type="primary")
 
             st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
-            # 💡 [조치 완료] 이전의 안정적인 폭(비율)으로 원상복구
             u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15 = st.columns([0.7, 1.0, 0.8, 0.8, 1.0, 0.8, 0.8, 1.3, 0.8, 1.1, 0.7, 1.0, 0.8, 0.9, 0.9])
             
             with u1: s3 = st.selectbox("s3", ["ALL", "제일", "중부"], label_visibility="collapsed")
@@ -661,7 +665,6 @@ try:
             
             with u5: b_new = st.button("신규입력", use_container_width=True, type="primary")
             
-            # 💡 [핵심 조치] 최근입력 ALL 삭제
             with u6: lmt = st.selectbox("l4", ["20개", "50개", "100개"], index=0, label_visibility="collapsed")
             with u7: b_rec = st.button("최근입력", use_container_width=True, type="primary")
             
@@ -861,8 +864,8 @@ try:
                 web_html += footer_html
                 web_html += '</tbody><tfoot style="display: table-footer-group;"><tr class="fake-margin"><td colspan="13"></td></tr></tfoot></table></div>'
 
-                # 3. 인쇄용 HTML 생성 (데이터를 25개씩 강제 분할하여 PAGE: 1/3을 정확히 부여)
-                CHUNK_SIZE = 25 
+                # 💡 [핵심 기술 1] 인쇄 페이지 분할 밸런스 조정 (25줄 -> 36줄로 확장하여 하단 여백 채움)
+                CHUNK_SIZE = 36 
                 total_rows = len(row_html_list)
                 est_pages = max(1, math.ceil(total_rows / CHUNK_SIZE))
                 
@@ -872,13 +875,11 @@ try:
                     end_idx = min((p + 1) * CHUNK_SIZE, total_rows)
                     chunk_rows = row_html_list[start_idx:end_idx]
                     
-                    # 💡 페이지 분할 CSS 적용 (마지막 페이지 제외)
                     page_break = 'style="page-break-after: always;"' if p < est_pages - 1 else ''
                     
                     print_html_table += f'<div class="custom-table-container" {page_break}><table class="custom-table"><thead>'
                     
-                    # 💡 [핵심] 분할된 각 표의 머리글에 PAGE : X/Y 동적 삽입, 그리고 가짜여백(fake-margin) 삭제하여 간격 밀착!
-                    print_html_table += f'<tr><th colspan="13" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border: none !important; border-bottom: 2px solid #555 !important; padding: 5px 0 5px 0 !important;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개 &nbsp;|&nbsp; PAGE : {p+1}/{est_pages}</span></th></tr>'
+                    print_html_table += f'<tr><th colspan="13" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border: none !important; border-bottom: 2px solid #555 !important; padding: 0px 0px 10px 0px !important;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개 &nbsp;|&nbsp; PAGE : {p+1}/{est_pages}</span></th></tr>'
                     
                     print_html_table += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
                     
@@ -890,14 +891,15 @@ try:
                         
                     print_html_table += '</tbody></table></div>'
 
+                # 💡 [핵심 기술 2] 종이 상하 여백 밸런스 조정 (@page margin 적용)
                 print_html_content = f"""
                 <!DOCTYPE html>
                 <html><head><title>인쇄 미리보기</title>
                 <meta charset="utf-8">
                 <style>
-                    @page {{ size: A4 portrait; margin: 0mm; }}
-                    body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; padding: 0 10mm; box-sizing: border-box; }}
-                    .custom-table-container {{ width: 100%; zoom: 65%; }}
+                    @page {{ size: A4 portrait; margin: 15mm 10mm 15mm 10mm; }} /* 상 15mm, 우 10mm, 하 15mm, 좌 10mm 로 상단 여백 확보 및 하단 밸런스 조정 */
+                    body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; box-sizing: border-box; }}
+                    .custom-table-container {{ width: 100%; zoom: 68%; }} /* 줌을 살짝 키워 하단 여백 채움 효과 극대화 */
                     .custom-table {{ width: 100%; border-collapse: collapse; font-size: 15px; background-color: white; }}
                     .custom-table th, .custom-table td {{ border: 1px solid #aaa; padding: 8px 10px; color: black !important; }}
                     .custom-table th {{ text-align: center; font-weight: bold; padding: 10px 6px; }}
