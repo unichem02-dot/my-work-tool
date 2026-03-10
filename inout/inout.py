@@ -394,7 +394,6 @@ except:
 
 col_t, col_u, col_sql, col_r, col_l = st.columns([3.9, 1.3, 1.4, 1.4, 1.4])
 with col_t: 
-    # 💡 [버그 완벽 해결] 로그인 상태를 유지(token 전달)하면서 메인화면으로 이동하도록 토큰 결합!
     pwd_token = str(st.secrets.get("tom_password", ""))
     st.markdown(f"<h3 style='margin:0;'><a href='?home=1&token={pwd_token}' target='_self' style='text-decoration: none; color: #ffffff;'>📦 TOmBOy's INOUT</a></h3>", unsafe_allow_html=True)
     
@@ -1017,7 +1016,8 @@ try:
                 footer_html = f'<tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr>'
                 footer_html += f'<tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr>'
 
-                title_div = f'<div class="print-only-title" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border-bottom: 2px solid #555 !important; padding: 10px 0px !important; margin-bottom: 10px; font-weight: bold;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개</span></div>'
+                # 💡 [요청 반영] 웹 화면 테이블 제목을 16px -> 26px로 60% 이상 대폭 확대!
+                title_div = f'<div class="print-only-title" style="background-color: white !important; color: black !important; text-align: left; font-size: 28px; border-bottom: 2px solid #555 !important; padding: 10px 0px !important; margin-bottom: 10px; font-weight: bold;">{print_title} &nbsp; <span style="font-size: 16px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개</span></div>'
                 
                 table_html = '<div class="custom-table-container">'
                 table_html += title_div
@@ -1063,7 +1063,7 @@ try:
                 """
                 
                 col_t1, col_t2, col_t3, col_t4 = st.columns([5.3, 1.7, 1.5, 1.5])
-                with col_t1: st.markdown(f'<div class="table-title-box"><span style="font-size:16px; font-weight:bold; color:#f8fafc;">{print_title}</span> <span style="font-size:13px; color:#cbd5e1; margin-left:10px;">| 출력 개수: {len(f_df)}개</span></div>', unsafe_allow_html=True)
+                with col_t1: st.markdown(f'<div class="table-title-box"><span style="font-size:26px; font-weight:bold; color:#f8fafc;">{print_title}</span> <span style="font-size:15px; color:#cbd5e1; margin-left:10px;">| 출력 개수: {len(f_df)}개</span></div>', unsafe_allow_html=True)
                 
                 with col_t2: 
                     if st.button("🔄 날짜정렬", use_container_width=True, type="primary"):
