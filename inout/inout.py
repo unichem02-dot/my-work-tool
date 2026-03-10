@@ -63,6 +63,17 @@ st.markdown("""
         color: white !important;
     }
     
+    /* 💡 기간/월별 검색버튼(Form 내부 Submit 버튼) 청록색 커스텀 */
+    div[data-testid="stForm"] button[kind="primary"] {
+        background-color: #009688 !important; /* 청록색 */
+        border-color: #009688 !important;
+        color: white !important;
+    }
+    div[data-testid="stForm"] button[kind="primary"]:hover {
+        background-color: #00796B !important; /* 마우스 오버시 진한 청록색 */
+        border-color: #00796B !important;
+    }
+    
     /* 결산버튼 초록색 커스텀을 위한 예외처리 */
     div:nth-child(4) > div[data-testid="stButton"] > button {
         background-color: #8ba966 !important;
@@ -116,13 +127,13 @@ st.markdown("""
     /* 검색 메뉴의 연도, 월, 날짜 등 선택 및 입력 텍스트를 굵게(Bold) 변경 */
     div[data-baseweb="select"] > div { font-weight: bold !important; }
     div[data-baseweb="input"] > input { font-weight: bold !important; }
-    /* 💡 일검색 등 Date Input 창의 글씨도 완벽하게 굵게 처리 */
+    /* 일검색 등 Date Input 창의 글씨도 완벽하게 굵게 처리 */
     div[data-testid="stDateInput"] input { font-weight: bold !important; }
     
     /* Form 테두리 및 여백 제거 (검색창 엔터 적용을 위한 래핑용) */
     div[data-testid="stForm"] { border: none !important; padding: 0 !important; margin-bottom: -15px !important; }
     
-    /* 💡 매입 및 매출 수량 툴팁 (메모장 팝업) 30% 투명도 적용 CSS */
+    /* 매입 및 매출 수량 툴팁 (메모장 팝업) 30% 투명도 적용 CSS */
     .memo-tooltip-in {
         position: relative;
         display: inline-block;
@@ -209,7 +220,7 @@ st.markdown("""
 # --- [2. 보안 및 세션 상태 관리] ---
 if "authenticated" not in st.session_state: st.session_state.authenticated = False
 if "search_params" not in st.session_state: st.session_state.search_params = {"mode": "init"}
-# 💡 [정렬 기본값 변경] True(최신순) ➔ False(과거순)으로 기본값을 변경하여 날짜가 적은 순부터 보여줌
+# 정렬 기본값 변경: True(최신순) ➔ False(과거순)으로 기본값을 변경하여 날짜가 적은 순부터 보여줌
 if "sort_desc" not in st.session_state: st.session_state.sort_desc = False 
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
 if "copy_id" not in st.session_state: st.session_state.copy_id = None
@@ -323,7 +334,7 @@ def safe_str(val):
 # --- [4. 상단 상태바] ---
 st.session_state.last_activity = get_kst_now()
 col_t, col_u, col_r, col_l = st.columns([5.5, 1.5, 1.5, 1.5])
-# 💡 타이틀 명칭 TOmBOy's INOUT 으로 변경
+# 타이틀 명칭 TOmBOy's INOUT 으로 변경
 with col_t: st.markdown("<h3 style='margin:0;'>📦 TOmBOy's INOUT</h3>", unsafe_allow_html=True)
 with col_u:
     if st.button("📤 DB 업로드" if not st.session_state.show_uploader else "❌ 업로드 닫기", use_container_width=True, type="primary"):
@@ -641,7 +652,7 @@ try:
                 </style>
                 </head>
                 <body>
-                <!-- 💡 [계산기 레이아웃 변경] 곱셈 ➔ 나눗셈 ➔ VAT 순으로 나열 -->
+                <!-- 계산기 레이아웃 변경 (곱셈 ➔ 나눗셈 ➔ VAT 순으로 나열) -->
                 <div class="rt-calc-wrap">
                     <!-- 1. 곱셈 -->
                     <div class="rt-group">
@@ -746,12 +757,12 @@ try:
             with u14: b_mon = st.button("월별", use_container_width=True, type="primary")
             with u15: b_yong = st.button("용차", use_container_width=True, type="primary")
 
-        # 💡 [검색 버튼 액션] (최근 검색 버튼은 최신순, 나머지는 과거순으로 정렬 분리 적용)
+        # 검색 버튼 액션 (최근 검색 버튼은 최신순, 나머지는 과거순으로 정렬 분리 적용)
         if b1: st.session_state.search_params = {"mode":"기간","title":f"기간 검색 ({dr1[0]} ~ {dr1[1] if len(dr1)>1 else dr1[0]})","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0], "s_filter": s1}; st.session_state.sort_desc = False; st.rerun()
         elif b2: st.session_state.search_params = {"mode":"월별상세","title":f"{y2}년 {m2}월 상세 검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2, "s_filter": s2}; st.session_state.sort_desc = False; st.rerun()
         elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3, "s_filter": s3}; st.session_state.sort_desc = False; st.rerun()
         elif b_new: st.session_state.search_params = {"mode":"신규입력"}; st.session_state.copy_id = None; st.rerun()
-        elif b_rec: st.session_state.search_params = {"mode":"최근","title":"최근 입력순서","limit":lmt, "s_filter": "ALL"}; st.session_state.sort_desc = True; st.rerun() # 💡 [최근 버튼]은 최신순 정렬(True)
+        elif b_rec: st.session_state.search_params = {"mode":"최근","title":"최근 입력순서","limit":lmt, "s_filter": "ALL"}; st.session_state.sort_desc = True; st.rerun() # [최근 버튼]은 최신순 정렬(True)
         elif b_day: st.session_state.search_params = {"mode":"일","title":f"일간 검색 ({d_day})","date":d_day, "s_filter": "ALL"}; st.session_state.sort_desc = False; st.rerun()
         elif b_ayt:
             st.session_state.search_params = {
@@ -798,14 +809,13 @@ try:
             if params.get("company"): f_df = f_df[f_df['incom'].str.contains(params["company"], na=False)|f_df['outcom'].str.contains(params["company"], na=False)]
             if params.get("item"): f_df = f_df[f_df['initem'].str.contains(params["item"], na=False)|f_df['outitem'].str.contains(params["item"], na=False)]
             
-            # 4. 정렬
+            # 정렬
             f_df = f_df.sort_values(by=[date_col, 'id_val'], ascending=[not st.session_state.sort_desc, not st.session_state.sort_desc])
             
             # 5. 표시 개수 리미트
             limit_str = str(params.get("limit", "ALL"))
             if "개" in limit_str:
                 num = int(limit_str.replace("개", ""))
-                # 💡 기본 정렬이 오름차순(False)이면 최신 자료를 원할 때 위에서부터 자르는 방식 유지
                 if st.session_state.sort_desc: f_df = f_df.head(num)
                 else: f_df = f_df.tail(num)
 
