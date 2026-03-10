@@ -150,7 +150,7 @@ st.markdown("""
     .memo-tooltip-in .memo-text, .memo-tooltip-out .memo-text {
         visibility: hidden;
         width: max-content;
-        background-color: rgba(255, 251, 235, 0.3) !important; /* 💡 70% 투명하게 (opacity: 0.3) 적용 */
+        background-color: rgba(255, 251, 235, 0.3) !important; /* 70% 투명하게 (opacity: 0.3) 적용 */
         backdrop-filter: blur(3px); /* 투명해지며 글자가 겹치는 것을 막기 위한 블러 처리 */
         text-align: right;
         border-radius: 6px;
@@ -229,6 +229,9 @@ if "last_activity" not in st.session_state: st.session_state.last_activity = Non
 if "failed_attempts" not in st.session_state: st.session_state.failed_attempts = 0
 if "lockout_until" not in st.session_state: st.session_state.lockout_until = None
 if "show_uploader" not in st.session_state: st.session_state.show_uploader = False
+# 💡 SQL 버튼 상태 관리
+if "sql_ready" not in st.session_state: st.session_state.sql_ready = False
+if "sql_content" not in st.session_state: st.session_state.sql_content = ""
 
 # URL 파라미터 감지 및 자동 로그인 (복사/수정 연동)
 if "edit_id" in st.query_params or "copy_id" in st.query_params:
@@ -332,7 +335,7 @@ def safe_str(val):
     if isinstance(val, float) and val.is_integer(): return str(int(val))
     return str(val)
 
-# 💡 SQL 생성을 위한 유틸리티 함수 추가
+# SQL 생성을 위한 유틸리티 함수
 def generate_sql_for_backup(df_data):
     lines = ["CREATE TABLE IF NOT EXISTS `jeilinout` (",
              "  `id` bigint(20) NOT NULL,",
@@ -366,13 +369,12 @@ def generate_sql_for_backup(df_data):
 # --- [4. 상단 상태바] ---
 st.session_state.last_activity = get_kst_now()
 
-# 💡 전체 연도 리스트를 미리 호출해둠 (SQL 다운로드에서 사용하기 위함)
+# 전체 연도 리스트를 미리 호출해둠 (SQL 다운로드에서 사용하기 위함)
 try:
     available_years = get_available_years()
 except:
     available_years = [get_kst_now().year]
 
-# 💡 [SQL다운 버튼 추가] 공간 분배 재조정 (col_sql 추가)
 col_t, col_u, col_sql, col_r, col_l = st.columns([3.9, 1.3, 1.4, 1.4, 1.4])
 with col_t: st.markdown("<h3 style='margin:0;'>📦 TOmBOy's INOUT</h3>", unsafe_allow_html=True)
 with col_u:
@@ -381,17 +383,24 @@ with col_u:
         st.rerun()
 
 with col_sql:
-    # 💡 모든 데이터를 한 번에 가져와서 phpMyAdmin 호환 SQL 텍스트 파일로 생성
-    try:
-        all_data_for_sql = load_data_for_years(available_years)
-        sql_content = generate_sql_for_backup(all_data_for_sql)
-        st.download_button("💾 SQL다운", data=sql_content.encode('utf-8-sig'), file_name=f"db_backup_{get_kst_now().strftime('%Y%m%d')}.sql", mime="application/sql", use_container_width=True, type="primary")
-    except Exception as e:
-        st.button("💾 SQL 준비중", disabled=True, use_container_width=True)
+    # 💡 [핵심 기술] SQL 다운로드 버튼 분리: 무거운 처리를 클릭 시에만 진행하도록 개선!
+    if not st.session_state.sql_ready:
+        if st.button("💾 SQL다운", use_container_width=True, type="primary"):
+            with st.spinner("⏳ SQL 데이터를 생성 중입니다..."):
+                try:
+                    all_data_for_sql = load_data_for_years(available_years)
+                    st.session_state.sql_content = generate_sql_for_backup(all_data_for_sql)
+                    st.session_state.sql_ready = True
+                    st.rerun()
+                except Exception as e:
+                    st.error("생성 실패")
+    else:
+        st.download_button("💾 생성완료! 다운로드", data=st.session_state.sql_content.encode('utf-8-sig'), file_name=f"db_backup_{get_kst_now().strftime('%Y%m%d')}.sql", mime="application/sql", use_container_width=True, type="primary")
 
 with col_r:
     if st.button("🔄 데이터 갱신", use_container_width=True, type="primary"):
         st.cache_data.clear()
+        st.session_state.sql_ready = False # 💡 갱신 시 캐시 및 SQL 상태 초기화
         st.rerun()
 with col_l:
     if st.button("🔓 LOGOUT", use_container_width=True, type="primary"):
@@ -491,6 +500,7 @@ if st.session_state.show_uploader:
                             st.success(f"🎉 성공! 총 {len(years_found)}개의 연도별 탭({', '.join(f'{y}년' for y in sorted(years_found, reverse=True))})으로 깔끔하게 분할 저장이 완료되었습니다!")
                             st.balloons()
                             st.cache_data.clear() 
+                            st.session_state.sql_ready = False # 💡 DB업로드 완료시 기존에 뽑은 SQL 초기화
                             
                         except Exception as e:
                             st.error(f"⚠️ 구글 시트 전송 중 오류가 발생했습니다: {e}")
@@ -720,13 +730,15 @@ try:
                         <div class="rt-out" id="rt-dr">0</div>
                     </div>
                     
-                    <!-- 3. VAT 계산 (VAT-10% -> 기준금액 -> VAT+10%) -->
+                    <!-- 💡 3. VAT 계산 완벽 재배치: [결과] VAT-10% / [입력] / VAT+10% [결과] -->
                     <div class="rt-group">
+                        <div class="rt-out" id="rt-vm" style="width: auto; min-width: 90px;">0</div>
                         <span class="rt-txt blue">VAT-10%</span>
-                        <div class="rt-out" id="rt-vm">0</div>
-                        <input type="number" class="rt-in" id="rt-v1" oninput="rtCalc()" placeholder="기준금액" style="text-align: center; margin: 0 5px;">
+                        <span class="rt-op" style="color: #4a5568; margin: 0 4px;">/</span>
+                        <input type="number" class="rt-in" id="rt-v1" oninput="rtCalc()" placeholder="기준금액" style="text-align: center; width: 120px;">
+                        <span class="rt-op" style="color: #4a5568; margin: 0 4px;">/</span>
                         <span class="rt-txt yellow">VAT+10%</span>
-                        <div class="rt-out orange" id="rt-vp">0</div>
+                        <div class="rt-out orange" id="rt-vp" style="width: auto; min-width: 90px;">0</div>
                     </div>
                 </div>
                 <script>
@@ -1027,7 +1039,7 @@ try:
                 
                 table_html += '</table></div>'
 
-                # 💡 [브라우저 기본글씨 제거 및 여백 기술] - 인쇄 로직은 단 한 줄도 건드리지 않음!
+                # 💡 [브라우저 기본글씨 제거 및 여백 기술]
                 print_html_content = f"""
                 <!DOCTYPE html>
                 <html><head><title>인쇄 미리보기</title>
