@@ -127,7 +127,8 @@ st.markdown("""
     .table-title-box { background-color: #2b323c; padding: 10px 15px; border-top: 2px solid #555; border-bottom: none; display: flex; align-items: center; justify-content: space-between; }
     .custom-table { width: 100%; border-collapse: collapse; font-size: 15px; background-color: white; }
     .custom-table th, .custom-table td { border: 1px solid #d0d0d0; padding: 8px 10px; }
-    .custom-table th { text-align: center; color: white; font-weight: bold; background-color: #353b48; }
+    /* 💡 제목 셀의 배경색을 통합 지정했던 것을 지우고 개별 클래스가 먹히도록 수정 */
+    .custom-table th { text-align: center; color: white; font-weight: bold; padding: 10px 6px; }
     .custom-table tr:nth-child(even) { background-color: #f8f9fa; }
     .custom-table tr:hover { background-color: #e2e6ea; }
     
@@ -137,10 +138,10 @@ st.markdown("""
     /* 인쇄 전용 타이틀 숨김 처리 */
     .print-only-title { display: none !important; }
     
-    /* 테이블 구역별 색상 */
-    .th-base { background-color: #353b48; color: white; }
-    .th-in { background-color: #3b5b88; color: white; } 
-    .th-out { background-color: #b8860b; color: white; }
+    /* 💡 테이블 구역별 색상 복구 완료 */
+    .th-base { background-color: #353b48 !important; color: white; }
+    .th-in { background-color: #3b5b88 !important; color: white; } 
+    .th-out { background-color: #b8860b !important; color: white; }
     
     /* 텍스트 색상 강조 */
     .txt-in-bold { color: #1e3a8a !important; font-weight: bold; }
@@ -303,7 +304,7 @@ if "sql_content" not in st.session_state: st.session_state.sql_content = ""
 # URL 파라미터 처리 로직 (무한 로딩 방지 및 검색 조건 완벽 복원)
 should_rerun = False
 
-# 💡 홈 로고 클릭 감지
+# 홈 로고 클릭 감지
 if "home" in st.query_params:
     st.session_state.search_params = {"mode": "init"}
     st.session_state.edit_id = None
@@ -1016,7 +1017,6 @@ try:
                 footer_html = f'<tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr>'
                 footer_html += f'<tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr>'
 
-                # 💡 [요청 반영] 웹 화면 테이블 제목을 16px -> 26px로 60% 이상 대폭 확대!
                 title_div = f'<div class="print-only-title" style="background-color: white !important; color: black !important; text-align: left; font-size: 28px; border-bottom: 2px solid #555 !important; padding: 10px 0px !important; margin-bottom: 10px; font-weight: bold;">{print_title} &nbsp; <span style="font-size: 16px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개</span></div>'
                 
                 table_html = '<div class="custom-table-container">'
