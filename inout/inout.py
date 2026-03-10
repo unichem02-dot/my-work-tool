@@ -63,7 +63,7 @@ st.markdown("""
         color: white !important;
     }
     
-    /* 💡 SQL 다운로드 생성완료 버튼 (Secondary 타입으로 분리하여 빨간색 완벽 고정 적용!) */
+    /* SQL 다운로드 생성완료 버튼 (Secondary 타입으로 분리하여 빨간색 완벽 고정 적용!) */
     div[data-testid="stDownloadButton"] button[kind="secondary"] {
         background-color: #ef4444 !important; /* 빨간색(Red) */
         border-color: #ef4444 !important;
@@ -146,20 +146,16 @@ st.markdown("""
     /* Form 테두리 및 여백 제거 (검색창 엔터 적용을 위한 래핑용) */
     div[data-testid="stForm"] { border: none !important; padding: 0 !important; margin-bottom: -15px !important; }
     
-    /* 매입 및 매출 수량 툴팁 (메모장 팝업) 70% 투명도 적용 CSS */
-    .memo-tooltip-in {
+    /* 💡 매입/매출 수량 및 품목/배송 툴팁 (메모장 팝업) 70% 투명도 적용 CSS */
+    .memo-tooltip-in, .memo-tooltip-out, .memo-tooltip-base {
         position: relative;
         display: inline-block;
         cursor: pointer;
-        color: #1e3a8a; 
     }
-    .memo-tooltip-out {
-        position: relative;
-        display: inline-block;
-        cursor: pointer;
-        color: #9a3412; 
-    }
-    .memo-tooltip-in .memo-text, .memo-tooltip-out .memo-text {
+    .memo-tooltip-in { color: #1e3a8a; } /* 매입 파란색 텍스트 유지 */
+    .memo-tooltip-out { color: #9a3412; } /* 매출 주황색 텍스트 유지 */
+    
+    .memo-tooltip-in .memo-text, .memo-tooltip-out .memo-text, .memo-tooltip-base .memo-text {
         visibility: hidden;
         width: max-content;
         background-color: rgba(255, 251, 235, 0.3) !important; /* 70% 투명하게 (opacity: 0.3) 적용 */
@@ -180,12 +176,12 @@ st.markdown("""
         line-height: 1.5;
     }
     /* 메모장 내부의 모든 텍스트를 완벽한 블랙으로 강제 */
-    .memo-tooltip-in .memo-text *, .memo-tooltip-out .memo-text * {
+    .memo-tooltip-in .memo-text *, .memo-tooltip-out .memo-text *, .memo-tooltip-base .memo-text * {
         color: #000000 !important;
         font-weight: bold !important;
     }
     /* 말풍선 아래쪽 화살표 */
-    .memo-tooltip-in .memo-text::after, .memo-tooltip-out .memo-text::after {
+    .memo-tooltip-in .memo-text::after, .memo-tooltip-out .memo-text::after, .memo-tooltip-base .memo-text::after {
         content: "";
         position: absolute;
         top: 100%;
@@ -196,7 +192,8 @@ st.markdown("""
         border-color: rgba(245, 158, 11, 0.8) transparent transparent transparent;
     }
     .memo-tooltip-in:hover .memo-text, .memo-tooltip-in:active .memo-text,
-    .memo-tooltip-out:hover .memo-text, .memo-tooltip-out:active .memo-text {
+    .memo-tooltip-out:hover .memo-text, .memo-tooltip-out:active .memo-text,
+    .memo-tooltip-base:hover .memo-text, .memo-tooltip-base:active .memo-text {
         visibility: visible;
         opacity: 1;
     }
@@ -241,7 +238,7 @@ if "last_activity" not in st.session_state: st.session_state.last_activity = Non
 if "failed_attempts" not in st.session_state: st.session_state.failed_attempts = 0
 if "lockout_until" not in st.session_state: st.session_state.lockout_until = None
 if "show_uploader" not in st.session_state: st.session_state.show_uploader = False
-# 💡 SQL 버튼 상태 관리
+# SQL 버튼 상태 관리
 if "sql_ready" not in st.session_state: st.session_state.sql_ready = False
 if "sql_content" not in st.session_state: st.session_state.sql_content = ""
 
@@ -406,13 +403,13 @@ with col_sql:
                 except Exception as e:
                     st.error("생성 실패")
     else:
-        # 💡 생성 완료 상태일 때 버튼을 'Secondary' 타입으로 출력하여 CSS에서 지정해둔 빨간색이 완벽하게 씌워지도록 함!
+        # 생성 완료 상태일 때 버튼을 'Secondary' 타입으로 출력하여 CSS에서 지정해둔 빨간색이 완벽하게 씌워지도록 함!
         st.download_button("💾 생성완료! 다운로드", data=st.session_state.sql_content.encode('utf-8-sig'), file_name=f"db_backup_{get_kst_now().strftime('%Y%m%d')}.sql", mime="application/sql", use_container_width=True, type="secondary")
 
 with col_r:
     if st.button("🔄 데이터 갱신", use_container_width=True, type="primary"):
         st.cache_data.clear()
-        st.session_state.sql_ready = False # 💡 갱신 시 캐시 및 SQL 상태 초기화
+        st.session_state.sql_ready = False # 갱신 시 캐시 및 SQL 상태 초기화
         st.rerun()
 with col_l:
     if st.button("🔓 LOGOUT", use_container_width=True, type="primary"):
@@ -512,7 +509,7 @@ if st.session_state.show_uploader:
                             st.success(f"🎉 성공! 총 {len(years_found)}개의 연도별 탭({', '.join(f'{y}년' for y in sorted(years_found, reverse=True))})으로 깔끔하게 분할 저장이 완료되었습니다!")
                             st.balloons()
                             st.cache_data.clear() 
-                            st.session_state.sql_ready = False # 💡 DB업로드 완료시 기존에 뽑은 SQL 초기화
+                            st.session_state.sql_ready = False # DB업로드 완료시 기존에 뽑은 SQL 초기화
                             
                         except Exception as e:
                             st.error(f"⚠️ 구글 시트 전송 중 오류가 발생했습니다: {e}")
@@ -742,7 +739,7 @@ try:
                         <div class="rt-out" id="rt-dr">0</div>
                     </div>
                     
-                    <!-- 💡 3. VAT 계산 완벽 재배치: [결과] VAT-10% / [입력] / VAT+10% [결과] -->
+                    <!-- 3. VAT 계산 완벽 재배치: [결과] VAT-10% / [입력] / VAT+10% [결과] -->
                     <div class="rt-group">
                         <div class="rt-out" id="rt-vm" style="width: auto; min-width: 90px;">0</div>
                         <span class="rt-txt blue">VAT-10%</span>
@@ -782,7 +779,7 @@ try:
                 height=75
             )
 
-            # 💡 [엔터 검색 기술 1] 기간 검색창 (라디오버튼 순서 변경: ALL > 매입 > 매출)
+            # 기간 검색창 (라디오버튼 순서 변경: ALL > 매입 > 매출)
             with st.form(key="form_row1", border=False):
                 r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
                 with r1_1: t1 = st.radio("t1", ["ALL", "매입", "매출"], index=0, horizontal=True, label_visibility="collapsed")
@@ -794,7 +791,7 @@ try:
 
             st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
-            # 💡 [엔터 검색 기술 2] 월별 검색창 (라디오버튼 순서 변경: ALL > 매입 > 매출)
+            # 월별 검색창 (라디오버튼 순서 변경: ALL > 매입 > 매출)
             with st.form(key="form_row2", border=False):
                 r2_1, r2_2, r2_3, r2_4, r2_5, r2_6, r2_7 = st.columns([1.5, 1.2, 1.3, 1, 2, 2, 2.5])
                 with r2_1: t2 = st.radio("t2", ["ALL", "매입", "매출"], index=0, horizontal=True, label_visibility="collapsed")
@@ -995,7 +992,6 @@ try:
             else:
                 pwd_token = str(st.secrets["tom_password"])
                 
-                # 1. 공통 행 데이터(TR) 생성
                 row_html_list = []
                 for _, r in f_df.iterrows():
                     rid, dt = safe_str(r['id']), r[date_col].strftime('%Y-%m-%d')
@@ -1014,23 +1010,49 @@ try:
                     
                     profit_tot_vat = out_tot_vat - in_tot_vat 
                     
-                    # 매입 툴팁 조립
+                    # 💡 [핵심 기술 1] 매입품목 텍스트 툴팁 및 굵게 처리 (memoin 연동)
+                    memoin_val = safe_str(r.get("memoin", ""))
+                    initem_val = safe_str(r.get("initem", ""))
+                    if memoin_val:
+                        initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;">{initem_val}<span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memoin_val}</span></div>'
+                    else:
+                        initem_html = initem_val
+
+                    # 💡 [핵심 기술 2] 매출품목 텍스트 툴팁 및 굵게 처리 (memoout 연동)
+                    memoout_val = safe_str(r.get("memoout", ""))
+                    outitem_val = safe_str(r.get("outitem", ""))
+                    if memoout_val:
+                        outitem_html = f'<div class="memo-tooltip-out" style="font-weight: bold;">{outitem_val}<span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memoout_val}</span></div>'
+                    else:
+                        outitem_html = outitem_val
+
+                    # 💡 [핵심 기술 3] 배송(carno) 텍스트 툴팁 및 굵게 처리 (memocar 연동)
+                    memocar_val = safe_str(r.get("memocar", ""))
+                    carno_val = safe_str(r.get("carno", ""))
+                    if memocar_val:
+                        # 배송 텍스트는 기존 회색 유지, 툴팁 기능만 추가
+                        carno_html = f'<div class="memo-tooltip-base" style="font-weight: bold; color: inherit;">{carno_val}<span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memocar_val}</span></div>'
+                    else:
+                        carno_html = carno_val
+                    
+                    # 매입 수량 툴팁 조립
                     inq_val_str = f'{r["inq_val"]:,.0f}' if pd.notnull(r["inq_val"]) else '0'
                     in_memo = f"<div style='text-align:right; color:#000000 !important;'>공급가액(VAT별도) : {in_tot:,.0f} 원<br>+ 부가세(10%) : {in_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</div>"
                     inq_html = f'<div class="memo-tooltip-in">{inq_val_str}<span class="memo-text">{in_memo}</span></div>'
                     
-                    # 매출 툴팁 조립
+                    # 매출 수량 툴팁 조립
                     outq_val_str = f'{r["outq_val"]:,.0f}' if pd.notnull(r["outq_val"]) else '0'
                     out_memo = f"<div style='text-align:right; color:#000000 !important;'>매출액(VAT별도) : {out_tot:,.0f} 원<br>+ 부가세(10%) : {out_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원<br>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원<br><hr style='margin:4px 0; border:0.5px solid #000000 !important;'><span style='color:#000000 !important; font-weight:bold;'>= 순이익(VAT포함) : {profit_tot_vat:,.0f} 원</span></div>"
                     outq_html = f'<div class="memo-tooltip-out">{outq_val_str}<span class="memo-text">{out_memo}</span></div>'
                     
-                    row_html = f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl txt-in-bold">{r["incom"]}</td><td class="tl txt-in">{r["initem"]}</td><td class="tr txt-in">{inq_html}</td><td class="tr txt-in">{r["inprice_val"]:,.0f}</td><td class="tl txt-out-bold">{r["outcom"]}</td><td class="tl txt-out">{r["outitem"]}</td><td class="tr txt-out">{outq_html}</td><td class="tr txt-out">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray print-hide-col">{rid}</td><td class="tc txt-gray">{r["carno"]}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
+                    # 💡 조립된 품목 및 배송 HTML 변수를 테이블 행(row)에 적용!
+                    row_html = f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl txt-in-bold">{r["incom"]}</td><td class="tl txt-in">{initem_html}</td><td class="tr txt-in">{inq_html}</td><td class="tr txt-in">{r["inprice_val"]:,.0f}</td><td class="tl txt-out-bold">{r["outcom"]}</td><td class="tl txt-out">{outitem_html}</td><td class="tr txt-out">{outq_html}</td><td class="tr txt-out">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray print-hide-col">{rid}</td><td class="tc txt-gray">{carno_html}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
                     row_html_list.append(row_html)
                     
                 footer_html = f'<tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr>'
                 footer_html += f'<tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr>'
 
-                # 💡 인쇄 시 레이아웃 붕 뜸 방지를 위해 단일 표(Single Table) 구조 유지
+                # 인쇄 시 레이아웃 붕 뜸 방지를 위해 단일 표(Single Table) 구조 유지
                 title_div = f'<div class="print-only-title" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border-bottom: 2px solid #555 !important; padding: 10px 0px !important; margin-bottom: 10px; font-weight: bold;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개</span></div>'
                 
                 table_html = '<div class="custom-table-container">'
@@ -1051,7 +1073,7 @@ try:
                 
                 table_html += '</table></div>'
 
-                # 💡 [브라우저 기본글씨 제거 및 여백 기술] - 인쇄 관련 소스는 절대 건드리지 않음!
+                # [브라우저 기본글씨 제거 및 여백 기술] - 💡 인쇄 관련 코드는 절대 변경하지 않음 (안전 보존)
                 print_html_content = f"""
                 <!DOCTYPE html>
                 <html><head><title>인쇄 미리보기</title>
