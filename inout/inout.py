@@ -63,7 +63,19 @@ st.markdown("""
         color: white !important;
     }
     
-    /* 💡 기간/월별 검색버튼(Form 내부 Submit 버튼) 청록색 커스텀 완벽 적용 */
+    /* 💡 SQL 다운로드 생성완료 버튼 (Secondary 타입으로 분리하여 빨간색 완벽 고정 적용!) */
+    div[data-testid="stDownloadButton"] button[kind="secondary"] {
+        background-color: #ef4444 !important; /* 빨간색(Red) */
+        border-color: #ef4444 !important;
+        color: white !important;
+    }
+    div[data-testid="stDownloadButton"] button[kind="secondary"]:hover {
+        background-color: #dc2626 !important; /* 마우스 오버시 진한 빨간색 */
+        border-color: #dc2626 !important;
+        color: white !important;
+    }
+    
+    /* 기간/월별 검색버튼(Form 내부 Submit 버튼) 청록색 커스텀 */
     [data-testid="stFormSubmitButton"] > button {
         background-color: #009688 !important; /* 청록색 */
         border-color: #009688 !important;
@@ -383,7 +395,6 @@ with col_u:
         st.rerun()
 
 with col_sql:
-    # 💡 [핵심 기술] SQL 다운로드 버튼 분리 및 동적 색상 변경 (생성 완료 시에만 빨간색으로 변경)
     if not st.session_state.sql_ready:
         if st.button("💾 SQL다운", use_container_width=True, type="primary"):
             with st.spinner("⏳ SQL 데이터를 생성 중입니다..."):
@@ -395,21 +406,8 @@ with col_sql:
                 except Exception as e:
                     st.error("생성 실패")
     else:
-        # 💡 생성 완료 상태일 때 3번째 컬럼(SQL다운 컬럼)의 버튼만 빨간색으로 덮어쓰는 전용 CSS 주입
-        st.markdown("""
-        <style>
-        div[data-testid="stHorizontalBlock"]:first-of-type div[data-testid="column"]:nth-of-type(3) button {
-            background-color: #ef4444 !important; /* 빨간색(Red) */
-            border-color: #ef4444 !important;
-            color: white !important;
-        }
-        div[data-testid="stHorizontalBlock"]:first-of-type div[data-testid="column"]:nth-of-type(3) button:hover {
-            background-color: #dc2626 !important; /* 마우스 오버시 진한 빨간색 */
-            border-color: #dc2626 !important;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-        st.download_button("💾 생성완료! 다운로드", data=st.session_state.sql_content.encode('utf-8-sig'), file_name=f"db_backup_{get_kst_now().strftime('%Y%m%d')}.sql", mime="application/sql", use_container_width=True, type="primary")
+        # 💡 생성 완료 상태일 때 버튼을 'Secondary' 타입으로 출력하여 CSS에서 지정해둔 빨간색이 완벽하게 씌워지도록 함!
+        st.download_button("💾 생성완료! 다운로드", data=st.session_state.sql_content.encode('utf-8-sig'), file_name=f"db_backup_{get_kst_now().strftime('%Y%m%d')}.sql", mime="application/sql", use_container_width=True, type="secondary")
 
 with col_r:
     if st.button("🔄 데이터 갱신", use_container_width=True, type="primary"):
@@ -1053,7 +1051,7 @@ try:
                 
                 table_html += '</table></div>'
 
-                # 💡 [브라우저 기본글씨 제거 및 여백 기술]
+                # 💡 [브라우저 기본글씨 제거 및 여백 기술] - 인쇄 관련 소스는 절대 건드리지 않음!
                 print_html_content = f"""
                 <!DOCTYPE html>
                 <html><head><title>인쇄 미리보기</title>
