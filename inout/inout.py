@@ -855,7 +855,7 @@ try:
                         st.dataframe(top_out.style.format({'매출액': '{:,.0f}'}), use_container_width=True, hide_index=True)
                     else: st.caption("매출 내역이 없습니다.")
                         
-                    st.markdown("<br><h4 style='color: #fbbf24;'>💎 최고 이익 거래처 Top 5</h4>", unsafe_allow_html=True)
+                    st.markdown("<br><h4 style='color: #fbbf24;'>💎 최고 이익 거래처 Top 전 Top 5</h4>", unsafe_allow_html=True)
                     if not valid_outcom.empty:
                         top_profit = valid_outcom.groupby('outcom')['profit'].sum().sort_values(ascending=False).head(5).reset_index()
                         top_profit.columns = ['거래처명', '순이익']
@@ -921,12 +921,12 @@ try:
                     
                     # 💡 [핵심 기술 2] 매입 툴팁 조립 (올블랙 적용 & 공급가+부가세 상세 표시)
                     inq_val_str = f'{r["inq_val"]:,.0f}' if pd.notnull(r["inq_val"]) else '0'
-                    in_memo = f"<div style='text-align:right; color:#000000 !important;'>공급가액 : {in_tot:,.0f} 원<br>+ 부가세 : {in_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</div>"
+                    in_memo = f"<div style='text-align:right; color:#000000 !important;'>공급가액 : {in_tot:,.0f} 원<br>+ 부가세(10%) : {in_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</div>"
                     inq_html = f'<div class="memo-tooltip-in">{inq_val_str}<span class="memo-text">{in_memo}</span></div>'
                     
-                    # 💡 [핵심 기술 3] 매출 툴팁 조립 (올블랙 적용 & 부가세 포함 매출-매입=이익금 계산식 표시)
+                    # 💡 [핵심 기술 3] 매출 툴팁 조립 (올블랙 적용 & 부가세 별도/포함 및 이익금 계산식 완벽 표시)
                     outq_val_str = f'{r["outq_val"]:,.0f}' if pd.notnull(r["outq_val"]) else '0'
-                    out_memo = f"<div style='text-align:right; color:#000000 !important;'>공급가액 : {out_tot:,.0f} 원<br>+ 부가세 : {out_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원<br>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원<br><hr style='margin:4px 0; border:0.5px solid #000000 !important;'><span style='color:#000000 !important; font-weight:bold;'>= 이익금(VAT포함) : {profit_tot_vat:,.0f} 원</span></div>"
+                    out_memo = f"<div style='text-align:right; color:#000000 !important;'>매출액(VAT별도) : {out_tot:,.0f} 원<br>+ 부가세(10%) : {out_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원<br>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원<br><hr style='margin:4px 0; border:0.5px solid #000000 !important;'><span style='color:#000000 !important; font-weight:bold;'>= 순이익(VAT포함) : {profit_tot_vat:,.0f} 원</span></div>"
                     outq_html = f'<div class="memo-tooltip-out">{outq_val_str}<span class="memo-text">{out_memo}</span></div>'
                     
                     row_html = f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl txt-in-bold">{r["incom"]}</td><td class="tl txt-in">{r["initem"]}</td><td class="tr txt-in">{inq_html}</td><td class="tr txt-in">{r["inprice_val"]:,.0f}</td><td class="tl txt-out-bold">{r["outcom"]}</td><td class="tl txt-out">{r["outitem"]}</td><td class="tr txt-out">{outq_html}</td><td class="tr txt-out">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray print-hide-col">{rid}</td><td class="tc txt-gray">{r["carno"]}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
@@ -935,47 +935,22 @@ try:
                 footer_html = f'<tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr>'
                 footer_html += f'<tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr>'
 
-                # 💡 [투트랙 기술 1] 웹 화면용 1개짜리 연결된 표 생성
-                est_pages = max(1, math.ceil(len(f_df) / 30)) # 인쇄용 페이지 수 예상 (안전하게 30개 기준)
+                # 💡 [투트랙 기술 1] 인쇄 시 잘림 방지를 위해 단일 표(Single Table) 구조로 원상복구!
+                # 억지로 파이썬에서 표를 자르면 텍스트 길이에 따라 페이지가 붕 뜨는 현상이 발생하므로, 브라우저 엔진에 페이지 넘김을 통째로 맡깁니다.
                 
-                web_html = '<div class="custom-table-container"><table class="custom-table">'
-                web_html += f'<thead><tr class="print-only-title"><th colspan="13" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border: none !important; border-bottom: 2px solid #555 !important; padding: 15px 0px 10px 0px !important;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개 &nbsp;|&nbsp; 총 {est_pages}페이지 분량</span></th></tr>'
-                web_html += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
-                web_html += "".join(row_html_list)
-                web_html += footer_html
-                web_html += '</tbody></table></div>'
-
-                # 💡 [투트랙 기술 2] 인쇄 전용 분할(Chunking) HTML 생성 (첫 페이지만 제목 노출!!)
-                CHUNK_SIZE = 30 # 인쇄 시 1페이지가 찢어지지 않도록 안전한 줄 수로 축소
-                total_rows = len(row_html_list)
+                # 표 제목을 표 안이 아닌 바깥으로 완전히 빼내서 첫 장에만 딱 한 번 출력되게 함
+                title_div = f'<div class="print-only-title" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border-bottom: 2px solid #555 !important; padding: 15px 0px 10px 0px !important; margin-bottom: 10px; font-weight: bold;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개</span></div>'
                 
-                print_html_table = ""
-                for p in range(est_pages):
-                    start_idx = p * CHUNK_SIZE
-                    end_idx = min((p + 1) * CHUNK_SIZE, total_rows)
-                    chunk_rows = row_html_list[start_idx:end_idx]
-                    
-                    page_break = 'style="page-break-before: always;"' if p > 0 else ''
-                    
-                    print_html_table += f'<div class="custom-table-container" {page_break}><table class="custom-table"><thead>'
-                    
-                    # 💡 [핵심] 1페이지(p==0)일 때만 거대한 제목을 넣고, 2페이지부터는 작게 우측 상단에 PAGE 번호만 넣음
-                    if p == 0:
-                        print_html_table += f'<tr><th colspan="13" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border: none !important; border-bottom: 2px solid #555 !important; padding: 15px 0px 10px 0px !important;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개 &nbsp;|&nbsp; PAGE : {p+1}/{est_pages}</span></th></tr>'
-                    else:
-                        print_html_table += f'<tr><th colspan="13" style="background-color: white !important; color: black !important; text-align: right; font-size: 14px; border: none !important; border-bottom: 2px solid #555 !important; padding: 5px 0px 5px 0px !important; font-weight: normal !important;">PAGE : {p+1}/{est_pages}</th></tr>'
-                        
-                    print_html_table += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
-                    
-                    print_html_table += "".join(chunk_rows)
-                    
-                    # 마지막 페이지 맨 밑에만 합계 기록
-                    if p == est_pages - 1:
-                        print_html_table += footer_html
-                        
-                    print_html_table += '</tbody></table></div>'
+                table_html = '<div class="custom-table-container">'
+                table_html += title_div
+                table_html += '<table class="custom-table">'
+                table_html += '<thead><tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead>'
+                table_html += '<tbody>'
+                table_html += "".join(row_html_list)
+                table_html += footer_html
+                table_html += '</tbody></table></div>'
 
-                # 💡 [브라우저 기본글씨 제거 기술] @page margin을 0으로 만들고 표 자체 여백으로 숨구멍 확보
+                # 💡 [브라우저 기본글씨 제거 기술] @page margin을 0으로 만들고, 브라우저 자동 머리글 반복을 통해 레이아웃 유지
                 print_html_content = f"""
                 <!DOCTYPE html>
                 <html><head><title>인쇄 미리보기</title>
@@ -983,16 +958,19 @@ try:
                 <style>
                     /* 브라우저 상하단 기본 글씨(주소, 날짜 등) 싹 지우기 */
                     @page {{ size: A4 portrait; margin: 0mm; }} 
-                    /* 종이 끝에 표가 안 닿게 좌우만 여백을 주고 상하 여백은 표(thead)의 padding으로 처리 */
-                    body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; padding: 0 10mm; box-sizing: border-box; }}
-                    /* zoom 배율 제거로 페이지 자르기 오류 완벽 방지, 대신 폰트를 줄임 */
-                    .custom-table-container {{ width: 100%; }} 
+                    /* 종이 끝에 표가 안 닿게 좌우만 여백을 주고 상하 여백은 padding으로 처리 */
+                    body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; padding: 10mm 10mm; box-sizing: border-box; }}
+                    /* zoom 배율 축소(67%)로 1페이지당 여유있게 들어가게 함 */
+                    .custom-table-container {{ width: 100%; zoom: 67%; }} 
                     .custom-table {{ width: 100%; border-collapse: collapse; font-size: 11.5px; background-color: white; }}
                     .custom-table th, .custom-table td {{ border: 1px solid #aaa; padding: 6px 8px; color: black !important; }}
                     .custom-table th {{ text-align: center; font-weight: bold; padding: 8px 6px; }}
                     .fake-margin {{ display: table-row !important; }}
                     .fake-margin td {{ height: 15mm; border: none !important; background-color: white !important; }}
-                    .print-only-title {{ display: table-row !important; }}
+                    
+                    /* 제목은 표 바깥이라 첫 페이지만 나옴 */
+                    .print-only-title {{ display: block !important; }}
+                    
                     .th-base {{ background-color: #e2e8f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
                     .th-in {{ background-color: #dbeafe !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
                     .th-out {{ background-color: #ffedd5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
@@ -1000,15 +978,17 @@ try:
                     .tc {{ text-align: center; }} .tl {{ text-align: left; }} .tr {{ text-align: right; }}
                     a {{ color: black !important; text-decoration: none !important; pointer-events: none; }}
                     .print-hide-col {{ display: none !important; }}
-                    /* 💡 브라우저 자체의 표 머리글 반복 기능 끄기 (우리가 직접 쪼갰으므로 충돌 방지) */
-                    thead {{ display: table-row-group !important; }}
-                    /* 표의 줄이 페이지 넘어갈 때 반으로 찢어지는 현상 방지 */
+                    
+                    /* 💡 브라우저가 다음 페이지 넘길 때 컬럼명(Vat, 날짜 등)만 예쁘게 반복 출력하게 허용 */
+                    thead {{ display: table-header-group !important; }}
+                    
+                    /* 표의 줄이 페이지 넘어갈 때 반으로 찢어지는 현상 방지 (원천 레이아웃 보호) */
                     .custom-table tr {{ page-break-inside: avoid; }}
-                    /* 💡 인쇄 시에는 불필요한 툴팁 메모장 꼬리표가 나오지 않도록 숨김 처리 */
+                    /* 인쇄 시에는 툴팁 메모장 꼬리표가 나오지 않도록 숨김 처리 */
                     .memo-text {{ display: none !important; }}
                 </style>
                 </head><body>
-                {print_html_table}
+                {table_html}
                 </body></html>
                 """
                 
@@ -1068,8 +1048,8 @@ try:
                     csv = f_df.to_csv(index=False).encode('utf-8-sig')
                     st.download_button("💾 엑셀 다운로드", data=csv, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
 
-                # 웹 화면용 HTML 출력
-                st.markdown(web_html, unsafe_allow_html=True)
+                # 웹 화면용 HTML 출력 (웹에서도 단일 렌더링)
+                st.markdown(table_html, unsafe_allow_html=True)
 
 except Exception as e: st.error(f"⚠️ 시스템 오류: {e}")
 st.markdown("<br><p style='text-align:center; color:#64748b;'>© 2026 UNICHEM02-DOT. ALL RIGHTS RESERVED.</p>", unsafe_allow_html=True)
