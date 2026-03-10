@@ -127,7 +127,7 @@ st.markdown("""
     .table-title-box { background-color: #2b323c; padding: 10px 15px; border-top: 2px solid #555; border-bottom: none; display: flex; align-items: center; justify-content: space-between; }
     .custom-table { width: 100%; border-collapse: collapse; font-size: 15px; background-color: white; }
     .custom-table th, .custom-table td { border: 1px solid #d0d0d0; padding: 8px 10px; }
-    /* 💡 제목 셀의 배경색을 통합 지정했던 것을 지우고 개별 클래스가 먹히도록 수정 */
+    /* 💡 테이블 헤더 전체 남색 강제 속성 제거, 개별 클래스가 우선 적용되도록 수정! */
     .custom-table th { text-align: center; color: white; font-weight: bold; padding: 10px 6px; }
     .custom-table tr:nth-child(even) { background-color: #f8f9fa; }
     .custom-table tr:hover { background-color: #e2e6ea; }
@@ -138,10 +138,11 @@ st.markdown("""
     /* 인쇄 전용 타이틀 숨김 처리 */
     .print-only-title { display: none !important; }
     
-    /* 💡 테이블 구역별 색상 복구 완료 */
-    .th-base { background-color: #353b48 !important; color: white; }
-    .th-in { background-color: #3b5b88 !important; color: white; } 
-    .th-out { background-color: #b8860b !important; color: white; }
+    /* 💡 테이블 구역별 색상 복구 완벽 완료 */
+    .th-base { background-color: #353b48 !important; color: white !important; }
+    .th-in { background-color: #3b5b88 !important; color: white !important; } 
+    .th-out { background-color: #b8860b !important; color: white !important; }
+    .th-etc { background-color: #757c43 !important; color: white !important; } /* 배송, 운송비 전용 올리브색 */
     
     /* 텍스트 색상 강조 */
     .txt-in-bold { color: #1e3a8a !important; font-weight: bold; }
@@ -1017,13 +1018,14 @@ try:
                 footer_html = f'<tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr>'
                 footer_html += f'<tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr>'
 
+                # 💡 [요청 반영] 웹 화면 테이블 제목 크기 대폭 확대 (26px)
                 title_div = f'<div class="print-only-title" style="background-color: white !important; color: black !important; text-align: left; font-size: 28px; border-bottom: 2px solid #555 !important; padding: 10px 0px !important; margin-bottom: 10px; font-weight: bold;">{print_title} &nbsp; <span style="font-size: 16px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개</span></div>'
                 
                 table_html = '<div class="custom-table-container">'
                 table_html += title_div
                 table_html += '<table class="custom-table">'
                 table_html += '<thead><tr class="print-fake-margin"><th colspan="13" style="height: 12mm; border: none !important; background-color: white !important; padding: 0 !important;"></th></tr>'
-                table_html += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead>'
+                table_html += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-etc">배송</th><th class="th-etc">운송비</th></tr></thead>'
                 table_html += '<tbody>'
                 table_html += "".join(row_html_list)
                 table_html += footer_html
@@ -1045,9 +1047,10 @@ try:
                     .custom-table th {{ text-align: center; font-weight: bold; padding: 8px 6px; }}
                     .print-only-title {{ display: block !important; margin-top: 15mm !important; }}
                     .print-fake-margin {{ display: table-row !important; }}
-                    .th-base {{ background-color: #e2e8f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                    .th-in {{ background-color: #dbeafe !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
-                    .th-out {{ background-color: #ffedd5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                    .th-base {{ background-color: #e2e8f0 !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                    .th-in {{ background-color: #dbeafe !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                    .th-out {{ background-color: #ffedd5 !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+                    .th-etc {{ background-color: #fef08a !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
                     .sum-profit {{ background-color: #f1f5f9 !important; text-align: right; padding: 12px 20px; font-weight: bold; border-top: 1px solid #444; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
                     .tc {{ text-align: center; }} .tl {{ text-align: left; }} .tr {{ text-align: right; }}
                     a {{ color: black !important; text-decoration: none !important; pointer-events: none; }}
