@@ -77,12 +77,12 @@ st.markdown("""
     
     /* 기간/월별 검색버튼(Form 내부 Submit 버튼) 청록색 커스텀 */
     [data-testid="stFormSubmitButton"] > button {
-        background-color: #009688 !important;
+        background-color: #009688 !important; /* 청록색 */
         border-color: #009688 !important;
         color: white !important;
     }
     [data-testid="stFormSubmitButton"] > button:hover {
-        background-color: #00796B !important;
+        background-color: #00796B !important; /* 마우스 오버시 진한 청록색 */
         border-color: #00796B !important;
         color: white !important;
     }
@@ -146,7 +146,7 @@ st.markdown("""
     /* Form 테두리 및 여백 제거 (검색창 엔터 적용을 위한 래핑용) */
     div[data-testid="stForm"] { border: none !important; padding: 0 !important; margin-bottom: -15px !important; }
     
-    /* 💡 매입/매출 수량 및 품목/배송 툴팁 (메모장 팝업) 완전 불투명(Solid) 적용 CSS */
+    /* 매입/매출 수량 및 품목/배송 툴팁 (메모장 팝업) 완전 불투명(Solid) 적용 CSS */
     .memo-tooltip-in, .memo-tooltip-out, .memo-tooltip-base {
         position: relative;
         display: inline-block;
@@ -547,7 +547,25 @@ try:
     years = available_years
     months = list(range(1, 13))
     
-    params = st.session_state.search_params
+    # 💡 [핵심 기술 1] 검색 조건 동기화 (메모 클릭 후 돌아와도 폼 값이 그대로 유지되도록 세션에서 읽어옴)
+    sp = st.session_state.search_params
+    p_type = sp.get("type", "ALL")
+    t_idx = ["ALL", "매입", "매출"].index(p_type) if p_type in ["ALL", "매입", "매출"] else 0
+    s_filt = sp.get("s_filter", "ALL")
+    s_idx = ["ALL", "제일", "중부"].index(s_filt) if s_filt in ["ALL", "제일", "중부"] else 0
+    comp = sp.get("company", "")
+    item = sp.get("item", "")
+    
+    d_start = sp.get("start", datetime(2014,1,1).date())
+    d_end = sp.get("end", get_kst_now().date())
+    
+    m_year = sp.get("year", get_kst_now().year)
+    y_idx = years.index(m_year) if m_year in years else 0
+    m_month = sp.get("month", get_kst_now().month)
+    m_idx = months.index(m_month) if m_month in months else get_kst_now().month-1
+    
+    target_date = sp.get("date", get_kst_now().date())
+    
     target_years = []
     
     if st.session_state.edit_id or st.session_state.copy_id or st.session_state.memo_edit_id:
@@ -581,7 +599,7 @@ try:
         df = pd.DataFrame(columns=['id', 'date', 'year', 'month', 'incom', 'initem', 'inq_val', 'inprice_val', 'outcom', 'outitem', 'outq_val', 'outprice_val', 'carno', 'carprice_val', 'in_total', 'out_total', 's', 'memoin', 'memoout', 'memocar'])
 
     # ---------------------------------------------------------
-    # [모드 분기 1] 메모장 수정 및 입력 팝업 창 (디자인 완벽 개선)
+    # [모드 분기 1] 💡 메모장 수정 및 입력 팝업 창 (올블랙 고정 & 디자인 완벽 개선)
     # ---------------------------------------------------------
     if st.session_state.memo_edit_id:
         target_memo = df[df['id'].astype(str) == str(st.session_state.memo_edit_id)]
@@ -596,26 +614,21 @@ try:
             btn_str = "💾 수정" if is_update else "💾 신규입력"
 
             def render_memo_form():
-                # 💡 [팝업 전용 예쁜 포스트잇 스타일 CSS 주입]
+                # 💡 [핵심 기술 2] 팝업 전용 예쁜 포스트잇 스타일 & 모든 글씨 올블랙(Black) 완벽 강제 CSS!
                 st.markdown("""
                 <style>
                 /* 다이얼로그 모달 전체 배경 및 테두리 (포스트잇 느낌) */
-                div[role="dialog"] {
+                div[role="dialog"], div[data-testid="stModal"] {
                     background-color: #FFFDE7 !important;
                     border: 3px solid #FFC107 !important;
                     border-radius: 12px !important;
                 }
-                /* fallback용 래퍼 */
-                .memo-fallback-wrapper {
-                    background-color: #FFFDE7;
-                    border: 3px solid #FFC107;
-                    border-radius: 12px;
-                    padding: 20px;
-                    margin-bottom: 20px;
+                /* 💡 팝업 내부의 모든 요소를 완벽한 검은색으로 덮어쓰기! (제목, 텍스트, 버튼 모두) */
+                div[role="dialog"] *, div[data-testid="stModal"] * {
+                    color: #000000 !important;
                 }
                 /* 텍스트 입력창 디자인 */
-                div[role="dialog"] div[data-testid="stTextArea"] textarea,
-                .memo-fallback-wrapper div[data-testid="stTextArea"] textarea {
+                div[role="dialog"] div[data-testid="stTextArea"] textarea {
                     background-color: #FFFFFF !important;
                     border: 2px solid #FFB300 !important;
                     border-radius: 8px !important;
@@ -624,53 +637,63 @@ try:
                     font-weight: bold !important;
                     box-shadow: inset 0 2px 4px rgba(0,0,0,0.05) !important;
                 }
-                /* 저장/신규입력 버튼 (파란색 유지) */
-                div[role="dialog"] div[data-testid="column"]:nth-child(2) button,
-                .memo-fallback-wrapper div[data-testid="column"]:nth-child(2) button {
+                /* 저장/신규입력 버튼 (파란색 유지 + 검은 글씨) */
+                div[role="dialog"] button[kind="primary"] {
                     background-color: #3b82f6 !important;
                     border-color: #3b82f6 !important;
-                    color: white !important;
+                    color: #000000 !important;
+                    font-weight: bold !important;
                 }
-                /* 💡 취소 버튼 (청록색 완벽 적용) */
-                div[role="dialog"] div[data-testid="column"]:nth-child(3) button,
-                .memo-fallback-wrapper div[data-testid="column"]:nth-child(3) button {
+                div[role="dialog"] button[kind="primary"]:hover {
+                    background-color: #2563eb !important;
+                    color: #ffffff !important;
+                }
+                /* 💡 취소 버튼 (청록색 완벽 적용 + 검은 글씨) */
+                div[role="dialog"] button[kind="secondary"] {
                     background-color: #009688 !important;
                     border-color: #009688 !important;
-                    color: white !important;
+                    color: #000000 !important;
+                    font-weight: bold !important;
                 }
-                div[role="dialog"] div[data-testid="column"]:nth-child(3) button:hover,
-                .memo-fallback-wrapper div[data-testid="column"]:nth-child(3) button:hover {
+                div[role="dialog"] button[kind="secondary"]:hover {
                     background-color: #00796B !important;
                     border-color: #00796B !important;
+                    color: #ffffff !important;
+                }
+                /* 닫기 아이콘 X 표시 검은색 */
+                div[role="dialog"] svg {
+                    fill: #000000 !important;
                 }
                 </style>
                 """, unsafe_allow_html=True)
                 
-                st.markdown(f"<h4 style='text-align:center; color:#E65100; margin-top:0; font-weight:bold;'>📝 {type_kr} 텍스트 메모</h4>", unsafe_allow_html=True)
+                st.markdown(f"<h4 style='text-align:center; margin-top:0; font-weight:bold;'>📝 {type_kr} 텍스트 메모</h4>", unsafe_allow_html=True)
                 new_memo = st.text_area("내용", orig_memo, height=150, label_visibility="collapsed")
                 
-                # 버튼 레이아웃
-                c1, c2, c3 = st.columns([5.5, 2.5, 2.5])
-                if c2.button(btn_str, use_container_width=True, type="primary", key="save_memo"):
-                    client = init_connection()
-                    try:
-                        sheet = client.open('SQL백업260211-jeilinout').worksheet(f"{orig_year_m}년")
-                        headers = sheet.row_values(1)
-                        if col_name not in headers:
-                            headers.append(col_name)
-                            sheet.update(f"A1:{gspread.utils.rowcol_to_a1(1, len(headers))}", [headers])
-                        col_idx = headers.index(col_name) + 1
-                        cell = sheet.find(str(st.session_state.memo_edit_id), in_column=1)
-                        if cell:
-                            sheet.update_cell(cell.row, col_idx, new_memo)
-                        st.cache_data.clear()
+                # 💡 버튼이 잘리지 않도록 레이아웃 비율 수정 (버튼 공간 넓게 확보)
+                c1, c2, c3 = st.columns([1, 4.5, 4.5])
+                with c2:
+                    if st.button(btn_str, use_container_width=True, type="primary", key="save_memo"):
+                        client = init_connection()
+                        try:
+                            sheet = client.open('SQL백업260211-jeilinout').worksheet(f"{orig_year_m}년")
+                            headers = sheet.row_values(1)
+                            if col_name not in headers:
+                                headers.append(col_name)
+                                sheet.update(f"A1:{gspread.utils.rowcol_to_a1(1, len(headers))}", [headers])
+                            col_idx = headers.index(col_name) + 1
+                            cell = sheet.find(str(st.session_state.memo_edit_id), in_column=1)
+                            if cell:
+                                sheet.update_cell(cell.row, col_idx, new_memo)
+                            st.cache_data.clear()
+                            st.session_state.memo_edit_id = None
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"저장 오류: {e}")
+                with c3:
+                    if st.button("취소", use_container_width=True, key="cancel_memo"):
                         st.session_state.memo_edit_id = None
                         st.rerun()
-                    except Exception as e:
-                        st.error(f"저장 오류: {e}")
-                if c3.button("취소", use_container_width=True, key="cancel_memo"):
-                    st.session_state.memo_edit_id = None
-                    st.rerun()
 
             # Streamlit 네이티브 dialog 팝업 활용
             if hasattr(st, 'dialog'):
@@ -678,11 +701,6 @@ try:
                 def memo_popup():
                     render_memo_form()
                 memo_popup()
-            else:
-                with st.container():
-                    st.markdown("<div class='memo-fallback-wrapper'>", unsafe_allow_html=True)
-                    render_memo_form()
-                    st.markdown("</div>", unsafe_allow_html=True)
 
     # ---------------------------------------------------------
     # [모드 분기 1-2] 기존 등록 자료 수정 / 삭제
@@ -694,13 +712,13 @@ try:
             t = target.iloc[0]
             def_date = pd.to_datetime(t['date']).date() if pd.notnull(t['date']) else get_kst_now().date()
             orig_year = def_date.year
-            s_idx = 1 if '중부' in safe_str(t.get('s')) else 0
+            s_idx_edit = 1 if '중부' in safe_str(t.get('s')) else 0
             
             with st.form("edit_form"):
                 c1, c2, c3, c4, c5, c6 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
                 for i, txt in enumerate(["종류","매입거래처","매입품목","수량","단가","배송"]):
                     [c1, c2, c3, c4, c5, c6][i].markdown(f'<div class="nh-box nh-{"base" if i==0 else "in" if i<5 else "etc"}">{txt}</div>', unsafe_allow_html=True)
-                e_s = c1.selectbox("s", ["제일", "중부"], index=s_idx, label_visibility="collapsed")
+                e_s = c1.selectbox("s", ["제일", "중부"], index=s_idx_edit, label_visibility="collapsed")
                 e_incom = c2.text_input("incom", safe_str(t.get('incom')), label_visibility="collapsed")
                 e_initem = c3.text_input("initem", safe_str(t.get('initem')), label_visibility="collapsed")
                 e_inq = c4.text_input("inq", safe_str(t.get('inq')), label_visibility="collapsed")
@@ -726,6 +744,7 @@ try:
                         sheet = client.open('SQL백업260211-jeilinout').worksheet(f"{orig_year}년")
                         cell = sheet.find(str(st.session_state.edit_id), in_column=1)
                         if cell:
+                            # 편집 시 다른 열(메모 등)이 지워지지 않도록 A~N 열까지만 안전하게 덮어쓰기
                             new_row = [st.session_state.edit_id, e_date.strftime('%Y-%m-%d'), e_incom, e_initem, e_inq, e_inprice, e_outcom, e_outitem, e_outq, e_outprice, "", e_s, e_carno, e_carprice]
                             sheet.update(f"A{cell.row}:N{cell.row}", [new_row])
                         st.cache_data.clear(); st.session_state.edit_id = None; st.rerun()
@@ -898,34 +917,35 @@ try:
                 height=75
             )
 
+            # 💡 [검색 조건 동기화 적용] 폼 렌더링 시 이전 검색값이 그대로 입력창에 유지되도록 값을 바인딩!
             with st.form(key="form_row1", border=False):
                 r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
-                with r1_1: t1 = st.radio("t1", ["ALL", "매입", "매출"], index=0, horizontal=True, label_visibility="collapsed")
-                with r1_2: dr1 = st.date_input("dr1", [datetime(2014,1,1).date(), get_kst_now().date()], format="YYYY-MM-DD", label_visibility="collapsed")
-                with r1_3: s1 = st.selectbox("s1", ["ALL", "제일", "중부"], label_visibility="collapsed")
-                with r1_4: c1 = st.text_input("c1", placeholder="거래처 검색", label_visibility="collapsed")
-                with r1_5: i1 = st.text_input("i1", placeholder="품목 검색", label_visibility="collapsed")
+                with r1_1: t1 = st.radio("t1", ["ALL", "매입", "매출"], index=t_idx, horizontal=True, label_visibility="collapsed")
+                with r1_2: dr1 = st.date_input("dr1", [d_start, d_end], format="YYYY-MM-DD", label_visibility="collapsed")
+                with r1_3: s1 = st.selectbox("s1", ["ALL", "제일", "중부"], index=s_idx, label_visibility="collapsed")
+                with r1_4: c1 = st.text_input("c1", value=comp, placeholder="거래처 검색", label_visibility="collapsed")
+                with r1_5: i1 = st.text_input("i1", value=item, placeholder="품목 검색", label_visibility="collapsed")
                 with r1_6: b1 = st.form_submit_button("기간 거래처&품목", use_container_width=True, type="primary")
 
             st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
             with st.form(key="form_row2", border=False):
                 r2_1, r2_2, r2_3, r2_4, r2_5, r2_6, r2_7 = st.columns([1.5, 1.2, 1.3, 1, 2, 2, 2.5])
-                with r2_1: t2 = st.radio("t2", ["ALL", "매입", "매출"], index=0, horizontal=True, label_visibility="collapsed")
-                with r2_2: y2 = st.selectbox("y2", years, label_visibility="collapsed", format_func=lambda x: f"{x}년")
-                with r2_3: m2 = st.selectbox("m2", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
-                with r2_4: s2 = st.selectbox("s2", ["ALL", "제일", "중부"], label_visibility="collapsed")
-                with r2_5: c2 = st.text_input("c2", placeholder="거래처 검색", label_visibility="collapsed")
-                with r2_6: i2 = st.text_input("i2", placeholder="품목 검색", label_visibility="collapsed")
+                with r2_1: t2 = st.radio("t2", ["ALL", "매입", "매출"], index=t_idx, horizontal=True, label_visibility="collapsed")
+                with r2_2: y2 = st.selectbox("y2", years, index=y_idx, label_visibility="collapsed", format_func=lambda x: f"{x}년")
+                with r2_3: m2 = st.selectbox("m2", months, index=m_idx, format_func=lambda x:f"{x}월", label_visibility="collapsed")
+                with r2_4: s2 = st.selectbox("s2", ["ALL", "제일", "중부"], index=s_idx, label_visibility="collapsed")
+                with r2_5: c2 = st.text_input("c2", value=comp, placeholder="거래처 검색", label_visibility="collapsed")
+                with r2_6: i2 = st.text_input("i2", value=item, placeholder="품목 검색", label_visibility="collapsed")
                 with r2_7: b2 = st.form_submit_button("월별 거래처&품목", use_container_width=True, type="primary")
 
             st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
             u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15 = st.columns([0.7, 1.0, 0.8, 0.8, 1.0, 0.8, 0.8, 1.3, 0.8, 1.1, 0.7, 1.0, 0.8, 0.9, 0.9])
             
-            with u1: s3 = st.selectbox("s3", ["ALL", "제일", "중부"], label_visibility="collapsed")
-            with u2: y3 = st.selectbox("y3", years, label_visibility="collapsed", format_func=lambda x: f"{x}년")
-            with u3: m3 = st.selectbox("m3", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
+            with u1: s3 = st.selectbox("s3", ["ALL", "제일", "중부"], index=s_idx, label_visibility="collapsed")
+            with u2: y3 = st.selectbox("y3", years, index=y_idx, label_visibility="collapsed", format_func=lambda x: f"{x}년")
+            with u3: m3 = st.selectbox("m3", months, index=m_idx, format_func=lambda x:f"{x}월", label_visibility="collapsed")
             with u4: b_set = st.button("결산", use_container_width=True, type="primary")
             
             with u5: b_new = st.button("신규", use_container_width=True, type="primary")
@@ -933,13 +953,13 @@ try:
             with u6: lmt = st.selectbox("l4", ["20개", "50개", "100개"], index=0, label_visibility="collapsed")
             with u7: b_rec = st.button("최근", use_container_width=True, type="primary")
             
-            with u8: d_day = st.date_input("d2", get_kst_now().date(), format="YYYY-MM-DD", label_visibility="collapsed")
+            with u8: d_day = st.date_input("d2", value=target_date, format="YYYY-MM-DD", label_visibility="collapsed")
             with u9: b_day = st.button("일검색", use_container_width=True, type="primary")
             with u10: b_ayt = st.button("어제오늘내일", use_container_width=True, type="primary")
             
-            with u11: s5 = st.selectbox("s5", ["ALL", "제일", "중부"], label_visibility="collapsed")
-            with u12: y4 = st.selectbox("y4", years, key="y4_sel", label_visibility="collapsed", format_func=lambda x: f"{x}년")
-            with u13: m4 = st.selectbox("m4", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", key="m4_sel", label_visibility="collapsed")
+            with u11: s5 = st.selectbox("s5", ["ALL", "제일", "중부"], index=s_idx, label_visibility="collapsed")
+            with u12: y4 = st.selectbox("y4", years, index=y_idx, key="y4_sel", label_visibility="collapsed", format_func=lambda x: f"{x}년")
+            with u13: m4 = st.selectbox("m4", months, index=m_idx, format_func=lambda x:f"{x}월", key="m4_sel", label_visibility="collapsed")
             with u14: b_mon = st.button("월별", use_container_width=True, type="primary")
             with u15: b_yong = st.button("용차", use_container_width=True, type="primary")
 
@@ -1176,7 +1196,7 @@ try:
                 table_html += '<tfoot style="display: table-footer-group !important;"><tr class="print-fake-margin"><td colspan="13" style="height: 12mm; border: none !important; background-color: white !important; padding: 0 !important;"></td></tr></tfoot>'
                 table_html += '</table></div>'
 
-                # 인쇄 관련 코드는 절대 변경하지 않음 (안전 보존)
+                # 💡 [인쇄 소스 완벽 보존]
                 print_html_content = f"""
                 <!DOCTYPE html>
                 <html><head><title>인쇄 미리보기</title>
@@ -1195,6 +1215,7 @@ try:
                     .th-out {{ background-color: #ffedd5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
                     .sum-profit {{ background-color: #f1f5f9 !important; text-align: right; padding: 12px 20px; font-weight: bold; border-top: 1px solid #444; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
                     .tc {{ text-align: center; }} .tl {{ text-align: left; }} .tr {{ text-align: right; }}
+                    /* 💡 인쇄 시 팝업 링크 밑줄 제거하여 일반 텍스트처럼 보이게 처리 */
                     a {{ color: black !important; text-decoration: none !important; pointer-events: none; }}
                     .print-hide-col {{ display: none !important; }}
                     thead {{ display: table-header-group !important; }}
