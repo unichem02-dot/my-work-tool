@@ -120,7 +120,7 @@ st.markdown("""
     /* Form 테두리 및 여백 제거 (검색창 엔터 적용을 위한 래핑용) */
     div[data-testid="stForm"] { border: none !important; padding: 0 !important; margin-bottom: -15px !important; }
     
-    /* 💡 매입 및 매출 수량 툴팁 (메모장 팝업) 전용 CSS */
+    /* 매입 및 매출 수량 툴팁 (메모장 팝업) 전용 CSS */
     .memo-tooltip-in {
         position: relative;
         display: inline-block;
@@ -921,12 +921,12 @@ try:
                     
                     # 💡 [핵심 기술 2] 매입 툴팁 조립 (올블랙 적용 & 공급가+부가세 상세 표시)
                     inq_val_str = f'{r["inq_val"]:,.0f}' if pd.notnull(r["inq_val"]) else '0'
-                    in_memo = f"<div style='text-align:right; color:#000000 !important;'>공급가액 : {in_tot:,.0f} 원<br>+ 부가세 : {in_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</div>"
+                    in_memo = f"<div style='text-align:right; color:#000000 !important;'>공급가액 : {in_tot:,.0f} 원<br>+ 부가세 : {in_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</div>"
                     inq_html = f'<div class="memo-tooltip-in">{inq_val_str}<span class="memo-text">{in_memo}</span></div>'
                     
                     # 💡 [핵심 기술 3] 매출 툴팁 조립 (올블랙 적용 & 부가세 포함 매출-매입=이익금 계산식 표시)
                     outq_val_str = f'{r["outq_val"]:,.0f}' if pd.notnull(r["outq_val"]) else '0'
-                    out_memo = f"<div style='text-align:right; color:#000000 !important;'>공급가액 : {out_tot:,.0f} 원<br>+ 부가세 : {out_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원<br>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원<br><hr style='margin:4px 0; border:0.5px solid #000000;'><span style='color:#000000 !important; font-weight:bold;'>= 이익금(VAT포함) : {profit_tot_vat:,.0f} 원</span></div>"
+                    out_memo = f"<div style='text-align:right; color:#000000 !important;'>공급가액 : {out_tot:,.0f} 원<br>+ 부가세 : {out_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원<br>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원<br><hr style='margin:4px 0; border:0.5px solid #000000 !important;'><span style='color:#000000 !important; font-weight:bold;'>= 이익금(VAT포함) : {profit_tot_vat:,.0f} 원</span></div>"
                     outq_html = f'<div class="memo-tooltip-out">{outq_val_str}<span class="memo-text">{out_memo}</span></div>'
                     
                     row_html = f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl txt-in-bold">{r["incom"]}</td><td class="tl txt-in">{r["initem"]}</td><td class="tr txt-in">{inq_html}</td><td class="tr txt-in">{r["inprice_val"]:,.0f}</td><td class="tl txt-out-bold">{r["outcom"]}</td><td class="tl txt-out">{r["outitem"]}</td><td class="tr txt-out">{outq_html}</td><td class="tr txt-out">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray print-hide-col">{rid}</td><td class="tc txt-gray">{r["carno"]}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
@@ -936,7 +936,7 @@ try:
                 footer_html += f'<tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr>'
 
                 # 💡 [투트랙 기술 1] 웹 화면용 1개짜리 연결된 표 생성
-                est_pages = max(1, math.ceil(len(f_df) / 38)) # 1페이지당 여유있게 들어가는 38개 기준으로 계산
+                est_pages = max(1, math.ceil(len(f_df) / 30)) # 인쇄용 페이지 수 예상 (안전하게 30개 기준)
                 
                 web_html = '<div class="custom-table-container"><table class="custom-table">'
                 web_html += f'<thead><tr class="print-only-title"><th colspan="13" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border: none !important; border-bottom: 2px solid #555 !important; padding: 15px 0px 10px 0px !important;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개 &nbsp;|&nbsp; 총 {est_pages}페이지 분량</span></th></tr>'
@@ -946,7 +946,7 @@ try:
                 web_html += '</tbody></table></div>'
 
                 # 💡 [투트랙 기술 2] 인쇄 전용 분할(Chunking) HTML 생성 (첫 페이지만 제목 노출!!)
-                CHUNK_SIZE = 38 
+                CHUNK_SIZE = 30 # 인쇄 시 1페이지가 찢어지지 않도록 안전한 줄 수로 축소
                 total_rows = len(row_html_list)
                 
                 print_html_table = ""
@@ -1000,8 +1000,8 @@ try:
                     .tc {{ text-align: center; }} .tl {{ text-align: left; }} .tr {{ text-align: right; }}
                     a {{ color: black !important; text-decoration: none !important; pointer-events: none; }}
                     .print-hide-col {{ display: none !important; }}
-                    /* 제목은 표 바깥이라 반복 안 됨. 대신 컬럼명(Vat, 날짜 등)은 매 페이지 상단에 반복되게 설정 */
-                    thead {{ display: table-header-group !important; }}
+                    /* 💡 브라우저 자체의 표 머리글 반복 기능 끄기 (우리가 직접 쪼갰으므로 충돌 방지) */
+                    thead {{ display: table-row-group !important; }}
                     /* 표의 줄이 페이지 넘어갈 때 반으로 찢어지는 현상 방지 */
                     .custom-table tr {{ page-break-inside: avoid; }}
                     /* 💡 인쇄 시에는 불필요한 툴팁 메모장 꼬리표가 나오지 않도록 숨김 처리 */
