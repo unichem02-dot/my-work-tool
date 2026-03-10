@@ -383,7 +383,7 @@ with col_u:
         st.rerun()
 
 with col_sql:
-    # 💡 [핵심 기술] SQL 다운로드 버튼 분리: 무거운 처리를 클릭 시에만 진행하도록 개선!
+    # 💡 [핵심 기술] SQL 다운로드 버튼 분리 및 동적 색상 변경 (생성 완료 시에만 빨간색으로 변경)
     if not st.session_state.sql_ready:
         if st.button("💾 SQL다운", use_container_width=True, type="primary"):
             with st.spinner("⏳ SQL 데이터를 생성 중입니다..."):
@@ -395,6 +395,20 @@ with col_sql:
                 except Exception as e:
                     st.error("생성 실패")
     else:
+        # 💡 생성 완료 상태일 때 3번째 컬럼(SQL다운 컬럼)의 버튼만 빨간색으로 덮어쓰는 전용 CSS 주입
+        st.markdown("""
+        <style>
+        div[data-testid="stHorizontalBlock"]:first-of-type div[data-testid="column"]:nth-of-type(3) button {
+            background-color: #ef4444 !important; /* 빨간색(Red) */
+            border-color: #ef4444 !important;
+            color: white !important;
+        }
+        div[data-testid="stHorizontalBlock"]:first-of-type div[data-testid="column"]:nth-of-type(3) button:hover {
+            background-color: #dc2626 !important; /* 마우스 오버시 진한 빨간색 */
+            border-color: #dc2626 !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
         st.download_button("💾 생성완료! 다운로드", data=st.session_state.sql_content.encode('utf-8-sig'), file_name=f"db_backup_{get_kst_now().strftime('%Y%m%d')}.sql", mime="application/sql", use_container_width=True, type="primary")
 
 with col_r:
