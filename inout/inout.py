@@ -146,7 +146,7 @@ st.markdown("""
     /* Form 테두리 및 여백 제거 (검색창 엔터 적용을 위한 래핑용) */
     div[data-testid="stForm"] { border: none !important; padding: 0 !important; margin-bottom: -15px !important; }
     
-    /* 💡 매입/매출 수량 및 품목/배송 툴팁 (메모장 팝업) 투명도 완전 제거 (솔리드 컬러) CSS */
+    /* 💡 매입/매출 수량 및 품목/배송 툴팁 (메모장 팝업) 완전 불투명(Solid) 적용 CSS */
     .memo-tooltip-in, .memo-tooltip-out, .memo-tooltip-base {
         position: relative;
         display: inline-block;
@@ -159,7 +159,7 @@ st.markdown("""
     .memo-tooltip-in .memo-text, .memo-tooltip-out .memo-text, .memo-tooltip-base .memo-text {
         visibility: hidden;
         width: max-content;
-        background-color: #fffbeb !important; /* 💡 투명도 제거, 솔리드 옐로우 적용 */
+        background-color: #fffbeb !important; /* 💡 투명도 완전히 없앰 (Solid Yellow) */
         text-align: right;
         border-radius: 6px;
         padding: 8px 12px;
@@ -175,7 +175,7 @@ st.markdown("""
         transition: opacity 0.2s;
         line-height: 1.5;
     }
-    /* 💡 메모장 내부의 모든 텍스트를 완벽한 블랙으로 강제 */
+    /* 💡 메모장 내부의 모든 텍스트를 완벽한 블랙으로 강제 고정 */
     .memo-tooltip-in .memo-text, .memo-tooltip-in .memo-text *, 
     .memo-tooltip-out .memo-text, .memo-tooltip-out .memo-text *, 
     .memo-tooltip-base .memo-text, .memo-tooltip-base .memo-text * {
@@ -191,7 +191,7 @@ st.markdown("""
         margin-left: -6px;
         border-width: 6px;
         border-style: solid;
-        border-color: #f59e0b transparent transparent transparent;
+        border-color: #f59e0b transparent transparent transparent; /* 화살표는 솔리드 오렌지 유지 */
     }
     .memo-tooltip-in:hover .memo-text, .memo-tooltip-in:active .memo-text,
     .memo-tooltip-out:hover .memo-text, .memo-tooltip-out:active .memo-text,
@@ -241,7 +241,7 @@ if "show_uploader" not in st.session_state: st.session_state.show_uploader = Fal
 # SQL 버튼 상태 관리
 if "sql_ready" not in st.session_state: st.session_state.sql_ready = False
 if "sql_content" not in st.session_state: st.session_state.sql_content = ""
-# 💡 텍스트 메모 창 상태 관리
+# 텍스트 메모 창 상태 관리
 if "memo_edit_id" not in st.session_state: st.session_state.memo_edit_id = None
 if "memo_type" not in st.session_state: st.session_state.memo_type = None
 
@@ -584,10 +584,9 @@ try:
         df = pd.DataFrame(columns=['id', 'date', 'year', 'month', 'incom', 'initem', 'inq_val', 'inprice_val', 'outcom', 'outitem', 'outq_val', 'outprice_val', 'carno', 'carprice_val', 'in_total', 'out_total', 's'])
 
     # ---------------------------------------------------------
-    # [모드 분기 1] 메모장 수정 및 입력 창 💡 (텍스트 메모 전용 편집 폼)
+    # [모드 분기 1] 메모장 수정 및 입력 창 💡 (📝 아이콘 없이 텍스트 클릭으로 통합)
     # ---------------------------------------------------------
     if st.session_state.memo_edit_id:
-        st.markdown("<h3 style='text-align:center; color:#ffeb3b; font-weight:bold;'>📝 텍스트 메모 추가 / 수정</h3>", unsafe_allow_html=True)
         target = df[df['id'].astype(str) == str(st.session_state.memo_edit_id)]
         if not target.empty:
             t = target.iloc[0]
@@ -598,18 +597,25 @@ try:
             
             type_kr = "매입품목" if m_type == 'in' else "매출품목" if m_type == 'out' else "배송"
             
+            # 💡 [핵심 기술 4] 기존 자료 여부에 따라 동적으로 제목과 버튼명을 '수정' 또는 '신규입력'으로 변경!
+            is_update = bool(orig_memo.strip())
+            title_str = "📝 텍스트 메모 수정" if is_update else "🆕 텍스트 메모 신규입력"
+            btn_str = "💾 수정" if is_update else "💾 신규입력"
+            
+            st.markdown(f"<h3 style='text-align:center; color:#ffeb3b; font-weight:bold;'>{title_str}</h3>", unsafe_allow_html=True)
+            
             with st.form("memo_form"):
                 st.markdown(f"**{type_kr} 메모 작성** (자료 ID: {st.session_state.memo_edit_id})")
                 new_memo = st.text_area("내용을 입력하세요", orig_memo, height=150, label_visibility="collapsed")
                 
                 bc1, bc2, bc3 = st.columns([6, 2, 2])
-                if bc2.form_submit_button("💾 저장", use_container_width=True, type="primary"):
+                if bc2.form_submit_button(btn_str, use_container_width=True, type="primary"):
                     client = init_connection()
                     try:
                         sheet = client.open('SQL백업260211-jeilinout').worksheet(f"{orig_year}년")
                         headers = sheet.row_values(1)
                         
-                        # 💡 열이 없으면 구글 시트 헤더에 새로 추가하여 에러 방지
+                        # 열이 없으면 구글 시트 헤더에 새로 추가하여 에러 방지
                         if col_name not in headers:
                             headers.append(col_name)
                             sheet.update(f"A1:{gspread.utils.rowcol_to_a1(1, len(headers))}", [headers])
@@ -669,7 +675,7 @@ try:
                         sheet = client.open('SQL백업260211-jeilinout').worksheet(f"{orig_year}년")
                         cell = sheet.find(str(st.session_state.edit_id), in_column=1)
                         if cell:
-                            # 💡 편집 시 다른 열(메모 등)이 지워지지 않도록 A~N 열까지만 안전하게 덮어쓰기
+                            # 편집 시 다른 열(메모 등)이 지워지지 않도록 A~N 열까지만 안전하게 덮어쓰기
                             new_row = [st.session_state.edit_id, e_date.strftime('%Y-%m-%d'), e_incom, e_initem, e_inq, e_inprice, e_outcom, e_outitem, e_outq, e_outprice, "", e_s, e_carno, e_carprice]
                             sheet.update(f"A{cell.row}:N{cell.row}", [new_row])
                         st.cache_data.clear(); st.session_state.edit_id = None; st.rerun()
@@ -1083,32 +1089,35 @@ try:
                     # 💡 [핵심 기술 1] 매입품목 텍스트 툴팁 및 굵게 처리 (memoin 연동)
                     memoin_val = safe_str(r.get("memoin", ""))
                     initem_val = safe_str(r.get("initem", ""))
+                    in_disp = initem_val if initem_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;"
+                    in_link = f"?memo_edit_id={rid}&memo_type=in&token={pwd_token}"
                     if memoin_val:
-                        edit_link = f'<div class="print-hide-col" style="text-align:right; margin-top:5px;"><a href="?memo_edit_id={rid}&memo_type=in&token={pwd_token}" target="_self" style="color:#000000 !important; text-decoration:underline !important; font-size:12px;">[✏️수정]</a></div>'
-                        initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;">{initem_val}<span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memoin_val}{edit_link}</span></div>'
+                        edit_link = f'<div class="print-hide-col" style="text-align:right; margin-top:5px;"><a href="{in_link}" target="_self" style="color:#000000 !important; text-decoration:underline !important; font-size:12px;">[✏️수정]</a></div>'
+                        initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;"><a href="{in_link}" target="_self" style="color:inherit; text-decoration:none;">{in_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memoin_val}{edit_link}</span></div>'
                     else:
-                        add_link = f'<a href="?memo_edit_id={rid}&memo_type=in&token={pwd_token}" target="_self" class="print-hide-col" style="text-decoration:none;"><span style="font-size:11px; opacity:0.5; color:#000000 !important;">[📝]</span></a>'
-                        initem_html = f'{initem_val} {add_link}'
+                        initem_html = f'<a href="{in_link}" target="_self" style="color:inherit; text-decoration:none;">{in_disp}</a>'
 
                     # 💡 [핵심 기술 2] 매출품목 텍스트 툴팁 및 굵게 처리 (memoout 연동)
                     memoout_val = safe_str(r.get("memoout", ""))
                     outitem_val = safe_str(r.get("outitem", ""))
+                    out_disp = outitem_val if outitem_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;"
+                    out_link = f"?memo_edit_id={rid}&memo_type=out&token={pwd_token}"
                     if memoout_val:
-                        edit_link = f'<div class="print-hide-col" style="text-align:right; margin-top:5px;"><a href="?memo_edit_id={rid}&memo_type=out&token={pwd_token}" target="_self" style="color:#000000 !important; text-decoration:underline !important; font-size:12px;">[✏️수정]</a></div>'
-                        outitem_html = f'<div class="memo-tooltip-out" style="font-weight: bold;">{outitem_val}<span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memoout_val}{edit_link}</span></div>'
+                        edit_link = f'<div class="print-hide-col" style="text-align:right; margin-top:5px;"><a href="{out_link}" target="_self" style="color:#000000 !important; text-decoration:underline !important; font-size:12px;">[✏️수정]</a></div>'
+                        outitem_html = f'<div class="memo-tooltip-out" style="font-weight: bold;"><a href="{out_link}" target="_self" style="color:inherit; text-decoration:none;">{out_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memoout_val}{edit_link}</span></div>'
                     else:
-                        add_link = f'<a href="?memo_edit_id={rid}&memo_type=out&token={pwd_token}" target="_self" class="print-hide-col" style="text-decoration:none;"><span style="font-size:11px; opacity:0.5; color:#000000 !important;">[📝]</span></a>'
-                        outitem_html = f'{outitem_val} {add_link}'
+                        outitem_html = f'<a href="{out_link}" target="_self" style="color:inherit; text-decoration:none;">{out_disp}</a>'
 
                     # 💡 [핵심 기술 3] 배송(carno) 텍스트 툴팁 및 굵게 처리 (memocar 연동)
                     memocar_val = safe_str(r.get("memocar", ""))
                     carno_val = safe_str(r.get("carno", ""))
+                    car_disp = carno_val if carno_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;"
+                    car_link = f"?memo_edit_id={rid}&memo_type=car&token={pwd_token}"
                     if memocar_val:
-                        edit_link = f'<div class="print-hide-col" style="text-align:right; margin-top:5px;"><a href="?memo_edit_id={rid}&memo_type=car&token={pwd_token}" target="_self" style="color:#000000 !important; text-decoration:underline !important; font-size:12px;">[✏️수정]</a></div>'
-                        carno_html = f'<div class="memo-tooltip-base" style="font-weight: bold; color: inherit;">{carno_val}<span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memocar_val}{edit_link}</span></div>'
+                        edit_link = f'<div class="print-hide-col" style="text-align:right; margin-top:5px;"><a href="{car_link}" target="_self" style="color:#000000 !important; text-decoration:underline !important; font-size:12px;">[✏️수정]</a></div>'
+                        carno_html = f'<div class="memo-tooltip-base" style="font-weight: bold; color: inherit;"><a href="{car_link}" target="_self" style="color:inherit; text-decoration:none;">{car_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memocar_val}{edit_link}</span></div>'
                     else:
-                        add_link = f'<a href="?memo_edit_id={rid}&memo_type=car&token={pwd_token}" target="_self" class="print-hide-col" style="text-decoration:none;"><span style="font-size:11px; opacity:0.5; color:#000000 !important;">[📝]</span></a>'
-                        carno_html = f'{carno_val} {add_link}'
+                        carno_html = f'<a href="{car_link}" target="_self" style="color:inherit; text-decoration:none;">{car_disp}</a>'
                     
                     # 매입 수량 툴팁 조립
                     inq_val_str = f'{r["inq_val"]:,.0f}' if pd.notnull(r["inq_val"]) else '0'
