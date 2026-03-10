@@ -280,7 +280,7 @@ if "authenticated" not in st.session_state: st.session_state.authenticated = Fal
 if "sort_desc" not in st.session_state: st.session_state.sort_desc = False 
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
 if "copy_id" not in st.session_state: st.session_state.copy_id = None
-if "show_new" not in st.session_state: st.session_state.show_new = False # 💡 신규/복사 폼 노출 제어용 독립 변수!
+if "show_new" not in st.session_state: st.session_state.show_new = False 
 if "show_uploader" not in st.session_state: st.session_state.show_uploader = False 
 if "sql_ready" not in st.session_state: st.session_state.sql_ready = False
 if "sql_content" not in st.session_state: st.session_state.sql_content = ""
@@ -297,12 +297,13 @@ if any(k in st.query_params for k in ["edit_id", "copy_id", "token"]):
             restored = decode_sp(sp_encoded)
             if restored: 
                 st.session_state.search_params = restored
+                st.session_state.prev_search_params = restored
                 
         if "year" in st.query_params: st.session_state.target_year_from_url = int(st.query_params["year"])
         if "edit_id" in st.query_params: st.session_state.edit_id = st.query_params["edit_id"]
         if "copy_id" in st.query_params:
             st.session_state.copy_id = st.query_params["copy_id"]
-            st.session_state.show_new = True # 💡 검색 모드(mode)를 훼손하지 않고 신규폼 상태만 활성화
+            st.session_state.show_new = True 
         
         should_rerun = True
 
@@ -414,19 +415,22 @@ try:
         target_years.add(available_years[0] if available_years else get_kst_now().year)
 
     df = load_data_for_years(sorted(list(target_years), reverse=True))
+    
+    # 💡 누락된 date_col 변수 복구
+    date_col = 'date_dt'
     if not df.empty:
-        df['date_dt'] = pd.to_datetime(df['date'], errors='coerce')
-        df = df.dropna(subset=['date_dt'])
-        df['year'] = df['date_dt'].dt.year.astype(int)
-        df['month'] = df['date_dt'].dt.month.astype(int)
+        df[date_col] = pd.to_datetime(df['date'], errors='coerce')
+        df = df.dropna(subset=[date_col])
+        df['year'] = df[date_col].dt.year.astype(int)
+        df['month'] = df[date_col].dt.month.astype(int)
         for c in ['inq', 'inprice', 'outq', 'outprice', 'carprice', 'id']:
             df[f'{c}_val'] = df[c].apply(clean_numeric)
         df['in_total'], df['out_total'] = df['inq_val'] * df['inprice_val'], df['outq_val'] * df['outprice_val']
     else:
-        df = pd.DataFrame(columns=['id', 'date', 'year', 'month', 'incom', 'initem', 'inq_val', 'inprice_val', 'outcom', 'outitem', 'outq_val', 'outprice_val', 'carno', 'carprice_val', 'in_total', 'out_total', 's', 'memoin', 'memoout', 'memocar'])
+        df = pd.DataFrame(columns=['id', 'date', 'year', 'month', 'incom', 'initem', 'inq_val', 'inprice_val', 'outcom', 'outitem', 'outq_val', 'outprice_val', 'carno', 'carprice_val', 'in_total', 'out_total', 's', 'memoin', 'memoout', 'memocar', date_col])
 
     # ---------------------------------------------------------
-    # [1] 등록 자료 수정 / 삭제 폼 (💡 하단에 메모 통합, UI 구조 분리로 표와 공존)
+    # [1] 등록 자료 수정 / 삭제 폼 (하단에 메모 통합, UI 구조 분리로 표와 공존)
     # ---------------------------------------------------------
     if st.session_state.edit_id:
         st.markdown("<h3 style='text-align:center; color:#ffeb3b; font-weight:bold;'>📝 등록 자료 및 메모 수정 / 삭제</h3>", unsafe_allow_html=True)
@@ -519,12 +523,15 @@ try:
                         st.error(f"삭제 오류: {e}")
                         
                 if bc4.form_submit_button("취소", use_container_width=True, type="secondary"):
-                    st.session_state.edit_id = None; st.rerun()
+                    st.session_state.edit_id = None
+                    if "prev_search_params" in st.session_state:
+                        st.session_state.search_params = st.session_state.prev_search_params
+                    st.rerun()
 
     # ---------------------------------------------------------
-    # [2] 신규입력 및 복사 창 (💡 요청에 따라 메모 입력칸 완전 제거!)
+    # [2] 신규입력 및 복사 창
     # ---------------------------------------------------------
-    if st.session_state.show_new:
+    elif st.session_state.show_new:
         st.markdown("<h3 style='text-align:center; font-weight:bold;'>🆕 신규자료입력 / 복사입력</h3>", unsafe_allow_html=True)
         def_v = {"s_idx":0, "date":get_kst_now().date()}
         if st.session_state.copy_id:
@@ -580,7 +587,6 @@ try:
                 if needs_update:
                     sheet.update(f"A1:{gspread.utils.rowcol_to_a1(1, len(headers))}", [headers])
                 
-                # 메모값 3개는 공란("")으로 추가하여 열 개수 맞춤
                 new_full_row = [next_id, n_date.strftime('%Y-%m-%d'), n_incom, n_initem, n_inq, n_inprice, n_outcom, n_outitem, n_outq, n_outprice, "", n_s, n_carno, n_carprice, "", "", ""]
                 for attempt in range(3):
                     try:
@@ -595,10 +601,14 @@ try:
                 
             if bc3.form_submit_button("취소", use_container_width=True, type="secondary"):
                 st.session_state.copy_id = None; st.session_state.show_new = False
+                if "prev_search_params" in st.session_state:
+                    st.session_state.search_params = st.session_state.prev_search_params
+                else:
+                    st.session_state.search_params = {"mode":"init"}
                 st.rerun()
 
     # ---------------------------------------------------------
-    # [3] 메인 검색 UI 및 데이터 테이블 (💡 항상 렌더링되어 표 보존)
+    # [3] 메인 검색 UI 및 데이터 테이블 (항상 렌더링되어 표 보존)
     # ---------------------------------------------------------
     with st.container():
         
@@ -693,7 +703,6 @@ try:
             height=75
         )
 
-        # 검색 폼 값 바인딩 (이전 검색 상태 화면 표시 유지)
         sp = params
         p_type = sp.get("type", "ALL")
         t_idx = ["ALL", "매입", "매출"].index(p_type) if p_type in ["ALL", "매입", "매출"] else 0
@@ -742,7 +751,6 @@ try:
         with u3: m3 = st.selectbox("m3", months, index=m_idx, format_func=lambda x:f"{x}월", label_visibility="collapsed")
         with u4: b_set = st.button("결산", use_container_width=True, type="primary")
         
-        # 💡 [핵심 기술 4] 신규 버튼 클릭 시 필터를 훼손하지 않고 폼만 열리도록 수정
         with u5: b_new = st.button("신규", use_container_width=True, type="primary")
         
         with u6: lmt = st.selectbox("l4", ["20개", "50개", "100개"], index=0, label_visibility="collapsed")
@@ -758,14 +766,14 @@ try:
         with u14: b_mon = st.button("월별", use_container_width=True, type="primary")
         with u15: b_yong = st.button("용차", use_container_width=True, type="primary")
 
-        # 💡 검색 버튼 액션 (선택 즉시 조건이 반영됨)
-        if b1: st.session_state.search_params = {"mode":"기간","title":f"기간 검색 ({dr1[0]} ~ {dr1[1] if len(dr1)>1 else dr1[0]})","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0], "s_filter": s1}; st.session_state.sort_desc = False; st.rerun()
-        elif b2: st.session_state.search_params = {"mode":"월별상세","title":f"{y2}년 {m2}월 상세 검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2, "s_filter": s2}; st.session_state.sort_desc = False; st.rerun()
-        elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3, "s_filter": s3}; st.session_state.sort_desc = False; st.rerun()
+        # 💡 버튼 클릭 시마다 이전 검색 상태를 백업
+        if b1: st.session_state.search_params = {"mode":"기간","title":f"기간 검색 ({dr1[0]} ~ {dr1[1] if len(dr1)>1 else dr1[0]})","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0], "s_filter": s1}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
+        elif b2: st.session_state.search_params = {"mode":"월별상세","title":f"{y2}년 {m2}월 상세 검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2, "s_filter": s2}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
+        elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3, "s_filter": s3}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
         elif b_new: 
             st.session_state.show_new = True; st.session_state.copy_id = None; st.rerun()
-        elif b_rec: st.session_state.search_params = {"mode":"최근","title":"최근 입력순서","limit":lmt, "s_filter": "ALL"}; st.session_state.sort_desc = True; st.rerun()
-        elif b_day: st.session_state.search_params = {"mode":"일","title":f"일간 검색 ({d_day})","date":d_day, "s_filter": "ALL"}; st.session_state.sort_desc = False; st.rerun()
+        elif b_rec: st.session_state.search_params = {"mode":"최근","title":"최근 입력순서","limit":lmt, "s_filter": "ALL"}; st.session_state.sort_desc = True; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
+        elif b_day: st.session_state.search_params = {"mode":"일","title":f"일간 검색 ({d_day})","date":d_day, "s_filter": "ALL"}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
         elif b_ayt:
             st.session_state.search_params = {
                 "mode":"기간",
@@ -779,11 +787,12 @@ try:
                 "s_filter": "ALL"
             }
             st.session_state.sort_desc = False
+            st.session_state.prev_search_params = st.session_state.search_params
             st.rerun()
-        elif b_mon: st.session_state.search_params = {"mode":"월별","title":f"{y4}년 {m4}월 기본 검색","year":y4,"month":m4, "s_filter": s5}; st.session_state.sort_desc = False; st.rerun()
-        elif b_yong: st.session_state.search_params = {"mode":"용차","title":f"{y4}년 {m4}월 배송(용/다) 검색","year":y4,"month":m4, "s_filter": s5}; st.session_state.sort_desc = False; st.rerun()
+        elif b_mon: st.session_state.search_params = {"mode":"월별","title":f"{y4}년 {m4}월 기본 검색","year":y4,"month":m4, "s_filter": s5}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
+        elif b_yong: st.session_state.search_params = {"mode":"용차","title":f"{y4}년 {m4}월 배송(용/다) 검색","year":y4,"month":m4, "s_filter": s5}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
 
-        # 💡 [핵심 기술 5] init 상태(첫 접속)일 경우 데이터 표를 일절 그리지 않아 빈 화면 유지!
+        # 💡 init 상태일 경우 데이터 테이블은 숨김
         if params["mode"] != "init":
             f_df = df.copy()
             
@@ -917,7 +926,7 @@ try:
                     s_cls = "txt-green" if "제일" in str(r['s']) else "txt-purple"
                     row_year = int(r['year'])
                     
-                    # 💡 표에서 링크를 클릭하면 팝업 없이 [메인 수정창]이 상단에 뜨도록 edit_id로 연동!
+                    # 💡 표에서 복사나 수정을 눌러도 현재 검색 상태(sp)를 유지한 채 폼을 오픈합니다!
                     v_link = f'<a href="?copy_id={rid}&year={row_year}&token={pwd_token}&sp={current_sp_encoded}" target="_self" style="text-decoration:none;"><span class="{s_cls}">{r["s"]}</span></a>'
                     edit_link_target = f"?edit_id={rid}&year={row_year}&token={pwd_token}&sp={current_sp_encoded}"
                     d_link = f'<a href="{edit_link_target}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
@@ -932,39 +941,35 @@ try:
                     
                     profit_tot_vat = out_tot_vat - in_tot_vat 
                     
-                    # 💡 클릭 시그널은 남기고 푸른색 링크만 없애기 (폰트를 부모에게 상속받음)
                     memoin_val = safe_str(r.get("memoin", ""))
                     initem_val = safe_str(r.get("initem", ""))
-                    in_disp = initem_val if initem_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                     
+                    # 💡 클릭 기능(a 태그) 제거! 텍스트는 그대로 보여주고 메모가 있으면 툴팁만 띄웁니다.
                     if memoin_val:
-                        initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;"><span style="color:inherit;">{in_disp}</span><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important; font-weight:bold !important;">{memoin_val}</span></span></div>'
+                        initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;"><span style="color:inherit;">{initem_val}</span><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important; font-weight:bold !important;">{memoin_val}</span></span></div>'
                     else:
-                        initem_html = f'<span style="color:inherit;">{in_disp}</span>'
+                        initem_html = f'<span style="color:inherit;">{initem_val}</span>'
 
                     memoout_val = safe_str(r.get("memoout", ""))
                     outitem_val = safe_str(r.get("outitem", ""))
-                    out_disp = outitem_val if outitem_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                     if memoout_val:
-                        outitem_html = f'<div class="memo-tooltip-out" style="font-weight: bold;"><span style="color:inherit;">{out_disp}</span><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important; font-weight:bold !important;">{memoout_val}</span></span></div>'
+                        outitem_html = f'<div class="memo-tooltip-out" style="font-weight: bold;"><span style="color:inherit;">{outitem_val}</span><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important; font-weight:bold !important;">{memoout_val}</span></span></div>'
                     else:
-                        outitem_html = f'<span style="color:inherit;">{out_disp}</span>'
+                        outitem_html = f'<span style="color:inherit;">{outitem_val}</span>'
 
                     memocar_val = safe_str(r.get("memocar", ""))
                     carno_val = safe_str(r.get("carno", ""))
-                    car_disp = carno_val if carno_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                     if memocar_val:
-                        carno_html = f'<div class="memo-tooltip-base" style="font-weight: bold; color: inherit;"><span style="color:inherit;">{car_disp}</span><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important; font-weight:bold !important;">{memocar_val}</span></span></div>'
+                        carno_html = f'<div class="memo-tooltip-base" style="font-weight: bold; color: inherit;"><span style="color:inherit;">{carno_val}</span><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important; font-weight:bold !important;">{memocar_val}</span></span></div>'
                     else:
-                        carno_html = f'<span style="color:inherit;">{car_disp}</span>'
+                        carno_html = f'<span style="color:inherit;">{carno_val}</span>'
                     
-                    # 💡 수량 메모창 완벽한 블랙 강제!
                     inq_val_str = f'{r["inq_val"]:,.0f}' if pd.notnull(r["inq_val"]) else '0'
-                    in_memo = f"<div style='text-align:right;'><span style='color:#000000 !important;'>공급가액(VAT별도) : {in_tot:,.0f} 원</span><br><span style='color:#000000 !important;'>+ 부가세(10%) : {in_vat_only:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'><span style='color:#000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</span></div>"
+                    in_memo = f"<div style='text-align:right;'><span style='color:#000000 !important;'>공급가액(VAT별도) : {in_tot:,.0f} 원</span><br><span style='color:#000000 !important;'>+ 부가세(10%) : {in_vat_only:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px dashed black !important;'><span style='color:#000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</span></div>"
                     inq_html = f'<div class="memo-tooltip-in">{inq_val_str}<span class="memo-text">{in_memo}</span></div>'
                     
                     outq_val_str = f'{r["outq_val"]:,.0f}' if pd.notnull(r["outq_val"]) else '0'
-                    out_memo = f"<div style='text-align:right;'><span style='color:#000000 !important;'>매출액(VAT별도) : {out_tot:,.0f} 원</span><br><span style='color:#000000 !important;'>+ 부가세(10%) : {out_vat_only:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'><span style='color:#000000 !important;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원</span><br><span style='color:#000000 !important;'>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px solid #000000 !important;'><span style='color:#000000 !important; font-weight:bold;'>= 순이익(VAT포함) : {profit_tot_vat:,.0f} 원</span></div>"
+                    out_memo = f"<div style='text-align:right;'><span style='color:#000000 !important;'>매출액(VAT별도) : {out_tot:,.0f} 원</span><br><span style='color:#000000 !important;'>+ 부가세(10%) : {out_vat_only:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px dashed black !important;'><span style='color:#000000 !important;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원</span><br><span style='color:#000000 !important;'>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px solid black !important;'><span style='color:#000000 !important; font-weight:bold;'>= 순이익(VAT포함) : {profit_tot_vat:,.0f} 원</span></div>"
                     outq_html = f'<div class="memo-tooltip-out">{outq_val_str}<span class="memo-text">{out_memo}</span></div>'
                     
                     row_html = f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl txt-in-bold">{r["incom"]}</td><td class="tl txt-in">{initem_html}</td><td class="tr txt-in">{inq_html}</td><td class="tr txt-in">{r["inprice_val"]:,.0f}</td><td class="tl txt-out-bold">{r["outcom"]}</td><td class="tl txt-out">{outitem_html}</td><td class="tr txt-out">{outq_html}</td><td class="tr txt-out">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray print-hide-col">{rid}</td><td class="tc txt-gray">{carno_html}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
@@ -1025,7 +1030,6 @@ try:
                         st.session_state.sort_desc = not st.session_state.sort_desc; st.rerun()
                 
                 with col_t3:
-                    # PRINT 버튼 사이즈 완벽 교정
                     components.html(
                         f"""
                         <!DOCTYPE html>
