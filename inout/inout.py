@@ -533,20 +533,18 @@ try:
                     st.rerun()
 
     # ---------------------------------------------------------
-    # [2] 신규입력 및 복사 창 (💡 복사 시 메모칸 & 메모 데이터 연동 제거 완료)
+    # [2] 신규입력 및 복사 창 (복사 시 메모칸 & 메모 데이터 연동 제거)
     # ---------------------------------------------------------
     elif st.session_state.show_new:
         st.markdown("<h3 style='text-align:center; font-weight:bold;'>🆕 신규자료입력 / 복사입력</h3>", unsafe_allow_html=True)
-        # 💡 [핵심 기술 1] 복사 시 오늘 날짜로 무조건 덮어쓰기! (원래 날짜 안가져옴)
+        # 복사 시 무조건 오늘 날짜로 덮어쓰기!
         def_v = {"s_idx":0, "date":get_kst_now().date()}
         if st.session_state.copy_id:
             cr = df[df['id'].astype(str) == str(st.session_state.copy_id)]
             if not cr.empty:
                 cr = cr.iloc[0]
-                # 메모 항목(memoin, memoout, memocar)은 복사 대상에서 제외
                 def_v.update({k: safe_str(cr.get(k)) for k in ['incom','initem','inq','inprice','outcom','outitem','outq','outprice','carno','carprice']})
                 def_v["s_idx"] = 1 if '중부' in safe_str(cr.get('s')) else 0
-                # 날짜 복사 코드를 삭제하여 무조건 '오늘 날짜'로 고정되도록 구현
 
         with st.form("new_form"):
             c1, c2, c3, c4, c5, c6 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
@@ -569,8 +567,6 @@ try:
             n_outprice = c11.text_input("outprice", def_v.get("outprice",""), label_visibility="collapsed")
             n_carprice = c12.text_input("carprice", def_v.get("carprice",""), label_visibility="collapsed")
 
-            # 💡 [핵심 기술 2] 신규입력/복사입력 시에는 메모 창을 완전히 없앰 (깔끔한 UI 유지)
-
             st.markdown("<hr style='margin: 10px 0; border: none;'>", unsafe_allow_html=True)
             bc1, bc2, bc3 = st.columns([8.2, 1.1, 0.7])
             
@@ -578,7 +574,17 @@ try:
                 client = init_connection()
                 spreadsheet = client.open('SQL백업260211-jeilinout')
                 target_year_str = f"{n_date.year}년"
-                next_id = int(get_kst_now().strftime("%y%m%d%H%M%S"))
+                
+                # 💡 [핵심 기술] 전체 넘버 중 가장 높은 수 + 1 산출 로직
+                max_id = 0
+                for y in available_years:
+                    temp_df = load_data_for_years([y])
+                    if not temp_df.empty and 'id' in temp_df.columns:
+                        temp_max = temp_df['id'].apply(clean_numeric).max()
+                        if pd.notna(temp_max) and temp_max > 0:
+                            max_id = int(temp_max)
+                            break
+                next_id = max_id + 1 if max_id > 0 else 1
                 
                 try:
                     sheet = spreadsheet.worksheet(target_year_str)
@@ -775,7 +781,7 @@ try:
         with u14: b_mon = st.button("월별", use_container_width=True, type="primary")
         with u15: b_yong = st.button("용차", use_container_width=True, type="primary")
 
-        # 💡 버튼 클릭 시마다 이전 검색 상태를 백업
+        # 버튼 클릭 시마다 이전 검색 상태를 백업
         if b1: st.session_state.search_params = {"mode":"기간","title":f"기간 검색 ({dr1[0]} ~ {dr1[1] if len(dr1)>1 else dr1[0]})","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0], "s_filter": s1}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
         elif b2: st.session_state.search_params = {"mode":"월별상세","title":f"{y2}년 {m2}월 상세 검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2, "s_filter": s2}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
         elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3, "s_filter": s3}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
@@ -825,7 +831,6 @@ try:
             if params.get("company"): f_df = f_df[f_df['incom'].str.contains(params["company"], na=False)|f_df['outcom'].str.contains(params["company"], na=False)]
             if params.get("item"): f_df = f_df[f_df['initem'].str.contains(params["item"], na=False)|f_df['outitem'].str.contains(params["item"], na=False)]
             
-            # 💡 [핵심 기술 3] '최근' 검색 모드 시 무조건 id_val(입력된 순서 NO) 기준 내림차순 정렬 보장!
             if params["mode"] == "최근":
                 f_df = f_df.sort_values(by=['id_val'], ascending=[False])
             else:
@@ -959,7 +964,6 @@ try:
                     initem_val = safe_str(r.get("initem", ""))
                     in_disp = initem_val if initem_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                     
-                    # 💡 [핵심 기술 4] 클래스 분리를 통한 매입(파란색), 매출(주황색) 텍스트 복구! (인쇄 시엔 검은색 유지)
                     if memoin_val:
                         initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;"><a href="{edit_link_target}" target="_self" style="text-decoration:none;"><span class="disp-in">{in_disp}</span></a><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important; font-weight:bold !important;">{memoin_val}</span></span></div>'
                     else:
