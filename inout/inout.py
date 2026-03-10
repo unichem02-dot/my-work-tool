@@ -389,6 +389,8 @@ st.markdown("<hr style='margin: 10px 0px 20px 0px; border: 0.5px solid #4a5568;'
 
 # --- [6. 메인 로직] ---
 try:
+    years = available_years
+    months = list(range(1, 13))
     params = st.session_state.search_params
     
     # 💡 데이터 로딩 범위 최적화 (표 출력용 연도 + 수정/복사용 연도를 동시에 확보하여 꼬임 방지!)
