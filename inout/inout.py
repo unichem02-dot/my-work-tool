@@ -425,6 +425,7 @@ with col_sql:
                 except Exception as e:
                     st.error("생성 실패")
     else:
+        # 생성 완료 상태일 때 버튼을 'Secondary' 타입으로 출력하여 CSS에서 지정해둔 빨간색이 완벽하게 씌워지도록 함!
         st.download_button("💾 생성완료! 다운로드", data=st.session_state.sql_content.encode('utf-8-sig'), file_name=f"db_backup_{get_kst_now().strftime('%Y%m%d')}.sql", mime="application/sql", use_container_width=True, type="secondary")
 
 with col_r:
@@ -547,8 +548,11 @@ try:
     years = available_years
     months = list(range(1, 13))
     
-    # 💡 [핵심 기술 1] 검색 조건 동기화 (메모 클릭 후 돌아와도 폼 값이 그대로 유지되도록 세션에서 읽어옴)
-    sp = st.session_state.search_params
+    # 💡 [오류 해결] params 변수 정의를 명확하게 추가하여 시스템 에러 해결!
+    params = st.session_state.search_params
+    
+    # 💡 [검색 조건 동기화 적용] 폼 렌더링 시 이전 검색값이 그대로 입력창에 유지되도록 값을 바인딩!
+    sp = params
     p_type = sp.get("type", "ALL")
     t_idx = ["ALL", "매입", "매출"].index(p_type) if p_type in ["ALL", "매입", "매출"] else 0
     s_filt = sp.get("s_filter", "ALL")
@@ -614,7 +618,7 @@ try:
             btn_str = "💾 수정" if is_update else "💾 신규입력"
 
             def render_memo_form():
-                # 💡 [핵심 기술 2] 팝업 전용 예쁜 포스트잇 스타일 & 모든 글씨 올블랙(Black) 완벽 강제 CSS!
+                # 팝업 전용 예쁜 포스트잇 스타일 & 모든 글씨 올블랙(Black) 완벽 강제 CSS!
                 st.markdown("""
                 <style>
                 /* 다이얼로그 모달 전체 배경 및 테두리 (포스트잇 느낌) */
@@ -623,7 +627,7 @@ try:
                     border: 3px solid #FFC107 !important;
                     border-radius: 12px !important;
                 }
-                /* 💡 팝업 내부의 모든 요소를 완벽한 검은색으로 덮어쓰기! (제목, 텍스트, 버튼 모두) */
+                /* 팝업 내부의 모든 요소를 완벽한 검은색으로 덮어쓰기! (제목, 텍스트, 버튼 모두) */
                 div[role="dialog"] *, div[data-testid="stModal"] * {
                     color: #000000 !important;
                 }
@@ -648,7 +652,7 @@ try:
                     background-color: #2563eb !important;
                     color: #ffffff !important;
                 }
-                /* 💡 취소 버튼 (청록색 완벽 적용 + 검은 글씨) */
+                /* 취소 버튼 (청록색 완벽 적용 + 검은 글씨) */
                 div[role="dialog"] button[kind="secondary"] {
                     background-color: #009688 !important;
                     border-color: #009688 !important;
@@ -670,7 +674,7 @@ try:
                 st.markdown(f"<h4 style='text-align:center; margin-top:0; font-weight:bold;'>📝 {type_kr} 텍스트 메모</h4>", unsafe_allow_html=True)
                 new_memo = st.text_area("내용", orig_memo, height=150, label_visibility="collapsed")
                 
-                # 💡 버튼이 잘리지 않도록 레이아웃 비율 수정 (버튼 공간 넓게 확보)
+                # 버튼이 잘리지 않도록 레이아웃 비율 수정 (버튼 공간 넓게 확보)
                 c1, c2, c3 = st.columns([1, 4.5, 4.5])
                 with c2:
                     if st.button(btn_str, use_container_width=True, type="primary", key="save_memo"):
@@ -917,7 +921,6 @@ try:
                 height=75
             )
 
-            # 💡 [검색 조건 동기화 적용] 폼 렌더링 시 이전 검색값이 그대로 입력창에 유지되도록 값을 바인딩!
             with st.form(key="form_row1", border=False):
                 r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
                 with r1_1: t1 = st.radio("t1", ["ALL", "매입", "매출"], index=t_idx, horizontal=True, label_visibility="collapsed")
@@ -1139,8 +1142,7 @@ try:
                     
                     profit_tot_vat = out_tot_vat - in_tot_vat 
                     
-                    # 💡 [핵심 기술] 텍스트 클릭 시 메모 팝업창 연동 (수정 버튼 제거, 글씨 자체를 클릭하게 만듦)
-                    # 여백(&nbsp;)을 주어 빈칸일 때도 쉽게 클릭할 수 있도록 확보합니다.
+                    # 텍스트 클릭 시 메모 팝업창 연동
                     memoin_val = safe_str(r.get("memoin", ""))
                     initem_val = safe_str(r.get("initem", ""))
                     in_disp = initem_val if initem_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
@@ -1196,7 +1198,7 @@ try:
                 table_html += '<tfoot style="display: table-footer-group !important;"><tr class="print-fake-margin"><td colspan="13" style="height: 12mm; border: none !important; background-color: white !important; padding: 0 !important;"></td></tr></tfoot>'
                 table_html += '</table></div>'
 
-                # 💡 [인쇄 소스 완벽 보존]
+                # 인쇄 관련 코드는 절대 변경하지 않음 (안전 보존)
                 print_html_content = f"""
                 <!DOCTYPE html>
                 <html><head><title>인쇄 미리보기</title>
@@ -1215,7 +1217,6 @@ try:
                     .th-out {{ background-color: #ffedd5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
                     .sum-profit {{ background-color: #f1f5f9 !important; text-align: right; padding: 12px 20px; font-weight: bold; border-top: 1px solid #444; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
                     .tc {{ text-align: center; }} .tl {{ text-align: left; }} .tr {{ text-align: right; }}
-                    /* 💡 인쇄 시 팝업 링크 밑줄 제거하여 일반 텍스트처럼 보이게 처리 */
                     a {{ color: black !important; text-decoration: none !important; pointer-events: none; }}
                     .print-hide-col {{ display: none !important; }}
                     thead {{ display: table-header-group !important; }}
