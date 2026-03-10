@@ -696,6 +696,7 @@ try:
                 with r1_3: s1 = st.selectbox("s1", ["ALL", "제일", "중부"], label_visibility="collapsed")
                 with r1_4: c1 = st.text_input("c1", placeholder="거래처 검색", label_visibility="collapsed")
                 with r1_5: i1 = st.text_input("i1", placeholder="품목 검색", label_visibility="collapsed")
+                # 💡 버튼명 수정
                 with r1_6: b1 = st.form_submit_button("기간 거래처&품목", use_container_width=True, type="primary")
 
             st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
@@ -709,6 +710,7 @@ try:
                 with r2_4: s2 = st.selectbox("s2", ["ALL", "제일", "중부"], label_visibility="collapsed")
                 with r2_5: c2 = st.text_input("c2", placeholder="거래처 검색", label_visibility="collapsed")
                 with r2_6: i2 = st.text_input("i2", placeholder="품목 검색", label_visibility="collapsed")
+                # 💡 버튼명 수정
                 with r2_7: b2 = st.form_submit_button("월별 거래처&품목", use_container_width=True, type="primary")
 
             st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
@@ -720,10 +722,12 @@ try:
             with u3: m3 = st.selectbox("m3", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
             with u4: b_set = st.button("결산", use_container_width=True, type="primary")
             
-            with u5: b_new = st.button("신규입력", use_container_width=True, type="primary")
+            # 💡 버튼명 수정: 신규
+            with u5: b_new = st.button("신규", use_container_width=True, type="primary")
             
             with u6: lmt = st.selectbox("l4", ["20개", "50개", "100개"], index=0, label_visibility="collapsed")
-            with u7: b_rec = st.button("최근입력", use_container_width=True, type="primary")
+            # 💡 버튼명 수정: 최근
+            with u7: b_rec = st.button("최근", use_container_width=True, type="primary")
             
             with u8: d_day = st.date_input("d2", get_kst_now().date(), format="YYYY-MM-DD", label_visibility="collapsed")
             with u9: b_day = st.button("일검색", use_container_width=True, type="primary")
@@ -732,7 +736,8 @@ try:
             with u11: s5 = st.selectbox("s5", ["ALL", "제일", "중부"], label_visibility="collapsed")
             with u12: y4 = st.selectbox("y4", years, key="y4_sel", label_visibility="collapsed", format_func=lambda x: f"{x}년")
             with u13: m4 = st.selectbox("m4", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", key="m4_sel", label_visibility="collapsed")
-            with u14: b_mon = st.button("월별검색", use_container_width=True, type="primary")
+            # 💡 버튼명 수정: 월별
+            with u14: b_mon = st.button("월별", use_container_width=True, type="primary")
             with u15: b_yong = st.button("용차", use_container_width=True, type="primary")
 
         # 💡 [검색 버튼 액션]
@@ -855,7 +860,7 @@ try:
                         st.dataframe(top_out.style.format({'매출액': '{:,.0f}'}), use_container_width=True, hide_index=True)
                     else: st.caption("매출 내역이 없습니다.")
                         
-                    st.markdown("<br><h4 style='color: #fbbf24;'>💎 최고 이익 거래처 Top 전 Top 5</h4>", unsafe_allow_html=True)
+                    st.markdown("<br><h4 style='color: #fbbf24;'>💎 최고 이익 거래처 Top 5</h4>", unsafe_allow_html=True)
                     if not valid_outcom.empty:
                         top_profit = valid_outcom.groupby('outcom')['profit'].sum().sort_values(ascending=False).head(5).reset_index()
                         top_profit.columns = ['거래처명', '순이익']
@@ -908,23 +913,23 @@ try:
                     v_link = f'<a href="?copy_id={rid}&token={pwd_token}" target="_self" style="text-decoration:none;"><span class="{s_cls}">{r["s"]}</span></a>'
                     d_link = f'<a href="?edit_id={rid}&token={pwd_token}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
                     
-                    # 💡 [핵심 기술 1] 부가세 연동 및 이익금 산출용 데이터 미리 계산
+                    # 💡 부가세 연동 및 이익금 산출용 데이터 미리 계산
                     in_tot = r["in_total"] if pd.notnull(r["in_total"]) else 0
-                    in_tot_vat = in_tot * 1.1       # 매입액 부가세 포함
-                    in_vat_only = in_tot * 0.1      # 매입액 순수 부가세
+                    in_tot_vat = in_tot * 1.1       
+                    in_vat_only = in_tot * 0.1      
                     
                     out_tot = r["out_total"] if pd.notnull(r["out_total"]) else 0
-                    out_tot_vat = out_tot * 1.1     # 매출액 부가세 포함
-                    out_vat_only = out_tot * 0.1    # 매출액 순수 부가세
+                    out_tot_vat = out_tot * 1.1     
+                    out_vat_only = out_tot * 0.1    
                     
-                    profit_tot_vat = out_tot_vat - in_tot_vat # 부가세 포함 기준 이익금 산출
+                    profit_tot_vat = out_tot_vat - in_tot_vat 
                     
-                    # 💡 [핵심 기술 2] 매입 툴팁 조립 (올블랙 적용 & 공급가+부가세 상세 표시)
+                    # 💡 매입 툴팁 조립
                     inq_val_str = f'{r["inq_val"]:,.0f}' if pd.notnull(r["inq_val"]) else '0'
                     in_memo = f"<div style='text-align:right; color:#000000 !important;'>공급가액(VAT별도) : {in_tot:,.0f} 원<br>+ 부가세(10%) : {in_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</div>"
                     inq_html = f'<div class="memo-tooltip-in">{inq_val_str}<span class="memo-text">{in_memo}</span></div>'
                     
-                    # 💡 [핵심 기술 3] 매출 툴팁 조립 (올블랙 적용 & 부가세 별도/포함 및 이익금 계산식 완벽 표시)
+                    # 💡 매출 툴팁 조립
                     outq_val_str = f'{r["outq_val"]:,.0f}' if pd.notnull(r["outq_val"]) else '0'
                     out_memo = f"<div style='text-align:right; color:#000000 !important;'>매출액(VAT별도) : {out_tot:,.0f} 원<br>+ 부가세(10%) : {out_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원<br>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원<br><hr style='margin:4px 0; border:0.5px solid #000000 !important;'><span style='color:#000000 !important; font-weight:bold;'>= 순이익(VAT포함) : {profit_tot_vat:,.0f} 원</span></div>"
                     outq_html = f'<div class="memo-tooltip-out">{outq_val_str}<span class="memo-text">{out_memo}</span></div>'
@@ -935,15 +940,14 @@ try:
                 footer_html = f'<tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr>'
                 footer_html += f'<tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr>'
 
-                # 💡 인쇄 시 레이아웃 붕 뜸 방지를 위해 단일 표(Single Table) 구조로 원상복구!
-                # 표 제목을 표 밖으로 완전히 빼내서 무조건 첫 장 맨 위에만 딱 한 번 나오게 통제합니다.
+                # 💡 인쇄 시 레이아웃 붕 뜸 방지를 위해 단일 표(Single Table) 구조 유지
                 title_div = f'<div class="print-only-title" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border-bottom: 2px solid #555 !important; padding: 10px 0px !important; margin-bottom: 10px; font-weight: bold;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개</span></div>'
                 
                 table_html = '<div class="custom-table-container">'
                 table_html += title_div
                 table_html += '<table class="custom-table">'
                 
-                # 💡 [핵심 기술 1] thead 안에 투명한 가짜 행(1.2cm)을 넣어 매 페이지 상단 여백을 안전하게 확보
+                # thead 안에 투명한 가짜 행(1.2cm)을 넣어 매 페이지 상단 여백을 안전하게 확보
                 table_html += '<thead><tr class="print-fake-margin"><th colspan="13" style="height: 12mm; border: none !important; background-color: white !important; padding: 0 !important;"></th></tr>'
                 table_html += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead>'
                 
@@ -952,22 +956,19 @@ try:
                 table_html += footer_html
                 table_html += '</tbody>'
                 
-                # 💡 [핵심 기술 2] tfoot 안에 투명한 가짜 행(1.2cm)을 넣어 매 페이지 하단 여백을 안전하게 확보
+                # tfoot 안에 투명한 가짜 행(1.2cm)을 넣어 매 페이지 하단 여백을 안전하게 확보
                 table_html += '<tfoot style="display: table-footer-group !important;"><tr class="print-fake-margin"><td colspan="13" style="height: 12mm; border: none !important; background-color: white !important; padding: 0 !important;"></td></tr></tfoot>'
                 
                 table_html += '</table></div>'
 
-                # 💡 [브라우저 기본글씨 제거 및 여백 기술] @page margin을 0으로 만들고, body 여백과 가짜 여백으로 밸런스 유지
+                # 💡 [브라우저 기본글씨 제거 및 여백 기술]
                 print_html_content = f"""
                 <!DOCTYPE html>
                 <html><head><title>인쇄 미리보기</title>
                 <meta charset="utf-8">
                 <style>
-                    /* 브라우저 상하단 기본 글씨(주소, 날짜 등) 완벽히 지우기 */
                     @page {{ size: A4 portrait; margin: 0mm; }} 
-                    /* 종이 끝에 표가 안 닿게 좌우 여백을 10mm로 줌 */
                     body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; padding: 0 10mm; box-sizing: border-box; }}
-                    /* zoom 배율 축소(67%)로 1페이지당 여유있게 들어가게 함 */
                     .custom-table-container {{ width: 100%; zoom: 67%; }} 
                     .custom-table {{ width: 100%; border-collapse: collapse; font-size: 11.5px; background-color: white; }}
                     .custom-table th, .custom-table td {{ border: 1px solid #aaa; padding: 6px 8px; color: black !important; }}
@@ -987,12 +988,9 @@ try:
                     a {{ color: black !important; text-decoration: none !important; pointer-events: none; }}
                     .print-hide-col {{ display: none !important; }}
                     
-                    /* 브라우저가 다음 페이지 넘길 때 컬럼명(Vat, 날짜 등)과 가짜 상단 여백을 세트로 반복 출력하게 허용 */
                     thead {{ display: table-header-group !important; }}
                     
-                    /* 표의 줄이 페이지 넘어갈 때 반으로 찢어지는 현상 방지 (원천 레이아웃 보호) */
                     .custom-table tr {{ page-break-inside: avoid; }}
-                    /* 인쇄 시에는 툴팁 메모장 꼬리표가 나오지 않도록 숨김 처리 */
                     .memo-text {{ display: none !important; }}
                 </style>
                 </head><body>
@@ -1002,9 +1000,13 @@ try:
                 
                 col_t1, col_t2, col_t3, col_t4 = st.columns([5.3, 1.7, 1.5, 1.5])
                 with col_t1: st.markdown(f'<div class="table-title-box"><span style="font-size:16px; font-weight:bold; color:#f8fafc;">{print_title}</span> <span style="font-size:13px; color:#cbd5e1; margin-left:10px;">| 출력 개수: {len(f_df)}개</span></div>', unsafe_allow_html=True)
+                
+                # 💡 버튼명 수정: 날짜정렬
                 with col_t2: 
-                    if st.button("🔄 날짜 정렬 전환", use_container_width=True, type="primary"):
+                    if st.button("🔄 날짜정렬", use_container_width=True, type="primary"):
                         st.session_state.sort_desc = not st.session_state.sort_desc; st.rerun()
+                
+                # 💡 버튼명 수정: PRINT
                 with col_t3:
                     components.html(
                         f"""
@@ -1046,15 +1048,17 @@ try:
                         </script>
                         </head>
                         <body>
-                        <button class="btn-print" onclick="fastPrint()">🖨️ A4 인쇄</button>
+                        <button class="btn-print" onclick="fastPrint()">🖨️ PRINT</button>
                         </body>
                         </html>
                         """,
                         height=35
                     )
+                
+                # 💡 버튼명 수정: EXCEL
                 with col_t4:
                     csv = f_df.to_csv(index=False).encode('utf-8-sig')
-                    st.download_button("💾 엑셀 다운로드", data=csv, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
+                    st.download_button("💾 EXCEL", data=csv, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
 
                 # 웹 화면용 HTML 출력 (웹에서도 단일 렌더링, 단 가짜 여백은 숨김)
                 st.markdown(table_html, unsafe_allow_html=True)
