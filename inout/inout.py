@@ -1039,9 +1039,10 @@ try:
             t_in_q, t_in_a = f_df['inq_val'].sum(), f_df['in_total'].sum()
             t_out_q, t_out_a = f_df['outq_val'].sum(), f_df['out_total'].sum()
             t_car = f_df['carprice_val'].sum()
-            t_profit = t_out_a - t_in_a - t_car
             
-            f_df['profit'] = f_df['out_total'] - f_df['in_total'] - f_df['carprice_val']
+            # 💡 [요청 반영] 순수익에서 운송비(C) 계산 제외
+            t_profit = t_out_a - t_in_a
+            f_df['profit'] = f_df['out_total'] - f_df['in_total']
             
             print_title = params.get("title", "검색결과")
             cond_texts = []
@@ -1057,10 +1058,11 @@ try:
                 col1, col2, col3, col4 = st.columns(4)
                 with col1: st.metric("총 매출액 (A) ↗", f"{t_out_a:,.0f} 원")
                 with col2: st.metric("총 매입액 (B) ↘", f"{t_in_a:,.0f} 원")
-                with col3: st.metric("총 운송비 (C) 🚚", f"{t_car:,.0f} 원")
+                with col3: st.metric("총 운송비 (C) 🚚", f"{t_car:,.0f} 원") # 참고용 유지
                 with col4:
                     margin = (t_profit / t_out_a * 100) if t_out_a > 0 else 0
-                    st.metric("최종 순수익 (A-B-C) 💰", f"{t_profit:,.0f} 원", f"마진율 {margin:.1f}%")
+                    # 💡 대시보드 텍스트 A-B로 수정
+                    st.metric("순이익 (A-B) 💰", f"{t_profit:,.0f} 원", f"마진율 {margin:.1f}%")
                 
                 st.markdown("<hr style='border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
                 
@@ -1127,7 +1129,6 @@ try:
                         st.dataframe(top_initem.style.format({'매입수량': '{:,.0f}'}), use_container_width=True, hide_index=True)
                     else: st.caption("매입 품목 내역이 없습니다.")
 
-            # 💡 그 외 검색 버튼 클릭 시 (테이블 렌더링)
             else:
                 pwd_token = str(st.secrets["tom_password"])
                 current_sp_encoded = encode_sp(st.session_state.search_params)
@@ -1142,7 +1143,6 @@ try:
                     edit_link_target = f"?edit_id={rid}&year={row_year}&token={pwd_token}&sp={current_sp_encoded}"
                     d_link = f'<a href="{edit_link_target}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
                     
-                    # 💡 [검토 및 수정] 수익 계산 로직 정교화 (운송비 포함)
                     in_tot = r["in_total"] if pd.notnull(r["in_total"]) else 0
                     in_tot_vat = in_tot * 1.1       
                     in_vat_only = in_tot * 0.1      
@@ -1151,10 +1151,8 @@ try:
                     out_tot_vat = out_tot * 1.1     
                     out_vat_only = out_tot * 0.1    
                     
-                    car_val = r["carprice_val"] if pd.notnull(r["carprice_val"]) else 0
-                    
-                    # 운송비까지 뺀 진짜 최종 순이익!
-                    profit_final = out_tot_vat - in_tot_vat - car_val
+                    # 💡 [요청 반영] 툴팁 순이익에서도 운송비(C) 차감 로직 제거
+                    profit_final = out_tot_vat - in_tot_vat
                     
                     memoin_val = safe_str(r.get("memoin", ""))
                     initem_val = safe_str(r.get("initem", ""))
@@ -1187,17 +1185,15 @@ try:
                     
                     outq_val_str = f'{r["outq_val"]:,.0f}' if pd.notnull(r["outq_val"]) else '0'
                     
-                    # 💡 [핵심 기술] 매출 툴팁을 '결산 영수증' 형태로 전면 개편! 매입, 매출, 운송비 내역까지 한방에 표기
+                    # 💡 [요청 반영] 툴팁에서 운송비 라인 완전히 제거 및 순이익 (A-B)로 수정 완료
                     out_memo = f"""<div style='text-align:right;'>
                     <span style='color:#000000 !important;'>[매출] 공급가: {out_tot:,.0f} + VAT: {out_vat_only:,.0f}</span><br>
                     <span style='color:#000000 !important; font-weight:bold;'>▶ 매출 합계(A) : {out_tot_vat:,.0f} 원</span><br>
                     <hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>
                     <span style='color:#000000 !important;'>[매입] 공급가: {in_tot:,.0f} + VAT: {in_vat_only:,.0f}</span><br>
                     <span style='color:#000000 !important; font-weight:bold;'>▶ 매입 합계(B) : {in_tot_vat:,.0f} 원</span><br>
-                    <hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>
-                    <span style='color:#000000 !important; font-weight:bold;'>▶ 운송비(C) : {car_val:,.0f} 원</span><br>
                     <hr style='margin:4px 0; border:0.5px solid #000000 !important;'>
-                    <span style='color:#000000 !important; font-weight:bold; font-size: 14px;'>= 순이익(A-B-C) : {profit_final:,.0f} 원</span>
+                    <span style='color:#000000 !important; font-weight:bold; font-size: 14px;'>= 순이익(A-B) : {profit_final:,.0f} 원</span>
                     </div>"""
                     outq_html = f'<div class="memo-tooltip-out">{outq_val_str}<span class="memo-text">{out_memo}</span></div>'
                     
