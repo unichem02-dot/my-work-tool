@@ -80,7 +80,31 @@ st.markdown("""
         color: white !important;
     }
     
-    /* SQL 다운로드 생성완료 버튼 */
+    /* 💡 날짜정렬 버튼 (Secondary 일반 버튼) 올리브색 적용 */
+    button[kind="secondary"] {
+        background-color: #757c43 !important;
+        border-color: #757c43 !important;
+        color: white !important;
+    }
+    button[kind="secondary"]:hover {
+        background-color: #646a39 !important;
+        border-color: #646a39 !important;
+        color: white !important;
+    }
+    
+    /* 💡 EXCEL 버튼 (Primary Download 버튼) 올리브색 적용 */
+    div[data-testid="stDownloadButton"] button[kind="primary"] {
+        background-color: #757c43 !important;
+        border-color: #757c43 !important;
+        color: white !important;
+    }
+    div[data-testid="stDownloadButton"] button[kind="primary"]:hover {
+        background-color: #646a39 !important;
+        border-color: #646a39 !important;
+        color: white !important;
+    }
+
+    /* SQL 다운로드 생성완료 버튼 (Secondary 타입) 빨간색 적용 */
     div[data-testid="stDownloadButton"] button[kind="secondary"] {
         background-color: #ef4444 !important; /* 빨간색(Red) */
         border-color: #ef4444 !important;
@@ -104,7 +128,7 @@ st.markdown("""
         color: white !important;
     }
     
-    /* [취소] 버튼 청록색 분리 적용 */
+    /* [취소] 버튼 청록색 분리 적용 (더 높은 우선순위로 날짜정렬 버튼과 분리) */
     div[data-testid="stForm"] button[kind="secondary"] {
         background-color: #009688 !important; /* 청록색 */
         border-color: #009688 !important;
@@ -127,7 +151,6 @@ st.markdown("""
     .table-title-box { background-color: #2b323c; padding: 10px 15px; border-top: 2px solid #555; border-bottom: none; display: flex; align-items: center; justify-content: space-between; }
     .custom-table { width: 100%; border-collapse: collapse; font-size: 15px; background-color: white; }
     .custom-table th, .custom-table td { border: 1px solid #d0d0d0; padding: 8px 10px; }
-    /* 💡 테이블 헤더 전체 남색 강제 속성 제거, 개별 클래스가 우선 적용되도록 수정! */
     .custom-table th { text-align: center; color: white; font-weight: bold; padding: 10px 6px; }
     .custom-table tr:nth-child(even) { background-color: #f8f9fa; }
     .custom-table tr:hover { background-color: #e2e6ea; }
@@ -138,7 +161,7 @@ st.markdown("""
     /* 인쇄 전용 타이틀 숨김 처리 */
     .print-only-title { display: none !important; }
     
-    /* 💡 테이블 구역별 색상 복구 완벽 완료 */
+    /* 테이블 구역별 색상 복구 완벽 완료 */
     .th-base { background-color: #353b48 !important; color: white !important; }
     .th-in { background-color: #3b5b88 !important; color: white !important; } 
     .th-out { background-color: #b8860b !important; color: white !important; }
@@ -1018,7 +1041,6 @@ try:
                 footer_html = f'<tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr>'
                 footer_html += f'<tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr>'
 
-                # 💡 [요청 반영] 웹 화면 테이블 제목 크기 대폭 확대 (26px)
                 title_div = f'<div class="print-only-title" style="background-color: white !important; color: black !important; text-align: left; font-size: 28px; border-bottom: 2px solid #555 !important; padding: 10px 0px !important; margin-bottom: 10px; font-weight: bold;">{print_title} &nbsp; <span style="font-size: 16px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개</span></div>'
                 
                 table_html = '<div class="custom-table-container">'
@@ -1069,10 +1091,12 @@ try:
                 with col_t1: st.markdown(f'<div class="table-title-box"><span style="font-size:26px; font-weight:bold; color:#f8fafc;">{print_title}</span> <span style="font-size:15px; color:#cbd5e1; margin-left:10px;">| 출력 개수: {len(f_df)}개</span></div>', unsafe_allow_html=True)
                 
                 with col_t2: 
-                    if st.button("🔄 날짜정렬", use_container_width=True, type="primary"):
+                    # 💡 날짜정렬 버튼을 secondary 타입으로 지정하여 올리브색 CSS가 타겟팅되도록 수정
+                    if st.button("🔄 날짜정렬", use_container_width=True, type="secondary"):
                         st.session_state.sort_desc = not st.session_state.sort_desc; st.rerun()
                 
                 with col_t3:
+                    # 💡 PRINT 버튼 배경색 및 테두리 색상을 올리브색(#757c43)으로 직접 변경 완료
                     components.html(
                         f"""
                         <!DOCTYPE html>
@@ -1081,12 +1105,12 @@ try:
                         <style>
                         body {{ margin: 0; padding: 0; overflow: hidden; background-color: transparent; }}
                         .btn-print {{
-                            width: 100%; height: 40px; background-color: #4e8cff; color: white;
-                            border: 1px solid #4e8cff; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px;
+                            width: 100%; height: 40px; background-color: #757c43; color: white;
+                            border: 1px solid #757c43; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px;
                             font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
                             display: flex; align-items: center; justify-content: center; box-sizing: border-box;
                         }}
-                        .btn-print:hover {{ background-color: #3b76e5; border-color: #3b76e5; }}
+                        .btn-print:hover {{ background-color: #646a39; border-color: #646a39; }}
                         </style>
                         <script>
                         function fastPrint() {{
@@ -1122,6 +1146,7 @@ try:
                 
                 with col_t4:
                     csv = f_df.to_csv(index=False).encode('utf-8-sig')
+                    # 💡 EXCEL 버튼은 primary 속성 그대로 유지(CSS에서 타겟팅하여 올리브색 적용)
                     st.download_button("💾 EXCEL", data=csv, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
 
                 st.markdown(table_html, unsafe_allow_html=True)
