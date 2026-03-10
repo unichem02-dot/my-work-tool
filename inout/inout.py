@@ -146,7 +146,7 @@ st.markdown("""
     /* Form 테두리 및 여백 제거 (검색창 엔터 적용을 위한 래핑용) */
     div[data-testid="stForm"] { border: none !important; padding: 0 !important; margin-bottom: -15px !important; }
     
-    /* 💡 매입/매출 수량 및 품목/배송 툴팁 (메모장 팝업) 70% 투명도 적용 CSS */
+    /* 💡 매입/매출 수량 및 품목/배송 툴팁 (메모장 팝업) 투명도 완전 제거 (솔리드 컬러) CSS */
     .memo-tooltip-in, .memo-tooltip-out, .memo-tooltip-base {
         position: relative;
         display: inline-block;
@@ -154,12 +154,12 @@ st.markdown("""
     }
     .memo-tooltip-in { color: #1e3a8a; } /* 매입 파란색 텍스트 유지 */
     .memo-tooltip-out { color: #9a3412; } /* 매출 주황색 텍스트 유지 */
+    .memo-tooltip-base { color: inherit; } /* 기본 텍스트 유지 */
     
     .memo-tooltip-in .memo-text, .memo-tooltip-out .memo-text, .memo-tooltip-base .memo-text {
         visibility: hidden;
         width: max-content;
-        background-color: rgba(255, 251, 235, 0.3) !important; /* 70% 투명하게 (opacity: 0.3) 적용 */
-        backdrop-filter: blur(3px); /* 투명해지며 글자가 겹치는 것을 막기 위한 블러 처리 */
+        background-color: #fffbeb !important; /* 💡 투명도 제거, 솔리드 옐로우 적용 */
         text-align: right;
         border-radius: 6px;
         padding: 8px 12px;
@@ -175,8 +175,10 @@ st.markdown("""
         transition: opacity 0.2s;
         line-height: 1.5;
     }
-    /* 메모장 내부의 모든 텍스트를 완벽한 블랙으로 강제 */
-    .memo-tooltip-in .memo-text *, .memo-tooltip-out .memo-text *, .memo-tooltip-base .memo-text * {
+    /* 💡 메모장 내부의 모든 텍스트를 완벽한 블랙으로 강제 */
+    .memo-tooltip-in .memo-text, .memo-tooltip-in .memo-text *, 
+    .memo-tooltip-out .memo-text, .memo-tooltip-out .memo-text *, 
+    .memo-tooltip-base .memo-text, .memo-tooltip-base .memo-text * {
         color: #000000 !important;
         font-weight: bold !important;
     }
@@ -189,7 +191,7 @@ st.markdown("""
         margin-left: -6px;
         border-width: 6px;
         border-style: solid;
-        border-color: rgba(245, 158, 11, 0.8) transparent transparent transparent;
+        border-color: #f59e0b transparent transparent transparent;
     }
     .memo-tooltip-in:hover .memo-text, .memo-tooltip-in:active .memo-text,
     .memo-tooltip-out:hover .memo-text, .memo-tooltip-out:active .memo-text,
@@ -229,8 +231,6 @@ st.markdown("""
 
 # --- [2. 보안 및 세션 상태 관리] ---
 if "authenticated" not in st.session_state: st.session_state.authenticated = False
-if "search_params" not in st.session_state: st.session_state.search_params = {"mode": "init"}
-# 정렬 기본값 변경: True(최신순) ➔ False(과거순)으로 기본값을 변경하여 날짜가 적은 순부터 보여줌
 if "sort_desc" not in st.session_state: st.session_state.sort_desc = False 
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
 if "copy_id" not in st.session_state: st.session_state.copy_id = None
@@ -241,9 +241,27 @@ if "show_uploader" not in st.session_state: st.session_state.show_uploader = Fal
 # SQL 버튼 상태 관리
 if "sql_ready" not in st.session_state: st.session_state.sql_ready = False
 if "sql_content" not in st.session_state: st.session_state.sql_content = ""
+# 💡 텍스트 메모 창 상태 관리
+if "memo_edit_id" not in st.session_state: st.session_state.memo_edit_id = None
+if "memo_type" not in st.session_state: st.session_state.memo_type = None
 
-# URL 파라미터 감지 및 자동 로그인 (복사/수정 연동)
-if "edit_id" in st.query_params or "copy_id" in st.query_params:
+# 💡 [처음 접속 시 '어제오늘내일' 데이터 자동 출력]
+if "search_params" not in st.session_state:
+    d_day = get_kst_now().date()
+    st.session_state.search_params = {
+        "mode": "기간",
+        "title": f"어제·오늘·내일 검색 ({d_day} 기준)",
+        "type": "ALL",
+        "company": "",
+        "item": "",
+        "limit": "ALL",
+        "start": d_day - timedelta(days=1),
+        "end": d_day + timedelta(days=1),
+        "s_filter": "ALL"
+    }
+
+# URL 파라미터 감지 및 자동 로그인 (복사/수정/메모 연동)
+if "edit_id" in st.query_params or "copy_id" in st.query_params or "memo_edit_id" in st.query_params:
     token = str(st.secrets.get("tom_password", ""))
     if st.query_params.get("token") == token:
         st.session_state.authenticated = True
@@ -252,6 +270,9 @@ if "edit_id" in st.query_params or "copy_id" in st.query_params:
         if "copy_id" in st.query_params:
             st.session_state.copy_id = st.query_params["copy_id"]
             st.session_state.search_params = {"mode": "신규입력"}
+        if "memo_edit_id" in st.query_params:
+            st.session_state.memo_edit_id = st.query_params["memo_edit_id"]
+            st.session_state.memo_type = st.query_params.get("memo_type", "in")
     st.query_params.clear()
     st.rerun()
 
@@ -344,7 +365,7 @@ def safe_str(val):
     if isinstance(val, float) and val.is_integer(): return str(int(val))
     return str(val)
 
-# SQL 생성을 위한 유틸리티 함수
+# SQL 생성을 위한 유틸리티 함수 (메모 데이터 memoin, memoout, memocar 연동 반영)
 def generate_sql_for_backup(df_data):
     lines = ["CREATE TABLE IF NOT EXISTS `jeilinout` (",
              "  `id` bigint(20) NOT NULL,",
@@ -361,18 +382,21 @@ def generate_sql_for_backup(df_data):
              "  `s` varchar(50) DEFAULT NULL,",
              "  `carno` varchar(100) DEFAULT NULL,",
              "  `carprice` varchar(50) DEFAULT '0',",
+             "  `memoin` text,",
+             "  `memoout` text,",
+             "  `memocar` text,",
              "  PRIMARY KEY (`id`)",
              ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;", ""]
     if not df_data.empty:
         for _, r in df_data.iterrows():
             val_str = []
-            for c in ['id', 'date', 'incom', 'initem', 'inq', 'inprice', 'outcom', 'outitem', 'outq', 'outprice', 'memo', 's', 'carno', 'carprice']:
+            for c in ['id', 'date', 'incom', 'initem', 'inq', 'inprice', 'outcom', 'outitem', 'outq', 'outprice', 'memo', 's', 'carno', 'carprice', 'memoin', 'memoout', 'memocar']:
                 v = str(r.get(c, ''))
                 if pd.isna(r.get(c)) or v.lower() == 'nan': v = ""
                 v = v.replace("'", "''") # SQL용 따옴표 이스케이프 처리
                 val_str.append(f"'{v}'")
             vals = ", ".join(val_str)
-            lines.append(f"INSERT IGNORE INTO `jeilinout` (`id`, `date`, `incom`, `initem`, `inq`, `inprice`, `outcom`, `outitem`, `outq`, `outprice`, `memo`, `s`, `carno`, `carprice`) VALUES ({vals});")
+            lines.append(f"INSERT IGNORE INTO `jeilinout` (`id`, `date`, `incom`, `initem`, `inq`, `inprice`, `outcom`, `outitem`, `outq`, `outprice`, `memo`, `s`, `carno`, `carprice`, `memoin`, `memoout`, `memocar`) VALUES ({vals});")
     return "\n".join(lines)
 
 # --- [4. 상단 상태바] ---
@@ -529,7 +553,7 @@ try:
     params = st.session_state.search_params
     target_years = []
     
-    if st.session_state.edit_id or st.session_state.copy_id:
+    if st.session_state.edit_id or st.session_state.copy_id or st.session_state.memo_edit_id:
         target_years = available_years 
     elif params["mode"] == "기간":
         start_y = params["start"].year
@@ -560,9 +584,53 @@ try:
         df = pd.DataFrame(columns=['id', 'date', 'year', 'month', 'incom', 'initem', 'inq_val', 'inprice_val', 'outcom', 'outitem', 'outq_val', 'outprice_val', 'carno', 'carprice_val', 'in_total', 'out_total', 's'])
 
     # ---------------------------------------------------------
-    # [모드 분기 1] 수정 및 삭제
+    # [모드 분기 1] 메모장 수정 및 입력 창 💡 (텍스트 메모 전용 편집 폼)
     # ---------------------------------------------------------
-    if st.session_state.edit_id:
+    if st.session_state.memo_edit_id:
+        st.markdown("<h3 style='text-align:center; color:#ffeb3b; font-weight:bold;'>📝 텍스트 메모 추가 / 수정</h3>", unsafe_allow_html=True)
+        target = df[df['id'].astype(str) == str(st.session_state.memo_edit_id)]
+        if not target.empty:
+            t = target.iloc[0]
+            orig_year = pd.to_datetime(t['date']).year if pd.notnull(t['date']) else get_kst_now().year
+            m_type = st.session_state.memo_type # 'in', 'out', 'car'
+            col_name = f"memo{m_type}"
+            orig_memo = safe_str(t.get(col_name, ""))
+            
+            type_kr = "매입품목" if m_type == 'in' else "매출품목" if m_type == 'out' else "배송"
+            
+            with st.form("memo_form"):
+                st.markdown(f"**{type_kr} 메모 작성** (자료 ID: {st.session_state.memo_edit_id})")
+                new_memo = st.text_area("내용을 입력하세요", orig_memo, height=150, label_visibility="collapsed")
+                
+                bc1, bc2, bc3 = st.columns([6, 2, 2])
+                if bc2.form_submit_button("💾 저장", use_container_width=True, type="primary"):
+                    client = init_connection()
+                    try:
+                        sheet = client.open('SQL백업260211-jeilinout').worksheet(f"{orig_year}년")
+                        headers = sheet.row_values(1)
+                        
+                        # 💡 열이 없으면 구글 시트 헤더에 새로 추가하여 에러 방지
+                        if col_name not in headers:
+                            headers.append(col_name)
+                            sheet.update(f"A1:{gspread.utils.rowcol_to_a1(1, len(headers))}", [headers])
+                        
+                        col_idx = headers.index(col_name) + 1
+                        cell = sheet.find(str(st.session_state.memo_edit_id), in_column=1)
+                        if cell:
+                            sheet.update_cell(cell.row, col_idx, new_memo)
+                        st.cache_data.clear()
+                        st.session_state.memo_edit_id = None
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"저장 오류: {e}")
+                if bc3.form_submit_button("취소", use_container_width=True):
+                    st.session_state.memo_edit_id = None
+                    st.rerun()
+
+    # ---------------------------------------------------------
+    # [모드 분기 1-2] 기존 등록 자료 수정 / 삭제
+    # ---------------------------------------------------------
+    elif st.session_state.edit_id:
         st.markdown("<h3 style='text-align:center; color:#ffeb3b; font-weight:bold;'>📝 등록 자료 수정 / 삭제</h3>", unsafe_allow_html=True)
         target = df[df['id'].astype(str) == str(st.session_state.edit_id)]
         if not target.empty:
@@ -601,6 +669,7 @@ try:
                         sheet = client.open('SQL백업260211-jeilinout').worksheet(f"{orig_year}년")
                         cell = sheet.find(str(st.session_state.edit_id), in_column=1)
                         if cell:
+                            # 💡 편집 시 다른 열(메모 등)이 지워지지 않도록 A~N 열까지만 안전하게 덮어쓰기
                             new_row = [st.session_state.edit_id, e_date.strftime('%Y-%m-%d'), e_incom, e_initem, e_inq, e_inprice, e_outcom, e_outitem, e_outq, e_outprice, "", e_s, e_carno, e_carprice]
                             sheet.update(f"A{cell.row}:N{cell.row}", [new_row])
                         st.cache_data.clear(); st.session_state.edit_id = None; st.rerun()
@@ -992,6 +1061,7 @@ try:
             else:
                 pwd_token = str(st.secrets["tom_password"])
                 
+                # 1. 공통 행 데이터(TR) 생성
                 row_html_list = []
                 for _, r in f_df.iterrows():
                     rid, dt = safe_str(r['id']), r[date_col].strftime('%Y-%m-%d')
@@ -1014,26 +1084,31 @@ try:
                     memoin_val = safe_str(r.get("memoin", ""))
                     initem_val = safe_str(r.get("initem", ""))
                     if memoin_val:
-                        initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;">{initem_val}<span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memoin_val}</span></div>'
+                        edit_link = f'<div class="print-hide-col" style="text-align:right; margin-top:5px;"><a href="?memo_edit_id={rid}&memo_type=in&token={pwd_token}" target="_self" style="color:#000000 !important; text-decoration:underline !important; font-size:12px;">[✏️수정]</a></div>'
+                        initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;">{initem_val}<span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memoin_val}{edit_link}</span></div>'
                     else:
-                        initem_html = initem_val
+                        add_link = f'<a href="?memo_edit_id={rid}&memo_type=in&token={pwd_token}" target="_self" class="print-hide-col" style="text-decoration:none;"><span style="font-size:11px; opacity:0.5; color:#000000 !important;">[📝]</span></a>'
+                        initem_html = f'{initem_val} {add_link}'
 
                     # 💡 [핵심 기술 2] 매출품목 텍스트 툴팁 및 굵게 처리 (memoout 연동)
                     memoout_val = safe_str(r.get("memoout", ""))
                     outitem_val = safe_str(r.get("outitem", ""))
                     if memoout_val:
-                        outitem_html = f'<div class="memo-tooltip-out" style="font-weight: bold;">{outitem_val}<span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memoout_val}</span></div>'
+                        edit_link = f'<div class="print-hide-col" style="text-align:right; margin-top:5px;"><a href="?memo_edit_id={rid}&memo_type=out&token={pwd_token}" target="_self" style="color:#000000 !important; text-decoration:underline !important; font-size:12px;">[✏️수정]</a></div>'
+                        outitem_html = f'<div class="memo-tooltip-out" style="font-weight: bold;">{outitem_val}<span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memoout_val}{edit_link}</span></div>'
                     else:
-                        outitem_html = outitem_val
+                        add_link = f'<a href="?memo_edit_id={rid}&memo_type=out&token={pwd_token}" target="_self" class="print-hide-col" style="text-decoration:none;"><span style="font-size:11px; opacity:0.5; color:#000000 !important;">[📝]</span></a>'
+                        outitem_html = f'{outitem_val} {add_link}'
 
                     # 💡 [핵심 기술 3] 배송(carno) 텍스트 툴팁 및 굵게 처리 (memocar 연동)
                     memocar_val = safe_str(r.get("memocar", ""))
                     carno_val = safe_str(r.get("carno", ""))
                     if memocar_val:
-                        # 배송 텍스트는 기존 회색 유지, 툴팁 기능만 추가
-                        carno_html = f'<div class="memo-tooltip-base" style="font-weight: bold; color: inherit;">{carno_val}<span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memocar_val}</span></div>'
+                        edit_link = f'<div class="print-hide-col" style="text-align:right; margin-top:5px;"><a href="?memo_edit_id={rid}&memo_type=car&token={pwd_token}" target="_self" style="color:#000000 !important; text-decoration:underline !important; font-size:12px;">[✏️수정]</a></div>'
+                        carno_html = f'<div class="memo-tooltip-base" style="font-weight: bold; color: inherit;">{carno_val}<span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memocar_val}{edit_link}</span></div>'
                     else:
-                        carno_html = carno_val
+                        add_link = f'<a href="?memo_edit_id={rid}&memo_type=car&token={pwd_token}" target="_self" class="print-hide-col" style="text-decoration:none;"><span style="font-size:11px; opacity:0.5; color:#000000 !important;">[📝]</span></a>'
+                        carno_html = f'{carno_val} {add_link}'
                     
                     # 매입 수량 툴팁 조립
                     inq_val_str = f'{r["inq_val"]:,.0f}' if pd.notnull(r["inq_val"]) else '0'
@@ -1045,7 +1120,7 @@ try:
                     out_memo = f"<div style='text-align:right; color:#000000 !important;'>매출액(VAT별도) : {out_tot:,.0f} 원<br>+ 부가세(10%) : {out_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원<br>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원<br><hr style='margin:4px 0; border:0.5px solid #000000 !important;'><span style='color:#000000 !important; font-weight:bold;'>= 순이익(VAT포함) : {profit_tot_vat:,.0f} 원</span></div>"
                     outq_html = f'<div class="memo-tooltip-out">{outq_val_str}<span class="memo-text">{out_memo}</span></div>'
                     
-                    # 💡 조립된 품목 및 배송 HTML 변수를 테이블 행(row)에 적용!
+                    # 조립된 품목 및 배송 HTML 변수를 테이블 행(row)에 적용!
                     row_html = f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl txt-in-bold">{r["incom"]}</td><td class="tl txt-in">{initem_html}</td><td class="tr txt-in">{inq_html}</td><td class="tr txt-in">{r["inprice_val"]:,.0f}</td><td class="tl txt-out-bold">{r["outcom"]}</td><td class="tl txt-out">{outitem_html}</td><td class="tr txt-out">{outq_html}</td><td class="tr txt-out">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray print-hide-col">{rid}</td><td class="tc txt-gray">{carno_html}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
                     row_html_list.append(row_html)
                     
