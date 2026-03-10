@@ -14,7 +14,7 @@ def get_kst_now():
     return datetime.utcnow() + timedelta(hours=9)
 
 # --- [1. 페이지 기본 설정 및 테마 스타일] ---
-st.set_page_config(layout="wide", page_title="입출력 관리 시스템 (inout)")
+st.set_page_config(layout="wide", page_title="TOmBOy's INOUT")
 
 # 커스텀 CSS 주입 (디자인 통일 및 레이아웃 정돈)
 st.markdown("""
@@ -113,7 +113,7 @@ st.markdown("""
     [data-testid="stMetricValue"] { color: #ffffff !important; }
     [data-testid="stMetricLabel"] { color: #cbd5e1 !important; font-size: 16px !important; }
     
-    /* 💡 검색 메뉴의 연도, 월, 날짜 등 선택 및 입력 텍스트를 굵게(Bold) 변경 */
+    /* 검색 메뉴의 연도, 월, 날짜 등 선택 및 입력 텍스트를 굵게(Bold) 변경 */
     div[data-baseweb="select"] > div { font-weight: bold !important; }
     div[data-baseweb="input"] > input { font-weight: bold !important; }
     /* 💡 일검색 등 Date Input 창의 글씨도 완벽하게 굵게 처리 */
@@ -122,7 +122,7 @@ st.markdown("""
     /* Form 테두리 및 여백 제거 (검색창 엔터 적용을 위한 래핑용) */
     div[data-testid="stForm"] { border: none !important; padding: 0 !important; margin-bottom: -15px !important; }
     
-    /* 매입 및 매출 수량 툴팁 (메모장 팝업) 전용 CSS */
+    /* 💡 매입 및 매출 수량 툴팁 (메모장 팝업) 30% 투명도 적용 CSS */
     .memo-tooltip-in {
         position: relative;
         display: inline-block;
@@ -138,7 +138,8 @@ st.markdown("""
     .memo-tooltip-in .memo-text, .memo-tooltip-out .memo-text {
         visibility: hidden;
         width: max-content;
-        background-color: #fffbeb !important; 
+        background-color: rgba(255, 251, 235, 0.7) !important; /* 30% 투명하게 (opacity: 0.7) */
+        backdrop-filter: blur(3px); /* 투명해지며 글자가 겹치는 것을 막기 위한 블러 처리 */
         text-align: right;
         border-radius: 6px;
         padding: 8px 12px;
@@ -148,7 +149,7 @@ st.markdown("""
         left: 50%;
         transform: translateX(-50%);
         box-shadow: 2px 4px 10px rgba(0,0,0,0.3);
-        border: 1px solid #f59e0b;
+        border: 1px solid rgba(245, 158, 11, 0.8);
         font-size: 13.5px;
         opacity: 0;
         transition: opacity 0.2s;
@@ -168,7 +169,7 @@ st.markdown("""
         margin-left: -6px;
         border-width: 6px;
         border-style: solid;
-        border-color: #f59e0b transparent transparent transparent;
+        border-color: rgba(245, 158, 11, 0.8) transparent transparent transparent;
     }
     .memo-tooltip-in:hover .memo-text, .memo-tooltip-in:active .memo-text,
     .memo-tooltip-out:hover .memo-text, .memo-tooltip-out:active .memo-text {
@@ -322,7 +323,8 @@ def safe_str(val):
 # --- [4. 상단 상태바] ---
 st.session_state.last_activity = get_kst_now()
 col_t, col_u, col_r, col_l = st.columns([5.5, 1.5, 1.5, 1.5])
-with col_t: st.markdown("<h3 style='margin:0;'>📦 입출력 통합 관리 시스템</h3>", unsafe_allow_html=True)
+# 💡 타이틀 명칭 TOmBOy's INOUT 으로 변경
+with col_t: st.markdown("<h3 style='margin:0;'>📦 TOmBOy's INOUT</h3>", unsafe_allow_html=True)
 with col_u:
     if st.button("📤 DB 업로드" if not st.session_state.show_uploader else "❌ 업로드 닫기", use_container_width=True, type="primary"):
         st.session_state.show_uploader = not st.session_state.show_uploader
@@ -639,7 +641,18 @@ try:
                 </style>
                 </head>
                 <body>
+                <!-- 💡 [계산기 레이아웃 변경] 곱셈 ➔ 나눗셈 ➔ VAT 순으로 나열 -->
                 <div class="rt-calc-wrap">
+                    <!-- 1. 곱셈 -->
+                    <div class="rt-group">
+                        <input type="number" class="rt-in" id="rt-m1" oninput="rtCalc()" placeholder="0">
+                        <span class="rt-op yellow">X</span>
+                        <input type="number" class="rt-in" id="rt-m2" oninput="rtCalc()" placeholder="0">
+                        <span class="rt-op yellow">=</span>
+                        <div class="rt-out" id="rt-mr">0</div>
+                    </div>
+                    
+                    <!-- 2. 나눗셈 -->
                     <div class="rt-group">
                         <input type="number" class="rt-in" id="rt-d1" oninput="rtCalc()" placeholder="0">
                         <span class="rt-op blue">/</span>
@@ -648,21 +661,13 @@ try:
                         <div class="rt-out" id="rt-dr">0</div>
                     </div>
                     
-                    <!-- 💡 [계산기 레이아웃 재배치] VAT-10% ➔ 기준금액(입력창) ➔ VAT+10% 순서로 변경 -->
+                    <!-- 3. VAT 계산 (VAT-10% -> 기준금액 -> VAT+10%) -->
                     <div class="rt-group">
                         <span class="rt-txt blue">VAT-10%</span>
                         <div class="rt-out" id="rt-vm">0</div>
                         <input type="number" class="rt-in" id="rt-v1" oninput="rtCalc()" placeholder="기준금액" style="text-align: center; margin: 0 5px;">
                         <span class="rt-txt yellow">VAT+10%</span>
                         <div class="rt-out orange" id="rt-vp">0</div>
-                    </div>
-                    
-                    <div class="rt-group">
-                        <input type="number" class="rt-in" id="rt-m1" oninput="rtCalc()" placeholder="0">
-                        <span class="rt-op yellow">X</span>
-                        <input type="number" class="rt-in" id="rt-m2" oninput="rtCalc()" placeholder="0">
-                        <span class="rt-op yellow">=</span>
-                        <div class="rt-out" id="rt-mr">0</div>
                     </div>
                 </div>
                 <script>
@@ -741,13 +746,13 @@ try:
             with u14: b_mon = st.button("월별", use_container_width=True, type="primary")
             with u15: b_yong = st.button("용차", use_container_width=True, type="primary")
 
-        # 검색 버튼 액션
-        if b1: st.session_state.search_params = {"mode":"기간","title":f"기간 검색 ({dr1[0]} ~ {dr1[1] if len(dr1)>1 else dr1[0]})","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0], "s_filter": s1}; st.rerun()
-        elif b2: st.session_state.search_params = {"mode":"월별상세","title":f"{y2}년 {m2}월 상세 검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2, "s_filter": s2}; st.rerun()
-        elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3, "s_filter": s3}; st.rerun()
+        # 💡 [검색 버튼 액션] (최근 검색 버튼은 최신순, 나머지는 과거순으로 정렬 분리 적용)
+        if b1: st.session_state.search_params = {"mode":"기간","title":f"기간 검색 ({dr1[0]} ~ {dr1[1] if len(dr1)>1 else dr1[0]})","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0], "s_filter": s1}; st.session_state.sort_desc = False; st.rerun()
+        elif b2: st.session_state.search_params = {"mode":"월별상세","title":f"{y2}년 {m2}월 상세 검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2, "s_filter": s2}; st.session_state.sort_desc = False; st.rerun()
+        elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3, "s_filter": s3}; st.session_state.sort_desc = False; st.rerun()
         elif b_new: st.session_state.search_params = {"mode":"신규입력"}; st.session_state.copy_id = None; st.rerun()
-        elif b_rec: st.session_state.search_params = {"mode":"최근","title":"최근 입력순서","limit":lmt, "s_filter": "ALL"}; st.rerun()
-        elif b_day: st.session_state.search_params = {"mode":"일","title":f"일간 검색 ({d_day})","date":d_day, "s_filter": "ALL"}; st.rerun()
+        elif b_rec: st.session_state.search_params = {"mode":"최근","title":"최근 입력순서","limit":lmt, "s_filter": "ALL"}; st.session_state.sort_desc = True; st.rerun() # 💡 [최근 버튼]은 최신순 정렬(True)
+        elif b_day: st.session_state.search_params = {"mode":"일","title":f"일간 검색 ({d_day})","date":d_day, "s_filter": "ALL"}; st.session_state.sort_desc = False; st.rerun()
         elif b_ayt:
             st.session_state.search_params = {
                 "mode":"기간",
@@ -760,9 +765,10 @@ try:
                 "end": d_day + timedelta(days=1),
                 "s_filter": "ALL"
             }
+            st.session_state.sort_desc = False
             st.rerun()
-        elif b_mon: st.session_state.search_params = {"mode":"월별","title":f"{y4}년 {m4}월 기본 검색","year":y4,"month":m4, "s_filter": s5}; st.rerun()
-        elif b_yong: st.session_state.search_params = {"mode":"용차","title":f"{y4}년 {m4}월 배송(용/다) 검색","year":y4,"month":m4, "s_filter": s5}; st.rerun()
+        elif b_mon: st.session_state.search_params = {"mode":"월별","title":f"{y4}년 {m4}월 기본 검색","year":y4,"month":m4, "s_filter": s5}; st.session_state.sort_desc = False; st.rerun()
+        elif b_yong: st.session_state.search_params = {"mode":"용차","title":f"{y4}년 {m4}월 배송(용/다) 검색","year":y4,"month":m4, "s_filter": s5}; st.session_state.sort_desc = False; st.rerun()
 
         params = st.session_state.search_params
         if params["mode"] != "init":
@@ -792,7 +798,7 @@ try:
             if params.get("company"): f_df = f_df[f_df['incom'].str.contains(params["company"], na=False)|f_df['outcom'].str.contains(params["company"], na=False)]
             if params.get("item"): f_df = f_df[f_df['initem'].str.contains(params["item"], na=False)|f_df['outitem'].str.contains(params["item"], na=False)]
             
-            # 💡 [정렬 기술] 기본값을 '과거 날짜 순(오름차순)'으로 처리
+            # 4. 정렬
             f_df = f_df.sort_values(by=[date_col, 'id_val'], ascending=[not st.session_state.sort_desc, not st.session_state.sort_desc])
             
             # 5. 표시 개수 리미트
@@ -812,7 +818,7 @@ try:
             # 행별 순수익(profit) 계산
             f_df['profit'] = f_df['out_total'] - f_df['in_total'] - f_df['carprice_val']
             
-            # 💡 사용자가 검색한 세부 조건 조립
+            # 사용자가 검색한 세부 조건 조립
             print_title = params.get("title", "검색결과")
             
             cond_texts = []
