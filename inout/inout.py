@@ -81,6 +81,9 @@ st.markdown("""
     /* 💡 인쇄용 가짜 상하단 여백 (웹 화면에서는 보이지 않도록 처리) */
     .fake-margin { display: none !important; }
     
+    /* 💡 인쇄 전용 타이틀 숨김 처리 (웹 화면에서는 안보이게 분리) */
+    .print-only-title { display: none !important; }
+    
     /* 테이블 구역별 색상 */
     .th-base { background-color: #353b48; color: white; }
     .th-in { background-color: #3b5b88; color: white; } 
@@ -110,7 +113,7 @@ st.markdown("""
     [data-testid="stMetricValue"] { color: #ffffff !important; }
     [data-testid="stMetricLabel"] { color: #cbd5e1 !important; font-size: 16px !important; }
     
-    /* 💡 검색 메뉴의 연도, 월, 날짜 등 선택 및 입력 텍스트를 굵게(Bold) 변경 */
+    /* 💡 검색 메뉴의 연도, 월, 날짜 등 선택 및 입력 텍스트를 굵게(Bold) 변경 (여백 다이어트 취소) */
     div[data-baseweb="select"] > div { font-weight: bold !important; }
     div[data-baseweb="input"] > input { font-weight: bold !important; }
     
@@ -839,7 +842,7 @@ try:
                         st.dataframe(top_initem.style.format({'매입수량': '{:,.0f}'}), use_container_width=True, hide_index=True)
                     else: st.caption("매입 품목 내역이 없습니다.")
 
-            # 💡 그 외 검색 버튼 클릭 시 (기존 테이블 + 인쇄 모드)
+            # 💡 그 외 검색 버튼 클릭 시 (기존 테이블 + 인쇄 모드 투트랙 분리)
             else:
                 pwd_token = str(st.secrets["tom_password"])
                 
@@ -856,34 +859,37 @@ try:
                 footer_html = f'<tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr>'
                 footer_html += f'<tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr>'
 
-                # 2. 웹 화면 및 인쇄 공용 HTML 생성 (끊김 없는 완벽한 하나의 표)
+                # 2. 공용 HTML 껍데기 생성 (웹화면용과 인쇄용으로 공통 사용)
                 html = '<div class="custom-table-container"><table class="custom-table">'
                 
-                # 💡 [핵심 기술 1] 인쇄 페이지 레이아웃 붕 뜸 방지를 위해 '하나의 표'로 원상복구! 
-                est_pages = max(1, math.ceil(len(f_df) / 36))
+                # 💡 [핵심 조치] 인쇄 시 매 페이지 제목 반복을 위한 thead 요소 구성, 1페이지당 데이터량은 CSS 패딩과 줌으로 컨트롤
+                est_pages = max(1, math.ceil(len(f_df) / 38))
                 
-                # 💡 [핵심 기술 2] 브라우저가 알아서 매 페이지 넘길 때마다 반복해서 찍어주는 thead 요소 안에 제목 삽입!
-                html += f'<thead><tr><th colspan="13" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border: none !important; border-bottom: 2px solid #555 !important; padding: 5px 0px 10px 0px !important;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개 &nbsp;|&nbsp; 예상 인쇄 분량: 약 {est_pages}페이지</span></th></tr>'
-                
+                html += f'<thead><tr class="print-only-title"><th colspan="13" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border: none !important; border-bottom: 2px solid #555 !important; padding: 15mm 0px 10px 0px !important;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개 &nbsp;|&nbsp; 예상 인쇄 분량: 약 {est_pages}페이지</span></th></tr>'
                 html += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
+                
                 html += "".join(row_html_list)
                 html += footer_html
                 html += '</tbody><tfoot style="display: table-footer-group;"><tr class="fake-margin"><td colspan="13"></td></tr></tfoot></table></div>'
 
-                # 💡 [핵심 기술 3] 종이 상하 여백을 균형있게 재조정하여 표가 끝에 닿지 않도록 마진(@page margin) 설정
+                # 💡 [핵심 기술] CSS @page margin을 0으로 주어 브라우저 기본 글씨(날짜, 주소 등) 완벽 차단!
                 print_html_content = f"""
                 <!DOCTYPE html>
                 <html><head><title>인쇄 미리보기</title>
                 <meta charset="utf-8">
                 <style>
-                    @page {{ size: A4 portrait; margin: 15mm 10mm; }} /* 상하 15mm 여백을 주어 자연스러운 출력 화면 확보 */
-                    body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; box-sizing: border-box; }}
-                    .custom-table-container {{ width: 100%; zoom: 70%; }} /* 줌을 70%로 고정하여 A4 세로 비율 최적화 */
+                    /* 💡 브라우저 기본 머리글/바닥글(날짜, URL, 페이지 번호) 완벽 제거 */
+                    @page {{ size: A4 portrait; margin: 0mm; }} 
+                    /* 💡 상하 여백은 표(thead, tfoot)에서 자체 확보하므로 본문 여백은 좌우만 10mm 부여 */
+                    body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; padding: 0 10mm; box-sizing: border-box; }}
+                    /* 💡 한 페이지에 2줄 정도 더 들어가도록 줌 축소(67%) 및 패딩 다이어트 */
+                    .custom-table-container {{ width: 100%; zoom: 67%; }} 
                     .custom-table {{ width: 100%; border-collapse: collapse; font-size: 15px; background-color: white; }}
-                    .custom-table th, .custom-table td {{ border: 1px solid #aaa; padding: 8px 10px; color: black !important; }}
+                    .custom-table th, .custom-table td {{ border: 1px solid #aaa; padding: 6px 8px; color: black !important; }}
                     .custom-table th {{ text-align: center; font-weight: bold; padding: 10px 6px; }}
                     .fake-margin {{ display: table-row !important; }}
                     .fake-margin td {{ height: 15mm; border: none !important; background-color: white !important; }}
+                    .print-only-title {{ display: table-row !important; }}
                     .th-base {{ background-color: #e2e8f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
                     .th-in {{ background-color: #dbeafe !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
                     .th-out {{ background-color: #ffedd5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
