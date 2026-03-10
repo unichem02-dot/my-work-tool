@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import re
 import io
 import json
+import math
 
 # 💡 한국 표준시(KST) 기준 시간 반환 함수
 def get_kst_now():
@@ -753,7 +754,7 @@ try:
             if params.get("item"): cond_texts.append(f"품목: '{params['item']}'")
             
             if cond_texts:
-                print_title += f" ➔ (조건: {', '.join(cond_texts)})"
+                print_title += f" ➔ (검색조건: {', '.join(cond_texts)})"
                 
             if s_filter != "ALL":
                 print_title = f"[{s_filter}] " + print_title
@@ -855,10 +856,13 @@ try:
                 html += '<tfoot style="display: table-footer-group;"><tr class="fake-margin"><td colspan="13"></td></tr></tfoot>'
                 html += '</table></div>'
 
-                # 💡 [핵심 기술] 인쇄 시 매 페이지 상단에 똑같은 제목이 반복되도록 표 머리글(thead) 안에 제목을 삽입!
+                # 💡 [핵심 기술 1] 예상 인쇄 페이지 수 자동 계산 (A4 용지 세로 출력, 1장당 25줄 기준)
+                est_pages = max(1, math.ceil(len(f_df) / 25)) if not f_df.empty else 1
+
+                # 💡 [핵심 기술 2] 인쇄 시 매 페이지 상단에 똑같은 제목과 페이지 수가 반복되도록 표 머리글(thead) 안에 삽입!
                 print_html_table = html.replace(
                     '<thead>',
-                    f'<thead><tr><th colspan="13" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border: none !important; border-bottom: 2px solid #555 !important; padding: 15px 0 10px 0 !important;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개</span></th></tr>'
+                    f'<thead><tr><th colspan="13" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border: none !important; border-bottom: 2px solid #555 !important; padding: 15px 0 10px 0 !important;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개 &nbsp;|&nbsp; 인쇄 분량: 약 {est_pages}페이지</span></th></tr>'
                 )
 
                 print_html_content = f"""
@@ -890,7 +894,7 @@ try:
                 """
                 
                 col_t1, col_t2, col_t3, col_t4 = st.columns([5.3, 1.7, 1.5, 1.5])
-                with col_t1: st.markdown(f'<div class="table-title-box"><span style="font-size:16px; font-weight:bold; color:#f8fafc;">{print_title}</span> <span style="font-size:13px; color:#cbd5e1; margin-left:10px;">| 출력 개수: {len(f_df)}</span></div>', unsafe_allow_html=True)
+                with col_t1: st.markdown(f'<div class="table-title-box"><span style="font-size:16px; font-weight:bold; color:#f8fafc;">{print_title}</span> <span style="font-size:13px; color:#cbd5e1; margin-left:10px;">| 출력 개수: {len(f_df)}개</span></div>', unsafe_allow_html=True)
                 with col_t2: 
                     if st.button("🔄 날짜 정렬 전환", use_container_width=True, type="primary"):
                         st.session_state.sort_desc = not st.session_state.sort_desc; st.rerun()
