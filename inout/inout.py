@@ -109,6 +109,10 @@ st.markdown("""
     [data-testid="stMetricValue"] { color: #ffffff !important; }
     [data-testid="stMetricLabel"] { color: #cbd5e1 !important; font-size: 16px !important; }
     
+    /* 💡 검색 메뉴의 연도, 월, 날짜 등 선택 및 입력 텍스트를 굵게(Bold) 변경 */
+    div[data-baseweb="select"] > div { font-weight: bold !important; }
+    div[data-baseweb="input"] > input { font-weight: bold !important; }
+    
     /* 💡 파일 업로드 창 전체 가시성 완벽 해결 (상위 컨테이너 강제 적용) */
     div[data-testid="stFileUploader"] {
         background-color: #f1f5f9 !important; /* 밝은 회색 바탕 */
