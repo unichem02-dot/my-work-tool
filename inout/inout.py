@@ -394,8 +394,9 @@ except:
 
 col_t, col_u, col_sql, col_r, col_l = st.columns([3.9, 1.3, 1.4, 1.4, 1.4])
 with col_t: 
-    # 💡 [핵심 기술 1] 로고 텍스트에 메인 복귀 링크(home=1) 추가 (디자인 변경 없이 a태그 씌움)
-    st.markdown("<h3 style='margin:0;'><a href='?home=1' target='_self' style='text-decoration: none; color: #ffffff;'>📦 TOmBOy's INOUT</a></h3>", unsafe_allow_html=True)
+    # 💡 [버그 완벽 해결] 로그인 상태를 유지(token 전달)하면서 메인화면으로 이동하도록 토큰 결합!
+    pwd_token = str(st.secrets.get("tom_password", ""))
+    st.markdown(f"<h3 style='margin:0;'><a href='?home=1&token={pwd_token}' target='_self' style='text-decoration: none; color: #ffffff;'>📦 TOmBOy's INOUT</a></h3>", unsafe_allow_html=True)
     
 with col_u: 
     if st.button("📤 DB 업로드" if not st.session_state.show_uploader else "❌ 업로드 닫기", use_container_width=True, type="primary"):
