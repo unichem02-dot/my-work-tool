@@ -877,10 +877,9 @@ try:
                     
                     print_html_table += f'<div class="custom-table-container" {page_break}><table class="custom-table"><thead>'
                     
-                    # 💡 [핵심] 분할된 각 표의 머리글에 PAGE : X/Y 동적 삽입
-                    print_html_table += f'<tr><th colspan="13" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border: none !important; border-bottom: 2px solid #555 !important; padding: 15px 0 10px 0 !important;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개 &nbsp;|&nbsp; PAGE : {p+1}/{est_pages}</span></th></tr>'
+                    # 💡 [핵심] 분할된 각 표의 머리글에 PAGE : X/Y 동적 삽입, 그리고 가짜여백(fake-margin) 삭제하여 간격 밀착!
+                    print_html_table += f'<tr><th colspan="13" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border: none !important; border-bottom: 2px solid #555 !important; padding: 5px 0 5px 0 !important;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개 &nbsp;|&nbsp; PAGE : {p+1}/{est_pages}</span></th></tr>'
                     
-                    print_html_table += '<tr class="fake-margin"><td colspan="13"></td></tr>'
                     print_html_table += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
                     
                     print_html_table += "".join(chunk_rows)
