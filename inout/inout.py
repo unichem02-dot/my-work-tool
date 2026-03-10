@@ -239,9 +239,6 @@ if "show_uploader" not in st.session_state: st.session_state.show_uploader = Fal
 # SQL 버튼 상태 관리
 if "sql_ready" not in st.session_state: st.session_state.sql_ready = False
 if "sql_content" not in st.session_state: st.session_state.sql_content = ""
-# 텍스트 메모 창 상태 관리
-if "memo_edit_id" not in st.session_state: st.session_state.memo_edit_id = None
-if "memo_type" not in st.session_state: st.session_state.memo_type = None
 
 # 처음 접속 시 '어제오늘내일' 데이터 자동 출력
 if "search_params" not in st.session_state:
@@ -258,8 +255,8 @@ if "search_params" not in st.session_state:
         "s_filter": "ALL"
     }
 
-# URL 파라미터 감지 및 자동 로그인 (복사/수정/메모 연동)
-if "edit_id" in st.query_params or "copy_id" in st.query_params or "memo_edit_id" in st.query_params:
+# URL 파라미터 감지 및 자동 로그인 (복사/수정 연동)
+if "edit_id" in st.query_params or "copy_id" in st.query_params:
     token = str(st.secrets.get("tom_password", ""))
     if st.query_params.get("token") == token:
         st.session_state.authenticated = True
@@ -268,9 +265,6 @@ if "edit_id" in st.query_params or "copy_id" in st.query_params or "memo_edit_id
         if "copy_id" in st.query_params:
             st.session_state.copy_id = st.query_params["copy_id"]
             st.session_state.search_params = {"mode": "신규입력"}
-        if "memo_edit_id" in st.query_params:
-            st.session_state.memo_edit_id = st.query_params["memo_edit_id"]
-            st.session_state.memo_type = st.query_params.get("memo_type", "in")
     st.query_params.clear()
     st.rerun()
 
@@ -425,7 +419,6 @@ with col_sql:
                 except Exception as e:
                     st.error("생성 실패")
     else:
-        # 생성 완료 상태일 때 버튼을 'Secondary' 타입으로 출력하여 CSS에서 지정해둔 빨간색이 완벽하게 씌워지도록 함!
         st.download_button("💾 생성완료! 다운로드", data=st.session_state.sql_content.encode('utf-8-sig'), file_name=f"db_backup_{get_kst_now().strftime('%Y%m%d')}.sql", mime="application/sql", use_container_width=True, type="secondary")
 
 with col_r:
@@ -548,10 +541,10 @@ try:
     years = available_years
     months = list(range(1, 13))
     
-    # 💡 [오류 해결] params 변수 정의를 명확하게 추가하여 시스템 에러 해결!
+    # params 변수 정의를 명확하게 추가
     params = st.session_state.search_params
     
-    # 💡 [검색 조건 동기화 적용] 폼 렌더링 시 이전 검색값이 그대로 입력창에 유지되도록 값을 바인딩!
+    # 검색 조건 동기화 바인딩
     sp = params
     p_type = sp.get("type", "ALL")
     t_idx = ["ALL", "매입", "매출"].index(p_type) if p_type in ["ALL", "매입", "매출"] else 0
@@ -572,7 +565,8 @@ try:
     
     target_years = []
     
-    if st.session_state.edit_id or st.session_state.copy_id or st.session_state.memo_edit_id:
+    # 💡 memo_edit_id 로직은 삭제되고 오직 edit_id와 copy_id 로직만 남김
+    if st.session_state.edit_id or st.session_state.copy_id:
         target_years = available_years 
     elif params["mode"] == "기간":
         start_y = params["start"].year
@@ -603,114 +597,10 @@ try:
         df = pd.DataFrame(columns=['id', 'date', 'year', 'month', 'incom', 'initem', 'inq_val', 'inprice_val', 'outcom', 'outitem', 'outq_val', 'outprice_val', 'carno', 'carprice_val', 'in_total', 'out_total', 's', 'memoin', 'memoout', 'memocar'])
 
     # ---------------------------------------------------------
-    # [모드 분기 1] 💡 메모장 수정 및 입력 팝업 창 (올블랙 고정 & 디자인 완벽 개선)
+    # [모드 분기 1] 기존 등록 자료 수정 / 삭제 💡 (텍스트 메모 입력란 완벽 통합!)
     # ---------------------------------------------------------
-    if st.session_state.memo_edit_id:
-        target_memo = df[df['id'].astype(str) == str(st.session_state.memo_edit_id)]
-        if not target_memo.empty:
-            tm = target_memo.iloc[0]
-            orig_year_m = pd.to_datetime(tm['date']).year if pd.notnull(tm['date']) else get_kst_now().year
-            m_type = st.session_state.memo_type 
-            col_name = f"memo{m_type}"
-            orig_memo = safe_str(tm.get(col_name, ""))
-            type_kr = "매입품목" if m_type == 'in' else "매출품목" if m_type == 'out' else "배송"
-            is_update = bool(orig_memo.strip())
-            btn_str = "💾 수정" if is_update else "💾 신규입력"
-
-            def render_memo_form():
-                # 팝업 전용 예쁜 포스트잇 스타일 & 모든 글씨 올블랙(Black) 완벽 강제 CSS!
-                st.markdown("""
-                <style>
-                /* 다이얼로그 모달 전체 배경 및 테두리 (포스트잇 느낌) */
-                div[role="dialog"], div[data-testid="stModal"] {
-                    background-color: #FFFDE7 !important;
-                    border: 3px solid #FFC107 !important;
-                    border-radius: 12px !important;
-                }
-                /* 팝업 내부의 모든 요소를 완벽한 검은색으로 덮어쓰기! (제목, 텍스트, 버튼 모두) */
-                div[role="dialog"] *, div[data-testid="stModal"] * {
-                    color: #000000 !important;
-                }
-                /* 텍스트 입력창 디자인 */
-                div[role="dialog"] div[data-testid="stTextArea"] textarea {
-                    background-color: #FFFFFF !important;
-                    border: 2px solid #FFB300 !important;
-                    border-radius: 8px !important;
-                    color: #000000 !important;
-                    font-size: 15px !important;
-                    font-weight: bold !important;
-                    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05) !important;
-                }
-                /* 저장/신규입력 버튼 (파란색 유지 + 검은 글씨) */
-                div[role="dialog"] button[kind="primary"] {
-                    background-color: #3b82f6 !important;
-                    border-color: #3b82f6 !important;
-                    color: #000000 !important;
-                    font-weight: bold !important;
-                }
-                div[role="dialog"] button[kind="primary"]:hover {
-                    background-color: #2563eb !important;
-                    color: #ffffff !important;
-                }
-                /* 취소 버튼 (청록색 완벽 적용 + 검은 글씨) */
-                div[role="dialog"] button[kind="secondary"] {
-                    background-color: #009688 !important;
-                    border-color: #009688 !important;
-                    color: #000000 !important;
-                    font-weight: bold !important;
-                }
-                div[role="dialog"] button[kind="secondary"]:hover {
-                    background-color: #00796B !important;
-                    border-color: #00796B !important;
-                    color: #ffffff !important;
-                }
-                /* 닫기 아이콘 X 표시 검은색 */
-                div[role="dialog"] svg {
-                    fill: #000000 !important;
-                }
-                </style>
-                """, unsafe_allow_html=True)
-                
-                st.markdown(f"<h4 style='text-align:center; margin-top:0; font-weight:bold;'>📝 {type_kr} 텍스트 메모</h4>", unsafe_allow_html=True)
-                new_memo = st.text_area("내용", orig_memo, height=150, label_visibility="collapsed")
-                
-                # 버튼이 잘리지 않도록 레이아웃 비율 수정 (버튼 공간 넓게 확보)
-                c1, c2, c3 = st.columns([1, 4.5, 4.5])
-                with c2:
-                    if st.button(btn_str, use_container_width=True, type="primary", key="save_memo"):
-                        client = init_connection()
-                        try:
-                            sheet = client.open('SQL백업260211-jeilinout').worksheet(f"{orig_year_m}년")
-                            headers = sheet.row_values(1)
-                            if col_name not in headers:
-                                headers.append(col_name)
-                                sheet.update(f"A1:{gspread.utils.rowcol_to_a1(1, len(headers))}", [headers])
-                            col_idx = headers.index(col_name) + 1
-                            cell = sheet.find(str(st.session_state.memo_edit_id), in_column=1)
-                            if cell:
-                                sheet.update_cell(cell.row, col_idx, new_memo)
-                            st.cache_data.clear()
-                            st.session_state.memo_edit_id = None
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"저장 오류: {e}")
-                with c3:
-                    if st.button("취소", use_container_width=True, key="cancel_memo"):
-                        st.session_state.memo_edit_id = None
-                        st.rerun()
-
-            # Streamlit 네이티브 dialog 팝업 활용
-            if hasattr(st, 'dialog'):
-                @st.dialog(f"메모 관리 (ID: {st.session_state.memo_edit_id})")
-                def memo_popup():
-                    render_memo_form()
-                memo_popup()
-
-    # ---------------------------------------------------------
-    # [모드 분기 1-2] 기존 등록 자료 수정 / 삭제
-    # ---------------------------------------------------------
-    elif st.session_state.edit_id:
-        st.markdown("<h3 style='text-align:center; color:#ffeb3b; font-weight:bold;'>📝 등록 자료 수정 / 삭제</h3>", unsafe_allow_html=True)
+    if st.session_state.edit_id:
+        st.markdown("<h3 style='text-align:center; color:#ffeb3b; font-weight:bold;'>📝 등록 자료 및 메모 수정 / 삭제</h3>", unsafe_allow_html=True)
         target = df[df['id'].astype(str) == str(st.session_state.edit_id)]
         if not target.empty:
             t = target.iloc[0]
@@ -719,6 +609,7 @@ try:
             s_idx_edit = 1 if '중부' in safe_str(t.get('s')) else 0
             
             with st.form("edit_form"):
+                # 기본 정보 입력칸
                 c1, c2, c3, c4, c5, c6 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
                 for i, txt in enumerate(["종류","매입거래처","매입품목","수량","단가","배송"]):
                     [c1, c2, c3, c4, c5, c6][i].markdown(f'<div class="nh-box nh-{"base" if i==0 else "in" if i<5 else "etc"}">{txt}</div>', unsafe_allow_html=True)
@@ -739,18 +630,39 @@ try:
                 e_outprice = c11.text_input("outprice", safe_str(t.get('outprice')), label_visibility="collapsed")
                 e_carprice = c12.text_input("carprice", safe_str(t.get('carprice')), label_visibility="collapsed")
                 
-                st.markdown("<hr>", unsafe_allow_html=True)
+                # 💡 [핵심 기술 1] 기존 폼 하단에 메모 입력 텍스트 에어리어(TextArea) 3개를 깔끔하게 추가!
+                st.markdown("<hr style='margin: 15px 0 10px 0; border: 0.5px dashed #555;'>", unsafe_allow_html=True)
+                m1, m2, m3 = st.columns(3)
+                m1.markdown('<div class="nh-box nh-in" style="font-size:13px;">📝 매입품목 메모</div>', unsafe_allow_html=True)
+                e_memoin = m1.text_area("memoin", safe_str(t.get('memoin')), label_visibility="collapsed", height=80)
+                
+                m2.markdown('<div class="nh-box nh-out" style="font-size:13px;">📝 매출품목 메모</div>', unsafe_allow_html=True)
+                e_memoout = m2.text_area("memoout", safe_str(t.get('memoout')), label_visibility="collapsed", height=80)
+                
+                m3.markdown('<div class="nh-box nh-etc" style="font-size:13px;">🚚 배송 메모</div>', unsafe_allow_html=True)
+                e_memocar = m3.text_area("memocar", safe_str(t.get('memocar')), label_visibility="collapsed", height=80)
+                
+                st.markdown("<hr style='margin: 10px 0; border: none;'>", unsafe_allow_html=True)
                 bc1, bc2, bc3, bc4 = st.columns([6, 1.5, 1.5, 1])
                 
                 if bc2.form_submit_button("💾 수정 저장", use_container_width=True, type="primary"):
                     client = init_connection()
                     try:
                         sheet = client.open('SQL백업260211-jeilinout').worksheet(f"{orig_year}년")
+                        headers = sheet.row_values(1)
+                        # 💡 열이 없으면 구글 시트 헤더에 새로 추가하여 에러 방지 (A~Q열 동기화)
+                        for req_col in ['memoin', 'memoout', 'memocar']:
+                            if req_col not in headers:
+                                headers.append(req_col)
+                        sheet.update(f"A1:{gspread.utils.rowcol_to_a1(1, len(headers))}", [headers])
+                        
                         cell = sheet.find(str(st.session_state.edit_id), in_column=1)
                         if cell:
-                            # 편집 시 다른 열(메모 등)이 지워지지 않도록 A~N 열까지만 안전하게 덮어쓰기
-                            new_row = [st.session_state.edit_id, e_date.strftime('%Y-%m-%d'), e_incom, e_initem, e_inq, e_inprice, e_outcom, e_outitem, e_outq, e_outprice, "", e_s, e_carno, e_carprice]
-                            sheet.update(f"A{cell.row}:N{cell.row}", [new_row])
+                            # 💡 17개 데이터를 모두 업데이트하여 메모가 완벽하게 저장되도록 구현
+                            new_row = [st.session_state.edit_id, e_date.strftime('%Y-%m-%d'), e_incom, e_initem, e_inq, e_inprice, e_outcom, e_outitem, e_outq, e_outprice, "", e_s, e_carno, e_carprice, e_memoin, e_memoout, e_memocar]
+                            # 데이터 길이에 맞춰 동적으로 끝 열을 지정 (ex: Q열)
+                            end_col_alpha = gspread.utils.rowcol_to_a1(cell.row, len(new_row))
+                            sheet.update(f"A{cell.row}:{end_col_alpha}", [new_row])
                         st.cache_data.clear(); st.session_state.edit_id = None; st.rerun()
                     except Exception as e:
                         st.error(f"수정 오류: {e}")
@@ -769,7 +681,7 @@ try:
                     st.session_state.edit_id = None; st.rerun()
 
     # ---------------------------------------------------------
-    # [모드 분기 2] 신규입력 및 복사
+    # [모드 분기 2] 신규입력 및 복사 (신규입력 폼에도 메모칸 추가)
     # ---------------------------------------------------------
     elif st.session_state.search_params["mode"] == "신규입력":
         st.markdown("<h3 style='text-align:center; font-weight:bold;'>🆕 신규자료입력 / 복사입력</h3>", unsafe_allow_html=True)
@@ -778,7 +690,7 @@ try:
             cr = df[df['id'].astype(str) == str(st.session_state.copy_id)]
             if not cr.empty:
                 cr = cr.iloc[0]
-                def_v.update({k: safe_str(cr.get(k)) for k in ['incom','initem','inq','inprice','outcom','outitem','outq','outprice','carno','carprice']})
+                def_v.update({k: safe_str(cr.get(k)) for k in ['incom','initem','inq','inprice','outcom','outitem','outq','outprice','carno','carprice','memoin','memoout','memocar']})
                 def_v["s_idx"] = 1 if '중부' in safe_str(cr.get('s')) else 0
                 if pd.notnull(cr.get('date')): def_v["date"] = pd.to_datetime(cr['date']).date()
 
@@ -803,22 +715,39 @@ try:
             n_outprice = c11.text_input("outprice", def_v.get("outprice",""), label_visibility="collapsed")
             n_carprice = c12.text_input("carprice", def_v.get("carprice",""), label_visibility="collapsed")
 
-            st.markdown("<hr>", unsafe_allow_html=True)
+            # 💡 [핵심 기술 1] 신규/복사입력 폼 하단에도 메모 입력창 추가
+            st.markdown("<hr style='margin: 15px 0 10px 0; border: 0.5px dashed #555;'>", unsafe_allow_html=True)
+            m1, m2, m3 = st.columns(3)
+            m1.markdown('<div class="nh-box nh-in" style="font-size:13px;">📝 매입품목 메모</div>', unsafe_allow_html=True)
+            n_memoin = m1.text_area("memoin", def_v.get("memoin",""), label_visibility="collapsed", height=80)
+            
+            m2.markdown('<div class="nh-box nh-out" style="font-size:13px;">📝 매출품목 메모</div>', unsafe_allow_html=True)
+            n_memoout = m2.text_area("memoout", def_v.get("memoout",""), label_visibility="collapsed", height=80)
+            
+            m3.markdown('<div class="nh-box nh-etc" style="font-size:13px;">🚚 배송 메모</div>', unsafe_allow_html=True)
+            n_memocar = m3.text_area("memocar", def_v.get("memocar",""), label_visibility="collapsed", height=80)
+
+            st.markdown("<hr style='margin: 10px 0; border: none;'>", unsafe_allow_html=True)
             bc1, bc2, bc3 = st.columns([8.2, 1.1, 0.7])
             if bc2.form_submit_button("신규자료입력", use_container_width=True, type="primary"):
                 client = init_connection()
                 spreadsheet = client.open('SQL백업260211-jeilinout')
                 target_year_str = f"{n_date.year}년"
-                
                 next_id = int(get_kst_now().strftime("%y%m%d%H%M%S"))
                 
                 try:
                     sheet = spreadsheet.worksheet(target_year_str)
                 except gspread.exceptions.WorksheetNotFound:
                     sheet = spreadsheet.add_worksheet(title=target_year_str, rows="1000", cols="15")
-                    sheet.append_row(['id', 'date', 'incom', 'initem', 'inq', 'inprice', 'outcom', 'outitem', 'outq', 'outprice', 'memo', 's', 'carno', 'carprice'])
+                    sheet.append_row(['id', 'date', 'incom', 'initem', 'inq', 'inprice', 'outcom', 'outitem', 'outq', 'outprice', 'memo', 's', 'carno', 'carprice', 'memoin', 'memoout', 'memocar'])
                 
-                sheet.append_row([next_id, n_date.strftime('%Y-%m-%d'), n_incom, n_initem, n_inq, n_inprice, n_outcom, n_outitem, n_outq, n_outprice, "", n_s, n_carno, n_carprice])
+                headers = sheet.row_values(1)
+                for req_col in ['memoin', 'memoout', 'memocar']:
+                    if req_col not in headers:
+                        headers.append(req_col)
+                sheet.update(f"A1:{gspread.utils.rowcol_to_a1(1, len(headers))}", [headers])
+                
+                sheet.append_row([next_id, n_date.strftime('%Y-%m-%d'), n_incom, n_initem, n_inq, n_inprice, n_outcom, n_outitem, n_outq, n_outprice, "", n_s, n_carno, n_carprice, n_memoin, n_memoout, n_memocar])
                 st.cache_data.clear(); st.session_state.copy_id = None; st.session_state.search_params = {"mode":"최근","title":"최근입력순서","limit":"20개"}; st.rerun()
                 
             if bc3.form_submit_button("취소", use_container_width=True, type="primary"):
@@ -1142,33 +1071,35 @@ try:
                     
                     profit_tot_vat = out_tot_vat - in_tot_vat 
                     
-                    # 텍스트 클릭 시 메모 팝업창 연동
+                    # 💡 [핵심 기술 2] 텍스트 클릭 시 느린 팝업 대신 즉시 '메인 수정 폼(edit_id)'을 열도록 연동!
+                    # "✏️수정"이나 "📝" 텍스트를 아예 지우고 오직 품목 글씨 자체만 클릭하도록 깔끔하게 변경
                     memoin_val = safe_str(r.get("memoin", ""))
                     initem_val = safe_str(r.get("initem", ""))
                     in_disp = initem_val if initem_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-                    in_link = f"?memo_edit_id={rid}&memo_type=in&token={pwd_token}"
+                    
+                    # 메모를 클릭하면 전체 행을 수정할 수 있는 상단 폼이 즉시 열림
+                    edit_link_target = f"?edit_id={rid}&token={pwd_token}"
+                    
                     if memoin_val:
-                        initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;"><a href="{in_link}" target="_self" style="color:inherit; text-decoration:none;">{in_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memoin_val}</span></div>'
+                        initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;"><a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{in_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memoin_val}</span></div>'
                     else:
-                        initem_html = f'<a href="{in_link}" target="_self" style="color:inherit; text-decoration:none;">{in_disp}</a>'
+                        initem_html = f'<a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{in_disp}</a>'
 
                     memoout_val = safe_str(r.get("memoout", ""))
                     outitem_val = safe_str(r.get("outitem", ""))
                     out_disp = outitem_val if outitem_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-                    out_link = f"?memo_edit_id={rid}&memo_type=out&token={pwd_token}"
                     if memoout_val:
-                        outitem_html = f'<div class="memo-tooltip-out" style="font-weight: bold;"><a href="{out_link}" target="_self" style="color:inherit; text-decoration:none;">{out_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memoout_val}</span></div>'
+                        outitem_html = f'<div class="memo-tooltip-out" style="font-weight: bold;"><a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{out_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memoout_val}</span></div>'
                     else:
-                        outitem_html = f'<a href="{out_link}" target="_self" style="color:inherit; text-decoration:none;">{out_disp}</a>'
+                        outitem_html = f'<a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{out_disp}</a>'
 
                     memocar_val = safe_str(r.get("memocar", ""))
                     carno_val = safe_str(r.get("carno", ""))
                     car_disp = carno_val if carno_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-                    car_link = f"?memo_edit_id={rid}&memo_type=car&token={pwd_token}"
                     if memocar_val:
-                        carno_html = f'<div class="memo-tooltip-base" style="font-weight: bold; color: inherit;"><a href="{car_link}" target="_self" style="color:inherit; text-decoration:none;">{car_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memocar_val}</span></div>'
+                        carno_html = f'<div class="memo-tooltip-base" style="font-weight: bold; color: inherit;"><a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{car_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memocar_val}</span></div>'
                     else:
-                        carno_html = f'<a href="{car_link}" target="_self" style="color:inherit; text-decoration:none;">{car_disp}</a>'
+                        carno_html = f'<a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{car_disp}</a>'
                     
                     inq_val_str = f'{r["inq_val"]:,.0f}' if pd.notnull(r["inq_val"]) else '0'
                     in_memo = f"<div style='text-align:right; color:#000000 !important;'>공급가액(VAT별도) : {in_tot:,.0f} 원<br>+ 부가세(10%) : {in_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</div>"
@@ -1236,6 +1167,7 @@ try:
                         st.session_state.sort_desc = not st.session_state.sort_desc; st.rerun()
                 
                 with col_t3:
+                    # 💡 [핵심 기술 3] Print 버튼 크기 완벽 동기화 (iframe 높이와 내부 padding을 Streamlit 버튼과 100% 일치시킴)
                     components.html(
                         f"""
                         <!DOCTYPE html>
@@ -1244,12 +1176,17 @@ try:
                         <style>
                         body {{ margin: 0; padding: 0; overflow: hidden; background-color: transparent; }}
                         .btn-print {{
-                            width: 100%; height: 35px; background-color: #4e8cff; color: white;
-                            border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 15px;
+                            width: 100%; 
+                            min-height: 2.5rem; /* 40px */
+                            padding: 0.25rem 0.75rem; /* Streamlit 기본 버튼 패딩 */
+                            background-color: #4e8cff; color: white;
+                            border: 1px solid #4e8cff; border-radius: 0.5rem; /* 8px 둥글기 일치 */
+                            font-weight: bold; cursor: pointer; font-size: 15px;
                             font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
                             display: flex; align-items: center; justify-content: center; box-sizing: border-box;
+                            line-height: 1.6;
                         }}
-                        .btn-print:hover {{ background-color: #3b76e5; }}
+                        .btn-print:hover {{ background-color: #3b76e5; border-color: #3b76e5; }}
                         </style>
                         <script>
                         function fastPrint() {{
@@ -1280,7 +1217,7 @@ try:
                         </body>
                         </html>
                         """,
-                        height=35
+                        height=40
                     )
                 
                 with col_t4:
