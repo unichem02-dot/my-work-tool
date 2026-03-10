@@ -36,6 +36,11 @@ st.markdown("""
     .main .block-container { padding-top: 1rem; max-width: 98%; }
     h1, h2, h3, p, span { color: #ffffff !important; }
     
+    /* 💡 매입/매출 품목, 배송 글자색 복구용 특정 클래스 */
+    span.disp-in { color: #1e3a8a !important; }
+    span.disp-out { color: #9a3412 !important; }
+    span.disp-car { color: #475569 !important; }
+
     /* 검색 패널 컨테이너 */
     .search-panel-container {
         background-color: #353b48;
@@ -394,7 +399,7 @@ try:
     months = list(range(1, 13))
     params = st.session_state.search_params
     
-    # 💡 데이터 로딩 범위 최적화 (표 출력용 연도 + 수정/복사용 연도를 동시에 확보하여 꼬임 방지!)
+    # 데이터 로딩 범위 최적화
     target_years = set()
     if params["mode"] == "기간":
         target_years.update([y for y in available_years if params["start"].year <= y <= params["end"].year])
@@ -416,7 +421,6 @@ try:
 
     df = load_data_for_years(sorted(list(target_years), reverse=True))
     
-    # 💡 누락된 date_col 변수 복구
     date_col = 'date_dt'
     if not df.empty:
         df[date_col] = pd.to_datetime(df['date'], errors='coerce')
@@ -462,7 +466,7 @@ try:
                 e_outprice = c11.text_input("outprice", safe_str(t.get('outprice')), label_visibility="collapsed")
                 e_carprice = c12.text_input("carprice", safe_str(t.get('carprice')), label_visibility="collapsed")
                 
-                # 메모 입력칸 3개 동시 배치
+                # 메모 입력칸 3개 동시 배치 (오직 수정 폼에서만 노출!)
                 st.markdown("<hr style='margin: 15px 0 10px 0; border: 0.5px dashed #555;'>", unsafe_allow_html=True)
                 m1, m2, m3 = st.columns(3)
                 m1.markdown('<div class="nh-box nh-in" style="font-size:13px;">📝 매입품목 메모</div>', unsafe_allow_html=True)
@@ -529,18 +533,20 @@ try:
                     st.rerun()
 
     # ---------------------------------------------------------
-    # [2] 신규입력 및 복사 창
+    # [2] 신규입력 및 복사 창 (💡 복사 시 메모칸 & 메모 데이터 연동 제거 완료)
     # ---------------------------------------------------------
     elif st.session_state.show_new:
         st.markdown("<h3 style='text-align:center; font-weight:bold;'>🆕 신규자료입력 / 복사입력</h3>", unsafe_allow_html=True)
+        # 💡 [핵심 기술 1] 복사 시 오늘 날짜로 무조건 덮어쓰기! (원래 날짜 안가져옴)
         def_v = {"s_idx":0, "date":get_kst_now().date()}
         if st.session_state.copy_id:
             cr = df[df['id'].astype(str) == str(st.session_state.copy_id)]
             if not cr.empty:
                 cr = cr.iloc[0]
+                # 메모 항목(memoin, memoout, memocar)은 복사 대상에서 제외
                 def_v.update({k: safe_str(cr.get(k)) for k in ['incom','initem','inq','inprice','outcom','outitem','outq','outprice','carno','carprice']})
                 def_v["s_idx"] = 1 if '중부' in safe_str(cr.get('s')) else 0
-                if pd.notnull(cr.get('date')): def_v["date"] = pd.to_datetime(cr['date']).date()
+                # 날짜 복사 코드를 삭제하여 무조건 '오늘 날짜'로 고정되도록 구현
 
         with st.form("new_form"):
             c1, c2, c3, c4, c5, c6 = st.columns([1, 2.5, 3, 1.2, 1.2, 1.2])
@@ -562,6 +568,8 @@ try:
             n_outq = c10.text_input("outq", def_v.get("outq",""), label_visibility="collapsed")
             n_outprice = c11.text_input("outprice", def_v.get("outprice",""), label_visibility="collapsed")
             n_carprice = c12.text_input("carprice", def_v.get("carprice",""), label_visibility="collapsed")
+
+            # 💡 [핵심 기술 2] 신규입력/복사입력 시에는 메모 창을 완전히 없앰 (깔끔한 UI 유지)
 
             st.markdown("<hr style='margin: 10px 0; border: none;'>", unsafe_allow_html=True)
             bc1, bc2, bc3 = st.columns([8.2, 1.1, 0.7])
@@ -587,6 +595,7 @@ try:
                 if needs_update:
                     sheet.update(f"A1:{gspread.utils.rowcol_to_a1(1, len(headers))}", [headers])
                 
+                # 메모값 3개는 공란("")으로 삽입
                 new_full_row = [next_id, n_date.strftime('%Y-%m-%d'), n_incom, n_initem, n_inq, n_inprice, n_outcom, n_outitem, n_outq, n_outprice, "", n_s, n_carno, n_carprice, "", "", ""]
                 for attempt in range(3):
                     try:
@@ -792,7 +801,7 @@ try:
         elif b_mon: st.session_state.search_params = {"mode":"월별","title":f"{y4}년 {m4}월 기본 검색","year":y4,"month":m4, "s_filter": s5}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
         elif b_yong: st.session_state.search_params = {"mode":"용차","title":f"{y4}년 {m4}월 배송(용/다) 검색","year":y4,"month":m4, "s_filter": s5}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
 
-        # 💡 init 상태일 경우 데이터 테이블은 숨김
+        # init 상태일 경우 데이터 테이블은 숨김
         if params["mode"] != "init":
             f_df = df.copy()
             
@@ -816,13 +825,19 @@ try:
             if params.get("company"): f_df = f_df[f_df['incom'].str.contains(params["company"], na=False)|f_df['outcom'].str.contains(params["company"], na=False)]
             if params.get("item"): f_df = f_df[f_df['initem'].str.contains(params["item"], na=False)|f_df['outitem'].str.contains(params["item"], na=False)]
             
-            f_df = f_df.sort_values(by=[date_col, 'id_val'], ascending=[not st.session_state.sort_desc, not st.session_state.sort_desc])
+            # 💡 [핵심 기술 3] '최근' 검색 모드 시 무조건 id_val(입력된 순서 NO) 기준 내림차순 정렬 보장!
+            if params["mode"] == "최근":
+                f_df = f_df.sort_values(by=['id_val'], ascending=[False])
+            else:
+                f_df = f_df.sort_values(by=[date_col, 'id_val'], ascending=[not st.session_state.sort_desc, not st.session_state.sort_desc])
             
             limit_str = str(params.get("limit", "ALL"))
             if "개" in limit_str:
                 num = int(limit_str.replace("개", ""))
-                if st.session_state.sort_desc: f_df = f_df.head(num)
-                else: f_df = f_df.tail(num)
+                if st.session_state.sort_desc or params["mode"] == "최근": 
+                    f_df = f_df.head(num)
+                else: 
+                    f_df = f_df.tail(num)
 
             t_in_q, t_in_a = f_df['inq_val'].sum(), f_df['in_total'].sum()
             t_out_q, t_out_a = f_df['outq_val'].sum(), f_df['out_total'].sum()
@@ -926,7 +941,6 @@ try:
                     s_cls = "txt-green" if "제일" in str(r['s']) else "txt-purple"
                     row_year = int(r['year'])
                     
-                    # 💡 표에서 복사나 수정을 눌러도 현재 검색 상태(sp)를 유지한 채 폼을 오픈합니다!
                     v_link = f'<a href="?copy_id={rid}&year={row_year}&token={pwd_token}&sp={current_sp_encoded}" target="_self" style="text-decoration:none;"><span class="{s_cls}">{r["s"]}</span></a>'
                     edit_link_target = f"?edit_id={rid}&year={row_year}&token={pwd_token}&sp={current_sp_encoded}"
                     d_link = f'<a href="{edit_link_target}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
@@ -943,33 +957,36 @@ try:
                     
                     memoin_val = safe_str(r.get("memoin", ""))
                     initem_val = safe_str(r.get("initem", ""))
+                    in_disp = initem_val if initem_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                     
-                    # 💡 클릭 기능(a 태그) 제거! 텍스트는 그대로 보여주고 메모가 있으면 툴팁만 띄웁니다.
+                    # 💡 [핵심 기술 4] 클래스 분리를 통한 매입(파란색), 매출(주황색) 텍스트 복구! (인쇄 시엔 검은색 유지)
                     if memoin_val:
-                        initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;"><span style="color:inherit;">{initem_val}</span><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important; font-weight:bold !important;">{memoin_val}</span></span></div>'
+                        initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;"><a href="{edit_link_target}" target="_self" style="text-decoration:none;"><span class="disp-in">{in_disp}</span></a><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important; font-weight:bold !important;">{memoin_val}</span></span></div>'
                     else:
-                        initem_html = f'<span style="color:inherit;">{initem_val}</span>'
+                        initem_html = f'<a href="{edit_link_target}" target="_self" style="text-decoration:none;"><span class="disp-in">{in_disp}</span></a>'
 
                     memoout_val = safe_str(r.get("memoout", ""))
                     outitem_val = safe_str(r.get("outitem", ""))
+                    out_disp = outitem_val if outitem_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                     if memoout_val:
-                        outitem_html = f'<div class="memo-tooltip-out" style="font-weight: bold;"><span style="color:inherit;">{outitem_val}</span><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important; font-weight:bold !important;">{memoout_val}</span></span></div>'
+                        outitem_html = f'<div class="memo-tooltip-out" style="font-weight: bold;"><a href="{edit_link_target}" target="_self" style="text-decoration:none;"><span class="disp-out">{out_disp}</span></a><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important; font-weight:bold !important;">{memoout_val}</span></span></div>'
                     else:
-                        outitem_html = f'<span style="color:inherit;">{outitem_val}</span>'
+                        outitem_html = f'<a href="{edit_link_target}" target="_self" style="text-decoration:none;"><span class="disp-out">{out_disp}</span></a>'
 
                     memocar_val = safe_str(r.get("memocar", ""))
                     carno_val = safe_str(r.get("carno", ""))
+                    car_disp = carno_val if carno_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                     if memocar_val:
-                        carno_html = f'<div class="memo-tooltip-base" style="font-weight: bold; color: inherit;"><span style="color:inherit;">{carno_val}</span><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important; font-weight:bold !important;">{memocar_val}</span></span></div>'
+                        carno_html = f'<div class="memo-tooltip-base" style="font-weight: bold;"><a href="{edit_link_target}" target="_self" style="text-decoration:none;"><span class="disp-car">{car_disp}</span></a><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important; font-weight:bold !important;">{memocar_val}</span></span></div>'
                     else:
-                        carno_html = f'<span style="color:inherit;">{carno_val}</span>'
+                        carno_html = f'<a href="{edit_link_target}" target="_self" style="text-decoration:none;"><span class="disp-car">{car_disp}</span></a>'
                     
                     inq_val_str = f'{r["inq_val"]:,.0f}' if pd.notnull(r["inq_val"]) else '0'
-                    in_memo = f"<div style='text-align:right;'><span style='color:#000000 !important;'>공급가액(VAT별도) : {in_tot:,.0f} 원</span><br><span style='color:#000000 !important;'>+ 부가세(10%) : {in_vat_only:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px dashed black !important;'><span style='color:#000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</span></div>"
+                    in_memo = f"<div style='text-align:right;'><span style='color:#000000 !important;'>공급가액(VAT별도) : {in_tot:,.0f} 원</span><br><span style='color:#000000 !important;'>+ 부가세(10%) : {in_vat_only:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'><span style='color:#000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</span></div>"
                     inq_html = f'<div class="memo-tooltip-in">{inq_val_str}<span class="memo-text">{in_memo}</span></div>'
                     
                     outq_val_str = f'{r["outq_val"]:,.0f}' if pd.notnull(r["outq_val"]) else '0'
-                    out_memo = f"<div style='text-align:right;'><span style='color:#000000 !important;'>매출액(VAT별도) : {out_tot:,.0f} 원</span><br><span style='color:#000000 !important;'>+ 부가세(10%) : {out_vat_only:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px dashed black !important;'><span style='color:#000000 !important;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원</span><br><span style='color:#000000 !important;'>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px solid black !important;'><span style='color:#000000 !important; font-weight:bold;'>= 순이익(VAT포함) : {profit_tot_vat:,.0f} 원</span></div>"
+                    out_memo = f"<div style='text-align:right;'><span style='color:#000000 !important;'>매출액(VAT별도) : {out_tot:,.0f} 원</span><br><span style='color:#000000 !important;'>+ 부가세(10%) : {out_vat_only:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'><span style='color:#000000 !important;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원</span><br><span style='color:#000000 !important;'>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px solid #000000 !important;'><span style='color:#000000 !important; font-weight:bold;'>= 순이익(VAT포함) : {profit_tot_vat:,.0f} 원</span></div>"
                     outq_html = f'<div class="memo-tooltip-out">{outq_val_str}<span class="memo-text">{out_memo}</span></div>'
                     
                     row_html = f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl txt-in-bold">{r["incom"]}</td><td class="tl txt-in">{initem_html}</td><td class="tr txt-in">{inq_html}</td><td class="tr txt-in">{r["inprice_val"]:,.0f}</td><td class="tl txt-out-bold">{r["outcom"]}</td><td class="tl txt-out">{outitem_html}</td><td class="tr txt-out">{outq_html}</td><td class="tr txt-out">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray print-hide-col">{rid}</td><td class="tc txt-gray">{carno_html}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
@@ -1012,6 +1029,7 @@ try:
                     .sum-profit {{ background-color: #f1f5f9 !important; text-align: right; padding: 12px 20px; font-weight: bold; border-top: 1px solid #444; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
                     .tc {{ text-align: center; }} .tl {{ text-align: left; }} .tr {{ text-align: right; }}
                     a {{ color: black !important; text-decoration: none !important; pointer-events: none; }}
+                    span.disp-in, span.disp-out, span.disp-car {{ color: black !important; }} /* 인쇄 시 텍스트 강제 블랙 */
                     .print-hide-col {{ display: none !important; }}
                     thead {{ display: table-header-group !important; }}
                     .custom-table tr {{ page-break-inside: avoid; }}
