@@ -631,6 +631,8 @@ try:
             r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
             with r1_1: t1 = st.radio("t1", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
             with r1_2: dr1 = st.date_input("dr1", [datetime(2014,1,1).date(), get_kst_now().date()], format="YYYY-MM-DD", label_visibility="collapsed")
+            # 💡 [핵심 조치] 1번째 줄 비어있던 칸에 (제일/중부) 필터 추가
+            with r1_3: s1 = st.selectbox("s1", ["ALL", "제일", "중부"], label_visibility="collapsed")
             with r1_4: c1 = st.text_input("c1", placeholder="거래처 검색", label_visibility="collapsed")
             with r1_5: i1 = st.text_input("i1", placeholder="품목 검색", label_visibility="collapsed")
             with r1_6: b1 = st.button("기간 거래처&품목", use_container_width=True, type="primary")
@@ -642,6 +644,8 @@ try:
             with r2_1: t2 = st.radio("t2", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
             with r2_2: y2 = st.selectbox("y2", years, label_visibility="collapsed", format_func=lambda x: f"{x}년")
             with r2_3: m2 = st.selectbox("m2", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
+            # 💡 [핵심 조치] 2번째 줄 비어있던 칸에 (제일/중부) 필터 추가
+            with r2_4: s2 = st.selectbox("s2", ["ALL", "제일", "중부"], label_visibility="collapsed")
             with r2_5: c2 = st.text_input("c2", placeholder="거래처 검색", label_visibility="collapsed")
             with r2_6: i2 = st.text_input("i2", placeholder="품목 검색", label_visibility="collapsed")
             with r2_7: b2 = st.button("월별 거래처&품목", use_container_width=True, type="primary")
@@ -650,7 +654,8 @@ try:
 
             # Row 3: 각종 유틸리티 버튼
             u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15 = st.columns([0.7, 1.0, 0.8, 0.8, 1.0, 0.8, 0.8, 1.3, 0.8, 1.1, 0.7, 1.0, 0.8, 0.9, 0.9])
-            with u1: st.selectbox("s3", ["ALL"], label_visibility="collapsed")
+            # 💡 [핵심 조치] 기존에 ALL만 있던 곳에 제일/중부 옵션 적용
+            with u1: s3 = st.selectbox("s3", ["ALL", "제일", "중부"], label_visibility="collapsed")
             with u2: y3 = st.selectbox("y3", years, label_visibility="collapsed", format_func=lambda x: f"{x}년")
             with u3: m3 = st.selectbox("m3", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
             with u4: b_set = st.button("결산", use_container_width=True, type="primary")
@@ -663,19 +668,20 @@ try:
             with u9: b_day = st.button("일검색", use_container_width=True, type="primary")
             with u10: b_ayt = st.button("어제오늘내일", use_container_width=True, type="primary")
             
-            with u11: st.selectbox("s5", ["ALL"], label_visibility="collapsed")
+            # 💡 [핵심 조치] 기존에 ALL만 있던 곳에 제일/중부 옵션 적용
+            with u11: s5 = st.selectbox("s5", ["ALL", "제일", "중부"], label_visibility="collapsed")
             with u12: y4 = st.selectbox("y4", years, key="y4_sel", label_visibility="collapsed", format_func=lambda x: f"{x}년")
             with u13: m4 = st.selectbox("m4", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", key="m4_sel", label_visibility="collapsed")
             with u14: b_mon = st.button("월별검색", use_container_width=True, type="primary")
             with u15: b_yong = st.button("용차", use_container_width=True, type="primary")
 
-        # 💡 [핵심 버그 해결] 버튼 누르는 즉시 강제 새로고침(st.rerun)을 발생시켜 옛날 데이터가 불려오는 현상 차단
-        if b1: st.session_state.search_params = {"mode":"기간","title":"기간검색","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0]}; st.rerun()
-        elif b2: st.session_state.search_params = {"mode":"월별상세","title":"월별상세검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2}; st.rerun()
-        elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3}; st.rerun()
+        # --- 버튼 액션 라우팅 (선택한 제일/중부 값을 s_filter로 넘겨줌) ---
+        if b1: st.session_state.search_params = {"mode":"기간","title":"기간검색","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0], "s_filter": s1}; st.rerun()
+        elif b2: st.session_state.search_params = {"mode":"월별상세","title":"월별상세검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2, "s_filter": s2}; st.rerun()
+        elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3, "s_filter": s3}; st.rerun()
         elif b_new: st.session_state.search_params = {"mode":"신규입력"}; st.session_state.copy_id = None; st.rerun()
-        elif b_rec: st.session_state.search_params = {"mode":"최근","title":"최근입력순서","limit":lmt}; st.rerun()
-        elif b_day: st.session_state.search_params = {"mode":"일","title":f"{d_day} 검색","date":d_day}; st.rerun()
+        elif b_rec: st.session_state.search_params = {"mode":"최근","title":"최근입력순서","limit":lmt, "s_filter": "ALL"}; st.rerun()
+        elif b_day: st.session_state.search_params = {"mode":"일","title":f"{d_day} 검색","date":d_day, "s_filter": "ALL"}; st.rerun()
         elif b_ayt:
             st.session_state.search_params = {
                 "mode":"기간",
@@ -685,11 +691,12 @@ try:
                 "item":"",
                 "limit":"ALL",
                 "start": d_day - timedelta(days=1),
-                "end": d_day + timedelta(days=1)
+                "end": d_day + timedelta(days=1),
+                "s_filter": "ALL"
             }
             st.rerun()
-        elif b_mon: st.session_state.search_params = {"mode":"월별","title":f"{y4}년 {m4}월 검색","year":y4,"month":m4}; st.rerun()
-        elif b_yong: st.session_state.search_params = {"mode":"용차","title":f"{y4}년 {m4}월 용차(용/다) 검색","year":y4,"month":m4}; st.rerun()
+        elif b_mon: st.session_state.search_params = {"mode":"월별","title":f"{y4}년 {m4}월 검색","year":y4,"month":m4, "s_filter": s5}; st.rerun()
+        elif b_yong: st.session_state.search_params = {"mode":"용차","title":f"{y4}년 {m4}월 용차(용/다) 검색","year":y4,"month":m4, "s_filter": s5}; st.rerun()
 
         params = st.session_state.search_params
         if params["mode"] != "init":
@@ -709,6 +716,11 @@ try:
             target_type = params.get("type", "ALL")
             if target_type == "매입": f_df = f_df[f_df['incom'].astype(str).str.strip() != '']
             elif target_type == "매출": f_df = f_df[f_df['outcom'].astype(str).str.strip() != '']
+            
+            # 💡 [핵심 연동] 전달받은 제일/중부 값으로 데이터를 필터링합니다.
+            s_filter = params.get("s_filter", "ALL")
+            if s_filter != "ALL":
+                f_df = f_df[f_df['s'].astype(str).str.contains(s_filter, na=False)]
             
             # 3. 검색어 필터링
             if params.get("company"): f_df = f_df[f_df['incom'].str.contains(params["company"], na=False)|f_df['outcom'].str.contains(params["company"], na=False)]
@@ -733,11 +745,14 @@ try:
             # 행별 순수익(profit) 계산
             f_df['profit'] = f_df['out_total'] - f_df['in_total'] - f_df['carprice_val']
             
+            # 타이틀에 필터 정보 추가
             print_title = params.get("title", "검색결과")
+            if s_filter != "ALL":
+                print_title = f"[{s_filter}] " + print_title
 
             # 💡 [모드 분기] 결산 버튼 클릭 시 프리미엄 대시보드 화면 렌더링
             if params["mode"] == "결산":
-                st.markdown(f"<h2 style='text-align: center; color: #4e8cff; margin-bottom: 20px;'>📊 {params['year']}년 {params['month']}월 결산 종합 대시보드</h2>", unsafe_allow_html=True)
+                st.markdown(f"<h2 style='text-align: center; color: #4e8cff; margin-bottom: 20px;'>📊 {print_title} 종합 대시보드</h2>", unsafe_allow_html=True)
                 
                 col1, col2, col3, col4 = st.columns(4)
                 with col1: st.metric("총 매출액 (A) ↗", f"{t_out_a:,.0f} 원")
