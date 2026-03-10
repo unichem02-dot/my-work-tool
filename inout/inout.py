@@ -908,7 +908,7 @@ try:
                     v_link = f'<a href="?copy_id={rid}&token={pwd_token}" target="_self" style="text-decoration:none;"><span class="{s_cls}">{r["s"]}</span></a>'
                     d_link = f'<a href="?edit_id={rid}&token={pwd_token}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
                     
-                    # 💡 [핵심 기술 1] 부가세 연동 및 이익금 산출용 데이터 미리 계산
+                    # 부가세 연동 및 이익금 산출용 데이터 미리 계산
                     in_tot = r["in_total"] if pd.notnull(r["in_total"]) else 0
                     in_tot_vat = in_tot * 1.1       # 매입액 부가세 포함
                     in_vat_only = in_tot * 0.1      # 매입액 순수 부가세
@@ -919,12 +919,12 @@ try:
                     
                     profit_tot_vat = out_tot_vat - in_tot_vat # 부가세 포함 기준 이익금 산출
                     
-                    # 💡 [핵심 기술 2] 매입 툴팁 조립 (올블랙 적용 & 공급가+부가세 상세 표시)
+                    # 매입 툴팁 조립
                     inq_val_str = f'{r["inq_val"]:,.0f}' if pd.notnull(r["inq_val"]) else '0'
                     in_memo = f"<div style='text-align:right; color:#000000 !important;'>공급가액 : {in_tot:,.0f} 원<br>+ 부가세(10%) : {in_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</div>"
                     inq_html = f'<div class="memo-tooltip-in">{inq_val_str}<span class="memo-text">{in_memo}</span></div>'
                     
-                    # 💡 [핵심 기술 3] 매출 툴팁 조립 (올블랙 적용 & 부가세 별도/포함 및 이익금 계산식 완벽 표시)
+                    # 매출 툴팁 조립
                     outq_val_str = f'{r["outq_val"]:,.0f}' if pd.notnull(r["outq_val"]) else '0'
                     out_memo = f"<div style='text-align:right; color:#000000 !important;'>매출액(VAT별도) : {out_tot:,.0f} 원<br>+ 부가세(10%) : {out_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원<br>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원<br><hr style='margin:4px 0; border:0.5px solid #000000 !important;'><span style='color:#000000 !important; font-weight:bold;'>= 순이익(VAT포함) : {profit_tot_vat:,.0f} 원</span></div>"
                     outq_html = f'<div class="memo-tooltip-out">{outq_val_str}<span class="memo-text">{out_memo}</span></div>'
@@ -935,8 +935,8 @@ try:
                 footer_html = f'<tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr>'
                 footer_html += f'<tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr>'
 
-                # 💡 [투트랙 기술 1] 인쇄 시 잘림 방지를 위해 단일 표(Single Table) 구조로 원상복구!
-                # 억지로 파이썬에서 표를 자르면 텍스트 길이에 따라 페이지가 붕 뜨는 현상이 발생하므로, 브라우저 엔진에 페이지 넘김을 통째로 맡깁니다.
+                # 💡 인쇄 시 레이아웃 붕 뜸 방지를 위해 단일 표(Single Table) 구조로 원상복구!
+                # 억지로 파이썬에서 표를 자르면 텍스트 길이에 따라 페이지가 붕 뜨는 현상이 발생하므로, 브라우저 엔진에 페이지 넘김을 맡깁니다.
                 
                 # 표 제목을 표 안이 아닌 바깥으로 완전히 빼내서 첫 장에만 딱 한 번 출력되게 함
                 title_div = f'<div class="print-only-title" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border-bottom: 2px solid #555 !important; padding: 15px 0px 10px 0px !important; margin-bottom: 10px; font-weight: bold;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개</span></div>'
@@ -950,7 +950,7 @@ try:
                 table_html += footer_html
                 table_html += '</tbody></table></div>'
 
-                # 💡 [브라우저 기본글씨 제거 기술] @page margin을 0으로 만들고, 브라우저 자동 머리글 반복을 통해 레이아웃 유지
+                # 💡 [브라우저 기본글씨 제거 및 여백 1cm 확장 기술] @page margin을 0으로 만들고, body padding에 20mm를 주어 위아래 공간 확보!
                 print_html_content = f"""
                 <!DOCTYPE html>
                 <html><head><title>인쇄 미리보기</title>
@@ -958,8 +958,8 @@ try:
                 <style>
                     /* 브라우저 상하단 기본 글씨(주소, 날짜 등) 싹 지우기 */
                     @page {{ size: A4 portrait; margin: 0mm; }} 
-                    /* 종이 끝에 표가 안 닿게 좌우만 여백을 주고 상하 여백은 padding으로 처리 */
-                    body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; padding: 10mm 10mm; box-sizing: border-box; }}
+                    /* 종이 끝에 표가 안 닿게 좌우 여백을 10mm로 주고, 상하 여백은 20mm로 1cm 넓게 확보 (요청사항) */
+                    body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; padding: 20mm 10mm; box-sizing: border-box; }}
                     /* zoom 배율 축소(67%)로 1페이지당 여유있게 들어가게 함 */
                     .custom-table-container {{ width: 100%; zoom: 67%; }} 
                     .custom-table {{ width: 100%; border-collapse: collapse; font-size: 11.5px; background-color: white; }}
@@ -979,7 +979,7 @@ try:
                     a {{ color: black !important; text-decoration: none !important; pointer-events: none; }}
                     .print-hide-col {{ display: none !important; }}
                     
-                    /* 💡 브라우저가 다음 페이지 넘길 때 컬럼명(Vat, 날짜 등)만 예쁘게 반복 출력하게 허용 */
+                    /* 브라우저가 다음 페이지 넘길 때 컬럼명(Vat, 날짜 등)만 예쁘게 반복 출력하게 허용 */
                     thead {{ display: table-header-group !important; }}
                     
                     /* 표의 줄이 페이지 넘어갈 때 반으로 찢어지는 현상 방지 (원천 레이아웃 보호) */
