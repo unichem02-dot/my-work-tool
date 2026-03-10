@@ -10,6 +10,7 @@ import json
 import math
 import base64
 import urllib.parse
+import time
 
 # 💡 한국 표준시(KST) 기준 시간 반환 함수
 def get_kst_now():
@@ -89,7 +90,7 @@ st.markdown("""
         color: white !important;
     }
     
-    /* 💡 [취소] 버튼 청록색 분리 적용 (Form 내부 Secondary 버튼) */
+    /* [취소] 버튼 청록색 분리 적용 (Form 내부 Secondary 버튼) */
     div[data-testid="stForm"] button[kind="secondary"] {
         background-color: #009688 !important; /* 청록색 */
         border-color: #009688 !important;
@@ -160,7 +161,7 @@ st.markdown("""
     /* Form 테두리 및 여백 제거 (검색창 엔터 적용을 위한 래핑용) */
     div[data-testid="stForm"] { border: none !important; padding: 0 !important; margin-bottom: -15px !important; }
     
-    /* 💡 매입/매출 수량 및 품목/배송 툴팁 (메모장 팝업) 완전 불투명(Solid) 적용 CSS */
+    /* 매입/매출 수량 및 품목/배송 툴팁 (메모장 팝업) 완전 불투명(Solid) 적용 CSS */
     .memo-tooltip-in, .memo-tooltip-out, .memo-tooltip-base {
         position: relative;
         display: inline-block;
@@ -173,7 +174,7 @@ st.markdown("""
     .memo-tooltip-in .memo-text, .memo-tooltip-out .memo-text, .memo-tooltip-base .memo-text {
         visibility: hidden;
         width: max-content;
-        background-color: #fffbeb !important; /* 💡 투명도 완전히 없앰 (Solid Yellow) */
+        background-color: #fffbeb !important; /* 투명도 완전히 없앰 (Solid Yellow) */
         text-align: right;
         border-radius: 6px;
         padding: 8px 12px;
@@ -188,10 +189,9 @@ st.markdown("""
         opacity: 0;
         transition: opacity 0.2s;
         line-height: 1.5;
-        /* 💡 툴팁 컨테이너 자체도 올블랙 고정 */
         color: #000000 !important; 
     }
-    /* 💡 메모장 내부의 모든 텍스트를 완벽한 블랙으로 강제 (초강력 적용) */
+    /* 메모장 내부의 모든 텍스트를 완벽한 블랙으로 강제 (초강력 적용) */
     .memo-tooltip-in .memo-text, .memo-tooltip-in .memo-text *, 
     .memo-tooltip-out .memo-text, .memo-tooltip-out .memo-text *, 
     .memo-tooltip-base .memo-text, .memo-tooltip-base .memo-text * {
@@ -246,7 +246,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 💡 [검색 조건 URL 동기화 기술] 상태를 암호화하여 URL로 넘기고 받는 함수
+# 검색 조건 URL 동기화 기술
 def encode_sp(sp):
     try:
         sp_copy = sp.copy()
@@ -283,29 +283,39 @@ if "show_uploader" not in st.session_state: st.session_state.show_uploader = Fal
 # SQL 버튼 상태 관리
 if "sql_ready" not in st.session_state: st.session_state.sql_ready = False
 if "sql_content" not in st.session_state: st.session_state.sql_content = ""
+# 텍스트 메모 창 상태 관리
+if "memo_edit_id" not in st.session_state: st.session_state.memo_edit_id = None
+if "memo_type" not in st.session_state: st.session_state.memo_type = None
 
-# 💡 URL 파라미터 감지 및 자동 로그인 (검색 결과 복구 포함!)
-if "edit_id" in st.query_params or "copy_id" in st.query_params:
+# URL 파라미터 감지 및 자동 로그인 (검색 결과 복구 포함!)
+if "edit_id" in st.query_params or "copy_id" in st.query_params or "memo_edit_id" in st.query_params:
     token = str(st.secrets.get("tom_password", ""))
     if st.query_params.get("token") == token:
         st.session_state.authenticated = True
         st.session_state.last_activity = get_kst_now()
         
-        # 💡 [핵심] URL에 숨겨둔 검색 조건(sp)을 복호화하여 세션에 완벽 복구
+        # URL에 숨겨둔 검색 조건(sp)을 복호화하여 세션에 완벽 복구
         sp_encoded = st.query_params.get("sp", "")
         if sp_encoded:
             restored_sp = decode_sp(sp_encoded)
             if restored_sp:
                 st.session_state.search_params = restored_sp
                 
+        # 💡 [핵심 기술 1] 429 방어를 위한 연도(year) 단일 추출 매핑
+        if "year" in st.query_params:
+            st.session_state.target_year_from_url = int(st.query_params["year"])
+                
         if "edit_id" in st.query_params: st.session_state.edit_id = st.query_params["edit_id"]
         if "copy_id" in st.query_params:
             st.session_state.copy_id = st.query_params["copy_id"]
             st.session_state.search_params = {"mode": "신규입력"}
+        if "memo_edit_id" in st.query_params:
+            st.session_state.memo_edit_id = st.query_params["memo_edit_id"]
+            st.session_state.memo_type = st.query_params.get("memo_type", "in")
     st.query_params.clear()
     st.rerun()
 
-# 💡 [처음 접속 시 '어제오늘내일' 데이터 자동 출력]
+# 처음 접속 시 '어제오늘내일' 데이터 자동 출력
 if "search_params" not in st.session_state or st.session_state.search_params.get("mode") == "init":
     d_day = get_kst_now().date()
     st.session_state.search_params = {
@@ -388,7 +398,17 @@ def load_data_for_years(target_years):
     for y in target_years:
         try:
             ws = spreadsheet.worksheet(f"{y}년")
-            raw = ws.get_all_values()
+            # 💡 [핵심 기술 3] 429 에러 방어: gspread API 읽기 시 백오프 재시도 적용
+            raw = []
+            for attempt in range(3):
+                try:
+                    raw = ws.get_all_values()
+                    break
+                except Exception as e:
+                    if "429" in str(e) and attempt < 2:
+                        time.sleep(1.5)
+                    else:
+                        raise e
             if len(raw) > 1:
                 header = [n.strip() if n.strip() else f"col_{i}" for i, n in enumerate(raw[0])]
                 df_y = pd.DataFrame(raw[1:], columns=header)
@@ -437,7 +457,7 @@ def generate_sql_for_backup(df_data):
             for c in ['id', 'date', 'incom', 'initem', 'inq', 'inprice', 'outcom', 'outitem', 'outq', 'outprice', 'memo', 's', 'carno', 'carprice', 'memoin', 'memoout', 'memocar']:
                 v = str(r.get(c, ''))
                 if pd.isna(r.get(c)) or v.lower() == 'nan': v = ""
-                v = v.replace("'", "''") # SQL용 따옴표 이스케이프 처리
+                v = v.replace("'", "''") 
                 val_str.append(f"'{v}'")
             vals = ", ".join(val_str)
             lines.append(f"INSERT IGNORE INTO `jeilinout` (`id`, `date`, `incom`, `initem`, `inq`, `inprice`, `outcom`, `outitem`, `outq`, `outprice`, `memo`, `s`, `carno`, `carprice`, `memoin`, `memoout`, `memocar`) VALUES ({vals});")
@@ -471,7 +491,6 @@ with col_sql:
                 except Exception as e:
                     st.error("생성 실패")
     else:
-        # 생성 완료 상태일 때 버튼을 'Secondary' 타입으로 출력하여 CSS에서 지정해둔 빨간색이 완벽하게 씌워지도록 함!
         st.download_button("💾 생성완료! 다운로드", data=st.session_state.sql_content.encode('utf-8-sig'), file_name=f"db_backup_{get_kst_now().strftime('%Y%m%d')}.sql", mime="application/sql", use_container_width=True, type="secondary")
 
 with col_r:
@@ -594,6 +613,7 @@ try:
     years = available_years
     months = list(range(1, 13))
     
+    # params 변수 정의를 명확하게 추가
     params = st.session_state.search_params
     
     # 검색 조건 동기화 바인딩 (메모 클릭 후 돌아와도 폼 값이 그대로 유지)
@@ -617,8 +637,12 @@ try:
     
     target_years = []
     
-    if st.session_state.edit_id or st.session_state.copy_id:
-        target_years = available_years 
+    # 💡 [핵심 기술 2] 수정/메모 시에는 전체 연도를 불러오지 않고, URL에서 가져온 단 1개의 연도만 로딩하여 429 에러 완벽 차단!
+    if st.session_state.edit_id or st.session_state.copy_id or st.session_state.memo_edit_id:
+        if hasattr(st.session_state, 'target_year_from_url') and st.session_state.target_year_from_url:
+            target_years = [st.session_state.target_year_from_url]
+        else:
+            target_years = available_years 
     elif params["mode"] == "기간":
         start_y = params["start"].year
         end_y = params["end"].year
@@ -648,7 +672,7 @@ try:
         df = pd.DataFrame(columns=['id', 'date', 'year', 'month', 'incom', 'initem', 'inq_val', 'inprice_val', 'outcom', 'outitem', 'outq_val', 'outprice_val', 'carno', 'carprice_val', 'in_total', 'out_total', 's', 'memoin', 'memoout', 'memocar'])
 
     # ---------------------------------------------------------
-    # [모드 분기 1] 기존 등록 자료 수정 / 삭제 💡 (텍스트 메모 입력란 완벽 통합!)
+    # [모드 분기 1] 기존 등록 자료 수정 / 삭제 (메모 통합)
     # ---------------------------------------------------------
     if st.session_state.edit_id:
         st.markdown("<h3 style='text-align:center; color:#ffeb3b; font-weight:bold;'>📝 등록 자료 및 메모 수정 / 삭제</h3>", unsafe_allow_html=True)
@@ -681,7 +705,6 @@ try:
                 e_outprice = c11.text_input("outprice", safe_str(t.get('outprice')), label_visibility="collapsed")
                 e_carprice = c12.text_input("carprice", safe_str(t.get('carprice')), label_visibility="collapsed")
                 
-                # 💡 [핵심 기술 1] 기존 폼 하단에 메모 입력 텍스트 에어리어(TextArea) 3개를 깔끔하게 추가!
                 st.markdown("<hr style='margin: 15px 0 10px 0; border: 0.5px dashed #555;'>", unsafe_allow_html=True)
                 m1, m2, m3 = st.columns(3)
                 m1.markdown('<div class="nh-box nh-in" style="font-size:13px;">📝 매입품목 메모</div>', unsafe_allow_html=True)
@@ -700,17 +723,22 @@ try:
                     client = init_connection()
                     try:
                         sheet = client.open('SQL백업260211-jeilinout').worksheet(f"{orig_year}년")
-                        headers = sheet.row_values(1)
-                        for req_col in ['memoin', 'memoout', 'memocar']:
-                            if req_col not in headers:
-                                headers.append(req_col)
-                        sheet.update(f"A1:{gspread.utils.rowcol_to_a1(1, len(headers))}", [headers])
-                        
                         cell = sheet.find(str(st.session_state.edit_id), in_column=1)
                         if cell:
+                            # 💡 [핵심 기술 3] 헤더(Row 1)를 읽는 API 낭비를 없애고 A~Q열(17칸)을 바로 덮어써서 429 방어!
                             new_row = [st.session_state.edit_id, e_date.strftime('%Y-%m-%d'), e_incom, e_initem, e_inq, e_inprice, e_outcom, e_outitem, e_outq, e_outprice, "", e_s, e_carno, e_carprice, e_memoin, e_memoout, e_memocar]
                             end_col_alpha = gspread.utils.rowcol_to_a1(cell.row, len(new_row))
-                            sheet.update(f"A{cell.row}:{end_col_alpha}", [new_row])
+                            
+                            # API 에러(429) 대비 Retry 구조
+                            for attempt in range(3):
+                                try:
+                                    sheet.update(f"A{cell.row}:{end_col_alpha}", [new_row])
+                                    break
+                                except Exception as e:
+                                    if "429" in str(e) and attempt < 2:
+                                        time.sleep(1.5)
+                                    else:
+                                        raise e
                         st.cache_data.clear(); st.session_state.edit_id = None; st.rerun()
                     except Exception as e:
                         st.error(f"수정 오류: {e}")
@@ -720,12 +748,20 @@ try:
                     try:
                         sheet = client.open('SQL백업260211-jeilinout').worksheet(f"{orig_year}년")
                         cell = sheet.find(str(st.session_state.edit_id), in_column=1)
-                        if cell: sheet.delete_rows(cell.row)
+                        if cell: 
+                            for attempt in range(3):
+                                try:
+                                    sheet.delete_rows(cell.row)
+                                    break
+                                except Exception as e:
+                                    if "429" in str(e) and attempt < 2:
+                                        time.sleep(1.5)
+                                    else:
+                                        raise e
                         st.cache_data.clear(); st.session_state.edit_id = None; st.rerun()
                     except Exception as e:
                         st.error(f"삭제 오류: {e}")
                         
-                # 💡 취소 버튼은 CSS에서 '청록색'으로 타겟팅되도록 'secondary' 타입으로 분리
                 if bc4.form_submit_button("취소", use_container_width=True, type="secondary"):
                     st.session_state.edit_id = None; st.rerun()
 
@@ -789,16 +825,21 @@ try:
                     sheet = spreadsheet.add_worksheet(title=target_year_str, rows="1000", cols="15")
                     sheet.append_row(['id', 'date', 'incom', 'initem', 'inq', 'inprice', 'outcom', 'outitem', 'outq', 'outprice', 'memo', 's', 'carno', 'carprice', 'memoin', 'memoout', 'memocar'])
                 
-                headers = sheet.row_values(1)
-                for req_col in ['memoin', 'memoout', 'memocar']:
-                    if req_col not in headers:
-                        headers.append(req_col)
-                sheet.update(f"A1:{gspread.utils.rowcol_to_a1(1, len(headers))}", [headers])
+                new_full_row = [next_id, n_date.strftime('%Y-%m-%d'), n_incom, n_initem, n_inq, n_inprice, n_outcom, n_outitem, n_outq, n_outprice, "", n_s, n_carno, n_carprice, n_memoin, n_memoout, n_memocar]
                 
-                sheet.append_row([next_id, n_date.strftime('%Y-%m-%d'), n_incom, n_initem, n_inq, n_inprice, n_outcom, n_outitem, n_outq, n_outprice, "", n_s, n_carno, n_carprice, n_memoin, n_memoout, n_memocar])
+                # Retry for append_row
+                for attempt in range(3):
+                    try:
+                        sheet.append_row(new_full_row)
+                        break
+                    except Exception as e:
+                        if "429" in str(e) and attempt < 2:
+                            time.sleep(1.5)
+                        else:
+                            raise e
+                            
                 st.cache_data.clear(); st.session_state.copy_id = None; st.session_state.search_params = {"mode":"최근","title":"최근입력순서","limit":"20개"}; st.rerun()
                 
-            # 💡 취소 버튼은 CSS에서 '청록색'으로 타겟팅되도록 'secondary' 타입으로 분리
             if bc3.form_submit_button("취소", use_container_width=True, type="secondary"):
                 st.session_state.copy_id = None; st.session_state.search_params = {"mode":"init"}; st.rerun()
 
@@ -1102,16 +1143,17 @@ try:
             # 💡 그 외 검색 버튼 클릭 시 (테이블 렌더링)
             else:
                 pwd_token = str(st.secrets["tom_password"])
-                # 현재 검색 조건을 인코딩하여 URL에 붙여놓음으로써, 수정 클릭 시 검색 상태 보존!
                 current_sp_encoded = encode_sp(st.session_state.search_params)
                 
                 row_html_list = []
                 for _, r in f_df.iterrows():
                     rid, dt = safe_str(r['id']), r[date_col].strftime('%Y-%m-%d')
                     s_cls = "txt-green" if "제일" in str(r['s']) else "txt-purple"
+                    row_year = int(r['year'])
                     
-                    v_link = f'<a href="?copy_id={rid}&token={pwd_token}&sp={current_sp_encoded}" target="_self" style="text-decoration:none;"><span class="{s_cls}">{r["s"]}</span></a>'
-                    edit_link_target = f"?edit_id={rid}&token={pwd_token}&sp={current_sp_encoded}"
+                    # 모든 수정 링크에 year 정보와 sp(검색조건) 정보를 붙여 URL로 넘깁니다.
+                    v_link = f'<a href="?copy_id={rid}&year={row_year}&token={pwd_token}&sp={current_sp_encoded}" target="_self" style="text-decoration:none;"><span class="{s_cls}">{r["s"]}</span></a>'
+                    edit_link_target = f"?edit_id={rid}&year={row_year}&token={pwd_token}&sp={current_sp_encoded}"
                     d_link = f'<a href="{edit_link_target}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
                     
                     in_tot = r["in_total"] if pd.notnull(r["in_total"]) else 0
@@ -1128,7 +1170,6 @@ try:
                     initem_val = safe_str(r.get("initem", ""))
                     in_disp = initem_val if initem_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                     
-                    # 💡 [초강력 올블랙 CSS] span 태그 자체에 color 속성 삽입
                     if memoin_val:
                         initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;"><a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{in_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important;">{memoin_val}</span></span></div>'
                     else:
@@ -1150,7 +1191,6 @@ try:
                     else:
                         carno_html = f'<a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{car_disp}</a>'
                     
-                    # 💡 수량 메모창도 완벽한 블랙 강제!
                     inq_val_str = f'{r["inq_val"]:,.0f}' if pd.notnull(r["inq_val"]) else '0'
                     in_memo = f"<div style='text-align:right;'><span style='color:#000000 !important;'>공급가액(VAT별도) : {in_tot:,.0f} 원</span><br><span style='color:#000000 !important;'>+ 부가세(10%) : {in_vat_only:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'><span style='color:#000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</span></div>"
                     inq_html = f'<div class="memo-tooltip-in">{inq_val_str}<span class="memo-text">{in_memo}</span></div>'
