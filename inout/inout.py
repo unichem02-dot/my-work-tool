@@ -1142,6 +1142,7 @@ try:
                     edit_link_target = f"?edit_id={rid}&year={row_year}&token={pwd_token}&sp={current_sp_encoded}"
                     d_link = f'<a href="{edit_link_target}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
                     
+                    # 💡 [검토 및 수정] 수익 계산 로직 정교화 (운송비 포함)
                     in_tot = r["in_total"] if pd.notnull(r["in_total"]) else 0
                     in_tot_vat = in_tot * 1.1       
                     in_vat_only = in_tot * 0.1      
@@ -1150,7 +1151,10 @@ try:
                     out_tot_vat = out_tot * 1.1     
                     out_vat_only = out_tot * 0.1    
                     
-                    profit_tot_vat = out_tot_vat - in_tot_vat 
+                    car_val = r["carprice_val"] if pd.notnull(r["carprice_val"]) else 0
+                    
+                    # 운송비까지 뺀 진짜 최종 순이익!
+                    profit_final = out_tot_vat - in_tot_vat - car_val
                     
                     memoin_val = safe_str(r.get("memoin", ""))
                     initem_val = safe_str(r.get("initem", ""))
@@ -1178,11 +1182,23 @@ try:
                         carno_html = f'<a href="{edit_link_target}" target="_self" style="text-decoration:none;"><span class="disp-car">{car_disp}</span></a>'
                     
                     inq_val_str = f'{r["inq_val"]:,.0f}' if pd.notnull(r["inq_val"]) else '0'
-                    in_memo = f"<div style='text-align:right;'><span style='color:#000000 !important;'>공급가액(VAT별도) : {in_tot:,.0f} 원</span><br><span style='color:#000000 !important;'>+ 부가세(10%) : {in_vat_only:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'><span style='color:#000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</span></div>"
+                    in_memo = f"<div style='text-align:right;'><span style='color:#000000 !important;'>공급가액(VAT별도) : {in_tot:,.0f} 원</span><br><span style='color:#000000 !important;'>+ 부가세(10%) : {in_vat_only:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'><span style='color:#000000 !important; font-weight:bold;'>매입 합계(VAT포함) : {in_tot_vat:,.0f} 원</span></div>"
                     inq_html = f'<div class="memo-tooltip-in">{inq_val_str}<span class="memo-text">{in_memo}</span></div>'
                     
                     outq_val_str = f'{r["outq_val"]:,.0f}' if pd.notnull(r["outq_val"]) else '0'
-                    out_memo = f"<div style='text-align:right;'><span style='color:#000000 !important;'>매출액(VAT별도) : {out_tot:,.0f} 원</span><br><span style='color:#000000 !important;'>+ 부가세(10%) : {out_vat_only:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'><span style='color:#000000 !important;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원</span><br><span style='color:#000000 !important;'>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px solid #000000 !important;'><span style='color:#000000 !important; font-weight:bold;'>= 순이익(VAT포함) : {profit_tot_vat:,.0f} 원</span></div>"
+                    
+                    # 💡 [핵심 기술] 매출 툴팁을 '결산 영수증' 형태로 전면 개편! 매입, 매출, 운송비 내역까지 한방에 표기
+                    out_memo = f"""<div style='text-align:right;'>
+                    <span style='color:#000000 !important;'>[매출] 공급가: {out_tot:,.0f} + VAT: {out_vat_only:,.0f}</span><br>
+                    <span style='color:#000000 !important; font-weight:bold;'>▶ 매출 합계(A) : {out_tot_vat:,.0f} 원</span><br>
+                    <hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>
+                    <span style='color:#000000 !important;'>[매입] 공급가: {in_tot:,.0f} + VAT: {in_vat_only:,.0f}</span><br>
+                    <span style='color:#000000 !important; font-weight:bold;'>▶ 매입 합계(B) : {in_tot_vat:,.0f} 원</span><br>
+                    <hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>
+                    <span style='color:#000000 !important; font-weight:bold;'>▶ 운송비(C) : {car_val:,.0f} 원</span><br>
+                    <hr style='margin:4px 0; border:0.5px solid #000000 !important;'>
+                    <span style='color:#000000 !important; font-weight:bold; font-size: 14px;'>= 순이익(A-B-C) : {profit_final:,.0f} 원</span>
+                    </div>"""
                     outq_html = f'<div class="memo-tooltip-out">{outq_val_str}<span class="memo-text">{out_memo}</span></div>'
                     
                     row_html = f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl txt-in-bold">{r["incom"]}</td><td class="tl txt-in">{initem_html}</td><td class="tr txt-in">{inq_html}</td><td class="tr txt-in">{r["inprice_val"]:,.0f}</td><td class="tl txt-out-bold">{r["outcom"]}</td><td class="tl txt-out">{outitem_html}</td><td class="tr txt-out">{outq_html}</td><td class="tr txt-out">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray print-hide-col">{rid}</td><td class="tc txt-gray">{carno_html}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
