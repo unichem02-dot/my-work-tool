@@ -191,7 +191,7 @@ st.markdown("""
         line-height: 1.5;
         color: #000000 !important; 
     }
-    /* 💡 메모장 내부의 모든 텍스트를 완벽한 블랙으로 강제 (초강력 적용) */
+    /* 메모장 내부의 모든 텍스트를 완벽한 블랙으로 강제 (초강력 적용) */
     .memo-tooltip-in .memo-text, .memo-tooltip-in .memo-text *, 
     .memo-tooltip-out .memo-text, .memo-tooltip-out .memo-text *, 
     .memo-tooltip-base .memo-text, .memo-tooltip-base .memo-text * {
@@ -247,7 +247,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 💡 [검색 조건 URL 동기화 기술] 검색 상태가 초기화되지 않도록 Base64 암호화/복호화 (패딩 오류 완벽 해결)
+# 검색 조건 URL 동기화 기술 (검색 상태가 초기화되지 않도록 Base64 암호화/복호화)
 def encode_sp(sp):
     try:
         sp_copy = sp.copy()
@@ -263,7 +263,7 @@ def decode_sp(s):
     try:
         if not s: return None
         s = urllib.parse.unquote(s)
-        # 💡 브라우저가 누락시킨 base64 패딩(=)을 강제로 채워넣어 복호화 에러(400) 완벽 차단!
+        # 브라우저가 누락시킨 base64 패딩(=)을 강제로 채워넣어 복호화 에러(400) 완벽 차단!
         s += "=" * ((4 - len(s) % 4) % 4)
         j = base64.urlsafe_b64decode(s.encode('utf-8')).decode('utf-8')
         sp = json.loads(j)
@@ -297,7 +297,7 @@ if "edit_id" in st.query_params or "copy_id" in st.query_params or "memo_edit_id
         st.session_state.authenticated = True
         st.session_state.last_activity = get_kst_now()
         
-        # 💡 URL에 숨겨둔 검색 조건(sp)을 복호화하여 세션에 완벽 복구 (화면 날아감 방지)
+        # URL에 숨겨둔 검색 조건(sp)을 복호화하여 세션에 완벽 복구 (화면 날아감 방지)
         sp_encoded = st.query_params.get("sp", "")
         if sp_encoded:
             restored_sp = decode_sp(sp_encoded)
@@ -318,20 +318,9 @@ if "edit_id" in st.query_params or "copy_id" in st.query_params or "memo_edit_id
     st.query_params.clear()
     st.rerun()
 
-# 💡 [처음 접속 시 '어제오늘내일' 데이터 자동 출력] (복원된 상태가 없을 때만 실행)
-if "search_params" not in st.session_state or st.session_state.search_params.get("mode") == "init":
-    d_day = get_kst_now().date()
-    st.session_state.search_params = {
-        "mode": "기간",
-        "title": f"어제·오늘·내일 검색 ({d_day} 기준)",
-        "type": "ALL",
-        "company": "",
-        "item": "",
-        "limit": "ALL",
-        "start": d_day - timedelta(days=1),
-        "end": d_day + timedelta(days=1),
-        "s_filter": "ALL"
-    }
+# 💡 '어제오늘내일' 강제 적용 로직 삭제 (처음 접속 시 빈 화면 유지 및 초기화 방지)
+if "search_params" not in st.session_state:
+    st.session_state.search_params = {"mode": "init"}
 
 now_kst = get_kst_now()
 
@@ -494,6 +483,7 @@ with col_sql:
                 except Exception as e:
                     st.error("생성 실패")
     else:
+        # 생성 완료 상태일 때 버튼을 'Secondary' 타입으로 출력하여 CSS에서 지정해둔 빨간색이 완벽하게 씌워지도록 함!
         st.download_button("💾 생성완료! 다운로드", data=st.session_state.sql_content.encode('utf-8-sig'), file_name=f"db_backup_{get_kst_now().strftime('%Y%m%d')}.sql", mime="application/sql", use_container_width=True, type="secondary")
 
 with col_r:
@@ -619,7 +609,7 @@ try:
     # params 변수 정의
     params = st.session_state.search_params
     
-    # 검색 조건 동기화 바인딩 (메모 클릭 후 돌아와도 폼 값이 그대로 유지)
+    # 검색 조건 동기화 바인딩
     sp = params
     p_type = sp.get("type", "ALL")
     t_idx = ["ALL", "매입", "매출"].index(p_type) if p_type in ["ALL", "매입", "매출"] else 0
@@ -640,7 +630,6 @@ try:
     
     target_years = []
     
-    # 수정/메모 시에는 전체 연도를 불러오지 않고, URL에서 가져온 단 1개의 연도만 로딩하여 429 에러 완벽 차단!
     if st.session_state.edit_id or st.session_state.copy_id or st.session_state.memo_edit_id:
         if hasattr(st.session_state, 'target_year_from_url') and st.session_state.target_year_from_url:
             target_years = [st.session_state.target_year_from_url]
@@ -675,7 +664,7 @@ try:
         df = pd.DataFrame(columns=['id', 'date', 'year', 'month', 'incom', 'initem', 'inq_val', 'inprice_val', 'outcom', 'outitem', 'outq_val', 'outprice_val', 'carno', 'carprice_val', 'in_total', 'out_total', 's', 'memoin', 'memoout', 'memocar'])
 
     # ---------------------------------------------------------
-    # [모드 분기 1] 💡 메모장 수정 및 입력 팝업 창 (올블랙 고정 & 디자인 완벽 개선)
+    # [모드 분기 1] 메모장 수정 및 입력 팝업 창 (올블랙 고정 & 디자인 완벽 개선)
     # ---------------------------------------------------------
     if st.session_state.memo_edit_id:
         target_memo = df[df['id'].astype(str) == str(st.session_state.memo_edit_id)]
@@ -690,20 +679,16 @@ try:
             btn_str = "💾 수정" if is_update else "💾 신규입력"
 
             def render_memo_form():
-                # 팝업 전용 예쁜 포스트잇 스타일 & 모든 글씨 올블랙(Black) 완벽 강제 CSS!
                 st.markdown("""
                 <style>
-                /* 다이얼로그 모달 전체 배경 및 테두리 (포스트잇 느낌) */
                 div[role="dialog"], div[data-testid="stModal"] {
                     background-color: #FFFDE7 !important;
                     border: 3px solid #FFC107 !important;
                     border-radius: 12px !important;
                 }
-                /* 💡 팝업 내부의 모든 요소를 완벽한 검은색으로 덮어쓰기! (제목, 텍스트, 버튼 모두) */
                 div[role="dialog"] *, div[data-testid="stModal"] * {
                     color: #000000 !important;
                 }
-                /* 텍스트 입력창 디자인 */
                 div[role="dialog"] div[data-testid="stTextArea"] textarea {
                     background-color: #FFFFFF !important;
                     border: 2px solid #FFB300 !important;
@@ -713,7 +698,6 @@ try:
                     font-weight: bold !important;
                     box-shadow: inset 0 2px 4px rgba(0,0,0,0.05) !important;
                 }
-                /* 저장/신규입력 버튼 (파란색 유지 + 검은 글씨) */
                 div[role="dialog"] button[kind="primary"] {
                     background-color: #3b82f6 !important;
                     border-color: #3b82f6 !important;
@@ -724,7 +708,6 @@ try:
                     background-color: #2563eb !important;
                     color: #ffffff !important;
                 }
-                /* 취소 버튼 (청록색 완벽 적용 + 검은 글씨) */
                 div[role="dialog"] button[kind="secondary"] {
                     background-color: #009688 !important;
                     border-color: #009688 !important;
@@ -736,7 +719,6 @@ try:
                     border-color: #00796B !important;
                     color: #ffffff !important;
                 }
-                /* 닫기 아이콘 X 표시 검은색 */
                 div[role="dialog"] svg {
                     fill: #000000 !important;
                 }
@@ -746,7 +728,6 @@ try:
                 st.markdown(f"<h4 style='text-align:center; margin-top:0; font-weight:bold;'>📝 {type_kr} 텍스트 메모</h4>", unsafe_allow_html=True)
                 new_memo = st.text_area("내용", orig_memo, height=150, label_visibility="collapsed")
                 
-                # 버튼이 잘리지 않도록 레이아웃 비율 수정 (버튼 공간 넓게 확보)
                 c1, c2, c3 = st.columns([1, 4.5, 4.5])
                 with c2:
                     if st.button(btn_str, use_container_width=True, type="primary", key="save_memo"):
@@ -771,7 +752,6 @@ try:
                         st.session_state.memo_edit_id = None
                         st.rerun()
 
-            # Streamlit 네이티브 dialog 팝업 활용
             if hasattr(st, 'dialog'):
                 @st.dialog(f"메모 관리 (ID: {st.session_state.memo_edit_id})")
                 def memo_popup():
@@ -820,9 +800,7 @@ try:
                         sheet = client.open('SQL백업260211-jeilinout').worksheet(f"{orig_year}년")
                         cell = sheet.find(str(st.session_state.edit_id), in_column=1)
                         if cell:
-                            # 편집 시 다른 열(메모 등)이 지워지지 않도록 A~N 열까지만 안전하게 덮어쓰기
                             new_row = [st.session_state.edit_id, e_date.strftime('%Y-%m-%d'), e_incom, e_initem, e_inq, e_inprice, e_outcom, e_outitem, e_outq, e_outprice, "", e_s, e_carno, e_carprice]
-                            
                             for attempt in range(3):
                                 try:
                                     sheet.update(f"A{cell.row}:N{cell.row}", [new_row])
@@ -908,8 +886,6 @@ try:
                     sheet.append_row(['id', 'date', 'incom', 'initem', 'inq', 'inprice', 'outcom', 'outitem', 'outq', 'outprice', 'memo', 's', 'carno', 'carprice'])
                 
                 new_full_row = [next_id, n_date.strftime('%Y-%m-%d'), n_incom, n_initem, n_inq, n_inprice, n_outcom, n_outitem, n_outq, n_outprice, "", n_s, n_carno, n_carprice]
-                
-                # Retry for append_row
                 for attempt in range(3):
                     try:
                         sheet.append_row(new_full_row)
@@ -1248,7 +1224,6 @@ try:
                     
                     profit_tot_vat = out_tot_vat - in_tot_vat 
                     
-                    # 💡 매입/매출/배송 항목에 대해 팝업창(memo_edit_id)이 열리도록 링크 주소 완전 수정!
                     in_link = f"?memo_edit_id={rid}&memo_type=in&year={row_year}&token={pwd_token}&sp={current_sp_encoded}"
                     out_link = f"?memo_edit_id={rid}&memo_type=out&year={row_year}&token={pwd_token}&sp={current_sp_encoded}"
                     car_link = f"?memo_edit_id={rid}&memo_type=car&year={row_year}&token={pwd_token}&sp={current_sp_encoded}"
@@ -1257,7 +1232,7 @@ try:
                     initem_val = safe_str(r.get("initem", ""))
                     in_disp = initem_val if initem_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                     
-                    # 💡 [초강력 올블랙 CSS] span 태그 자체에 color 속성 삽입
+                    # 💡 [초강력 올블랙 CSS 적용] HTML 내부의 텍스트에 직접 인라인 스타일 주입하여 다크모드 무력화!
                     if memoin_val:
                         initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;"><a href="{in_link}" target="_self" style="color:inherit; text-decoration:none;">{in_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important;">{memoin_val}</span></span></div>'
                     else:
@@ -1279,7 +1254,7 @@ try:
                     else:
                         carno_html = f'<a href="{car_link}" target="_self" style="color:inherit; text-decoration:none;">{car_disp}</a>'
                     
-                    # 💡 수량 메모창도 완벽한 블랙 강제!
+                    # 💡 수량 메모창 완벽한 블랙 강제!
                     inq_val_str = f'{r["inq_val"]:,.0f}' if pd.notnull(r["inq_val"]) else '0'
                     in_memo = f"<div style='text-align:right;'><span style='color:#000000 !important;'>공급가액(VAT별도) : {in_tot:,.0f} 원</span><br><span style='color:#000000 !important;'>+ 부가세(10%) : {in_vat_only:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'><span style='color:#000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</span></div>"
                     inq_html = f'<div class="memo-tooltip-in">{inq_val_str}<span class="memo-text">{in_memo}</span></div>'
