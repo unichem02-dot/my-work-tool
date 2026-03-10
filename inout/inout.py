@@ -409,6 +409,40 @@ def safe_str(val):
     if isinstance(val, float) and val.is_integer(): return str(int(val))
     return str(val)
 
+# 💡 [핵심 기술 1] SQL 생성을 위한 유틸리티 함수 복구
+def generate_sql_for_backup(df_data):
+    lines = ["CREATE TABLE IF NOT EXISTS `jeilinout` (",
+             "  `id` bigint(20) NOT NULL,",
+             "  `date` varchar(50) DEFAULT NULL,",
+             "  `incom` varchar(255) DEFAULT NULL,",
+             "  `initem` varchar(255) DEFAULT NULL,",
+             "  `inq` varchar(50) DEFAULT '0',",
+             "  `inprice` varchar(50) DEFAULT '0',",
+             "  `outcom` varchar(255) DEFAULT NULL,",
+             "  `outitem` varchar(255) DEFAULT NULL,",
+             "  `outq` varchar(50) DEFAULT '0',",
+             "  `outprice` varchar(50) DEFAULT '0',",
+             "  `memo` text,",
+             "  `s` varchar(50) DEFAULT NULL,",
+             "  `carno` varchar(100) DEFAULT NULL,",
+             "  `carprice` varchar(50) DEFAULT '0',",
+             "  `memoin` text,",
+             "  `memoout` text,",
+             "  `memocar` text,",
+             "  PRIMARY KEY (`id`)",
+             ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;", ""]
+    if not df_data.empty:
+        for _, r in df_data.iterrows():
+            val_str = []
+            for c in ['id', 'date', 'incom', 'initem', 'inq', 'inprice', 'outcom', 'outitem', 'outq', 'outprice', 'memo', 's', 'carno', 'carprice', 'memoin', 'memoout', 'memocar']:
+                v = str(r.get(c, ''))
+                if pd.isna(r.get(c)) or v.lower() == 'nan': v = ""
+                v = v.replace("'", "''") 
+                val_str.append(f"'{v}'")
+            vals = ", ".join(val_str)
+            lines.append(f"INSERT IGNORE INTO `jeilinout` (`id`, `date`, `incom`, `initem`, `inq`, `inprice`, `outcom`, `outitem`, `outq`, `outprice`, `memo`, `s`, `carno`, `carprice`, `memoin`, `memoout`, `memocar`) VALUES ({vals});")
+    return "\n".join(lines)
+
 # --- [4. 상단 상태바] ---
 try: 
     client = init_connection()
@@ -428,7 +462,19 @@ with col_u:
         st.rerun()
 
 with col_sql: 
-    st.button("💾 SQL다운", use_container_width=True, type="primary", disabled=True)
+    # 💡 [핵심 기술 2] SQL 다운로드 버튼 로직 완벽 복구
+    if not st.session_state.sql_ready:
+        if st.button("💾 SQL다운", use_container_width=True, type="primary"):
+            with st.spinner("⏳ SQL 데이터를 생성 중입니다..."):
+                try:
+                    all_data_for_sql = load_data_for_years(available_years)
+                    st.session_state.sql_content = generate_sql_for_backup(all_data_for_sql)
+                    st.session_state.sql_ready = True
+                    st.rerun()
+                except Exception as e:
+                    st.error("생성 실패")
+    else:
+        st.download_button("💾 생성완료! 다운로드", data=st.session_state.sql_content.encode('utf-8-sig'), file_name=f"db_backup_{get_kst_now().strftime('%Y%m%d')}.sql", mime="application/sql", use_container_width=True, type="secondary")
 
 with col_r: 
     if st.button("🔄 데이터 갱신", use_container_width=True, type="primary"):
@@ -439,6 +485,110 @@ with col_l:
         st.session_state.authenticated = False; st.rerun()
 
 st.markdown("<hr style='margin: 10px 0px 20px 0px; border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
+
+# 💡 [핵심 기술 3] DB 파일 업로드 UI 완벽 복구
+if st.session_state.show_uploader:
+    st.markdown("<div class='search-panel-container'>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #4e8cff; margin-bottom: 10px;'>📂 과거 통합 데이터 연도별 분할 업로드</h4>", unsafe_allow_html=True)
+    st.info("💡 과거의 모든 데이터가 들어있는 엑셀(또는 CSV) 파일을 올리시면, 연도별로 탭(시트)을 자동으로 쪼개서 구글 시트에 저장합니다.")
+    
+    uploaded_file = st.file_uploader("여기에 엑셀/CSV 파일을 끌어다 놓거나 클릭하여 업로드하세요.", type=["xlsx", "xls", "csv"])
+    
+    if uploaded_file is not None:
+        try:
+            if uploaded_file.name.endswith('.csv'):
+                try:
+                    upload_df = pd.read_csv(uploaded_file, encoding='utf-8')
+                except UnicodeDecodeError:
+                    uploaded_file.seek(0)
+                    upload_df = pd.read_csv(uploaded_file, encoding='cp949')
+            else:
+                try:
+                    upload_df = pd.read_excel(uploaded_file, engine='openpyxl')
+                except Exception:
+                    try:
+                        uploaded_file.seek(0)
+                        upload_df = pd.read_excel(uploaded_file, engine='xlrd')
+                    except Exception:
+                        uploaded_file.seek(0)
+                        raw_bytes = uploaded_file.getvalue()
+                        try:
+                            html_content = raw_bytes.decode('utf-8')
+                        except UnicodeDecodeError:
+                            html_content = raw_bytes.decode('cp949', errors='ignore')
+                        
+                        trs = re.findall(r'<tr[^>]*>(.*?)</tr>', html_content, re.IGNORECASE | re.DOTALL)
+                        if not trs:
+                            raise ValueError("표 데이터를 찾을 수 없습니다. 진짜 엑셀(.xlsx)로 '다른 이름으로 저장' 후 시도해주세요.")
+                        
+                        data = []
+                        for tr in trs:
+                            tds = re.findall(r'<t[dh][^>]*>(.*?)</t[dh]>', tr, re.IGNORECASE | re.DOTALL)
+                            tds = [re.sub(r'<[^>]+>', '', td).replace('&nbsp;', ' ').strip() for td in tds]
+                            if any(tds):
+                                data.append(tds)
+                                
+                        if len(data) > 1:
+                            upload_df = pd.DataFrame(data[1:], columns=data[0])
+                        else:
+                            upload_df = pd.DataFrame(data)
+                
+            st.success(f"✅ 파일 읽기 성공! 총 {len(upload_df):,}개의 데이터를 가져왔습니다.")
+            st.dataframe(upload_df.head(5), use_container_width=True)
+            
+            if st.button("🚀 구글 시트에 연도별로 분할 저장하기", type="primary"):
+                target_date_col = 'date' if 'date' in upload_df.columns else None
+                if not target_date_col:
+                    for col in upload_df.columns:
+                        if 'date' in str(col).lower() or '날짜' in str(col):
+                            target_date_col = col
+                            break
+
+                if not target_date_col:
+                    st.error("⚠️ 업로드한 파일에 'date' 또는 '날짜' 열을 찾을 수 없어 연도별 분석이 불가능합니다.")
+                else:
+                    with st.spinner("⏳ 데이터를 연도별로 분석하여 구글 시트에 분할 업로드 중입니다... (데이터량에 따라 1~2분 소요될 수 있습니다)"):
+                        try:
+                            client = init_connection()
+                            spreadsheet = client.open('SQL백업260211-jeilinout')
+                            
+                            temp_df = upload_df.copy()
+                            temp_df[target_date_col] = pd.to_datetime(temp_df[target_date_col], errors='coerce')
+                            valid_df = temp_df.dropna(subset=[target_date_col]).copy()
+                            valid_df['분할연도'] = valid_df[target_date_col].dt.year.astype(int)
+                            
+                            years_found = valid_df['분할연도'].unique()
+                            
+                            for y in sorted(years_found, reverse=True):
+                                year_str = f"{y}년"
+                                year_df = valid_df[valid_df['분할연도'] == y].drop(columns=['분할연도'])
+                                
+                                year_df[target_date_col] = year_df[target_date_col].dt.strftime('%Y-%m-%d')
+                                year_df = year_df.fillna("")
+                                
+                                try:
+                                    worksheet = spreadsheet.worksheet(year_str)
+                                    api_retry(lambda: worksheet.clear())
+                                except gspread.exceptions.WorksheetNotFound:
+                                    worksheet = spreadsheet.add_worksheet(title=year_str, rows=str(len(year_df)+100), cols=str(len(year_df.columns)))
+                                
+                                data_to_upload = [year_df.columns.tolist()] + year_df.values.tolist()
+                                api_retry(lambda: worksheet.update("A1", data_to_upload))
+                            
+                            st.success(f"🎉 성공! 총 {len(years_found)}개의 연도별 탭({', '.join(f'{y}년' for y in sorted(years_found, reverse=True))})으로 깔끔하게 분할 저장이 완료되었습니다!")
+                            st.balloons()
+                            st.cache_data.clear() 
+                            st.session_state.sql_ready = False 
+                            
+                        except Exception as e:
+                            st.error(f"⚠️ 구글 시트 전송 중 오류가 발생했습니다: {e}")
+                            
+        except Exception as e:
+            st.error(f"⚠️ 파일을 읽는 중 오류가 발생했습니다: {e}")
+            
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin: 10px 0px 20px 0px; border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
+
 
 # --- [6. 메인 로직] ---
 try:
@@ -1041,7 +1191,7 @@ try:
                 footer_html = f'<tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr>'
                 footer_html += f'<tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr>'
 
-                title_div = f'<div class="print-only-title" style="background-color: white !important; color: black !important; text-align: left; font-size: 28px; border-bottom: 2px solid #555 !important; padding: 10px 0px !important; margin-bottom: 10px; font-weight: bold;">{print_title} &nbsp; <span style="font-size: 16px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개</span></div>'
+                title_div = f'<div class="print-only-title" style="background-color: white !important; color: black !important; text-align: left; font-size: 26px; border-bottom: 2px solid #555 !important; padding: 10px 0px !important; margin-bottom: 10px; font-weight: bold;">{print_title} &nbsp; <span style="font-size: 15px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개</span></div>'
                 
                 table_html = '<div class="custom-table-container">'
                 table_html += title_div
@@ -1091,12 +1241,10 @@ try:
                 with col_t1: st.markdown(f'<div class="table-title-box"><span style="font-size:26px; font-weight:bold; color:#f8fafc;">{print_title}</span> <span style="font-size:15px; color:#cbd5e1; margin-left:10px;">| 출력 개수: {len(f_df)}개</span></div>', unsafe_allow_html=True)
                 
                 with col_t2: 
-                    # 💡 날짜정렬 버튼을 secondary 타입으로 지정하여 올리브색 CSS가 타겟팅되도록 수정
                     if st.button("🔄 날짜정렬", use_container_width=True, type="secondary"):
                         st.session_state.sort_desc = not st.session_state.sort_desc; st.rerun()
                 
                 with col_t3:
-                    # 💡 PRINT 버튼 배경색 및 테두리 색상을 올리브색(#757c43)으로 직접 변경 완료
                     components.html(
                         f"""
                         <!DOCTYPE html>
@@ -1146,7 +1294,6 @@ try:
                 
                 with col_t4:
                     csv = f_df.to_csv(index=False).encode('utf-8-sig')
-                    # 💡 EXCEL 버튼은 primary 속성 그대로 유지(CSS에서 타겟팅하여 올리브색 적용)
                     st.download_button("💾 EXCEL", data=csv, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
 
                 st.markdown(table_html, unsafe_allow_html=True)
