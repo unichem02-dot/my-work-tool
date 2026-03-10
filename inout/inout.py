@@ -581,14 +581,15 @@ try:
                 spreadsheet = client.open('SQL백업260211-jeilinout')
                 target_year_str = f"{n_date.year}년"
                 
-                # 💡 [핵심 기술] 전체 데이터 중 가장 높은 id 값을 찾아내어 +1 적용! (순차적 넘버링)
+                # 💡 [핵심 기술] 가장 최근 연도 시트만 조회하여 최댓값 산출 후 즉시 탐색 중지 (API 429 에러 완벽 차단)
                 max_id = 0
                 for y in available_years:
                     temp_df = load_data_for_years([y])
                     if not temp_df.empty and 'id' in temp_df.columns:
                         temp_max = temp_df['id'].apply(clean_numeric).max()
                         if pd.notna(temp_max) and temp_max > 0:
-                            max_id = max(max_id, int(temp_max))
+                            max_id = int(temp_max)
+                            break # 최댓값을 찾으면 과거 데이터는 읽지 않고 즉시 멈춤!
                 next_id = max_id + 1 if max_id > 0 else int(get_kst_now().strftime("%y%m%d%H%M%S"))
                 
                 try:
