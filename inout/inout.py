@@ -109,17 +109,9 @@ st.markdown("""
     [data-testid="stMetricValue"] { color: #ffffff !important; }
     [data-testid="stMetricLabel"] { color: #cbd5e1 !important; font-size: 16px !important; }
     
-    /* 💡 검색 메뉴의 연도, 월, 날짜 등 선택 및 입력 텍스트를 굵게(Bold) 변경 및 여백 다이어트로 글씨 짤림 방지 */
-    div[data-baseweb="select"] > div { 
-        font-weight: bold !important; 
-        padding-left: 8px !important; 
-        padding-right: 8px !important; 
-    }
-    div[data-baseweb="input"] > input { 
-        font-weight: bold !important; 
-        padding-left: 8px !important; 
-        padding-right: 8px !important; 
-    }
+    /* 💡 검색 메뉴의 연도, 월, 날짜 등 선택 및 입력 텍스트를 굵게(Bold) 변경 (여백 다이어트 취소) */
+    div[data-baseweb="select"] > div { font-weight: bold !important; }
+    div[data-baseweb="input"] > input { font-weight: bold !important; }
     
     /* 💡 파일 업로드 창 전체 가시성 완벽 해결 (상위 컨테이너 강제 적용) */
     div[data-testid="stFileUploader"] {
@@ -635,8 +627,8 @@ try:
                 height=75
             )
 
-            # 💡 [비율 조치] 검색창 1열 폭 넓히기
-            r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1.2, 2, 2, 2.5])
+            # 💡 [조치 완료] 이전의 안정적인 폭(비율)으로 원상복구
+            r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
             with r1_1: t1 = st.radio("t1", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
             with r1_2: dr1 = st.date_input("dr1", [datetime(2014,1,1).date(), get_kst_now().date()], format="YYYY-MM-DD", label_visibility="collapsed")
             with r1_3: s1 = st.selectbox("s1", ["ALL", "제일", "중부"], label_visibility="collapsed")
@@ -646,8 +638,8 @@ try:
 
             st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
-            # 💡 [비율 조치] 검색창 2열 폭 넓히기
-            r2_1, r2_2, r2_3, r2_4, r2_5, r2_6, r2_7 = st.columns([1.5, 1.3, 1.3, 1.2, 2, 2, 2.5])
+            # 💡 [조치 완료] 이전의 안정적인 폭(비율)으로 원상복구
+            r2_1, r2_2, r2_3, r2_4, r2_5, r2_6, r2_7 = st.columns([1.5, 1.2, 1.3, 1, 2, 2, 2.5])
             with r2_1: t2 = st.radio("t2", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
             with r2_2: y2 = st.selectbox("y2", years, label_visibility="collapsed", format_func=lambda x: f"{x}년")
             with r2_3: m2 = st.selectbox("m2", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
@@ -658,8 +650,8 @@ try:
 
             st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
-            # 💡 [비율 조치] 검색창 3열 폭 최적화 재분배 (글씨 짤림 방지)
-            u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15 = st.columns([1.0, 1.2, 0.9, 0.9, 1.0, 0.8, 0.9, 1.5, 0.8, 1.3, 1.0, 1.2, 0.9, 0.9, 0.9])
+            # 💡 [조치 완료] 이전의 안정적인 폭(비율)으로 원상복구
+            u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15 = st.columns([0.7, 1.0, 0.8, 0.8, 1.0, 0.8, 0.8, 1.3, 0.8, 1.1, 0.7, 1.0, 0.8, 0.9, 0.9])
             
             with u1: s3 = st.selectbox("s3", ["ALL", "제일", "중부"], label_visibility="collapsed")
             with u2: y3 = st.selectbox("y3", years, label_visibility="collapsed", format_func=lambda x: f"{x}년")
@@ -668,7 +660,7 @@ try:
             
             with u5: b_new = st.button("신규입력", use_container_width=True, type="primary")
             
-            # 💡 [핵심 조치] 최근입력 ALL 제거 (20, 50, 100개만 남김)
+            # 💡 [핵심 조치] 최근입력 ALL 삭제
             with u6: lmt = st.selectbox("l4", ["20개", "50개", "100개"], index=0, label_visibility="collapsed")
             with u7: b_rec = st.button("최근입력", use_container_width=True, type="primary")
             
