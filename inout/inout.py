@@ -302,6 +302,15 @@ if "sql_content" not in st.session_state: st.session_state.sql_content = ""
 
 # URL 파라미터 처리 로직 (무한 로딩 방지 및 검색 조건 완벽 복원)
 should_rerun = False
+
+# 💡 홈 로고 클릭 감지
+if "home" in st.query_params:
+    st.session_state.search_params = {"mode": "init"}
+    st.session_state.edit_id = None
+    st.session_state.copy_id = None
+    st.session_state.show_new = False
+    should_rerun = True
+
 if any(k in st.query_params for k in ["edit_id", "copy_id", "token"]):
     token = str(st.secrets.get("tom_password", ""))
     if st.query_params.get("token") == token:
@@ -326,7 +335,7 @@ if should_rerun:
     st.query_params.clear()
     st.rerun()
 
-# 초기 접속 상태 정의 (강제 검색 없이 완벽한 빈 화면 'init' 유지)
+# 초기 접속 상태 정의
 if "search_params" not in st.session_state:
     st.session_state.search_params = {"mode": "init"}
 
@@ -384,7 +393,10 @@ except:
     available_years = [get_kst_now().year]
 
 col_t, col_u, col_sql, col_r, col_l = st.columns([3.9, 1.3, 1.4, 1.4, 1.4])
-with col_t: st.markdown("<h3 style='margin:0;'>📦 TOmBOy's INOUT</h3>", unsafe_allow_html=True)
+with col_t: 
+    # 💡 [핵심 기술 1] 로고 텍스트에 메인 복귀 링크(home=1) 추가 (디자인 변경 없이 a태그 씌움)
+    st.markdown("<h3 style='margin:0;'><a href='?home=1' target='_self' style='text-decoration: none; color: #ffffff;'>📦 TOmBOy's INOUT</a></h3>", unsafe_allow_html=True)
+    
 with col_u: 
     if st.button("📤 DB 업로드" if not st.session_state.show_uploader else "❌ 업로드 닫기", use_container_width=True, type="primary"):
         st.session_state.show_uploader = not st.session_state.show_uploader
@@ -610,7 +622,6 @@ try:
                 st.session_state.copy_id = None
                 st.session_state.show_new = False
                 
-                # 💡 [핵심 기술 1] 신규/복사 입력 후 최근 20개 내역으로 자동 이동!
                 st.session_state.sort_desc = True 
                 st.session_state.search_params = {"mode":"최근","title":"최근 입력순서","limit":"20개", "s_filter": "ALL"}
                 st.session_state.prev_search_params = st.session_state.search_params
@@ -720,7 +731,6 @@ try:
             height=75
         )
 
-        # 💡 [핵심 기술 2] 검색 폼 간섭 방지를 위해 기간검색과 월별검색의 변수 완전 분리!
         sp = params
         s_filt = sp.get("s_filter", "ALL")
         s_idx = ["ALL", "제일", "중부"].index(s_filt) if s_filt in ["ALL", "제일", "중부"] else 0
@@ -790,7 +800,6 @@ try:
         with u14: b_mon = st.button("월별", use_container_width=True, type="primary")
         with u15: b_yong = st.button("용차", use_container_width=True, type="primary")
 
-        # 버튼 클릭 시마다 이전 검색 상태를 백업
         if b1: st.session_state.search_params = {"mode":"기간","title":f"기간 검색 ({dr1[0]} ~ {dr1[1] if len(dr1)>1 else dr1[0]})","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0], "s_filter": s1}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
         elif b2: st.session_state.search_params = {"mode":"월별상세","title":f"{y2}년 {m2}월 상세 검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2, "s_filter": s2}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
         elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3, "s_filter": s3}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
@@ -816,7 +825,6 @@ try:
         elif b_mon: st.session_state.search_params = {"mode":"월별","title":f"{y4}년 {m4}월 기본 검색","year":y4,"month":m4, "s_filter": s5}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
         elif b_yong: st.session_state.search_params = {"mode":"용차","title":f"{y4}년 {m4}월 배송(용/다) 검색","year":y4,"month":m4, "s_filter": s5}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
 
-        # init 상태일 경우 데이터 테이블은 숨김
         if params["mode"] != "init":
             f_df = df.copy()
             
