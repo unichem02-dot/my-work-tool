@@ -283,10 +283,8 @@ if "last_activity" not in st.session_state: st.session_state.last_activity = Non
 if "failed_attempts" not in st.session_state: st.session_state.failed_attempts = 0
 if "lockout_until" not in st.session_state: st.session_state.lockout_until = None
 if "show_uploader" not in st.session_state: st.session_state.show_uploader = False
-# SQL 버튼 상태 관리
 if "sql_ready" not in st.session_state: st.session_state.sql_ready = False
 if "sql_content" not in st.session_state: st.session_state.sql_content = ""
-# 텍스트 메모 창 상태 관리
 if "memo_edit_id" not in st.session_state: st.session_state.memo_edit_id = None
 if "memo_type" not in st.session_state: st.session_state.memo_type = None
 
@@ -303,6 +301,8 @@ if "edit_id" in st.query_params or "copy_id" in st.query_params or "memo_edit_id
             restored_sp = decode_sp(sp_encoded)
             if restored_sp:
                 st.session_state.search_params = restored_sp
+                # 복사(copy_id) 취소 시 돌아갈 수 있도록 이전 검색 기록 백업
+                st.session_state.prev_search_params = restored_sp
                 
         # 429 방어를 위한 연도(year) 단일 추출 매핑
         if "year" in st.query_params:
@@ -315,12 +315,25 @@ if "edit_id" in st.query_params or "copy_id" in st.query_params or "memo_edit_id
         if "memo_edit_id" in st.query_params:
             st.session_state.memo_edit_id = st.query_params["memo_edit_id"]
             st.session_state.memo_type = st.query_params.get("memo_type", "in")
+            
+    # 💡 [무한 로딩 버그 핵심 해결] st.rerun()을 제거하여 URL clear 충돌 방지!
     st.query_params.clear()
-    st.rerun()
 
-# 💡 '어제오늘내일' 강제 적용 로직 삭제 (처음 접속 시 빈 화면 유지 및 초기화 방지)
+# 💡 [처음 접속 시 '어제오늘내일' 데이터 자동 출력]
+# 단, 복원된 검색 상태가 없을 때(완전 첫 접속)만 실행하여 기존 검색 조건 훼손 방지
 if "search_params" not in st.session_state:
-    st.session_state.search_params = {"mode": "init"}
+    d_day = get_kst_now().date()
+    st.session_state.search_params = {
+        "mode": "기간",
+        "title": f"어제·오늘·내일 검색 ({d_day} 기준)",
+        "type": "ALL",
+        "company": "",
+        "item": "",
+        "limit": "ALL",
+        "start": d_day - timedelta(days=1),
+        "end": d_day + timedelta(days=1),
+        "s_filter": "ALL"
+    }
 
 now_kst = get_kst_now()
 
@@ -483,7 +496,6 @@ with col_sql:
                 except Exception as e:
                     st.error("생성 실패")
     else:
-        # 생성 완료 상태일 때 버튼을 'Secondary' 타입으로 출력하여 CSS에서 지정해둔 빨간색이 완벽하게 씌워지도록 함!
         st.download_button("💾 생성완료! 다운로드", data=st.session_state.sql_content.encode('utf-8-sig'), file_name=f"db_backup_{get_kst_now().strftime('%Y%m%d')}.sql", mime="application/sql", use_container_width=True, type="secondary")
 
 with col_r:
@@ -725,7 +737,7 @@ try:
                 </style>
                 """, unsafe_allow_html=True)
                 
-                st.markdown(f"<h4 style='text-align:center; margin-top:0; font-weight:bold;'>📝 {type_kr} 텍스트 메모</h4>", unsafe_allow_html=True)
+                st.markdown(f"<h4 style='text-align:center; margin-top:0; font-weight:bold;'><span style='color:#000000 !important;'>📝 {type_kr} 텍스트 메모</span></h4>", unsafe_allow_html=True)
                 new_memo = st.text_area("내용", orig_memo, height=150, label_visibility="collapsed")
                 
                 c1, c2, c3 = st.columns([1, 4.5, 4.5])
@@ -899,7 +911,13 @@ try:
                 st.cache_data.clear(); st.session_state.copy_id = None; st.session_state.search_params = {"mode":"최근","title":"최근입력순서","limit":"20개"}; st.rerun()
                 
             if bc3.form_submit_button("취소", use_container_width=True, type="secondary"):
-                st.session_state.copy_id = None; st.session_state.search_params = {"mode":"init"}; st.rerun()
+                st.session_state.copy_id = None
+                # 💡 신규입력 취소 시에도 이전 검색 내용 복구 보장
+                if "prev_search_params" in st.session_state:
+                    st.session_state.search_params = st.session_state.prev_search_params
+                else:
+                    st.session_state.search_params = {"mode":"init"}
+                st.rerun()
 
     # ---------------------------------------------------------
     # [모드 분기 3] 메인 검색 및 리스트
@@ -1043,11 +1061,13 @@ try:
             with u14: b_mon = st.button("월별", use_container_width=True, type="primary")
             with u15: b_yong = st.button("용차", use_container_width=True, type="primary")
 
-        # 검색 버튼 액션
+        # 검색 버튼 액션 (버튼을 누를 때마다 검색 상태를 확실하게 저장!)
         if b1: st.session_state.search_params = {"mode":"기간","title":f"기간 검색 ({dr1[0]} ~ {dr1[1] if len(dr1)>1 else dr1[0]})","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0], "s_filter": s1}; st.session_state.sort_desc = False; st.rerun()
         elif b2: st.session_state.search_params = {"mode":"월별상세","title":f"{y2}년 {m2}월 상세 검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2, "s_filter": s2}; st.session_state.sort_desc = False; st.rerun()
         elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3, "s_filter": s3}; st.session_state.sort_desc = False; st.rerun()
-        elif b_new: st.session_state.search_params = {"mode":"신규입력"}; st.session_state.copy_id = None; st.rerun()
+        elif b_new: 
+            st.session_state.prev_search_params = st.session_state.search_params # 💡 이전 검색 기록 백업
+            st.session_state.search_params = {"mode":"신규입력"}; st.session_state.copy_id = None; st.rerun()
         elif b_rec: st.session_state.search_params = {"mode":"최근","title":"최근 입력순서","limit":lmt, "s_filter": "ALL"}; st.session_state.sort_desc = True; st.rerun()
         elif b_day: st.session_state.search_params = {"mode":"일","title":f"일간 검색 ({d_day})","date":d_day, "s_filter": "ALL"}; st.session_state.sort_desc = False; st.rerun()
         elif b_ayt:
@@ -1232,9 +1252,9 @@ try:
                     initem_val = safe_str(r.get("initem", ""))
                     in_disp = initem_val if initem_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                     
-                    # 💡 [초강력 올블랙 CSS 적용] HTML 내부의 텍스트에 직접 인라인 스타일 주입하여 다크모드 무력화!
+                    # 💡 [초강력 올블랙 CSS 적용] HTML 내부의 텍스트와 모든 내용에 <span style='color:#000000 !important;'>을 이중으로 박아 넣음!
                     if memoin_val:
-                        initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;"><a href="{in_link}" target="_self" style="color:inherit; text-decoration:none;">{in_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important;">{memoin_val}</span></span></div>'
+                        initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;"><a href="{in_link}" target="_self" style="color:inherit; text-decoration:none;">{in_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important; font-weight:bold !important;">{memoin_val}</span></span></div>'
                     else:
                         initem_html = f'<a href="{in_link}" target="_self" style="color:inherit; text-decoration:none;">{in_disp}</a>'
 
@@ -1242,7 +1262,7 @@ try:
                     outitem_val = safe_str(r.get("outitem", ""))
                     out_disp = outitem_val if outitem_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                     if memoout_val:
-                        outitem_html = f'<div class="memo-tooltip-out" style="font-weight: bold;"><a href="{out_link}" target="_self" style="color:inherit; text-decoration:none;">{out_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important;">{memoout_val}</span></span></div>'
+                        outitem_html = f'<div class="memo-tooltip-out" style="font-weight: bold;"><a href="{out_link}" target="_self" style="color:inherit; text-decoration:none;">{out_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important; font-weight:bold !important;">{memoout_val}</span></span></div>'
                     else:
                         outitem_html = f'<a href="{out_link}" target="_self" style="color:inherit; text-decoration:none;">{out_disp}</a>'
 
@@ -1250,11 +1270,11 @@ try:
                     carno_val = safe_str(r.get("carno", ""))
                     car_disp = carno_val if carno_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                     if memocar_val:
-                        carno_html = f'<div class="memo-tooltip-base" style="font-weight: bold; color: inherit;"><a href="{car_link}" target="_self" style="color:inherit; text-decoration:none;">{car_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important;">{memocar_val}</span></span></div>'
+                        carno_html = f'<div class="memo-tooltip-base" style="font-weight: bold; color: inherit;"><a href="{car_link}" target="_self" style="color:inherit; text-decoration:none;">{car_disp}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important; font-weight:bold !important;">{memocar_val}</span></span></div>'
                     else:
                         carno_html = f'<a href="{car_link}" target="_self" style="color:inherit; text-decoration:none;">{car_disp}</a>'
                     
-                    # 💡 수량 메모창 완벽한 블랙 강제!
+                    # 💡 수량 메모창도 완벽한 블랙 강제!
                     inq_val_str = f'{r["inq_val"]:,.0f}' if pd.notnull(r["inq_val"]) else '0'
                     in_memo = f"<div style='text-align:right;'><span style='color:#000000 !important;'>공급가액(VAT별도) : {in_tot:,.0f} 원</span><br><span style='color:#000000 !important;'>+ 부가세(10%) : {in_vat_only:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'><span style='color:#000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</span></div>"
                     inq_html = f'<div class="memo-tooltip-in">{inq_val_str}<span class="memo-text">{in_memo}</span></div>'
