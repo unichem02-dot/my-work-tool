@@ -63,15 +63,16 @@ st.markdown("""
         color: white !important;
     }
     
-    /* 💡 기간/월별 검색버튼(Form 내부 Submit 버튼) 청록색 커스텀 */
-    div[data-testid="stForm"] button[kind="primary"] {
+    /* 💡 기간/월별 검색버튼(Form 내부 Submit 버튼) 청록색 커스텀 완벽 적용 */
+    [data-testid="stFormSubmitButton"] > button {
         background-color: #009688 !important; /* 청록색 */
         border-color: #009688 !important;
         color: white !important;
     }
-    div[data-testid="stForm"] button[kind="primary"]:hover {
+    [data-testid="stFormSubmitButton"] > button:hover {
         background-color: #00796B !important; /* 마우스 오버시 진한 청록색 */
         border-color: #00796B !important;
+        color: white !important;
     }
     
     /* 결산버튼 초록색 커스텀을 위한 예외처리 */
@@ -133,7 +134,7 @@ st.markdown("""
     /* Form 테두리 및 여백 제거 (검색창 엔터 적용을 위한 래핑용) */
     div[data-testid="stForm"] { border: none !important; padding: 0 !important; margin-bottom: -15px !important; }
     
-    /* 매입 및 매출 수량 툴팁 (메모장 팝업) 30% 투명도 적용 CSS */
+    /* 매입 및 매출 수량 툴팁 (메모장 팝업) 70% 투명도 적용 CSS */
     .memo-tooltip-in {
         position: relative;
         display: inline-block;
@@ -149,7 +150,7 @@ st.markdown("""
     .memo-tooltip-in .memo-text, .memo-tooltip-out .memo-text {
         visibility: hidden;
         width: max-content;
-        background-color: rgba(255, 251, 235, 0.7) !important; /* 30% 투명하게 (opacity: 0.7) */
+        background-color: rgba(255, 251, 235, 0.3) !important; /* 💡 70% 투명하게 (opacity: 0.3) 적용 */
         backdrop-filter: blur(3px); /* 투명해지며 글자가 겹치는 것을 막기 위한 블러 처리 */
         text-align: right;
         border-radius: 6px;
@@ -331,15 +332,63 @@ def safe_str(val):
     if isinstance(val, float) and val.is_integer(): return str(int(val))
     return str(val)
 
+# 💡 SQL 생성을 위한 유틸리티 함수 추가
+def generate_sql_for_backup(df_data):
+    lines = ["CREATE TABLE IF NOT EXISTS `jeilinout` (",
+             "  `id` bigint(20) NOT NULL,",
+             "  `date` varchar(50) DEFAULT NULL,",
+             "  `incom` varchar(255) DEFAULT NULL,",
+             "  `initem` varchar(255) DEFAULT NULL,",
+             "  `inq` varchar(50) DEFAULT '0',",
+             "  `inprice` varchar(50) DEFAULT '0',",
+             "  `outcom` varchar(255) DEFAULT NULL,",
+             "  `outitem` varchar(255) DEFAULT NULL,",
+             "  `outq` varchar(50) DEFAULT '0',",
+             "  `outprice` varchar(50) DEFAULT '0',",
+             "  `memo` text,",
+             "  `s` varchar(50) DEFAULT NULL,",
+             "  `carno` varchar(100) DEFAULT NULL,",
+             "  `carprice` varchar(50) DEFAULT '0',",
+             "  PRIMARY KEY (`id`)",
+             ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;", ""]
+    if not df_data.empty:
+        for _, r in df_data.iterrows():
+            val_str = []
+            for c in ['id', 'date', 'incom', 'initem', 'inq', 'inprice', 'outcom', 'outitem', 'outq', 'outprice', 'memo', 's', 'carno', 'carprice']:
+                v = str(r.get(c, ''))
+                if pd.isna(r.get(c)) or v.lower() == 'nan': v = ""
+                v = v.replace("'", "''") # SQL용 따옴표 이스케이프 처리
+                val_str.append(f"'{v}'")
+            vals = ", ".join(val_str)
+            lines.append(f"INSERT IGNORE INTO `jeilinout` (`id`, `date`, `incom`, `initem`, `inq`, `inprice`, `outcom`, `outitem`, `outq`, `outprice`, `memo`, `s`, `carno`, `carprice`) VALUES ({vals});")
+    return "\n".join(lines)
+
 # --- [4. 상단 상태바] ---
 st.session_state.last_activity = get_kst_now()
-col_t, col_u, col_r, col_l = st.columns([5.5, 1.5, 1.5, 1.5])
-# 타이틀 명칭 TOmBOy's INOUT 으로 변경
+
+# 💡 전체 연도 리스트를 미리 호출해둠 (SQL 다운로드에서 사용하기 위함)
+try:
+    available_years = get_available_years()
+except:
+    available_years = [get_kst_now().year]
+
+# 💡 [SQL다운 버튼 추가] 공간 분배 재조정 (col_sql 추가)
+col_t, col_u, col_sql, col_r, col_l = st.columns([3.9, 1.3, 1.4, 1.4, 1.4])
 with col_t: st.markdown("<h3 style='margin:0;'>📦 TOmBOy's INOUT</h3>", unsafe_allow_html=True)
 with col_u:
     if st.button("📤 DB 업로드" if not st.session_state.show_uploader else "❌ 업로드 닫기", use_container_width=True, type="primary"):
         st.session_state.show_uploader = not st.session_state.show_uploader
         st.rerun()
+
+with col_sql:
+    # 💡 모든 데이터를 한 번에 가져와서 phpMyAdmin 호환 SQL 텍스트 파일로 생성
+    try:
+        all_data_for_sql = load_data_for_years(available_years)
+        sql_content = generate_sql_for_backup(all_data_for_sql)
+        st.download_button("💾 SQL다운", data=sql_content.encode('utf-8-sig'), file_name=f"db_backup_{get_kst_now().strftime('%Y%m%d')}.sql", mime="application/sql", use_container_width=True, type="primary")
+    except Exception as e:
+        st.button("💾 SQL 준비중", disabled=True, use_container_width=True)
+
 with col_r:
     if st.button("🔄 데이터 갱신", use_container_width=True, type="primary"):
         st.cache_data.clear()
@@ -455,7 +504,6 @@ if st.session_state.show_uploader:
 
 # --- [6. 메인 로직 (초고속 타겟팅 로딩)] ---
 try:
-    available_years = get_available_years()
     years = available_years
     months = list(range(1, 13))
     
@@ -979,7 +1027,7 @@ try:
                 
                 table_html += '</table></div>'
 
-                # 💡 [브라우저 기본글씨 제거 및 여백 기술]
+                # 💡 [브라우저 기본글씨 제거 및 여백 기술] - 인쇄 로직은 단 한 줄도 건드리지 않음!
                 print_html_content = f"""
                 <!DOCTYPE html>
                 <html><head><title>인쇄 미리보기</title>
