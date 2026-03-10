@@ -836,34 +836,60 @@ try:
                         st.dataframe(top_initem.style.format({'매입수량': '{:,.0f}'}), use_container_width=True, hide_index=True)
                     else: st.caption("매입 품목 내역이 없습니다.")
 
-            # 💡 그 외 검색 버튼 클릭 시 (기존 테이블 + 인쇄 모드)
+            # 💡 그 외 검색 버튼 클릭 시 (기존 테이블 + 인쇄 모드 투트랙 분리)
             else:
-                html = '<div class="custom-table-container"><table class="custom-table"><thead>'
-                html += '<tr class="fake-margin"><td colspan="13"></td></tr>'
-                html += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
-                
                 pwd_token = str(st.secrets["tom_password"])
+                
+                # 1. 공통 행 데이터(TR) 및 꼬리말(Footer) 미리 생성
+                row_html_list = []
                 for _, r in f_df.iterrows():
                     rid, dt = safe_str(r['id']), r[date_col].strftime('%Y-%m-%d')
                     s_cls = "txt-green" if "제일" in str(r['s']) else "txt-purple"
                     v_link = f'<a href="?copy_id={rid}&token={pwd_token}" target="_self" style="text-decoration:none;"><span class="{s_cls}">{r["s"]}</span></a>'
                     d_link = f'<a href="?edit_id={rid}&token={pwd_token}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
-                    html += f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl txt-in-bold">{r["incom"]}</td><td class="tl txt-in">{r["initem"]}</td><td class="tr txt-in">{r["inq_val"]:,.0f}</td><td class="tr txt-in">{r["inprice_val"]:,.0f}</td><td class="tl txt-out-bold">{r["outcom"]}</td><td class="tl txt-out">{r["outitem"]}</td><td class="tr txt-out">{r["outq_val"]:,.0f}</td><td class="tr txt-out">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray print-hide-col">{rid}</td><td class="tc txt-gray">{r["carno"]}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
+                    row_html = f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl txt-in-bold">{r["incom"]}</td><td class="tl txt-in">{r["initem"]}</td><td class="tr txt-in">{r["inq_val"]:,.0f}</td><td class="tr txt-in">{r["inprice_val"]:,.0f}</td><td class="tl txt-out-bold">{r["outcom"]}</td><td class="tl txt-out">{r["outitem"]}</td><td class="tr txt-out">{r["outq_val"]:,.0f}</td><td class="tr txt-out">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray print-hide-col">{rid}</td><td class="tc txt-gray">{r["carno"]}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
+                    row_html_list.append(row_html)
+                    
+                footer_html = f'<tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr>'
+                footer_html += f'<tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr>'
+
+                # 2. 웹 화면용 HTML 생성 (끊김 없이 하나의 표로 렌더링)
+                web_html = '<div class="custom-table-container"><table class="custom-table"><thead>'
+                web_html += '<tr class="fake-margin"><td colspan="13"></td></tr>'
+                web_html += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
+                web_html += "".join(row_html_list)
+                web_html += footer_html
+                web_html += '</tbody><tfoot style="display: table-footer-group;"><tr class="fake-margin"><td colspan="13"></td></tr></tfoot></table></div>'
+
+                # 3. 인쇄용 HTML 생성 (데이터를 25개씩 강제 분할하여 PAGE: 1/3을 정확히 부여)
+                CHUNK_SIZE = 25 
+                total_rows = len(row_html_list)
+                est_pages = max(1, math.ceil(total_rows / CHUNK_SIZE))
                 
-                html += f'<tr><td colspan="2" class="th-base">자료수 : {len(f_df)}개</td><td colspan="4" class="th-in">매입수량 : {t_in_q:,.0f} | 매입금액 : {t_in_a:,.0f}원</td><td colspan="4" class="th-out">매출수량 : {t_out_q:,.0f} | 매출금액 : {t_out_a:,.0f}원</td><td colspan="3" class="th-base">운송비 : {t_car:,.0f}원</td></tr>'
-                html += f'<tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr>'
-                html += '</tbody>'
-                html += '<tfoot style="display: table-footer-group;"><tr class="fake-margin"><td colspan="13"></td></tr></tfoot>'
-                html += '</table></div>'
-
-                # 💡 [핵심 기술 1] 예상 인쇄 페이지 수 자동 계산 (A4 용지 세로 출력, 1장당 25줄 기준)
-                est_pages = max(1, math.ceil(len(f_df) / 25)) if not f_df.empty else 1
-
-                # 💡 [핵심 기술 2] 인쇄 시 매 페이지 상단에 똑같은 제목과 페이지 수가 반복되도록 표 머리글(thead) 안에 삽입!
-                print_html_table = html.replace(
-                    '<thead>',
-                    f'<thead><tr><th colspan="13" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border: none !important; border-bottom: 2px solid #555 !important; padding: 15px 0 10px 0 !important;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개 &nbsp;|&nbsp; 인쇄 분량: 약 {est_pages}페이지</span></th></tr>'
-                )
+                print_html_table = ""
+                for p in range(est_pages):
+                    start_idx = p * CHUNK_SIZE
+                    end_idx = min((p + 1) * CHUNK_SIZE, total_rows)
+                    chunk_rows = row_html_list[start_idx:end_idx]
+                    
+                    # 💡 페이지 분할 CSS 적용 (마지막 페이지 제외)
+                    page_break = 'style="page-break-after: always;"' if p < est_pages - 1 else ''
+                    
+                    print_html_table += f'<div class="custom-table-container" {page_break}><table class="custom-table"><thead>'
+                    
+                    # 💡 [핵심] 분할된 각 표의 머리글에 PAGE : X/Y 동적 삽입
+                    print_html_table += f'<tr><th colspan="13" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border: none !important; border-bottom: 2px solid #555 !important; padding: 15px 0 10px 0 !important;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개 &nbsp;|&nbsp; PAGE : {p+1}/{est_pages}</span></th></tr>'
+                    
+                    print_html_table += '<tr class="fake-margin"><td colspan="13"></td></tr>'
+                    print_html_table += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead><tbody>'
+                    
+                    print_html_table += "".join(chunk_rows)
+                    
+                    # 마지막 페이지에만 합계 푸터 삽입
+                    if p == est_pages - 1:
+                        print_html_table += footer_html
+                        
+                    print_html_table += '</tbody></table></div>'
 
                 print_html_content = f"""
                 <!DOCTYPE html>
@@ -949,7 +975,7 @@ try:
                     csv = f_df.to_csv(index=False).encode('utf-8-sig')
                     st.download_button("💾 엑셀 다운로드", data=csv, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
 
-                st.markdown(html, unsafe_allow_html=True)
+                st.markdown(web_html, unsafe_allow_html=True)
 
 except Exception as e: st.error(f"⚠️ 시스템 오류: {e}")
 st.markdown("<br><p style='text-align:center; color:#64748b;'>© 2026 UNICHEM02-DOT. ALL RIGHTS RESERVED.</p>", unsafe_allow_html=True)
