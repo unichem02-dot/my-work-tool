@@ -674,17 +674,17 @@ try:
             with u14: b_mon = st.button("월별검색", use_container_width=True, type="primary")
             with u15: b_yong = st.button("용차", use_container_width=True, type="primary")
 
-        # --- 버튼 액션 라우팅 ---
-        if b1: st.session_state.search_params = {"mode":"기간","title":"기간검색","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0], "s_filter": s1}; st.rerun()
-        elif b2: st.session_state.search_params = {"mode":"월별상세","title":"월별상세검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2, "s_filter": s2}; st.rerun()
+        # 💡 [검색 버튼 액션] 제목을 더 상세하게 기록하도록 title 수정
+        if b1: st.session_state.search_params = {"mode":"기간","title":f"기간 검색 ({dr1[0]} ~ {dr1[1] if len(dr1)>1 else dr1[0]})","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0], "s_filter": s1}; st.rerun()
+        elif b2: st.session_state.search_params = {"mode":"월별상세","title":f"{y2}년 {m2}월 상세 검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2, "s_filter": s2}; st.rerun()
         elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3, "s_filter": s3}; st.rerun()
         elif b_new: st.session_state.search_params = {"mode":"신규입력"}; st.session_state.copy_id = None; st.rerun()
-        elif b_rec: st.session_state.search_params = {"mode":"최근","title":"최근입력순서","limit":lmt, "s_filter": "ALL"}; st.rerun()
-        elif b_day: st.session_state.search_params = {"mode":"일","title":f"{d_day} 검색","date":d_day, "s_filter": "ALL"}; st.rerun()
+        elif b_rec: st.session_state.search_params = {"mode":"최근","title":"최근 입력순서","limit":lmt, "s_filter": "ALL"}; st.rerun()
+        elif b_day: st.session_state.search_params = {"mode":"일","title":f"일간 검색 ({d_day})","date":d_day, "s_filter": "ALL"}; st.rerun()
         elif b_ayt:
             st.session_state.search_params = {
                 "mode":"기간",
-                "title":f"{d_day} 기준 (어제~내일)",
+                "title":f"어제·오늘·내일 검색 ({d_day} 기준)",
                 "type":"ALL",
                 "company":"",
                 "item":"",
@@ -694,8 +694,8 @@ try:
                 "s_filter": "ALL"
             }
             st.rerun()
-        elif b_mon: st.session_state.search_params = {"mode":"월별","title":f"{y4}년 {m4}월 검색","year":y4,"month":m4, "s_filter": s5}; st.rerun()
-        elif b_yong: st.session_state.search_params = {"mode":"용차","title":f"{y4}년 {m4}월 용차(용/다) 검색","year":y4,"month":m4, "s_filter": s5}; st.rerun()
+        elif b_mon: st.session_state.search_params = {"mode":"월별","title":f"{y4}년 {m4}월 기본 검색","year":y4,"month":m4, "s_filter": s5}; st.rerun()
+        elif b_yong: st.session_state.search_params = {"mode":"용차","title":f"{y4}년 {m4}월 배송(용/다) 검색","year":y4,"month":m4, "s_filter": s5}; st.rerun()
 
         params = st.session_state.search_params
         if params["mode"] != "init":
@@ -744,14 +744,23 @@ try:
             # 행별 순수익(profit) 계산
             f_df['profit'] = f_df['out_total'] - f_df['in_total'] - f_df['carprice_val']
             
-            # 타이틀에 필터 정보 추가
+            # 💡 [핵심] 사용자가 검색한 세부 조건(거래처, 품목, 매입/매출 여부)을 파악하여 인쇄용 제목으로 조립
             print_title = params.get("title", "검색결과")
+            
+            cond_texts = []
+            if params.get("type", "ALL") != "ALL": cond_texts.append(f"분류: {params['type']}")
+            if params.get("company"): cond_texts.append(f"거래처: '{params['company']}'")
+            if params.get("item"): cond_texts.append(f"품목: '{params['item']}'")
+            
+            if cond_texts:
+                print_title += f" ➔ (조건: {', '.join(cond_texts)})"
+                
             if s_filter != "ALL":
                 print_title = f"[{s_filter}] " + print_title
 
             # 💡 [모드 분기] 결산 버튼 클릭 시 프리미엄 대시보드 화면 렌더링
             if params["mode"] == "결산":
-                st.markdown(f"<h2 style='text-align: center; color: #4e8cff; margin-bottom: 20px;'>📊 {print_title} 종합 대시보드</h2>", unsafe_allow_html=True)
+                st.markdown(f"<h2 style='text-align: center; color: #4e8cff; margin-bottom: 20px;'>📊 {print_title} 결산 요약 대시보드</h2>", unsafe_allow_html=True)
                 
                 col1, col2, col3, col4 = st.columns(4)
                 with col1: st.metric("총 매출액 (A) ↗", f"{t_out_a:,.0f} 원")
@@ -846,6 +855,12 @@ try:
                 html += '<tfoot style="display: table-footer-group;"><tr class="fake-margin"><td colspan="13"></td></tr></tfoot>'
                 html += '</table></div>'
 
+                # 💡 [핵심 기술] 인쇄 시 매 페이지 상단에 똑같은 제목이 반복되도록 표 머리글(thead) 안에 제목을 삽입!
+                print_html_table = html.replace(
+                    '<thead>',
+                    f'<thead><tr><th colspan="13" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border: none !important; border-bottom: 2px solid #555 !important; padding: 15px 0 10px 0 !important;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개</span></th></tr>'
+                )
+
                 print_html_content = f"""
                 <!DOCTYPE html>
                 <html><head><title>인쇄 미리보기</title>
@@ -853,7 +868,6 @@ try:
                 <style>
                     @page {{ size: A4 portrait; margin: 0mm; }}
                     body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; padding: 0 10mm; box-sizing: border-box; }}
-                    .print-header {{ font-size: 18px; font-weight: bold; padding-bottom: 10px; margin-bottom: 0px; border-bottom: 2px solid #555; display: flex; align-items: baseline; padding-top: 15mm; }}
                     .custom-table-container {{ width: 100%; zoom: 65%; }}
                     .custom-table {{ width: 100%; border-collapse: collapse; font-size: 15px; background-color: white; }}
                     .custom-table th, .custom-table td {{ border: 1px solid #aaa; padding: 8px 10px; color: black !important; }}
@@ -871,8 +885,7 @@ try:
                     .custom-table tr {{ page-break-inside: avoid; }}
                 </style>
                 </head><body>
-                <div class="print-header">{print_title} &nbsp; <span style="font-size: 14px; color: #555; font-weight: normal;">| 출력 개수: {len(f_df)}개</span></div>
-                {html}
+                {print_html_table}
                 </body></html>
                 """
                 
