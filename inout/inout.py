@@ -78,8 +78,8 @@ st.markdown("""
     .custom-table tr:nth-child(even) { background-color: #f8f9fa; }
     .custom-table tr:hover { background-color: #e2e6ea; }
     
-    /* 💡 인쇄용 가짜 상하단 여백 (웹 화면에서는 보이지 않도록 처리) */
-    .fake-margin { display: none !important; }
+    /* 💡 인쇄용 가짜 상하단 여백 (웹 화면에서는 보이지 않도록 숨김) */
+    .print-fake-margin { display: none !important; }
     
     /* 💡 인쇄 전용 타이틀 숨김 처리 (웹 화면에서는 안보이게 분리) */
     .print-only-title { display: none !important; }
@@ -120,7 +120,7 @@ st.markdown("""
     /* Form 테두리 및 여백 제거 (검색창 엔터 적용을 위한 래핑용) */
     div[data-testid="stForm"] { border: none !important; padding: 0 !important; margin-bottom: -15px !important; }
     
-    /* 매입 및 매출 수량 툴팁 (메모장 팝업) 전용 CSS */
+    /* 💡 매입 및 매출 수량 툴팁 (메모장 팝업) 전용 CSS */
     .memo-tooltip-in {
         position: relative;
         display: inline-block;
@@ -908,7 +908,7 @@ try:
                     v_link = f'<a href="?copy_id={rid}&token={pwd_token}" target="_self" style="text-decoration:none;"><span class="{s_cls}">{r["s"]}</span></a>'
                     d_link = f'<a href="?edit_id={rid}&token={pwd_token}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
                     
-                    # 부가세 연동 및 이익금 산출용 데이터 미리 계산
+                    # 💡 [핵심 기술 1] 부가세 연동 및 이익금 산출용 데이터 미리 계산
                     in_tot = r["in_total"] if pd.notnull(r["in_total"]) else 0
                     in_tot_vat = in_tot * 1.1       # 매입액 부가세 포함
                     in_vat_only = in_tot * 0.1      # 매입액 순수 부가세
@@ -919,12 +919,12 @@ try:
                     
                     profit_tot_vat = out_tot_vat - in_tot_vat # 부가세 포함 기준 이익금 산출
                     
-                    # 매입 툴팁 조립
+                    # 💡 [핵심 기술 2] 매입 툴팁 조립 (올블랙 적용 & 공급가+부가세 상세 표시)
                     inq_val_str = f'{r["inq_val"]:,.0f}' if pd.notnull(r["inq_val"]) else '0'
-                    in_memo = f"<div style='text-align:right; color:#000000 !important;'>공급가액 : {in_tot:,.0f} 원<br>+ 부가세(10%) : {in_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</div>"
+                    in_memo = f"<div style='text-align:right; color:#000000 !important;'>공급가액(VAT별도) : {in_tot:,.0f} 원<br>+ 부가세(10%) : {in_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</div>"
                     inq_html = f'<div class="memo-tooltip-in">{inq_val_str}<span class="memo-text">{in_memo}</span></div>'
                     
-                    # 매출 툴팁 조립
+                    # 💡 [핵심 기술 3] 매출 툴팁 조립 (올블랙 적용 & 부가세 별도/포함 및 이익금 계산식 완벽 표시)
                     outq_val_str = f'{r["outq_val"]:,.0f}' if pd.notnull(r["outq_val"]) else '0'
                     out_memo = f"<div style='text-align:right; color:#000000 !important;'>매출액(VAT별도) : {out_tot:,.0f} 원<br>+ 부가세(10%) : {out_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원<br>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원<br><hr style='margin:4px 0; border:0.5px solid #000000 !important;'><span style='color:#000000 !important; font-weight:bold;'>= 순이익(VAT포함) : {profit_tot_vat:,.0f} 원</span></div>"
                     outq_html = f'<div class="memo-tooltip-out">{outq_val_str}<span class="memo-text">{out_memo}</span></div>'
@@ -936,40 +936,48 @@ try:
                 footer_html += f'<tr><td colspan="13" class="sum-profit">검색내 총수익 : {t_profit:,.0f}원</td></tr>'
 
                 # 💡 인쇄 시 레이아웃 붕 뜸 방지를 위해 단일 표(Single Table) 구조로 원상복구!
-                # 억지로 파이썬에서 표를 자르면 텍스트 길이에 따라 페이지가 붕 뜨는 현상이 발생하므로, 브라우저 엔진에 페이지 넘김을 맡깁니다.
-                
-                # 표 제목을 표 안이 아닌 바깥으로 완전히 빼내서 첫 장에만 딱 한 번 출력되게 함
-                title_div = f'<div class="print-only-title" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border-bottom: 2px solid #555 !important; padding: 15px 0px 10px 0px !important; margin-bottom: 10px; font-weight: bold;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개</span></div>'
+                # 표 제목을 표 밖으로 완전히 빼내서 무조건 첫 장 맨 위에만 딱 한 번 나오게 통제합니다.
+                title_div = f'<div class="print-only-title" style="background-color: white !important; color: black !important; text-align: left; font-size: 18px; border-bottom: 2px solid #555 !important; padding: 10px 0px !important; margin-bottom: 10px; font-weight: bold;">{print_title} &nbsp; <span style="font-size: 14px; color: #555 !important; font-weight: normal !important;">| 출력 개수: {len(f_df)}개</span></div>'
                 
                 table_html = '<div class="custom-table-container">'
                 table_html += title_div
                 table_html += '<table class="custom-table">'
-                table_html += '<thead><tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead>'
+                
+                # 💡 [핵심 기술 1] thead 안에 투명한 가짜 행(1.2cm)을 넣어 매 페이지 상단 여백을 안전하게 확보
+                table_html += '<thead><tr class="print-fake-margin"><th colspan="13" style="height: 12mm; border: none !important; background-color: white !important; padding: 0 !important;"></th></tr>'
+                table_html += '<tr><th class="th-base">Vat</th><th class="th-base">날짜</th><th class="th-in">매입거래처</th><th class="th-in">매입품목 (MEMO)</th><th class="th-in">수량</th><th class="th-in">단가</th><th class="th-out">매출거래처</th><th class="th-out">매출품목 (MEMO)</th><th class="th-out">수량</th><th class="th-out">단가</th><th class="th-base print-hide-col">NO</th><th class="th-base">배송</th><th class="th-base">운송비</th></tr></thead>'
+                
                 table_html += '<tbody>'
                 table_html += "".join(row_html_list)
                 table_html += footer_html
-                table_html += '</tbody></table></div>'
+                table_html += '</tbody>'
+                
+                # 💡 [핵심 기술 2] tfoot 안에 투명한 가짜 행(1.2cm)을 넣어 매 페이지 하단 여백을 안전하게 확보
+                table_html += '<tfoot style="display: table-footer-group !important;"><tr class="print-fake-margin"><td colspan="13" style="height: 12mm; border: none !important; background-color: white !important; padding: 0 !important;"></td></tr></tfoot>'
+                
+                table_html += '</table></div>'
 
-                # 💡 [브라우저 기본글씨 제거 및 여백 1cm 확장 기술] @page margin을 0으로 만들고, body padding에 20mm를 주어 위아래 공간 확보!
+                # 💡 [브라우저 기본글씨 제거 및 여백 기술] @page margin을 0으로 만들고, body 여백과 가짜 여백으로 밸런스 유지
                 print_html_content = f"""
                 <!DOCTYPE html>
                 <html><head><title>인쇄 미리보기</title>
                 <meta charset="utf-8">
                 <style>
-                    /* 브라우저 상하단 기본 글씨(주소, 날짜 등) 싹 지우기 */
+                    /* 브라우저 상하단 기본 글씨(주소, 날짜 등) 완벽히 지우기 */
                     @page {{ size: A4 portrait; margin: 0mm; }} 
-                    /* 종이 끝에 표가 안 닿게 좌우 여백을 10mm로 주고, 상하 여백은 20mm로 1cm 넓게 확보 (요청사항) */
-                    body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; padding: 20mm 10mm; box-sizing: border-box; }}
+                    /* 종이 끝에 표가 안 닿게 좌우 여백을 10mm로 줌 */
+                    body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; padding: 0 10mm; box-sizing: border-box; }}
                     /* zoom 배율 축소(67%)로 1페이지당 여유있게 들어가게 함 */
                     .custom-table-container {{ width: 100%; zoom: 67%; }} 
                     .custom-table {{ width: 100%; border-collapse: collapse; font-size: 11.5px; background-color: white; }}
                     .custom-table th, .custom-table td {{ border: 1px solid #aaa; padding: 6px 8px; color: black !important; }}
                     .custom-table th {{ text-align: center; font-weight: bold; padding: 8px 6px; }}
-                    .fake-margin {{ display: table-row !important; }}
-                    .fake-margin td {{ height: 15mm; border: none !important; background-color: white !important; }}
                     
-                    /* 제목은 표 바깥이라 첫 페이지만 나옴 */
-                    .print-only-title {{ display: block !important; }}
+                    /* 제목은 첫 페이지만 나오며, 첫 페이지 제목 윗부분 여백(15mm) 추가 */
+                    .print-only-title {{ display: block !important; margin-top: 15mm !important; }}
+                    
+                    /* 인쇄 시에만 가짜 상하단 여백이 켜져서 숨통을 틔워줌 */
+                    .print-fake-margin {{ display: table-row !important; }}
                     
                     .th-base {{ background-color: #e2e8f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
                     .th-in {{ background-color: #dbeafe !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
@@ -979,7 +987,7 @@ try:
                     a {{ color: black !important; text-decoration: none !important; pointer-events: none; }}
                     .print-hide-col {{ display: none !important; }}
                     
-                    /* 브라우저가 다음 페이지 넘길 때 컬럼명(Vat, 날짜 등)만 예쁘게 반복 출력하게 허용 */
+                    /* 브라우저가 다음 페이지 넘길 때 컬럼명(Vat, 날짜 등)과 가짜 상단 여백을 세트로 반복 출력하게 허용 */
                     thead {{ display: table-header-group !important; }}
                     
                     /* 표의 줄이 페이지 넘어갈 때 반으로 찢어지는 현상 방지 (원천 레이아웃 보호) */
@@ -1048,7 +1056,7 @@ try:
                     csv = f_df.to_csv(index=False).encode('utf-8-sig')
                     st.download_button("💾 엑셀 다운로드", data=csv, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
 
-                # 웹 화면용 HTML 출력 (웹에서도 단일 렌더링)
+                # 웹 화면용 HTML 출력 (웹에서도 단일 렌더링, 단 가짜 여백은 숨김)
                 st.markdown(table_html, unsafe_allow_html=True)
 
 except Exception as e: st.error(f"⚠️ 시스템 오류: {e}")
