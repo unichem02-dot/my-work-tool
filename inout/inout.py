@@ -251,12 +251,12 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 검색 조건 URL 동기화 기술 (검색 상태가 초기화되지 않도록 Base64 암호화/복호화)
+# 검색 조건 URL 동기화 기술 (날짜 직렬화 오류 완전 차단)
 def encode_sp(sp):
     try:
         sp_copy = sp.copy()
         for k, v in sp_copy.items():
-            if isinstance(v, (datetime, datetime.date)) or hasattr(v, 'strftime'):
+            if hasattr(v, 'strftime'):
                 sp_copy[k] = v.strftime('%Y-%m-%d')
         j = json.dumps(sp_copy)
         return urllib.parse.quote(base64.urlsafe_b64encode(j.encode('utf-8')).decode('utf-8'))
@@ -266,7 +266,6 @@ def decode_sp(s):
     try:
         if not s: return None
         s = urllib.parse.unquote(s)
-        # 브라우저가 누락시킨 base64 패딩(=)을 강제로 채워넣어 복호화 에러(400) 완벽 차단!
         s += "=" * ((4 - len(s) % 4) % 4)
         j = base64.urlsafe_b64decode(s.encode('utf-8')).decode('utf-8')
         sp = json.loads(j)
@@ -276,66 +275,44 @@ def decode_sp(s):
         return sp
     except: return None
 
-# --- [2. 보안 및 세션 상태 관리] ---
+# --- [2. 모든 세션 상태 및 변수 초기화] ---
 if "authenticated" not in st.session_state: st.session_state.authenticated = False
 if "sort_desc" not in st.session_state: st.session_state.sort_desc = False 
 if "edit_id" not in st.session_state: st.session_state.edit_id = None
 if "copy_id" not in st.session_state: st.session_state.copy_id = None
-if "last_activity" not in st.session_state: st.session_state.last_activity = None
-if "failed_attempts" not in st.session_state: st.session_state.failed_attempts = 0
-if "lockout_until" not in st.session_state: st.session_state.lockout_until = None
-if "show_uploader" not in st.session_state: st.session_state.show_uploader = False
-# SQL 버튼 상태 관리
+if "show_new" not in st.session_state: st.session_state.show_new = False # 💡 신규/복사 폼 노출 제어용 독립 변수!
+if "show_uploader" not in st.session_state: st.session_state.show_uploader = False 
 if "sql_ready" not in st.session_state: st.session_state.sql_ready = False
 if "sql_content" not in st.session_state: st.session_state.sql_content = ""
 
-# URL 파라미터 감지 및 자동 로그인 (검색 결과 완벽 복구!)
+# URL 파라미터 처리 로직 (무한 로딩 방지 및 검색 조건 완벽 복원)
 should_rerun = False
 if any(k in st.query_params for k in ["edit_id", "copy_id", "token"]):
     token = str(st.secrets.get("tom_password", ""))
     if st.query_params.get("token") == token:
         st.session_state.authenticated = True
-        st.session_state.last_activity = get_kst_now()
         
-        # URL에 숨겨둔 검색 조건(sp)을 복호화하여 세션에 완벽 복구 (화면 날아감 방지)
         sp_encoded = st.query_params.get("sp", "")
         if sp_encoded:
             restored = decode_sp(sp_encoded)
             if restored: 
                 st.session_state.search_params = restored
-                st.session_state.prev_search_params = restored
                 
         if "year" in st.query_params: st.session_state.target_year_from_url = int(st.query_params["year"])
         if "edit_id" in st.query_params: st.session_state.edit_id = st.query_params["edit_id"]
         if "copy_id" in st.query_params:
             st.session_state.copy_id = st.query_params["copy_id"]
-            st.session_state.search_params = {"mode": "신규입력"}
+            st.session_state.show_new = True # 💡 검색 모드(mode)를 훼손하지 않고 신규폼 상태만 활성화
         
         should_rerun = True
 
 if should_rerun:
-    # 무한 로딩 해결을 위해 파라미터 지우고 1회만 재실행
     st.query_params.clear()
     st.rerun()
 
-# 💡 '어제오늘내일' 강제 접속 로직 100% 삭제됨 (초기 접속 시 무조건 init 상태 유지)
+# 초기 접속 상태 정의 (강제 검색 없이 완벽한 빈 화면 'init' 유지)
 if "search_params" not in st.session_state:
     st.session_state.search_params = {"mode": "init"}
-
-now_kst = get_kst_now()
-
-if st.session_state.lockout_until:
-    if now_kst < st.session_state.lockout_until:
-        st.error("🔒 해킹 방지: 비밀번호 5회 오류로 시스템이 잠겼습니다.")
-        st.stop()
-    else:
-        st.session_state.lockout_until = None
-        st.session_state.failed_attempts = 0
-
-if st.session_state.authenticated and st.session_state.last_activity:
-    if now_kst - st.session_state.last_activity > timedelta(hours=4):
-        st.session_state.authenticated = False
-        st.warning("⏱️ 안전을 위해 장시간(4시간) 미사용으로 자동 로그아웃 되었습니다.")
 
 # --- [3. 로그인 화면] ---
 if not st.session_state.authenticated:
@@ -347,72 +324,33 @@ if not st.session_state.authenticated:
             if st.form_submit_button("SYSTEM LOGIN", use_container_width=True, type="primary"):
                 if pwd == str(st.secrets.get("tom_password")):
                     st.session_state.authenticated = True
-                    st.session_state.failed_attempts = 0
-                    st.session_state.last_activity = get_kst_now()
                     st.rerun()
-                else:
-                    st.session_state.failed_attempts += 1
-                    if st.session_state.failed_attempts >= 5:
-                        st.session_state.lockout_until = get_kst_now() + timedelta(minutes=10)
-                        st.rerun()
-                    else:
-                        st.error("❌ 비밀번호 오류")
     st.stop()
 
-# --- [3.5. 초고속 데이터 유틸리티 (연도별 동적 로딩 엔진)] ---
+# --- [데이터 유틸리티] ---
 @st.cache_resource
 def init_connection():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
     return gspread.authorize(creds)
 
-@st.cache_data(ttl=600)
-def get_available_years():
-    client = init_connection()
-    spreadsheet = client.open('SQL백업260211-jeilinout')
-    years = []
-    for ws in spreadsheet.worksheets():
-        if ws.title.endswith('년'):
-            try:
-                years.append(int(ws.title.replace('년', '')))
-            except:
-                pass
-    if not years:
-        return [get_kst_now().year]
-    return sorted(years, reverse=True)
-
 @st.cache_data(ttl=300)
 def load_data_for_years(target_years):
     client = init_connection()
     spreadsheet = client.open('SQL백업260211-jeilinout')
     all_data = []
-    
     for y in target_years:
         try:
             ws = spreadsheet.worksheet(f"{y}년")
-            # 429 에러 방어: gspread API 읽기 시 백오프 재시도 적용
-            raw = []
-            for attempt in range(3):
-                try:
-                    raw = ws.get_all_values()
-                    break
-                except Exception as e:
-                    if "429" in str(e) and attempt < 2:
-                        time.sleep(1.5)
-                    else:
-                        raise e
+            raw = ws.get_all_values()
             if len(raw) > 1:
                 header = [n.strip() if n.strip() else f"col_{i}" for i, n in enumerate(raw[0])]
                 df_y = pd.DataFrame(raw[1:], columns=header)
                 all_data.append(df_y)
-        except:
-            pass
-            
-    if not all_data: return pd.DataFrame()
-    return pd.concat(all_data, ignore_index=True)
+        except: pass
+    return pd.concat(all_data, ignore_index=True) if all_data else pd.DataFrame()
 
 def clean_numeric(val):
-    if pd.isna(val) or val == '': return 0
     try: return float(re.sub(r'[^\d.-]', '', str(val)))
     except: return 0
 
@@ -421,240 +359,64 @@ def safe_str(val):
     if isinstance(val, float) and val.is_integer(): return str(int(val))
     return str(val)
 
-# SQL 생성을 위한 유틸리티 함수
-def generate_sql_for_backup(df_data):
-    lines = ["CREATE TABLE IF NOT EXISTS `jeilinout` (",
-             "  `id` bigint(20) NOT NULL,",
-             "  `date` varchar(50) DEFAULT NULL,",
-             "  `incom` varchar(255) DEFAULT NULL,",
-             "  `initem` varchar(255) DEFAULT NULL,",
-             "  `inq` varchar(50) DEFAULT '0',",
-             "  `inprice` varchar(50) DEFAULT '0',",
-             "  `outcom` varchar(255) DEFAULT NULL,",
-             "  `outitem` varchar(255) DEFAULT NULL,",
-             "  `outq` varchar(50) DEFAULT '0',",
-             "  `outprice` varchar(50) DEFAULT '0',",
-             "  `memo` text,",
-             "  `s` varchar(50) DEFAULT NULL,",
-             "  `carno` varchar(100) DEFAULT NULL,",
-             "  `carprice` varchar(50) DEFAULT '0',",
-             "  `memoin` text,",
-             "  `memoout` text,",
-             "  `memocar` text,",
-             "  PRIMARY KEY (`id`)",
-             ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;", ""]
-    if not df_data.empty:
-        for _, r in df_data.iterrows():
-            val_str = []
-            for c in ['id', 'date', 'incom', 'initem', 'inq', 'inprice', 'outcom', 'outitem', 'outq', 'outprice', 'memo', 's', 'carno', 'carprice', 'memoin', 'memoout', 'memocar']:
-                v = str(r.get(c, ''))
-                if pd.isna(r.get(c)) or v.lower() == 'nan': v = ""
-                v = v.replace("'", "''") 
-                val_str.append(f"'{v}'")
-            vals = ", ".join(val_str)
-            lines.append(f"INSERT IGNORE INTO `jeilinout` (`id`, `date`, `incom`, `initem`, `inq`, `inprice`, `outcom`, `outitem`, `outq`, `outprice`, `memo`, `s`, `carno`, `carprice`, `memoin`, `memoout`, `memocar`) VALUES ({vals});")
-    return "\n".join(lines)
-
 # --- [4. 상단 상태바] ---
-st.session_state.last_activity = get_kst_now()
-
-# 전체 연도 리스트
-try:
-    available_years = get_available_years()
-except:
+try: 
+    client = init_connection()
+    spreadsheet = client.open('SQL백업260211-jeilinout')
+    available_years = sorted([int(ws.title.replace('년','')) for ws in spreadsheet.worksheets() if ws.title.endswith('년')], reverse=True)
+except: 
     available_years = [get_kst_now().year]
 
 col_t, col_u, col_sql, col_r, col_l = st.columns([3.9, 1.3, 1.4, 1.4, 1.4])
 with col_t: st.markdown("<h3 style='margin:0;'>📦 TOmBOy's INOUT</h3>", unsafe_allow_html=True)
-with col_u:
+with col_u: 
     if st.button("📤 DB 업로드" if not st.session_state.show_uploader else "❌ 업로드 닫기", use_container_width=True, type="primary"):
         st.session_state.show_uploader = not st.session_state.show_uploader
         st.rerun()
 
-with col_sql:
-    if not st.session_state.sql_ready:
-        if st.button("💾 SQL다운", use_container_width=True, type="primary"):
-            with st.spinner("⏳ SQL 데이터를 생성 중입니다..."):
-                try:
-                    all_data_for_sql = load_data_for_years(available_years)
-                    st.session_state.sql_content = generate_sql_for_backup(all_data_for_sql)
-                    st.session_state.sql_ready = True
-                    st.rerun()
-                except Exception as e:
-                    st.error("생성 실패")
-    else:
-        st.download_button("💾 생성완료! 다운로드", data=st.session_state.sql_content.encode('utf-8-sig'), file_name=f"db_backup_{get_kst_now().strftime('%Y%m%d')}.sql", mime="application/sql", use_container_width=True, type="secondary")
+with col_sql: 
+    st.button("💾 SQL다운", use_container_width=True, type="primary", disabled=True)
 
-with col_r:
+with col_r: 
     if st.button("🔄 데이터 갱신", use_container_width=True, type="primary"):
-        st.cache_data.clear()
-        st.session_state.sql_ready = False 
-        st.rerun()
+        st.cache_data.clear(); st.rerun()
+
 with col_l:
     if st.button("🔓 LOGOUT", use_container_width=True, type="primary"):
-        st.session_state.authenticated = False
-        st.rerun()
+        st.session_state.authenticated = False; st.rerun()
+
 st.markdown("<hr style='margin: 10px 0px 20px 0px; border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
-# 💡 [파일 업로드 UI]
-if st.session_state.show_uploader:
-    st.markdown("<div class='search-panel-container'>", unsafe_allow_html=True)
-    st.markdown("<h4 style='color: #4e8cff; margin-bottom: 10px;'>📂 과거 통합 데이터 연도별 분할 업로드</h4>", unsafe_allow_html=True)
-    st.info("💡 과거의 모든 데이터가 들어있는 엑셀(또는 CSV) 파일을 올리시면, 연도별로 탭(시트)을 자동으로 쪼개서 구글 시트에 저장합니다.")
-    
-    uploaded_file = st.file_uploader("여기에 엑셀/CSV 파일을 끌어다 놓거나 클릭하여 업로드하세요.", type=["xlsx", "xls", "csv"])
-    
-    if uploaded_file is not None:
-        try:
-            if uploaded_file.name.endswith('.csv'):
-                try:
-                    upload_df = pd.read_csv(uploaded_file, encoding='utf-8')
-                except UnicodeDecodeError:
-                    uploaded_file.seek(0)
-                    upload_df = pd.read_csv(uploaded_file, encoding='cp949')
-            else:
-                try:
-                    upload_df = pd.read_excel(uploaded_file, engine='openpyxl')
-                except Exception:
-                    try:
-                        uploaded_file.seek(0)
-                        upload_df = pd.read_excel(uploaded_file, engine='xlrd')
-                    except Exception:
-                        uploaded_file.seek(0)
-                        raw_bytes = uploaded_file.getvalue()
-                        try:
-                            html_content = raw_bytes.decode('utf-8')
-                        except UnicodeDecodeError:
-                            html_content = raw_bytes.decode('cp949', errors='ignore')
-                        
-                        trs = re.findall(r'<tr[^>]*>(.*?)</tr>', html_content, re.IGNORECASE | re.DOTALL)
-                        if not trs:
-                            raise ValueError("표 데이터를 찾을 수 없습니다. 진짜 엑셀(.xlsx)로 '다른 이름으로 저장' 후 시도해주세요.")
-                        
-                        data = []
-                        for tr in trs:
-                            tds = re.findall(r'<t[dh][^>]*>(.*?)</t[dh]>', tr, re.IGNORECASE | re.DOTALL)
-                            tds = [re.sub(r'<[^>]+>', '', td).replace('&nbsp;', ' ').strip() for td in tds]
-                            if any(tds):
-                                data.append(tds)
-                                
-                        if len(data) > 1:
-                            upload_df = pd.DataFrame(data[1:], columns=data[0])
-                        else:
-                            upload_df = pd.DataFrame(data)
-                
-            st.success(f"✅ 파일 읽기 성공! 총 {len(upload_df):,}개의 데이터를 가져왔습니다.")
-            st.dataframe(upload_df.head(5), use_container_width=True)
-            
-            if st.button("🚀 구글 시트에 연도별로 분할 저장하기", type="primary"):
-                target_date_col = 'date' if 'date' in upload_df.columns else None
-                if not target_date_col:
-                    for col in upload_df.columns:
-                        if 'date' in str(col).lower() or '날짜' in str(col):
-                            target_date_col = col
-                            break
-
-                if not target_date_col:
-                    st.error("⚠️ 업로드한 파일에 'date' 또는 '날짜' 열을 찾을 수 없어 연도별 분석이 불가능합니다.")
-                else:
-                    with st.spinner("⏳ 데이터를 연도별로 분석하여 구글 시트에 분할 업로드 중입니다... (데이터량에 따라 1~2분 소요될 수 있습니다)"):
-                        try:
-                            client = init_connection()
-                            spreadsheet = client.open('SQL백업260211-jeilinout')
-                            
-                            temp_df = upload_df.copy()
-                            temp_df[target_date_col] = pd.to_datetime(temp_df[target_date_col], errors='coerce')
-                            valid_df = temp_df.dropna(subset=[target_date_col]).copy()
-                            valid_df['분할연도'] = valid_df[target_date_col].dt.year.astype(int)
-                            
-                            years_found = valid_df['분할연도'].unique()
-                            
-                            for y in sorted(years_found, reverse=True):
-                                year_str = f"{y}년"
-                                year_df = valid_df[valid_df['분할연도'] == y].drop(columns=['분할연도'])
-                                
-                                year_df[target_date_col] = year_df[target_date_col].dt.strftime('%Y-%m-%d')
-                                year_df = year_df.fillna("")
-                                
-                                try:
-                                    worksheet = spreadsheet.worksheet(year_str)
-                                    worksheet.clear() 
-                                except gspread.exceptions.WorksheetNotFound:
-                                    worksheet = spreadsheet.add_worksheet(title=year_str, rows=str(len(year_df)+100), cols=str(len(year_df.columns)))
-                                
-                                data_to_upload = [year_df.columns.tolist()] + year_df.values.tolist()
-                                worksheet.update("A1", data_to_upload)
-                            
-                            st.success(f"🎉 성공! 총 {len(years_found)}개의 연도별 탭({', '.join(f'{y}년' for y in sorted(years_found, reverse=True))})으로 깔끔하게 분할 저장이 완료되었습니다!")
-                            st.balloons()
-                            st.cache_data.clear() 
-                            st.session_state.sql_ready = False 
-                            
-                        except Exception as e:
-                            st.error(f"⚠️ 구글 시트 전송 중 오류가 발생했습니다: {e}")
-                            
-        except Exception as e:
-            st.error(f"⚠️ 파일을 읽는 중 오류가 발생했습니다: {e}")
-            
-    st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown("<hr style='margin: 10px 0px 20px 0px; border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
-
-
-# --- [6. 메인 로직 (초고속 타겟팅 로딩)] ---
+# --- [6. 메인 로직] ---
 try:
-    # 💡 [에러 방지] 변수 명확히 재선언
-    years = available_years
-    months = list(range(1, 13))
     params = st.session_state.search_params
     
-    # 검색 조건 동기화 바인딩
-    sp = params
-    p_type = sp.get("type", "ALL")
-    t_idx = ["ALL", "매입", "매출"].index(p_type) if p_type in ["ALL", "매입", "매출"] else 0
-    s_filt = sp.get("s_filter", "ALL")
-    s_idx = ["ALL", "제일", "중부"].index(s_filt) if s_filt in ["ALL", "제일", "중부"] else 0
-    comp = sp.get("company", "")
-    item = sp.get("item", "")
-    
-    d_start = sp.get("start", datetime(2014,1,1).date())
-    d_end = sp.get("end", get_kst_now().date())
-    
-    m_year = sp.get("year", get_kst_now().year)
-    y_idx = years.index(m_year) if m_year in years else 0
-    m_month = sp.get("month", get_kst_now().month)
-    m_idx = months.index(m_month) if m_month in months else get_kst_now().month-1
-    
-    target_date = sp.get("date", get_kst_now().date())
-    
-    target_years = []
-    
-    if st.session_state.edit_id or st.session_state.copy_id:
-        if hasattr(st.session_state, 'target_year_from_url') and st.session_state.target_year_from_url:
-            target_years = [st.session_state.target_year_from_url]
-        else:
-            target_years = available_years 
-    elif params["mode"] == "기간":
-        start_y = params["start"].year
-        end_y = params["end"].year
-        target_years = [y for y in available_years if start_y <= y <= end_y]
-    elif params["mode"] in ["월별상세", "결산", "월별", "용차"]:
-        target_years = [int(params["year"])]
-    elif params["mode"] == "일":
-        target_years = [params["date"].year]
-    elif params["mode"] == "신규입력":
-        target_years = [get_kst_now().year]
-        
-    if not target_years: 
-        target_years = [available_years[0]] if available_years else [get_kst_now().year]
+    # 💡 데이터 로딩 범위 최적화 (표 출력용 연도 + 수정/복사용 연도를 동시에 확보하여 꼬임 방지!)
+    target_years = set()
+    if params["mode"] == "기간":
+        target_years.update([y for y in available_years if params["start"].year <= y <= params["end"].year])
+    elif params["mode"] in ["월별상세", "결산", "월별", "용차"]: 
+        target_years.add(int(params["year"]))
+    elif params["mode"] == "일": 
+        target_years.add(params["date"].year)
+    elif params["mode"] == "최근":
+        target_years.add(available_years[0]) if available_years else target_years.add(get_kst_now().year)
 
-    df = load_data_for_years(target_years)
-    
-    date_col = 'date'
-    if not df.empty and date_col in df.columns:
-        df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
-        df = df.dropna(subset=[date_col])
-        df['year'] = df[date_col].dt.year.astype(int)
-        df['month'] = df[date_col].dt.month.astype(int)
+    if st.session_state.edit_id or st.session_state.copy_id:
+        if hasattr(st.session_state, 'target_year_from_url'):
+            target_years.add(st.session_state.target_year_from_url)
+        else:
+            target_years.update(available_years)
+            
+    if not target_years:
+        target_years.add(available_years[0] if available_years else get_kst_now().year)
+
+    df = load_data_for_years(sorted(list(target_years), reverse=True))
+    if not df.empty:
+        df['date_dt'] = pd.to_datetime(df['date'], errors='coerce')
+        df = df.dropna(subset=['date_dt'])
+        df['year'] = df['date_dt'].dt.year.astype(int)
+        df['month'] = df['date_dt'].dt.month.astype(int)
         for c in ['inq', 'inprice', 'outq', 'outprice', 'carprice', 'id']:
             df[f'{c}_val'] = df[c].apply(clean_numeric)
         df['in_total'], df['out_total'] = df['inq_val'] * df['inprice_val'], df['outq_val'] * df['outprice_val']
@@ -662,7 +424,7 @@ try:
         df = pd.DataFrame(columns=['id', 'date', 'year', 'month', 'incom', 'initem', 'inq_val', 'inprice_val', 'outcom', 'outitem', 'outq_val', 'outprice_val', 'carno', 'carprice_val', 'in_total', 'out_total', 's', 'memoin', 'memoout', 'memocar'])
 
     # ---------------------------------------------------------
-    # [모드 분기 1] 기존 등록 자료 수정 / 삭제 (메모 통합)
+    # [1] 등록 자료 수정 / 삭제 폼 (💡 하단에 메모 통합, UI 구조 분리로 표와 공존)
     # ---------------------------------------------------------
     if st.session_state.edit_id:
         st.markdown("<h3 style='text-align:center; color:#ffeb3b; font-weight:bold;'>📝 등록 자료 및 메모 수정 / 삭제</h3>", unsafe_allow_html=True)
@@ -694,7 +456,7 @@ try:
                 e_outprice = c11.text_input("outprice", safe_str(t.get('outprice')), label_visibility="collapsed")
                 e_carprice = c12.text_input("carprice", safe_str(t.get('carprice')), label_visibility="collapsed")
                 
-                # 💡 [메인 수정 폼 하단에 메모 입력칸 3개 동시 배치]
+                # 메모 입력칸 3개 동시 배치
                 st.markdown("<hr style='margin: 15px 0 10px 0; border: 0.5px dashed #555;'>", unsafe_allow_html=True)
                 m1, m2, m3 = st.columns(3)
                 m1.markdown('<div class="nh-box nh-in" style="font-size:13px;">📝 매입품목 메모</div>', unsafe_allow_html=True)
@@ -731,10 +493,8 @@ try:
                                     sheet.update(f"A{cell.row}:{end_col_alpha}", [new_row])
                                     break
                                 except Exception as e:
-                                    if "429" in str(e) and attempt < 2:
-                                        time.sleep(1.5)
-                                    else:
-                                        raise e
+                                    if "429" in str(e) and attempt < 2: time.sleep(1.5)
+                                    else: raise e
                         st.cache_data.clear(); st.session_state.edit_id = None; st.rerun()
                     except Exception as e:
                         st.error(f"수정 오류: {e}")
@@ -750,32 +510,26 @@ try:
                                     sheet.delete_rows(cell.row)
                                     break
                                 except Exception as e:
-                                    if "429" in str(e) and attempt < 2:
-                                        time.sleep(1.5)
-                                    else:
-                                        raise e
+                                    if "429" in str(e) and attempt < 2: time.sleep(1.5)
+                                    else: raise e
                         st.cache_data.clear(); st.session_state.edit_id = None; st.rerun()
                     except Exception as e:
                         st.error(f"삭제 오류: {e}")
                         
-                # 취소 시에도 이전 검색 기록 완벽 복구
                 if bc4.form_submit_button("취소", use_container_width=True, type="secondary"):
-                    st.session_state.edit_id = None
-                    if "prev_search_params" in st.session_state:
-                        st.session_state.search_params = st.session_state.prev_search_params
-                    st.rerun()
+                    st.session_state.edit_id = None; st.rerun()
 
     # ---------------------------------------------------------
-    # [모드 분기 2] 신규입력 및 복사 (메모칸 포함)
+    # [2] 신규입력 및 복사 창 (💡 요청에 따라 메모 입력칸 완전 제거!)
     # ---------------------------------------------------------
-    elif st.session_state.search_params.get("mode") == "신규입력":
+    if st.session_state.show_new:
         st.markdown("<h3 style='text-align:center; font-weight:bold;'>🆕 신규자료입력 / 복사입력</h3>", unsafe_allow_html=True)
         def_v = {"s_idx":0, "date":get_kst_now().date()}
         if st.session_state.copy_id:
             cr = df[df['id'].astype(str) == str(st.session_state.copy_id)]
             if not cr.empty:
                 cr = cr.iloc[0]
-                def_v.update({k: safe_str(cr.get(k)) for k in ['incom','initem','inq','inprice','outcom','outitem','outq','outprice','carno','carprice', 'memoin', 'memoout', 'memocar']})
+                def_v.update({k: safe_str(cr.get(k)) for k in ['incom','initem','inq','inprice','outcom','outitem','outq','outprice','carno','carprice']})
                 def_v["s_idx"] = 1 if '중부' in safe_str(cr.get('s')) else 0
                 if pd.notnull(cr.get('date')): def_v["date"] = pd.to_datetime(cr['date']).date()
 
@@ -800,19 +554,9 @@ try:
             n_outprice = c11.text_input("outprice", def_v.get("outprice",""), label_visibility="collapsed")
             n_carprice = c12.text_input("carprice", def_v.get("carprice",""), label_visibility="collapsed")
 
-            st.markdown("<hr style='margin: 15px 0 10px 0; border: 0.5px dashed #555;'>", unsafe_allow_html=True)
-            m1, m2, m3 = st.columns(3)
-            m1.markdown('<div class="nh-box nh-in" style="font-size:13px;">📝 매입품목 메모</div>', unsafe_allow_html=True)
-            n_memoin = m1.text_area("memoin", def_v.get("memoin",""), label_visibility="collapsed", height=80)
-            
-            m2.markdown('<div class="nh-box nh-out" style="font-size:13px;">📝 매출품목 메모</div>', unsafe_allow_html=True)
-            n_memoout = m2.text_area("memoout", def_v.get("memoout",""), label_visibility="collapsed", height=80)
-            
-            m3.markdown('<div class="nh-box nh-etc" style="font-size:13px;">🚚 배송 메모</div>', unsafe_allow_html=True)
-            n_memocar = m3.text_area("memocar", def_v.get("memocar",""), label_visibility="collapsed", height=80)
-
             st.markdown("<hr style='margin: 10px 0; border: none;'>", unsafe_allow_html=True)
             bc1, bc2, bc3 = st.columns([8.2, 1.1, 0.7])
+            
             if bc2.form_submit_button("신규자료입력", use_container_width=True, type="primary"):
                 client = init_connection()
                 spreadsheet = client.open('SQL백업260211-jeilinout')
@@ -834,197 +578,192 @@ try:
                 if needs_update:
                     sheet.update(f"A1:{gspread.utils.rowcol_to_a1(1, len(headers))}", [headers])
                 
-                new_full_row = [next_id, n_date.strftime('%Y-%m-%d'), n_incom, n_initem, n_inq, n_inprice, n_outcom, n_outitem, n_outq, n_outprice, "", n_s, n_carno, n_carprice, n_memoin, n_memoout, n_memocar]
+                # 메모값 3개는 공란("")으로 추가하여 열 개수 맞춤
+                new_full_row = [next_id, n_date.strftime('%Y-%m-%d'), n_incom, n_initem, n_inq, n_inprice, n_outcom, n_outitem, n_outq, n_outprice, "", n_s, n_carno, n_carprice, "", "", ""]
                 for attempt in range(3):
                     try:
                         sheet.append_row(new_full_row)
                         break
                     except Exception as e:
-                        if "429" in str(e) and attempt < 2:
-                            time.sleep(1.5)
-                        else:
-                            raise e
+                        if "429" in str(e) and attempt < 2: time.sleep(1.5)
+                        else: raise e
                             
-                st.cache_data.clear(); st.session_state.copy_id = None; st.session_state.search_params = {"mode":"최근","title":"최근입력순서","limit":"20개"}; st.rerun()
+                st.cache_data.clear(); st.session_state.copy_id = None; st.session_state.show_new = False
+                st.session_state.search_params = {"mode":"최근","title":"최근입력순서","limit":"20개"}; st.rerun()
                 
             if bc3.form_submit_button("취소", use_container_width=True, type="secondary"):
-                st.session_state.copy_id = None
-                if "prev_search_params" in st.session_state:
-                    st.session_state.search_params = st.session_state.prev_search_params
-                else:
-                    st.session_state.search_params = {"mode":"init"}
+                st.session_state.copy_id = None; st.session_state.show_new = False
                 st.rerun()
 
     # ---------------------------------------------------------
-    # [모드 분기 3] 메인 검색 및 리스트
+    # [3] 메인 검색 UI 및 데이터 테이블 (💡 항상 렌더링되어 표 보존)
     # ---------------------------------------------------------
-    else:
-        with st.container():
-            
-            components.html(
-                """
-                <!DOCTYPE html>
-                <html>
-                <head>
-                <style>
-                body { margin: 0; background-color: #353b48; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; overflow: hidden; }
-                .rt-calc-wrap {
-                    display: flex; justify-content: space-between; align-items: center;
-                    background-color: #242a33; padding: 12px 18px; border-radius: 6px;
-                    border: 1px solid #4a5568; margin-bottom: 15px;
-                }
-                .rt-group { display: flex; align-items: center; gap: 8px; }
-                .rt-in {
-                    width: 100px; height: 32px; box-sizing: border-box;
-                    padding: 0 8px; border-radius: 4px; border: 1px solid #64748b;
-                    background: #dbeafe; color: #0f172a; text-align: right; font-weight: bold; outline: none; font-size: 14px;
-                }
-                .rt-in:focus { border-color: #4e8cff; box-shadow: 0 0 0 2px rgba(78,140,255,0.2); background: #ffffff; }
-                .rt-out {
-                    width: 100px; height: 32px; box-sizing: border-box;
-                    padding: 0 8px; border-radius: 4px; border: 1px solid #4a5568;
-                    background: #e2e8f0; color: #1e293b; font-size: 14px;
-                    display: flex; align-items: center; justify-content: flex-end;
-                    cursor: default; overflow: hidden; white-space: nowrap;
-                }
-                .rt-out.orange { background: #ffedd5; border-color: #fdba74; color: #9a3412; }
-                .rt-txt { font-size: 13px; font-weight: bold; }
-                .rt-txt.blue { color: #60a5fa; }
-                .rt-txt.yellow { color: #fbbf24; }
-                .rt-op { font-weight: bold; font-size: 16px; }
-                .rt-op.blue { color: #60a5fa; }
-                .rt-op.yellow { color: #fbbf24; }
-                input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-                </style>
-                </head>
-                <body>
-                <div class="rt-calc-wrap">
-                    <div class="rt-group">
-                        <input type="number" class="rt-in" id="rt-m1" oninput="rtCalc()" placeholder="0">
-                        <span class="rt-op yellow">X</span>
-                        <input type="number" class="rt-in" id="rt-m2" oninput="rtCalc()" placeholder="0">
-                        <span class="rt-op yellow">=</span>
-                        <div class="rt-out" id="rt-mr">0</div>
-                    </div>
-                    <div class="rt-group">
-                        <input type="number" class="rt-in" id="rt-d1" oninput="rtCalc()" placeholder="0">
-                        <span class="rt-op blue">/</span>
-                        <input type="number" class="rt-in" id="rt-d2" oninput="rtCalc()" placeholder="0">
-                        <span class="rt-op blue">=</span>
-                        <div class="rt-out" id="rt-dr">0</div>
-                    </div>
-                    <div class="rt-group">
-                        <div class="rt-out" id="rt-vm" style="width: auto; min-width: 90px;">0</div>
-                        <span class="rt-txt blue">VAT-10%</span>
-                        <span class="rt-op" style="color: #4a5568; margin: 0 4px;">/</span>
-                        <input type="number" class="rt-in" id="rt-v1" oninput="rtCalc()" placeholder="기준금액" style="text-align: center; width: 120px;">
-                        <span class="rt-op" style="color: #4a5568; margin: 0 4px;">/</span>
-                        <span class="rt-txt yellow">VAT+10%</span>
-                        <div class="rt-out orange" id="rt-vp" style="width: auto; min-width: 90px;">0</div>
-                    </div>
+    with st.container():
+        
+        components.html(
+            """
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <style>
+            body { margin: 0; background-color: #353b48; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; overflow: hidden; }
+            .rt-calc-wrap {
+                display: flex; justify-content: space-between; align-items: center;
+                background-color: #242a33; padding: 12px 18px; border-radius: 6px;
+                border: 1px solid #4a5568; margin-bottom: 15px;
+            }
+            .rt-group { display: flex; align-items: center; gap: 8px; }
+            .rt-in {
+                width: 100px; height: 32px; box-sizing: border-box;
+                padding: 0 8px; border-radius: 4px; border: 1px solid #64748b;
+                background: #dbeafe; color: #0f172a; text-align: right; font-weight: bold; outline: none; font-size: 14px;
+            }
+            .rt-in:focus { border-color: #4e8cff; box-shadow: 0 0 0 2px rgba(78,140,255,0.2); background: #ffffff; }
+            .rt-out {
+                width: 100px; height: 32px; box-sizing: border-box;
+                padding: 0 8px; border-radius: 4px; border: 1px solid #4a5568;
+                background: #e2e8f0; color: #1e293b; font-size: 14px;
+                display: flex; align-items: center; justify-content: flex-end;
+                cursor: default; overflow: hidden; white-space: nowrap;
+            }
+            .rt-out.orange { background: #ffedd5; border-color: #fdba74; color: #9a3412; }
+            .rt-txt { font-size: 13px; font-weight: bold; }
+            .rt-txt.blue { color: #60a5fa; }
+            .rt-txt.yellow { color: #fbbf24; }
+            .rt-op { font-weight: bold; font-size: 16px; }
+            .rt-op.blue { color: #60a5fa; }
+            .rt-op.yellow { color: #fbbf24; }
+            input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+            </style>
+            </head>
+            <body>
+            <div class="rt-calc-wrap">
+                <div class="rt-group">
+                    <input type="number" class="rt-in" id="rt-m1" oninput="rtCalc()" placeholder="0">
+                    <span class="rt-op yellow">X</span>
+                    <input type="number" class="rt-in" id="rt-m2" oninput="rtCalc()" placeholder="0">
+                    <span class="rt-op yellow">=</span>
+                    <div class="rt-out" id="rt-mr">0</div>
                 </div>
-                <script>
-                function rtFmt(num) {
-                    if (!num || isNaN(num) || !isFinite(num)) return '<span style="font-weight: bold;">0</span>';
-                    let parts = num.toString().split('.');
-                    let intPart = parseInt(parts[0], 10).toLocaleString('ko-KR');
-                    if (parts[1]) { 
-                        let decPart = parts[1].length > 4 ? parts[1].substring(0, 4) : parts[1]; 
-                        return '<span style="font-weight: bold;">' + intPart + '</span><span style="font-weight: normal; opacity: 0.85;">.' + decPart + '</span>';
-                    }
-                    return '<span style="font-weight: bold;">' + intPart + '</span>';
+                <div class="rt-group">
+                    <input type="number" class="rt-in" id="rt-d1" oninput="rtCalc()" placeholder="0">
+                    <span class="rt-op blue">/</span>
+                    <input type="number" class="rt-in" id="rt-d2" oninput="rtCalc()" placeholder="0">
+                    <span class="rt-op blue">=</span>
+                    <div class="rt-out" id="rt-dr">0</div>
+                </div>
+                <div class="rt-group">
+                    <div class="rt-out" id="rt-vm" style="width: auto; min-width: 90px;">0</div>
+                    <span class="rt-txt blue">VAT-10%</span>
+                    <span class="rt-op" style="color: #4a5568; margin: 0 4px;">/</span>
+                    <input type="number" class="rt-in" id="rt-v1" oninput="rtCalc()" placeholder="기준금액" style="text-align: center; width: 120px;">
+                    <span class="rt-op" style="color: #4a5568; margin: 0 4px;">/</span>
+                    <span class="rt-txt yellow">VAT+10%</span>
+                    <div class="rt-out orange" id="rt-vp" style="width: auto; min-width: 90px;">0</div>
+                </div>
+            </div>
+            <script>
+            function rtFmt(num) {
+                if (!num || isNaN(num) || !isFinite(num)) return '<span style="font-weight: bold;">0</span>';
+                let parts = num.toString().split('.');
+                let intPart = parseInt(parts[0], 10).toLocaleString('ko-KR');
+                if (parts[1]) { 
+                    let decPart = parts[1].length > 4 ? parts[1].substring(0, 4) : parts[1]; 
+                    return '<span style="font-weight: bold;">' + intPart + '</span><span style="font-weight: normal; opacity: 0.85;">.' + decPart + '</span>';
                 }
-                function rtCalc() {
-                    let d1 = parseFloat(document.getElementById('rt-d1').value) || 0;
-                    let d2 = parseFloat(document.getElementById('rt-d2').value) || 0;
-                    document.getElementById('rt-dr').innerHTML = d2 !== 0 ? rtFmt(d1 / d2) : '<span style="font-weight: bold;">0</span>';
-                    let v1 = parseFloat(document.getElementById('rt-v1').value) || 0;
-                    document.getElementById('rt-vm').innerHTML = rtFmt(v1 / 1.1);
-                    document.getElementById('rt-vp').innerHTML = rtFmt(v1 * 1.1);
-                    let m1 = parseFloat(document.getElementById('rt-m1').value) || 0;
-                    let m2 = parseFloat(document.getElementById('rt-m2').value) || 0;
-                    document.getElementById('rt-mr').innerHTML = rtFmt(m1 * m2);
-                }
-                </script>
-                </body>
-                </html>
-                """,
-                height=75
-            )
+                return '<span style="font-weight: bold;">' + intPart + '</span>';
+            }
+            function rtCalc() {
+                let d1 = parseFloat(document.getElementById('rt-d1').value) || 0;
+                let d2 = parseFloat(document.getElementById('rt-d2').value) || 0;
+                document.getElementById('rt-dr').innerHTML = d2 !== 0 ? rtFmt(d1 / d2) : '<span style="font-weight: bold;">0</span>';
+                let v1 = parseFloat(document.getElementById('rt-v1').value) || 0;
+                document.getElementById('rt-vm').innerHTML = rtFmt(v1 / 1.1);
+                document.getElementById('rt-vp').innerHTML = rtFmt(v1 * 1.1);
+                let m1 = parseFloat(document.getElementById('rt-m1').value) || 0;
+                let m2 = parseFloat(document.getElementById('rt-m2').value) || 0;
+                document.getElementById('rt-mr').innerHTML = rtFmt(m1 * m2);
+            }
+            </script>
+            </body>
+            </html>
+            """,
+            height=75
+        )
 
-            # 검색 폼 바인딩 상태 유지
-            sp = params
-            p_type = sp.get("type", "ALL")
-            t_idx = ["ALL", "매입", "매출"].index(p_type) if p_type in ["ALL", "매입", "매출"] else 0
-            s_filt = sp.get("s_filter", "ALL")
-            s_idx = ["ALL", "제일", "중부"].index(s_filt) if s_filt in ["ALL", "제일", "중부"] else 0
-            comp = sp.get("company", "")
-            item = sp.get("item", "")
-            
-            d_start = sp.get("start", datetime(2014,1,1).date())
-            d_end = sp.get("end", get_kst_now().date())
-            
-            m_year = sp.get("year", get_kst_now().year)
-            y_idx = years.index(m_year) if m_year in years else 0
-            m_month = sp.get("month", get_kst_now().month)
-            m_idx = months.index(m_month) if m_month in months else get_kst_now().month-1
-            
-            target_date = sp.get("date", get_kst_now().date())
+        # 검색 폼 값 바인딩 (이전 검색 상태 화면 표시 유지)
+        sp = params
+        p_type = sp.get("type", "ALL")
+        t_idx = ["ALL", "매입", "매출"].index(p_type) if p_type in ["ALL", "매입", "매출"] else 0
+        s_filt = sp.get("s_filter", "ALL")
+        s_idx = ["ALL", "제일", "중부"].index(s_filt) if s_filt in ["ALL", "제일", "중부"] else 0
+        comp = sp.get("company", "")
+        item = sp.get("item", "")
+        
+        d_start = sp.get("start", datetime(2014,1,1).date())
+        d_end = sp.get("end", get_kst_now().date())
+        
+        m_year = sp.get("year", get_kst_now().year)
+        y_idx = years.index(m_year) if m_year in years else 0
+        m_month = sp.get("month", get_kst_now().month)
+        m_idx = months.index(m_month) if m_month in months else get_kst_now().month-1
+        
+        target_date = sp.get("date", get_kst_now().date())
 
-            with st.form(key="form_row1", border=False):
-                r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
-                with r1_1: t1 = st.radio("t1", ["ALL", "매입", "매출"], index=t_idx, horizontal=True, label_visibility="collapsed")
-                with r1_2: dr1 = st.date_input("dr1", [d_start, d_end], format="YYYY-MM-DD", label_visibility="collapsed")
-                with r1_3: s1 = st.selectbox("s1", ["ALL", "제일", "중부"], index=s_idx, label_visibility="collapsed")
-                with r1_4: c1 = st.text_input("c1", value=comp, placeholder="거래처 검색", label_visibility="collapsed")
-                with r1_5: i1 = st.text_input("i1", value=item, placeholder="품목 검색", label_visibility="collapsed")
-                with r1_6: b1 = st.form_submit_button("기간 거래처&품목", use_container_width=True, type="primary")
+        with st.form(key="form_row1", border=False):
+            r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
+            with r1_1: t1 = st.radio("t1", ["ALL", "매입", "매출"], index=t_idx, horizontal=True, label_visibility="collapsed")
+            with r1_2: dr1 = st.date_input("dr1", [d_start, d_end], format="YYYY-MM-DD", label_visibility="collapsed")
+            with r1_3: s1 = st.selectbox("s1", ["ALL", "제일", "중부"], index=s_idx, label_visibility="collapsed")
+            with r1_4: c1 = st.text_input("c1", value=comp, placeholder="거래처 검색", label_visibility="collapsed")
+            with r1_5: i1 = st.text_input("i1", value=item, placeholder="품목 검색", label_visibility="collapsed")
+            with r1_6: b1 = st.form_submit_button("기간 거래처&품목", use_container_width=True, type="primary")
 
-            st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
-            with st.form(key="form_row2", border=False):
-                r2_1, r2_2, r2_3, r2_4, r2_5, r2_6, r2_7 = st.columns([1.5, 1.2, 1.3, 1, 2, 2, 2.5])
-                with r2_1: t2 = st.radio("t2", ["ALL", "매입", "매출"], index=t_idx, horizontal=True, label_visibility="collapsed")
-                with r2_2: y2 = st.selectbox("y2", years, index=y_idx, label_visibility="collapsed", format_func=lambda x: f"{x}년")
-                with r2_3: m2 = st.selectbox("m2", months, index=m_idx, format_func=lambda x:f"{x}월", label_visibility="collapsed")
-                with r2_4: s2 = st.selectbox("s2", ["ALL", "제일", "중부"], index=s_idx, label_visibility="collapsed")
-                with r2_5: c2 = st.text_input("c2", value=comp, placeholder="거래처 검색", label_visibility="collapsed")
-                with r2_6: i2 = st.text_input("i2", value=item, placeholder="품목 검색", label_visibility="collapsed")
-                with r2_7: b2 = st.form_submit_button("월별 거래처&품목", use_container_width=True, type="primary")
+        with st.form(key="form_row2", border=False):
+            r2_1, r2_2, r2_3, r2_4, r2_5, r2_6, r2_7 = st.columns([1.5, 1.2, 1.3, 1, 2, 2, 2.5])
+            with r2_1: t2 = st.radio("t2", ["ALL", "매입", "매출"], index=t_idx, horizontal=True, label_visibility="collapsed")
+            with r2_2: y2 = st.selectbox("y2", years, index=y_idx, label_visibility="collapsed", format_func=lambda x: f"{x}년")
+            with r2_3: m2 = st.selectbox("m2", months, index=m_idx, format_func=lambda x:f"{x}월", label_visibility="collapsed")
+            with r2_4: s2 = st.selectbox("s2", ["ALL", "제일", "중부"], index=s_idx, label_visibility="collapsed")
+            with r2_5: c2 = st.text_input("c2", value=comp, placeholder="거래처 검색", label_visibility="collapsed")
+            with r2_6: i2 = st.text_input("i2", value=item, placeholder="품목 검색", label_visibility="collapsed")
+            with r2_7: b2 = st.form_submit_button("월별 거래처&품목", use_container_width=True, type="primary")
 
-            st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
-            u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15 = st.columns([0.7, 1.0, 0.8, 0.8, 1.0, 0.8, 0.8, 1.3, 0.8, 1.1, 0.7, 1.0, 0.8, 0.9, 0.9])
-            
-            with u1: s3 = st.selectbox("s3", ["ALL", "제일", "중부"], index=s_idx, label_visibility="collapsed")
-            with u2: y3 = st.selectbox("y3", years, index=y_idx, label_visibility="collapsed", format_func=lambda x: f"{x}년")
-            with u3: m3 = st.selectbox("m3", months, index=m_idx, format_func=lambda x:f"{x}월", label_visibility="collapsed")
-            with u4: b_set = st.button("결산", use_container_width=True, type="primary")
-            
-            with u5: b_new = st.button("신규", use_container_width=True, type="primary")
-            
-            with u6: lmt = st.selectbox("l4", ["20개", "50개", "100개"], index=0, label_visibility="collapsed")
-            with u7: b_rec = st.button("최근", use_container_width=True, type="primary")
-            
-            with u8: d_day = st.date_input("d2", value=target_date, format="YYYY-MM-DD", label_visibility="collapsed")
-            with u9: b_day = st.button("일검색", use_container_width=True, type="primary")
-            with u10: b_ayt = st.button("어제오늘내일", use_container_width=True, type="primary")
-            
-            with u11: s5 = st.selectbox("s5", ["ALL", "제일", "중부"], index=s_idx, label_visibility="collapsed")
-            with u12: y4 = st.selectbox("y4", years, index=y_idx, key="y4_sel", label_visibility="collapsed", format_func=lambda x: f"{x}년")
-            with u13: m4 = st.selectbox("m4", months, index=m_idx, format_func=lambda x:f"{x}월", key="m4_sel", label_visibility="collapsed")
-            with u14: b_mon = st.button("월별", use_container_width=True, type="primary")
-            with u15: b_yong = st.button("용차", use_container_width=True, type="primary")
+        u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15 = st.columns([0.7, 1.0, 0.8, 0.8, 1.0, 0.8, 0.8, 1.3, 0.8, 1.1, 0.7, 1.0, 0.8, 0.9, 0.9])
+        
+        with u1: s3 = st.selectbox("s3", ["ALL", "제일", "중부"], index=s_idx, label_visibility="collapsed")
+        with u2: y3 = st.selectbox("y3", years, index=y_idx, label_visibility="collapsed", format_func=lambda x: f"{x}년")
+        with u3: m3 = st.selectbox("m3", months, index=m_idx, format_func=lambda x:f"{x}월", label_visibility="collapsed")
+        with u4: b_set = st.button("결산", use_container_width=True, type="primary")
+        
+        # 💡 [핵심 기술 4] 신규 버튼 클릭 시 필터를 훼손하지 않고 폼만 열리도록 수정
+        with u5: b_new = st.button("신규", use_container_width=True, type="primary")
+        
+        with u6: lmt = st.selectbox("l4", ["20개", "50개", "100개"], index=0, label_visibility="collapsed")
+        with u7: b_rec = st.button("최근", use_container_width=True, type="primary")
+        
+        with u8: d_day = st.date_input("d2", value=target_date, format="YYYY-MM-DD", label_visibility="collapsed")
+        with u9: b_day = st.button("일검색", use_container_width=True, type="primary")
+        with u10: b_ayt = st.button("어제오늘내일", use_container_width=True, type="primary")
+        
+        with u11: s5 = st.selectbox("s5", ["ALL", "제일", "중부"], index=s_idx, label_visibility="collapsed")
+        with u12: y4 = st.selectbox("y4", years, index=y_idx, key="y4_sel", label_visibility="collapsed", format_func=lambda x: f"{x}년")
+        with u13: m4 = st.selectbox("m4", months, index=m_idx, format_func=lambda x:f"{x}월", key="m4_sel", label_visibility="collapsed")
+        with u14: b_mon = st.button("월별", use_container_width=True, type="primary")
+        with u15: b_yong = st.button("용차", use_container_width=True, type="primary")
 
-        # 검색 버튼 액션
-        if b1: st.session_state.search_params = {"mode":"기간","title":f"기간 검색 ({dr1[0]} ~ {dr1[1] if len(dr1)>1 else dr1[0]})","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0], "s_filter": s1}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
-        elif b2: st.session_state.search_params = {"mode":"월별상세","title":f"{y2}년 {m2}월 상세 검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2, "s_filter": s2}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
-        elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3, "s_filter": s3}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
+        # 💡 검색 버튼 액션 (선택 즉시 조건이 반영됨)
+        if b1: st.session_state.search_params = {"mode":"기간","title":f"기간 검색 ({dr1[0]} ~ {dr1[1] if len(dr1)>1 else dr1[0]})","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0], "s_filter": s1}; st.session_state.sort_desc = False; st.rerun()
+        elif b2: st.session_state.search_params = {"mode":"월별상세","title":f"{y2}년 {m2}월 상세 검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2, "s_filter": s2}; st.session_state.sort_desc = False; st.rerun()
+        elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3, "s_filter": s3}; st.session_state.sort_desc = False; st.rerun()
         elif b_new: 
-            st.session_state.prev_search_params = st.session_state.search_params 
-            st.session_state.search_params = {"mode":"신규입력"}; st.session_state.copy_id = None; st.rerun()
-        elif b_rec: st.session_state.search_params = {"mode":"최근","title":"최근 입력순서","limit":lmt, "s_filter": "ALL"}; st.session_state.sort_desc = True; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
-        elif b_day: st.session_state.search_params = {"mode":"일","title":f"일간 검색 ({d_day})","date":d_day, "s_filter": "ALL"}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
+            st.session_state.show_new = True; st.session_state.copy_id = None; st.rerun()
+        elif b_rec: st.session_state.search_params = {"mode":"최근","title":"최근 입력순서","limit":lmt, "s_filter": "ALL"}; st.session_state.sort_desc = True; st.rerun()
+        elif b_day: st.session_state.search_params = {"mode":"일","title":f"일간 검색 ({d_day})","date":d_day, "s_filter": "ALL"}; st.session_state.sort_desc = False; st.rerun()
         elif b_ayt:
             st.session_state.search_params = {
                 "mode":"기간",
@@ -1038,12 +777,11 @@ try:
                 "s_filter": "ALL"
             }
             st.session_state.sort_desc = False
-            st.session_state.prev_search_params = st.session_state.search_params
             st.rerun()
-        elif b_mon: st.session_state.search_params = {"mode":"월별","title":f"{y4}년 {m4}월 기본 검색","year":y4,"month":m4, "s_filter": s5}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
-        elif b_yong: st.session_state.search_params = {"mode":"용차","title":f"{y4}년 {m4}월 배송(용/다) 검색","year":y4,"month":m4, "s_filter": s5}; st.session_state.sort_desc = False; st.session_state.prev_search_params = st.session_state.search_params; st.rerun()
+        elif b_mon: st.session_state.search_params = {"mode":"월별","title":f"{y4}년 {m4}월 기본 검색","year":y4,"month":m4, "s_filter": s5}; st.session_state.sort_desc = False; st.rerun()
+        elif b_yong: st.session_state.search_params = {"mode":"용차","title":f"{y4}년 {m4}월 배송(용/다) 검색","year":y4,"month":m4, "s_filter": s5}; st.session_state.sort_desc = False; st.rerun()
 
-        # 💡 [초기화면 빈화면 유지] init 상태일 경우 테이블은 그리지 않음
+        # 💡 [핵심 기술 5] init 상태(첫 접속)일 경우 데이터 표를 일절 그리지 않아 빈 화면 유지!
         if params["mode"] != "init":
             f_df = df.copy()
             
@@ -1177,6 +915,7 @@ try:
                     s_cls = "txt-green" if "제일" in str(r['s']) else "txt-purple"
                     row_year = int(r['year'])
                     
+                    # 💡 표에서 링크를 클릭하면 팝업 없이 [메인 수정창]이 상단에 뜨도록 edit_id로 연동!
                     v_link = f'<a href="?copy_id={rid}&year={row_year}&token={pwd_token}&sp={current_sp_encoded}" target="_self" style="text-decoration:none;"><span class="{s_cls}">{r["s"]}</span></a>'
                     edit_link_target = f"?edit_id={rid}&year={row_year}&token={pwd_token}&sp={current_sp_encoded}"
                     d_link = f'<a href="{edit_link_target}" target="_self" style="color:#1e293b; text-decoration:none;">{dt}</a>'
@@ -1191,35 +930,39 @@ try:
                     
                     profit_tot_vat = out_tot_vat - in_tot_vat 
                     
+                    # 💡 클릭 시그널은 남기고 푸른색 링크만 없애기 (폰트를 부모에게 상속받음)
                     memoin_val = safe_str(r.get("memoin", ""))
                     initem_val = safe_str(r.get("initem", ""))
+                    in_disp = initem_val if initem_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                     
-                    # 💡 클릭 시 기존 edit 폼이 열리도록 통일 (직관적 UX)
                     if memoin_val:
-                        initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;"><a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{initem_val}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memoin_val}</span></div>'
+                        initem_html = f'<div class="memo-tooltip-in" style="font-weight: bold;"><span style="color:inherit;">{in_disp}</span><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important; font-weight:bold !important;">{memoin_val}</span></span></div>'
                     else:
-                        initem_html = f'{initem_val}'
+                        initem_html = f'<span style="color:inherit;">{in_disp}</span>'
 
                     memoout_val = safe_str(r.get("memoout", ""))
                     outitem_val = safe_str(r.get("outitem", ""))
+                    out_disp = outitem_val if outitem_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                     if memoout_val:
-                        outitem_html = f'<div class="memo-tooltip-out" style="font-weight: bold;"><a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{outitem_val}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memoout_val}</span></div>'
+                        outitem_html = f'<div class="memo-tooltip-out" style="font-weight: bold;"><span style="color:inherit;">{out_disp}</span><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important; font-weight:bold !important;">{memoout_val}</span></span></div>'
                     else:
-                        outitem_html = f'{outitem_val}'
+                        outitem_html = f'<span style="color:inherit;">{out_disp}</span>'
 
                     memocar_val = safe_str(r.get("memocar", ""))
                     carno_val = safe_str(r.get("carno", ""))
+                    car_disp = carno_val if carno_val.strip() else "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                     if memocar_val:
-                        carno_html = f'<div class="memo-tooltip-base" style="font-weight: bold; color: inherit;"><a href="{edit_link_target}" target="_self" style="color:inherit; text-decoration:none;">{carno_val}</a><span class="memo-text" style="text-align:left; white-space:pre-wrap;">{memocar_val}</span></div>'
+                        carno_html = f'<div class="memo-tooltip-base" style="font-weight: bold; color: inherit;"><span style="color:inherit;">{car_disp}</span><span class="memo-text" style="text-align:left; white-space:pre-wrap;"><span style="color:#000000 !important; font-weight:bold !important;">{memocar_val}</span></span></div>'
                     else:
-                        carno_html = f'{carno_val}'
+                        carno_html = f'<span style="color:inherit;">{car_disp}</span>'
                     
+                    # 💡 수량 메모창 완벽한 블랙 강제!
                     inq_val_str = f'{r["inq_val"]:,.0f}' if pd.notnull(r["inq_val"]) else '0'
-                    in_memo = f"<div style='text-align:right;'>공급가액(VAT별도) : {in_tot:,.0f} 원<br>+ 부가세(10%) : {in_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed black !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</div>"
+                    in_memo = f"<div style='text-align:right;'><span style='color:#000000 !important;'>공급가액(VAT별도) : {in_tot:,.0f} 원</span><br><span style='color:#000000 !important;'>+ 부가세(10%) : {in_vat_only:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'><span style='color:#000000 !important;'>합계(VAT포함) : {in_tot_vat:,.0f} 원</span></div>"
                     inq_html = f'<div class="memo-tooltip-in">{inq_val_str}<span class="memo-text">{in_memo}</span></div>'
                     
                     outq_val_str = f'{r["outq_val"]:,.0f}' if pd.notnull(r["outq_val"]) else '0'
-                    out_memo = f"<div style='text-align:right;'>매출액(VAT별도) : {out_tot:,.0f} 원<br>+ 부가세(10%) : {out_vat_only:,.0f} 원<br><hr style='margin:4px 0; border:0.5px dashed black !important;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원<br>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원<br><hr style='margin:4px 0; border:0.5px solid black !important;'><span style='font-weight:bold;'>= 순이익(VAT포함) : {profit_tot_vat:,.0f} 원</span></div>"
+                    out_memo = f"<div style='text-align:right;'><span style='color:#000000 !important;'>매출액(VAT별도) : {out_tot:,.0f} 원</span><br><span style='color:#000000 !important;'>+ 부가세(10%) : {out_vat_only:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px dashed #000000 !important;'><span style='color:#000000 !important;'>매출액(VAT포함) : {out_tot_vat:,.0f} 원</span><br><span style='color:#000000 !important;'>- 매입액(VAT포함) : {in_tot_vat:,.0f} 원</span><br><hr style='margin:4px 0; border:0.5px solid #000000 !important;'><span style='color:#000000 !important; font-weight:bold;'>= 순이익(VAT포함) : {profit_tot_vat:,.0f} 원</span></div>"
                     outq_html = f'<div class="memo-tooltip-out">{outq_val_str}<span class="memo-text">{out_memo}</span></div>'
                     
                     row_html = f'<tr><td class="tc">{v_link}</td><td class="tc">{d_link}</td><td class="tl txt-in-bold">{r["incom"]}</td><td class="tl txt-in">{initem_html}</td><td class="tr txt-in">{inq_html}</td><td class="tr txt-in">{r["inprice_val"]:,.0f}</td><td class="tl txt-out-bold">{r["outcom"]}</td><td class="tl txt-out">{outitem_html}</td><td class="tr txt-out">{outq_html}</td><td class="tr txt-out">{r["outprice_val"]:,.0f}</td><td class="tc txt-gray print-hide-col">{rid}</td><td class="tc txt-gray">{carno_html}</td><td class="tr txt-black">{r["carprice_val"]:,.0f}</td></tr>'
@@ -1242,7 +985,7 @@ try:
                 table_html += '<tfoot style="display: table-footer-group !important;"><tr class="print-fake-margin"><td colspan="13" style="height: 12mm; border: none !important; background-color: white !important; padding: 0 !important;"></td></tr></tfoot>'
                 table_html += '</table></div>'
 
-                # 💡 [인쇄 소스 완벽 보존]
+                # 인쇄 관련 코드는 절대 변경하지 않음 (안전 보존)
                 print_html_content = f"""
                 <!DOCTYPE html>
                 <html><head><title>인쇄 미리보기</title>
@@ -1251,7 +994,7 @@ try:
                     @page {{ size: A4 portrait; margin: 0mm; }} 
                     body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; padding: 0 10mm; box-sizing: border-box; }}
                     .custom-table-container {{ width: 100%; zoom: 67%; }} 
-                    .custom-table {{ width: 100%; border-collapse: collapse; font-size: 11.5px; background-color: white; }}
+                    .custom-table {{ width: 100%; border-collapse: collapse; font-size: 11.5px; background: white !important; }}
                     .custom-table th, .custom-table td {{ border: 1px solid #aaa; padding: 6px 8px; color: black !important; }}
                     .custom-table th {{ text-align: center; font-weight: bold; padding: 8px 6px; }}
                     .print-only-title {{ display: block !important; margin-top: 15mm !important; }}
