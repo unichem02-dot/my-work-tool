@@ -109,9 +109,17 @@ st.markdown("""
     [data-testid="stMetricValue"] { color: #ffffff !important; }
     [data-testid="stMetricLabel"] { color: #cbd5e1 !important; font-size: 16px !important; }
     
-    /* 💡 검색 메뉴의 연도, 월, 날짜 등 선택 및 입력 텍스트를 굵게(Bold) 변경 */
-    div[data-baseweb="select"] > div { font-weight: bold !important; }
-    div[data-baseweb="input"] > input { font-weight: bold !important; }
+    /* 💡 검색 메뉴의 연도, 월, 날짜 등 선택 및 입력 텍스트를 굵게(Bold) 변경 및 여백 다이어트로 글씨 짤림 방지 */
+    div[data-baseweb="select"] > div { 
+        font-weight: bold !important; 
+        padding-left: 8px !important; 
+        padding-right: 8px !important; 
+    }
+    div[data-baseweb="input"] > input { 
+        font-weight: bold !important; 
+        padding-left: 8px !important; 
+        padding-right: 8px !important; 
+    }
     
     /* 💡 파일 업로드 창 전체 가시성 완벽 해결 (상위 컨테이너 강제 적용) */
     div[data-testid="stFileUploader"] {
@@ -627,11 +635,10 @@ try:
                 height=75
             )
 
-            # Row 1: 기간 검색
-            r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1, 2, 2, 2.5])
+            # 💡 [비율 조치] 검색창 1열 폭 넓히기
+            r1_1, r1_2, r1_3, r1_4, r1_5, r1_6 = st.columns([1.5, 2.5, 1.2, 2, 2, 2.5])
             with r1_1: t1 = st.radio("t1", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
             with r1_2: dr1 = st.date_input("dr1", [datetime(2014,1,1).date(), get_kst_now().date()], format="YYYY-MM-DD", label_visibility="collapsed")
-            # 💡 [핵심 조치] 1번째 줄 비어있던 칸에 (제일/중부) 필터 추가
             with r1_3: s1 = st.selectbox("s1", ["ALL", "제일", "중부"], label_visibility="collapsed")
             with r1_4: c1 = st.text_input("c1", placeholder="거래처 검색", label_visibility="collapsed")
             with r1_5: i1 = st.text_input("i1", placeholder="품목 검색", label_visibility="collapsed")
@@ -639,12 +646,11 @@ try:
 
             st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
-            # Row 2: 월별 상세 검색
-            r2_1, r2_2, r2_3, r2_4, r2_5, r2_6, r2_7 = st.columns([1.5, 1.2, 1.3, 1, 2, 2, 2.5])
+            # 💡 [비율 조치] 검색창 2열 폭 넓히기
+            r2_1, r2_2, r2_3, r2_4, r2_5, r2_6, r2_7 = st.columns([1.5, 1.3, 1.3, 1.2, 2, 2, 2.5])
             with r2_1: t2 = st.radio("t2", ["매입", "매출", "ALL"], index=2, horizontal=True, label_visibility="collapsed")
             with r2_2: y2 = st.selectbox("y2", years, label_visibility="collapsed", format_func=lambda x: f"{x}년")
             with r2_3: m2 = st.selectbox("m2", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
-            # 💡 [핵심 조치] 2번째 줄 비어있던 칸에 (제일/중부) 필터 추가
             with r2_4: s2 = st.selectbox("s2", ["ALL", "제일", "중부"], label_visibility="collapsed")
             with r2_5: c2 = st.text_input("c2", placeholder="거래처 검색", label_visibility="collapsed")
             with r2_6: i2 = st.text_input("i2", placeholder="품목 검색", label_visibility="collapsed")
@@ -652,30 +658,31 @@ try:
 
             st.markdown("<hr style='margin:10px 0; border:0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
-            # Row 3: 각종 유틸리티 버튼
-            u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15 = st.columns([0.7, 1.0, 0.8, 0.8, 1.0, 0.8, 0.8, 1.3, 0.8, 1.1, 0.7, 1.0, 0.8, 0.9, 0.9])
-            # 💡 [핵심 조치] 기존에 ALL만 있던 곳에 제일/중부 옵션 적용
+            # 💡 [비율 조치] 검색창 3열 폭 최적화 재분배 (글씨 짤림 방지)
+            u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12, u13, u14, u15 = st.columns([1.0, 1.2, 0.9, 0.9, 1.0, 0.8, 0.9, 1.5, 0.8, 1.3, 1.0, 1.2, 0.9, 0.9, 0.9])
+            
             with u1: s3 = st.selectbox("s3", ["ALL", "제일", "중부"], label_visibility="collapsed")
             with u2: y3 = st.selectbox("y3", years, label_visibility="collapsed", format_func=lambda x: f"{x}년")
             with u3: m3 = st.selectbox("m3", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", label_visibility="collapsed")
             with u4: b_set = st.button("결산", use_container_width=True, type="primary")
             
             with u5: b_new = st.button("신규입력", use_container_width=True, type="primary")
-            with u6: lmt = st.selectbox("l4", ["20개", "50개", "100개", "ALL"], index=0, label_visibility="collapsed")
+            
+            # 💡 [핵심 조치] 최근입력 ALL 제거 (20, 50, 100개만 남김)
+            with u6: lmt = st.selectbox("l4", ["20개", "50개", "100개"], index=0, label_visibility="collapsed")
             with u7: b_rec = st.button("최근입력", use_container_width=True, type="primary")
             
             with u8: d_day = st.date_input("d2", get_kst_now().date(), format="YYYY-MM-DD", label_visibility="collapsed")
             with u9: b_day = st.button("일검색", use_container_width=True, type="primary")
             with u10: b_ayt = st.button("어제오늘내일", use_container_width=True, type="primary")
             
-            # 💡 [핵심 조치] 기존에 ALL만 있던 곳에 제일/중부 옵션 적용
             with u11: s5 = st.selectbox("s5", ["ALL", "제일", "중부"], label_visibility="collapsed")
             with u12: y4 = st.selectbox("y4", years, key="y4_sel", label_visibility="collapsed", format_func=lambda x: f"{x}년")
             with u13: m4 = st.selectbox("m4", months, index=get_kst_now().month-1, format_func=lambda x:f"{x}월", key="m4_sel", label_visibility="collapsed")
             with u14: b_mon = st.button("월별검색", use_container_width=True, type="primary")
             with u15: b_yong = st.button("용차", use_container_width=True, type="primary")
 
-        # --- 버튼 액션 라우팅 (선택한 제일/중부 값을 s_filter로 넘겨줌) ---
+        # --- 버튼 액션 라우팅 ---
         if b1: st.session_state.search_params = {"mode":"기간","title":"기간검색","type":t1,"company":c1,"item":i1,"limit":"ALL","start":dr1[0],"end":dr1[1] if len(dr1)>1 else dr1[0], "s_filter": s1}; st.rerun()
         elif b2: st.session_state.search_params = {"mode":"월별상세","title":"월별상세검색","type":t2,"year":y2,"month":m2,"company":c2,"item":i2, "s_filter": s2}; st.rerun()
         elif b_set: st.session_state.search_params = {"mode":"결산","year":y3,"month":m3, "s_filter": s3}; st.rerun()
@@ -717,7 +724,7 @@ try:
             if target_type == "매입": f_df = f_df[f_df['incom'].astype(str).str.strip() != '']
             elif target_type == "매출": f_df = f_df[f_df['outcom'].astype(str).str.strip() != '']
             
-            # 💡 [핵심 연동] 전달받은 제일/중부 값으로 데이터를 필터링합니다.
+            # 필터 연동
             s_filter = params.get("s_filter", "ALL")
             if s_filter != "ALL":
                 f_df = f_df[f_df['s'].astype(str).str.contains(s_filter, na=False)]
