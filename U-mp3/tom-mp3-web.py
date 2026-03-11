@@ -30,7 +30,8 @@ with col1:
 with col2:
     duration_str = st.selectbox("다운로드 할 분량:", ["전체", "1시간", "50분", "30분"])
 
-browser_choice = st.selectbox("인증 방식 (403 에러 우회용):", ["모바일 앱 위장 (우회 추천)", "chrome", "edge", "없음"])
+# 인증 방식 옵션에 '기본 (yt-dlp 자동 처리)' 추가
+browser_choice = st.selectbox("인증 방식 (오류 발생 시 변경해보세요):", ["기본 (yt-dlp 자동 처리)", "모바일 앱 위장 (우회 추천)", "chrome", "edge"])
 
 st.write("") # 간격 띄우기
 
@@ -57,11 +58,13 @@ if st.button("MP3 다운로드 시작", type="primary", use_container_width=True
                         'nocheckcertificate': True, 
                     }
 
+                    # 사용자가 선택한 인증 방식에 따라 옵션 분기
                     if browser_choice == "모바일 앱 위장 (우회 추천)":
                         ydl_opts['extractor_args'] = {'youtube': {'player_client': ['tv', 'mweb']}}
                     elif browser_choice in ["chrome", "edge"]:
                         ydl_opts['cookiesfrombrowser'] = (browser_choice, )
                         ydl_opts['extractor_args'] = {'youtube': {'player_client': ['web']}}
+                    # "기본 (yt-dlp 자동 처리)"인 경우 아무 옵션도 추가하지 않고 yt-dlp의 최신 기본값을 따름
 
                     st.write("🏃‍♂️ 1단계: 전체 오디오 초고속 다운로드 중...")
                     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -109,5 +112,11 @@ if st.button("MP3 다운로드 시작", type="primary", use_container_width=True
                     st.success(f"🎉 모든 작업이 성공적으로 완료되었습니다!\n\n📂 **저장 위치:** `{save_dir}`")
                 
                 except Exception as e:
+                    error_msg = str(e)
                     status.update(label="오류 발생", state="error", expanded=True)
-                    st.error(f"다운로드 실패: {str(e)}")
+                    
+                    # Reload 에러나 403 에러에 대한 맞춤형 가이드 제공
+                    if "reloaded" in error_msg.lower() or "403" in error_msg:
+                        st.error(f"🚨 **유튜브 보안 차단 발생**\n\n에러 내용: {error_msg}\n\n**[해결 방법]**\n1. 위 설정에서 인증 방식을 **'기본 (yt-dlp 자동 처리)'**로 바꾸고 다시 시도해보세요.\n2. CMD 창을 열고 `pip install --upgrade yt-dlp` 를 입력해 모듈을 최신 버전으로 꼭 업데이트하세요.")
+                    else:
+                        st.error(f"다운로드 실패: {error_msg}")
