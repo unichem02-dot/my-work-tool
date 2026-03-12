@@ -5,4 +5,6 @@ gspread
 google-auth
 streamlit
 pymysql
+
 pandas
+openpyxl
