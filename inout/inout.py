@@ -504,6 +504,9 @@ if st.session_state.show_uploader:
             else:
                 try:
                     upload_df = pd.read_excel(uploaded_file, engine='openpyxl')
+                except ImportError:
+                    st.error("⚠️ 'openpyxl' 라이브러리가 필요합니다. 시스템 관리자에게 문의하여 설치하세요.")
+                    st.stop()
                 except Exception:
                     try:
                         uploaded_file.seek(0)
@@ -1299,7 +1302,6 @@ try:
                     )
                 
                 with col_t4:
-                    # 💡 [핵심 기술] 스타일링된 진짜 엑셀(.xlsx) 파일 생성 로직
                     export_cols = ['s', 'date', 'incom', 'initem', 'inq_val', 'inprice_val', 'outcom', 'outitem', 'outq_val', 'outprice_val', 'id', 'carno', 'carprice_val', 'memoin', 'memoout', 'memocar']
                     export_names = ['Vat', '날짜', '매입거래처', '매입품목', '매입수량', '매입단가', '매출거래처', '매출품목', '매출수량', '매출단가', 'NO', '배송', '운송비', '매입메모', '매출메모', '배송메모']
                     
@@ -1308,7 +1310,6 @@ try:
                     if pd.api.types.is_datetime64_any_dtype(df_export['날짜']):
                         df_export['날짜'] = df_export['날짜'].dt.strftime('%Y-%m-%d')
                     
-                    # 엑셀 맨 아래 총 합계/결산 내용 추가
                     totals = {name: "" for name in export_names}
                     totals['Vat'] = "합계"
                     totals['매입수량'] = t_in_q
@@ -1320,72 +1321,78 @@ try:
                     df_export.loc[len(df_export)] = totals
                         
                     excel_output = io.BytesIO()
-                    try:
-                        from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
-                        with pd.ExcelWriter(excel_output, engine='openpyxl') as writer:
-                            df_export.to_excel(writer, index=False, sheet_name='검색결과')
-                            worksheet = writer.sheets['검색결과']
-                            
-                            fill_base = PatternFill(start_color="353B48", end_color="353B48", fill_type="solid")
-                            fill_in = PatternFill(start_color="3B5B88", end_color="3B5B88", fill_type="solid")
-                            fill_out = PatternFill(start_color="B8860B", end_color="B8860B", fill_type="solid")
-                            fill_etc = PatternFill(start_color="757C43", end_color="757C43", fill_type="solid")
-                            
-                            font_white = Font(color="FFFFFF", bold=True)
-                            align_center = Alignment(horizontal="center", vertical="center")
-                            align_left = Alignment(horizontal="left", vertical="center")
-                            align_right = Alignment(horizontal="right", vertical="center")
-                            border_thin = Border(left=Side(style='thin', color='D0D0D0'), 
-                                                 right=Side(style='thin', color='D0D0D0'), 
-                                                 top=Side(style='thin', color='D0D0D0'), 
-                                                 bottom=Side(style='thin', color='D0D0D0'))
-                            
-                            # (열 알파벳, 너비, 채우기 색상, 정렬방식)
-                            col_settings = [
-                                ('A', 8, fill_base, align_center),   
-                                ('B', 14, fill_base, align_center),  
-                                ('C', 18, fill_in, align_left),      
-                                ('D', 25, fill_in, align_left),      
-                                ('E', 12, fill_in, align_right),     
-                                ('F', 15, fill_in, align_right),     
-                                ('G', 18, fill_out, align_left),     
-                                ('H', 25, fill_out, align_left),     
-                                ('I', 12, fill_out, align_right),    
-                                ('J', 15, fill_out, align_right),    
-                                ('K', 18, fill_base, align_center),  
-                                ('L', 12, fill_etc, align_center),   
-                                ('M', 15, fill_etc, align_right),    
-                                ('N', 25, fill_in, align_left),      
-                                ('O', 25, fill_out, align_left),     
-                                ('P', 25, fill_etc, align_left),     
-                            ]
-                            
-                            # 첫번째 행(제목) 스타일 적용
-                            for col_idx, (col_letter, width, fill, align) in enumerate(col_settings, 1):
-                                cell = worksheet.cell(row=1, column=col_idx)
-                                cell.fill = fill
-                                cell.font = font_white
-                                cell.alignment = align_center
-                                cell.border = border_thin
-                                worksheet.column_dimensions[col_letter].width = width
-                            
-                            # 데이터 및 합계 행 스타일 적용
-                            for row_idx in range(2, len(df_export) + 2):
-                                for col_idx, (col_letter, width, fill, align) in enumerate(col_settings, 1):
-                                    cell = worksheet.cell(row=row_idx, column=col_idx)
-                                    cell.alignment = align
-                                    cell.border = border_thin
-                                    # 금액, 수량칸 천단위 콤마 쉼표 적용
-                                    if col_idx in [5, 6, 9, 10, 13]: 
-                                        cell.number_format = '#,##0'
-                    except Exception as e:
-                        # 오류 발생 시 기본 엑셀로 저장 (안전장치)
-                        with pd.ExcelWriter(excel_output, engine='openpyxl') as writer:
-                            df_export.to_excel(writer, index=False, sheet_name='검색결과')
-                            
-                    excel_data = excel_output.getvalue()
+                    has_openpyxl = False
                     
-                    st.download_button("💾 EXCEL", data=excel_data, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
+                    try:
+                        import openpyxl
+                        from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+                        has_openpyxl = True
+                    except ImportError:
+                        pass
+                        
+                    if has_openpyxl:
+                        try:
+                            with pd.ExcelWriter(excel_output, engine='openpyxl') as writer:
+                                df_export.to_excel(writer, index=False, sheet_name='검색결과')
+                                worksheet = writer.sheets['검색결과']
+                                
+                                fill_base = PatternFill(start_color="353B48", end_color="353B48", fill_type="solid")
+                                fill_in = PatternFill(start_color="3B5B88", end_color="3B5B88", fill_type="solid")
+                                fill_out = PatternFill(start_color="B8860B", end_color="B8860B", fill_type="solid")
+                                fill_etc = PatternFill(start_color="757C43", end_color="757C43", fill_type="solid")
+                                
+                                font_white = Font(color="FFFFFF", bold=True)
+                                align_center = Alignment(horizontal="center", vertical="center")
+                                align_left = Alignment(horizontal="left", vertical="center")
+                                align_right = Alignment(horizontal="right", vertical="center")
+                                border_thin = Border(left=Side(style='thin', color='D0D0D0'), 
+                                                     right=Side(style='thin', color='D0D0D0'), 
+                                                     top=Side(style='thin', color='D0D0D0'), 
+                                                     bottom=Side(style='thin', color='D0D0D0'))
+                                
+                                col_settings = [
+                                    ('A', 8, fill_base, align_center),   
+                                    ('B', 14, fill_base, align_center),  
+                                    ('C', 18, fill_in, align_left),      
+                                    ('D', 25, fill_in, align_left),      
+                                    ('E', 12, fill_in, align_right),     
+                                    ('F', 15, fill_in, align_right),     
+                                    ('G', 18, fill_out, align_left),     
+                                    ('H', 25, fill_out, align_left),     
+                                    ('I', 12, fill_out, align_right),    
+                                    ('J', 15, fill_out, align_right),    
+                                    ('K', 18, fill_base, align_center),  
+                                    ('L', 12, fill_etc, align_center),   
+                                    ('M', 15, fill_etc, align_right),    
+                                    ('N', 25, fill_in, align_left),      
+                                    ('O', 25, fill_out, align_left),     
+                                    ('P', 25, fill_etc, align_left),     
+                                ]
+                                
+                                for col_idx, (col_letter, width, fill, align) in enumerate(col_settings, 1):
+                                    cell = worksheet.cell(row=1, column=col_idx)
+                                    cell.fill = fill
+                                    cell.font = font_white
+                                    cell.alignment = align_center
+                                    cell.border = border_thin
+                                    worksheet.column_dimensions[col_letter].width = width
+                                
+                                for row_idx in range(2, len(df_export) + 2):
+                                    for col_idx, (col_letter, width, fill, align) in enumerate(col_settings, 1):
+                                        cell = worksheet.cell(row=row_idx, column=col_idx)
+                                        cell.alignment = align
+                                        cell.border = border_thin
+                                        if col_idx in [5, 6, 9, 10, 13]: 
+                                            cell.number_format = '#,##0'
+                                            
+                            excel_data = excel_output.getvalue()
+                            st.download_button("💾 EXCEL", data=excel_data, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
+                        except Exception as e:
+                            st.error(f"엑셀 생성 오류: {e}")
+                    else:
+                        st.warning("⚠️ 'openpyxl' 모듈 필요 (임시로 CSV 다운로드 제공)")
+                        csv_data = df_export.to_csv(index=False).encode('utf-8-sig')
+                        st.download_button("💾 EXCEL (기본)", data=csv_data, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
 
                 st.markdown(table_html, unsafe_allow_html=True)
 
