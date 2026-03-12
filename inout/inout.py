@@ -409,7 +409,7 @@ def safe_str(val):
     if isinstance(val, float) and val.is_integer(): return str(int(val))
     return str(val)
 
-# 💡 [핵심 기술 1] SQL 생성을 위한 유틸리티 함수 복구
+# SQL 생성을 위한 유틸리티 함수
 def generate_sql_for_backup(df_data):
     lines = ["CREATE TABLE IF NOT EXISTS `jeilinout` (",
              "  `id` bigint(20) NOT NULL,",
@@ -462,7 +462,6 @@ with col_u:
         st.rerun()
 
 with col_sql: 
-    # 💡 [핵심 기술 2] SQL 다운로드 버튼 로직 완벽 복구
     if not st.session_state.sql_ready:
         if st.button("💾 SQL다운", use_container_width=True, type="primary"):
             with st.spinner("⏳ SQL 데이터를 생성 중입니다..."):
@@ -486,7 +485,7 @@ with col_l:
 
 st.markdown("<hr style='margin: 10px 0px 20px 0px; border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
 
-# 💡 [핵심 기술 3] DB 파일 업로드 UI 완벽 복구
+# DB 파일 업로드 UI 
 if st.session_state.show_uploader:
     st.markdown("<div class='search-panel-container'>", unsafe_allow_html=True)
     st.markdown("<h4 style='color: #4e8cff; margin-bottom: 10px;'>📂 과거 통합 데이터 연도별 분할 업로드</h4>", unsafe_allow_html=True)
@@ -669,7 +668,6 @@ try:
                 e_outprice = c11.text_input("outprice", safe_str(t.get('outprice')), label_visibility="collapsed")
                 e_carprice = c12.text_input("carprice", safe_str(t.get('carprice')), label_visibility="collapsed")
                 
-                # 메모 입력칸 3개 동시 배치
                 st.markdown("<hr style='margin: 15px 0 10px 0; border: 0.5px dashed #555;'>", unsafe_allow_html=True)
                 m1, m2, m3 = st.columns(3)
                 m1.markdown('<div class="nh-box nh-in" style="font-size:13px;">📝 매입품목 메모</div>', unsafe_allow_html=True)
@@ -1040,7 +1038,6 @@ try:
             t_out_q, t_out_a = f_df['outq_val'].sum(), f_df['out_total'].sum()
             t_car = f_df['carprice_val'].sum()
             
-            # 💡 [요청 반영] 순수익에서 운송비(C) 계산 제외
             t_profit = t_out_a - t_in_a
             f_df['profit'] = f_df['out_total'] - f_df['in_total']
             
@@ -1058,10 +1055,9 @@ try:
                 col1, col2, col3, col4 = st.columns(4)
                 with col1: st.metric("총 매출액 (A) ↗", f"{t_out_a:,.0f} 원")
                 with col2: st.metric("총 매입액 (B) ↘", f"{t_in_a:,.0f} 원")
-                with col3: st.metric("총 운송비 (C) 🚚", f"{t_car:,.0f} 원") # 참고용 유지
+                with col3: st.metric("총 운송비 (C) 🚚", f"{t_car:,.0f} 원") 
                 with col4:
                     margin = (t_profit / t_out_a * 100) if t_out_a > 0 else 0
-                    # 💡 대시보드 텍스트 A-B로 수정
                     st.metric("순이익 (A-B) 💰", f"{t_profit:,.0f} 원", f"마진율 {margin:.1f}%")
                 
                 st.markdown("<hr style='border: 0.5px solid #4a5568;'>", unsafe_allow_html=True)
@@ -1151,7 +1147,6 @@ try:
                     out_tot_vat = out_tot * 1.1     
                     out_vat_only = out_tot * 0.1    
                     
-                    # 💡 [요청 반영] 툴팁 순이익에서도 운송비(C) 차감 로직 제거
                     profit_final = out_tot_vat - in_tot_vat
                     
                     memoin_val = safe_str(r.get("memoin", ""))
@@ -1185,7 +1180,6 @@ try:
                     
                     outq_val_str = f'{r["outq_val"]:,.0f}' if pd.notnull(r["outq_val"]) else '0'
                     
-                    # 💡 [요청 반영] 툴팁에서 운송비 라인 완전히 제거 및 순이익 (A-B)로 수정 완료
                     out_memo = f"""<div style='text-align:right;'>
                     <span style='color:#000000 !important;'>[매출] 공급가: {out_tot:,.0f} + VAT: {out_vat_only:,.0f}</span><br>
                     <span style='color:#000000 !important; font-weight:bold;'>▶ 매출 합계(A) : {out_tot_vat:,.0f} 원</span><br>
@@ -1305,8 +1299,93 @@ try:
                     )
                 
                 with col_t4:
-                    csv = f_df.to_csv(index=False).encode('utf-8-sig')
-                    st.download_button("💾 EXCEL", data=csv, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
+                    # 💡 [핵심 기술] 스타일링된 진짜 엑셀(.xlsx) 파일 생성 로직
+                    export_cols = ['s', 'date', 'incom', 'initem', 'inq_val', 'inprice_val', 'outcom', 'outitem', 'outq_val', 'outprice_val', 'id', 'carno', 'carprice_val', 'memoin', 'memoout', 'memocar']
+                    export_names = ['Vat', '날짜', '매입거래처', '매입품목', '매입수량', '매입단가', '매출거래처', '매출품목', '매출수량', '매출단가', 'NO', '배송', '운송비', '매입메모', '매출메모', '배송메모']
+                    
+                    df_export = f_df[export_cols].copy()
+                    df_export.columns = export_names
+                    if pd.api.types.is_datetime64_any_dtype(df_export['날짜']):
+                        df_export['날짜'] = df_export['날짜'].dt.strftime('%Y-%m-%d')
+                    
+                    # 엑셀 맨 아래 총 합계/결산 내용 추가
+                    totals = {name: "" for name in export_names}
+                    totals['Vat'] = "합계"
+                    totals['매입수량'] = t_in_q
+                    totals['매입단가'] = t_in_a
+                    totals['매출수량'] = t_out_q
+                    totals['매출단가'] = t_out_a
+                    totals['운송비'] = t_car
+                    totals['매입메모'] = f'총수익: {t_profit:,.0f}원'
+                    df_export.loc[len(df_export)] = totals
+                        
+                    excel_output = io.BytesIO()
+                    try:
+                        from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+                        with pd.ExcelWriter(excel_output, engine='openpyxl') as writer:
+                            df_export.to_excel(writer, index=False, sheet_name='검색결과')
+                            worksheet = writer.sheets['검색결과']
+                            
+                            fill_base = PatternFill(start_color="353B48", end_color="353B48", fill_type="solid")
+                            fill_in = PatternFill(start_color="3B5B88", end_color="3B5B88", fill_type="solid")
+                            fill_out = PatternFill(start_color="B8860B", end_color="B8860B", fill_type="solid")
+                            fill_etc = PatternFill(start_color="757C43", end_color="757C43", fill_type="solid")
+                            
+                            font_white = Font(color="FFFFFF", bold=True)
+                            align_center = Alignment(horizontal="center", vertical="center")
+                            align_left = Alignment(horizontal="left", vertical="center")
+                            align_right = Alignment(horizontal="right", vertical="center")
+                            border_thin = Border(left=Side(style='thin', color='D0D0D0'), 
+                                                 right=Side(style='thin', color='D0D0D0'), 
+                                                 top=Side(style='thin', color='D0D0D0'), 
+                                                 bottom=Side(style='thin', color='D0D0D0'))
+                            
+                            # (열 알파벳, 너비, 채우기 색상, 정렬방식)
+                            col_settings = [
+                                ('A', 8, fill_base, align_center),   
+                                ('B', 14, fill_base, align_center),  
+                                ('C', 18, fill_in, align_left),      
+                                ('D', 25, fill_in, align_left),      
+                                ('E', 12, fill_in, align_right),     
+                                ('F', 15, fill_in, align_right),     
+                                ('G', 18, fill_out, align_left),     
+                                ('H', 25, fill_out, align_left),     
+                                ('I', 12, fill_out, align_right),    
+                                ('J', 15, fill_out, align_right),    
+                                ('K', 18, fill_base, align_center),  
+                                ('L', 12, fill_etc, align_center),   
+                                ('M', 15, fill_etc, align_right),    
+                                ('N', 25, fill_in, align_left),      
+                                ('O', 25, fill_out, align_left),     
+                                ('P', 25, fill_etc, align_left),     
+                            ]
+                            
+                            # 첫번째 행(제목) 스타일 적용
+                            for col_idx, (col_letter, width, fill, align) in enumerate(col_settings, 1):
+                                cell = worksheet.cell(row=1, column=col_idx)
+                                cell.fill = fill
+                                cell.font = font_white
+                                cell.alignment = align_center
+                                cell.border = border_thin
+                                worksheet.column_dimensions[col_letter].width = width
+                            
+                            # 데이터 및 합계 행 스타일 적용
+                            for row_idx in range(2, len(df_export) + 2):
+                                for col_idx, (col_letter, width, fill, align) in enumerate(col_settings, 1):
+                                    cell = worksheet.cell(row=row_idx, column=col_idx)
+                                    cell.alignment = align
+                                    cell.border = border_thin
+                                    # 금액, 수량칸 천단위 콤마 쉼표 적용
+                                    if col_idx in [5, 6, 9, 10, 13]: 
+                                        cell.number_format = '#,##0'
+                    except Exception as e:
+                        # 오류 발생 시 기본 엑셀로 저장 (안전장치)
+                        with pd.ExcelWriter(excel_output, engine='openpyxl') as writer:
+                            df_export.to_excel(writer, index=False, sheet_name='검색결과')
+                            
+                    excel_data = excel_output.getvalue()
+                    
+                    st.download_button("💾 EXCEL", data=excel_data, file_name=f"검색결과_{get_kst_now().strftime('%Y%m%d')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
 
                 st.markdown(table_html, unsafe_allow_html=True)
 
