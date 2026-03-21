@@ -75,7 +75,7 @@ st.markdown("""
         outline: none !important;
     }
     button[kind="tertiary"] p {
-        font-size: 1.8rem !important;
+        font-size: 1.8rem !important; /* H3 타이틀 크기 */
         font-weight: 800 !important;
         color: #ffffff !important;
         margin: 0 !important;
@@ -94,6 +94,10 @@ st.markdown("""
         background-color: #757c43 !important;
         border-color: #757c43 !important;
         color: white !important;
+    }
+    div[data-testid="stDownloadButton"] button[kind="primary"]:hover {
+        background-color: #646a39 !important;
+        border-color: #646a39 !important;
     }
     
     /* 검색 메뉴 굵게 및 색상 (검색창 내부는 가독성을 위해 밝게 유지) */
@@ -173,27 +177,27 @@ data = data.fillna("")
 # ==========================================
 # 🛠️ 상태 관리 (검색/전체보기 전용 로직)
 # ==========================================
-if 'active_vendor' not in st.session_state: st.session_state.active_vendor = "전체"
-if 'active_item' not in st.session_state: st.session_state.active_item = "전체"
+if 'active_vendor' not in st.session_state: st.session_state.active_vendor = ""
+if 'active_item' not in st.session_state: st.session_state.active_item = ""
 if 'active_year' not in st.session_state: st.session_state.active_year = "전체"
 
 def do_search():
-    """검색 버튼 클릭 시 필터링 적용 및 입력창을 '전체'로 초기화"""
+    """검색 버튼 클릭 시 필터링 적용 및 입력창 초기화"""
     st.session_state.active_vendor = st.session_state.ui_vendor
     st.session_state.active_item = st.session_state.ui_item
     st.session_state.active_year = st.session_state.ui_year
-    # 입력창은 다시 '전체'를 보여줌
-    st.session_state.ui_vendor = "전체"
-    st.session_state.ui_item = "전체"
+    # 입력창 UI 초기화 (전체보기 글자 제거를 위해 빈칸으로 설정)
+    st.session_state.ui_vendor = ""
+    st.session_state.ui_item = ""
     st.session_state.ui_year = "전체"
 
 def do_reset():
     """초기화 및 전체보기 기능"""
-    st.session_state.active_vendor = "전체"
-    st.session_state.active_item = "전체"
+    st.session_state.active_vendor = ""
+    st.session_state.active_item = ""
     st.session_state.active_year = "전체"
-    st.session_state.ui_vendor = "전체"
-    st.session_state.ui_item = "전체"
+    st.session_state.ui_vendor = ""
+    st.session_state.ui_item = ""
     st.session_state.ui_year = "전체"
 
 def do_full_refresh():
@@ -206,7 +210,6 @@ def do_full_refresh():
 # ==========================================
 col_t, col_l = st.columns([8.5, 1.5])
 with col_t: 
-    # 클릭 가능한 타이틀 (흰색 창 현상 방지 CSS 적용됨)
     st.button("📈 유니매입가격정보 (인상공문 현황)", type="tertiary", on_click=do_full_refresh)
 
 with col_l:
@@ -218,8 +221,9 @@ with col_l:
 st.markdown("<hr>", unsafe_allow_html=True)
 
 # ==========================================
-# 드롭다운 고유 항목 리스트 추출 ('전체' 포함)
+# 드롭다운 고유 항목 리스트 추출
 # ==========================================
+# 1. 연도 (전체 유지)
 years_set = set()
 if col_date in data.columns:
     for d in data[col_date].dropna().unique():
@@ -231,11 +235,11 @@ if col_date in data.columns:
             elif len(y) == 4: years_set.add(y)
 year_list = ["전체"] + [f"{y}년" for y in sorted(list(years_set), reverse=True)]
 
-# 목록에 '전체'를 다시 추가하여 드롭다운에서 선택 가능하게 함
-vendor_list = ["전체"] + sorted([str(v).strip() for v in data[col_vendor].unique() if str(v).strip() != ""])
-item_list = ["전체"] + sorted([str(v).strip() for v in data[col_item].unique() if str(v).strip() != ""])
+# 2. 업체명/물품명 (빈칸 기본, '전체' 글자 삭제)
+vendor_list = [""] + sorted([str(v).strip() for v in data[col_vendor].unique() if str(v).strip() != ""])
+item_list = [""] + sorted([str(v).strip() for v in data[col_item].unique() if str(v).strip() != ""])
 
-# 1. 상세 검색 영역
+# 1. 상세 검색 영역 (Selectbox 드롭다운 + 텍스트 검색 동시 지원)
 search_col1, search_col2, search_col3, search_col4, search_col5 = st.columns([2.5, 2.5, 1.5, 1.2, 1.2])
 
 with search_col1:
@@ -257,9 +261,9 @@ with search_col5:
 
 # 2. 필터링 로직 (AND 조건)
 filtered_df = data.copy()
-if st.session_state.active_vendor != "전체":
+if st.session_state.active_vendor != "":
     filtered_df = filtered_df[filtered_df[col_vendor].astype(str).str.contains(st.session_state.active_vendor, case=False, na=False)]
-if st.session_state.active_item != "전체":
+if st.session_state.active_item != "":
     filtered_df = filtered_df[filtered_df[col_item].astype(str).str.contains(st.session_state.active_item, case=False, na=False)]
 if st.session_state.active_year != "전체":
     target_y = st.session_state.active_year.replace("년", "")
@@ -292,15 +296,16 @@ with col_bar:
         </div>
     """, unsafe_allow_html=True)
 
-# 4. PRINT/EXCEL 기능 (생략 없이 유지)
+# 4. PRINT/EXCEL 기능
 html_table = filtered_df.to_html(index=False, escape=True)
 html_table = html_table.replace('border="1" class="dataframe"', 'class="custom-table"')
+# 칸 너비 비율 강제 적용
 html_table = html_table.replace('<th>물품명</th>', '<th style="width: 18%;">물품명</th>').replace('<th>메모</th>', '<th style="width: 34%;">메모</th>').replace('<th>기존가날짜</th>', '<th style="width: 8%;">기존가날짜</th>')
 
 print_html_content = f"<html><head><meta charset='utf-8'><style>body {{ font-family: 'Malgun Gothic'; }} .custom-table {{ width: 100%; border-collapse: collapse; }} .custom-table th, .custom-table td {{ border: 1px solid #aaa; padding: 6px; text-align: center; }} .custom-table th {{ background: #f1f5f9; }}</style></head><body><h2 style='text-align:center;'>유니매입가격정보 검색결과</h2>{html_table}</body></html>"
 
 with col_print:
-    components.html(f"<html><body><style>.btn {{ width: 100%; height: 42px; background: #757c43; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }}</style><button class='btn' onclick='fastPrint()'>🖨️ PRINT</button><script>function fastPrint() {{ var html = {json.dumps(print_html_content)}; var win = window.open('', '_blank'); win.document.write(html); win.document.close(); setTimeout(function(){{ win.print(); }}, 200); }}</script></body></html>", height=45)
+    components.html(f"<html><body><style>.btn {{ width: 100%; height: 42px; background: #757c43; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }} .btn:hover {{ background: #646a39; }}</style><button class='btn' onclick='fastPrint()'>🖨️ PRINT</button><script>function fastPrint() {{ var html = {json.dumps(print_html_content)}; var win = window.open('', '_blank'); win.document.write(html); win.document.close(); setTimeout(function(){{ win.print(); }}, 200); }}</script></body></html>", height=45)
 
 with col_excel:
     excel_output = io.BytesIO()
@@ -313,15 +318,15 @@ with col_excel:
 
 # 5. 검색 조건 표시
 conds = []
-if st.session_state.active_vendor != "전체": conds.append(f"업체({st.session_state.active_vendor})")
-if st.session_state.active_item != "전체": conds.append(f"물품({st.session_state.active_item})")
+if st.session_state.active_vendor != "": conds.append(f"업체({st.session_state.active_vendor})")
+if st.session_state.active_item != "": conds.append(f"물품({st.session_state.active_item})")
 if st.session_state.active_year != "전체": conds.append(f"연도({st.session_state.active_year})")
 search_info = f"<span style='color:#ffeb3b;'>[검색조건: {' + '.join(conds)}]</span>" if conds else "(전체 데이터)"
-st.markdown(f"#### 📋 상세 내역 {ads if 'ads' in locals() else search_info}", unsafe_allow_html=True)
+st.markdown(f"#### 📋 상세 내역 {search_info}", unsafe_allow_html=True)
 
 # 6. 독립 HTML 테이블 렌더링
 if filtered_df.empty:
-    st.warning("검색 결과가 없습니다.")
+    st.warning("👀 검색 조건에 맞는 데이터가 없습니다.")
 else:
     def get_th_class(col):
         if "기존" in str(col): return "th-in"
@@ -336,7 +341,7 @@ else:
         d_s = "" if idx < 100 else " style='display:none;'"
         r_s = f"<tr{d_s}>"
         for i, col_name in enumerate(filtered_df.columns):
-            val = html.escape(str(row[i])) if row[i] != "" else ""
+            val = html.escape(str(row[i+1])) if row[i+1] != "" else ""
             cls = get_td_class(col_name) + (" bold-col" if col_name in ["물품명", "인상폭"] else "")
             r_s += f"<td class='{cls}'>{val}</td>"
         rows_html.append(r_s + "</tr>")
@@ -345,13 +350,13 @@ else:
     iframe_html = f"""
     <!DOCTYPE html><html><head><meta charset='utf-8'><style>
     body {{ background: #2b323c; font-family: 'Malgun Gothic'; margin: 0; color: #1e293b; }}
-    .custom-table {{ width: 100%; border-collapse: collapse; background: white; font-size: 15px; }}
-    .custom-table th, .custom-table td {{ border: 1px solid #d0d0d0; padding: 8px 10px; }}
+    .custom-table {{ width: 100%; border-collapse: collapse; background: white; font-size: 15px; table-layout: fixed; }}
+    .custom-table th, .custom-table td {{ border: 1px solid #d0d0d0; padding: 8px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
     .custom-table th {{ color: white; font-weight: bold; cursor: pointer; user-select: none; }}
     .th-base {{ background: #353b48; }} .th-in {{ background: #3b5b88; }} .th-out {{ background: #b8860b; }} .th-etc {{ background: #757c43; }}
     .tc {{ text-align: center; }} .tl {{ text-align: left; }} .tr {{ text-align: right; }}
-    .bold-col {{ font-weight: 900; color: black; }}
-    .custom-table tr:nth-child(even) td {{ background: #f8f9fa; }}
+    .bold-col {{ font-weight: 900; color: black !important; }}
+    .custom-table tr:nth-child(even) td {{ background-color: #f8f9fa; }}
     </style></head><body>
     <table class='custom-table'><thead><tr>
     """
