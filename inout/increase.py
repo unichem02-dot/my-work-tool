@@ -62,7 +62,7 @@ st.markdown("""
         background-color: #646a39 !important; 
     }
     
-    /* 💾 EXCEL/CSV 버튼 전용 스타일 (진한 회색 및 높이 42px 강제 일치) */
+    /* 💾 EXCEL/CSV 버튼 전용 스타일 */
     div[data-testid="stDownloadButton"] {
         display: flex;
         align-items: center;
@@ -115,13 +115,26 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 🔒 로그인 기능 (4시간 지속 세션 유지)
+# 🔒 로그인 기능 (4시간 유지 + 외부 링크 자동인증 완벽 적용)
 # ==========================================
 def check_password():
-    # 💡 요청하신 대로 4시간(14,400초)으로 연장
     TIMEOUT_SECONDS = 14400 
     
-    if st.query_params.get("auth") == "true":
+    if "authenticated" not in st.session_state:
+        st.session_state["authenticated"] = False
+
+    # 💡 1. 링크 접속 (자동 로그인) 처리: 즉시 세션 부여 후 화면 강제 새로고침
+    if st.query_params.get("pass") == "uni":
+        st.session_state["authenticated"] = True
+        st.query_params["auth"] = "true"
+        st.query_params["ts"] = str(time.time())
+        # 보안 상 URL 창에서 ?pass=uni 글자를 제거
+        if "pass" in st.query_params:
+            del st.query_params["pass"]
+        st.rerun() # 로그인 창을 보여주지 않고 바로 대시보드로 넘어감
+
+    # 💡 2. 기존 로그인된 상태 유지 관리
+    elif st.query_params.get("auth") == "true":
         try:
             login_ts = float(st.query_params.get("ts", 0))
             if time.time() - login_ts < TIMEOUT_SECONDS:
@@ -133,9 +146,7 @@ def check_password():
             st.session_state["authenticated"] = False
             st.query_params.clear()
 
-    if "authenticated" not in st.session_state:
-        st.session_state["authenticated"] = False
-
+    # 💡 3. 인증되지 않았을 때만 로그인 화면 표시
     if not st.session_state["authenticated"]:
         st.markdown("<h1 style='text-align: center; color: #4e8cff !important; margin-top: 50px;'>🛡️ ADMIN ACCESS</h1>", unsafe_allow_html=True)
         col_l, col_c, col_r = st.columns([1, 1.2, 1])
@@ -193,7 +204,6 @@ def do_search_t1():
     st.session_state.act_t1_v = st.session_state.ui_t1_v
     st.session_state.act_t1_i = st.session_state.ui_t1_i
     st.session_state.act_t1_y = st.session_state.ui_t1_y
-    # 입력창 리셋
     st.session_state.ui_t1_v = ""
     st.session_state.ui_t1_i = ""
     st.session_state.ui_t1_y = "전체"
@@ -203,7 +213,6 @@ def do_search_t2():
     st.session_state.act_t2_v = st.session_state.ui_t2_v
     st.session_state.act_t2_i = st.session_state.ui_t2_i
     st.session_state.act_t2_y = st.session_state.ui_t2_y
-    # 입력창 리셋
     st.session_state.ui_t2_v = "전체"
     st.session_state.ui_t2_i = "전체"
     st.session_state.ui_t2_y = "전체"
@@ -216,7 +225,6 @@ def do_reset():
     st.session_state.act_t2_v = "전체"
     st.session_state.act_t2_i = "전체"
     st.session_state.act_t2_y = "전체"
-    # UI 위젯 리셋
     st.session_state.ui_t1_v = ""
     st.session_state.ui_t1_i = ""
     st.session_state.ui_t1_y = "전체"
@@ -229,14 +237,13 @@ def do_full_refresh():
     do_reset()
 
 # ==========================================
-# UI 구성 (상단 버튼 배치)
+# UI 상단 검색 영역
 # ==========================================
 col_t, col_g, col_l = st.columns([7.0, 1.5, 1.5])
 with col_t: 
     st.button("📈 유니매입가격정보 (인상공문 현황)", type="tertiary", on_click=do_full_refresh)
 
 with col_g:
-    # 🔗 구글 시트 바로가기 (새 창 열림)
     st.link_button("📂 Google Sheet", "https://drive.google.com/drive/starred", use_container_width=True)
 
 with col_l:
@@ -247,7 +254,6 @@ with col_l:
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
-# 리스트용 데이터 추출
 years_set = set()
 if col_date in data.columns:
     for d in data[col_date].dropna().unique():
@@ -262,7 +268,7 @@ year_list = ["전체"] + [f"{y}년" for y in sorted(list(years_set), reverse=Tru
 vendor_list = ["전체"] + sorted([str(v).strip() for v in data[col_vendor].unique() if str(v).strip() != ""])
 item_list = ["전체"] + sorted([str(v).strip() for v in data[col_item].unique() if str(v).strip() != ""])
 
-# 1라인 검색 (텍스트)
+# 1라인 검색
 c1_1, c1_2, c1_3, c1_4, c1_5 = st.columns([2.5, 2.5, 1.5, 1.7, 1.8])
 with c1_1: st.text_input("🏢 업체명 타이핑", placeholder="부분 일치 검색", key="ui_t1_v")
 with c1_2: st.text_input("📦 물품명 타이핑", placeholder="부분 일치 검색", key="ui_t1_i")
@@ -274,7 +280,7 @@ with c1_5:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
     st.button("📂 전체보기", use_container_width=True, type="secondary", on_click=do_reset, key="res1")
 
-# 2라인 검색 (선택)
+# 2라인 검색
 c2_1, c2_2, c2_3, c2_4, c2_5 = st.columns([2.5, 2.5, 1.5, 1.7, 1.8])
 with c2_1: st.selectbox("🏢 업체명 선택", vendor_list, key="ui_t2_v")
 with c2_2: st.selectbox("📦 물품명 선택", item_list, key="ui_t2_i")
@@ -368,7 +374,7 @@ search_info = f"<span style='color:#ffeb3b;'>[검색조건: {' + '.join(conds)}]
 st.markdown(f"#### 📋 상세 내역 {search_info} <span style='font-size:12px; color:#cbd5e1; font-weight:normal; margin-left:10px;'>(제목 클릭 시 정렬)</span>", unsafe_allow_html=True)
 
 # ==========================================
-# 📋 메인 테이블 (50개 단위 및 하이라이트 효과 적용)
+# 📋 메인 테이블 (50개 단위 페이지네이션 적용)
 # ==========================================
 if filtered_df.empty:
     st.warning("👀 조건에 맞는 데이터가 없습니다.")
@@ -382,7 +388,6 @@ else:
         return "tr" if any(x in str(col) for x in ["가", "폭", "수량"]) else "tc"
 
     rows_html = []
-    # 💡 row[i] 인덱싱을 통해 IndexError 완벽 해결
     for idx, row in enumerate(filtered_df.itertuples(index=False)):
         rs = "<tr>"
         for i, col_name in enumerate(filtered_df.columns):
@@ -444,7 +449,6 @@ else:
         prevBtn.disabled = (currentPage === 1);
         prevBtn.onclick = () => {{ currentPage--; renderTable(); }};
         container.appendChild(prevBtn);
-        // 💡 Math 객체 대소문자 수정 (math -> Math)
         let startPage = Math.max(1, currentPage - 4);
         let endPage = Math.min(totalPages, startPage + 9);
         if (endPage - startPage < 9) startPage = Math.max(1, endPage - 9);
