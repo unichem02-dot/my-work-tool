@@ -5,6 +5,5 @@ gspread
 google-auth
 streamlit
 pymysql
-
 pandas
-openpyxl
+st-gsheets-connection
