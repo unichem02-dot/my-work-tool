@@ -240,13 +240,16 @@ item_list = ["전체"] + sorted([str(v).strip() for v in data[col_item].unique()
 # ------------------------------------------
 # 라인 1: 텍스트 검색 영역 (독립 버튼)
 # ------------------------------------------
-c1_1, c1_2, c1_3, c1_4 = st.columns([3, 3, 2, 2])
+c1_1, c1_2, c1_3, c1_4, c1_5 = st.columns([2.5, 2.5, 1.5, 1.7, 1.8])
 with c1_1: st.text_input("🏢 업체명 타이핑", placeholder="부분 검색어 입력", key="ui_t1_v")
 with c1_2: st.text_input("📦 물품명 타이핑", placeholder="부분 검색어 입력", key="ui_t1_i")
 with c1_3: st.selectbox("📅 인상연도", year_list, key="ui_t1_y")
 with c1_4:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
     st.button("🔍 텍스트 검색", use_container_width=True, type="primary", on_click=do_search_t1)
+with c1_5:
+    st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+    st.button("📂 전체보기", use_container_width=True, type="secondary", on_click=do_reset, key="btn_reset_t1")
 
 # ------------------------------------------
 # 라인 2: 드롭다운 검색 영역 (독립 버튼)
@@ -260,7 +263,7 @@ with c2_4:
     st.button("🔍 선택 검색", use_container_width=True, type="primary", on_click=do_search_t2)
 with c2_5:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-    st.button("📂 전체보기(초기화)", use_container_width=True, type="secondary", on_click=do_reset)
+    st.button("📂 전체보기", use_container_width=True, type="secondary", on_click=do_reset, key="btn_reset_t2")
 
 # ==========================================
 # 필터링 로직 (모드별 독립 적용)
@@ -365,7 +368,7 @@ else:
         ds = "" if idx < 100 else " style='display:none;'"
         rs = f"<tr{ds}>"
         for i, col_name in enumerate(filtered_df.columns):
-            val = html.escape(str(row[i])) if row[i] != "" else ""
+            val = html.escape(str(row[i+1])) if row[i+1] != "" else ""
             cls = get_td_class(col_name) + (" bold-col" if col_name in ["물품명", "인상폭"] else "")
             rs += f"<td class='{cls}'>{val}</td>"
         rows.append(rs + "</tr>")
