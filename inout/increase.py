@@ -217,7 +217,7 @@ def do_full_refresh():
     do_reset()
 
 # ==========================================
-# UI 상단 영역
+# UI 상단 검색 영역
 # ==========================================
 col_t, col_l = st.columns([8.5, 1.5])
 with col_t: 
@@ -352,7 +352,7 @@ search_info = f"<span style='color:#ffeb3b;'>[검색조건: {' + '.join(conds)}]
 st.markdown(f"#### 📋 상세 내역 {search_info} <span style='font-size:12px; color:#cbd5e1; font-weight:normal; margin-left:10px;'>(제목 클릭 시 정렬)</span>", unsafe_allow_html=True)
 
 # ==========================================
-# 📋 메인 테이블 (유연한 동적 높이 및 상하단 숫자 페이지네이션)
+# 📋 메인 테이블 (상단 전용 숫자 페이지네이션 버전)
 # ==========================================
 if filtered_df.empty:
     st.warning("👀 조건에 맞는 데이터가 없습니다.")
@@ -402,7 +402,7 @@ else:
     .page-num.active {{ background: #ffeb3b; color: #000; font-weight: 800; }}
     </style></head><body>
     
-    <!-- 💡 상단 페이지 컨트롤 -->
+    <!-- 상단 페이지 컨트롤만 남김 -->
     <div id='nav-top' class='pagination-container'></div>
 
     <table class='custom-table' id='mainTable'>
@@ -414,9 +414,6 @@ else:
     
     t_html += f"""
         </tr></thead><tbody id='tableBody'>{''.join(rows_html)}</tbody></table>
-        
-        <!-- 💡 하단 페이지 컨트롤 -->
-        <div id='nav-bottom' class='pagination-container'></div>
 
     <script>
     let sortOrder = 1; 
@@ -427,7 +424,7 @@ else:
         const tbody = document.getElementById("tableBody");
         const rows = Array.from(tbody.rows);
         const totalRows = rows.length;
-        const totalPages = Math.ceil(totalRows / rowsPerPage);
+        const totalPages = math.ceil(totalRows / rowsPerPage);
         
         if (currentPage < 1) currentPage = 1;
         if (currentPage > totalPages) currentPage = totalPages;
@@ -439,45 +436,40 @@ else:
         }});
 
         updatePagination(totalPages);
-        window.scrollTo(0,0); // 페이지 이동 시 즉시 표 상단으로 이동
+        window.scrollTo(0,0); 
     }}
 
     function updatePagination(totalPages) {{
-        const containers = [document.getElementById('nav-top'), document.getElementById('nav-bottom')];
-        containers.forEach(container => {{
-            container.innerHTML = "";
-            if (totalPages <= 1) return;
+        const container = document.getElementById('nav-top');
+        container.innerHTML = "";
+        if (totalPages <= 1) return;
 
-            // 이전 버튼
-            const prevBtn = document.createElement("button");
-            prevBtn.className = "page-btn";
-            prevBtn.innerText = "◀ 이전";
-            prevBtn.disabled = (currentPage === 1);
-            prevBtn.onclick = () => {{ currentPage--; renderTable(); }};
-            container.appendChild(prevBtn);
+        const prevBtn = document.createElement("button");
+        prevBtn.className = "page-btn";
+        prevBtn.innerText = "◀ 이전";
+        prevBtn.disabled = (currentPage === 1);
+        prevBtn.onclick = () => {{ currentPage--; renderTable(); }};
+        container.appendChild(prevBtn);
 
-            // 숫자 버튼 (현재 페이지 기준 앞뒤 4개씩)
-            let startPage = Math.max(1, currentPage - 4);
-            let endPage = Math.min(totalPages, startPage + 9);
-            if (endPage - startPage < 9) startPage = Math.max(1, endPage - 9);
+        let startPage = math.max(1, currentPage - 4);
+        let endPage = math.min(totalPages, startPage + 9);
+        if (endPage - startPage < 9) startPage = math.max(1, endPage - 9);
 
-            for (let i = startPage; i <= endPage; i++) {{
-                if (i < 1) continue;
-                const pageNum = document.createElement("button");
-                pageNum.className = (i === currentPage) ? "page-num active" : "page-num";
-                pageNum.innerText = i;
-                pageNum.onclick = () => {{ currentPage = i; renderTable(); }};
-                container.appendChild(pageNum);
-            }}
+        for (let i = startPage; i <= endPage; i++) {{
+            if (i < 1) continue;
+            const pageNum = document.createElement("button");
+            pageNum.className = (i === currentPage) ? "page-num active" : "page-num";
+            pageNum.innerText = i;
+            pageNum.onclick = () => {{ currentPage = i; renderTable(); }};
+            container.appendChild(pageNum);
+        }}
 
-            // 다음 버튼
-            const nextBtn = document.createElement("button");
-            nextBtn.className = "page-btn";
-            nextBtn.innerText = "다음 ▶";
-            nextBtn.disabled = (currentPage === totalPages);
-            nextBtn.onclick = () => {{ currentPage++; renderTable(); }};
-            container.appendChild(nextBtn);
-        }});
+        const nextBtn = document.createElement("button");
+        nextBtn.className = "page-btn";
+        nextBtn.innerText = "다음 ▶";
+        nextBtn.disabled = (currentPage === totalPages);
+        nextBtn.onclick = () => {{ currentPage++; renderTable(); }};
+        container.appendChild(nextBtn);
     }}
 
     function sortTable(n) {{
@@ -505,9 +497,8 @@ else:
     </script></body></html>
     """
     
-    # 💡 [핵심] 높이 고정 하지 않고 표시 데이터 양에 따라 계산
     display_rows = min(len(filtered_df), 100)
-    # 한 행당 약 42px + 헤더/푸터 및 상하단 네비게이션 여유 공간 180px
-    dynamic_height = (display_rows * 42) + 180
+    # 하단 버튼이 빠진 만큼 높이 조정 (180 -> 120)
+    dynamic_height = (display_rows * 42) + 120
     
     components.html(t_html, height=dynamic_height, scrolling=False)
