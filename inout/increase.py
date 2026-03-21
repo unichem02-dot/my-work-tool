@@ -32,10 +32,13 @@ st.markdown("""
     h1, h2, h3, h4, h5, p, span, label { color: #ffffff !important; }
     
     /* 버튼 공통 스타일 */
-    div.stButton > button {
+    div.stButton > button, div.stLinkButton > a {
         border-radius: 8px !important;
         font-weight: bold !important;
         padding: 0px 10px !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     
     /* 검색 버튼 (Primary) -> 파란색 */
@@ -48,14 +51,18 @@ st.markdown("""
         background-color: #3b76e5 !important; 
     }
 
-    /* 전체보기/로그아웃 (Secondary) -> 올리브색 */
-    button[kind="secondary"] {
+    /* 전체보기/로그아웃/구글시트 (Secondary) -> 올리브색 계열 */
+    button[kind="secondary"], div.stLinkButton > a {
         background-color: #757c43 !important;
         border-color: #757c43 !important;
         color: white !important;
+        text-decoration: none !important;
+    }
+    button[kind="secondary"]:hover, div.stLinkButton > a:hover { 
+        background-color: #646a39 !important; 
     }
     
-    /* 💾 EXCEL/CSV 버튼 정렬 및 스타일 (높이 42px 강제 일치) */
+    /* 💾 EXCEL/CSV 버튼 전용 스타일 (진한 회색 및 높이 교정) */
     div[data-testid="stDownloadButton"] {
         display: flex;
         align-items: center;
@@ -217,11 +224,16 @@ def do_full_refresh():
     do_reset()
 
 # ==========================================
-# UI 구성
+# UI 구성 (상단 버튼 배치 조정)
 # ==========================================
-col_t, col_l = st.columns([8.5, 1.5])
+col_t, col_g, col_l = st.columns([7.0, 1.5, 1.5])
 with col_t: 
     st.button("📈 유니매입가격정보 (인상공문 현황)", type="tertiary", on_click=do_full_refresh)
+
+with col_g:
+    # 💡 구글 시트 바로가기 버튼 (새 창으로 열림)
+    st.link_button("📂 Google Sheet", "https://drive.google.com/drive/starred", use_container_width=True)
+
 with col_l:
     if st.button("🔓 LOGOUT", use_container_width=True, type="secondary"):
         st.session_state["authenticated"] = False
@@ -291,7 +303,9 @@ sort_cols = [c for c in [col_date, col_vendor, col_item] if c in filtered_df.col
 if sort_cols:
     filtered_df = filtered_df.sort_values(by=sort_cols, ascending=[False if c == col_date else True for c in sort_cols])
 
-# 요약 지표
+# ==========================================
+# 📊 요약 지표 및 버튼 레이아웃
+# ==========================================
 latest_date = "-"
 if not filtered_df.empty:
     valid_dates = [d for d in filtered_df[col_date].tolist() if str(d).strip() != ""]
@@ -350,7 +364,7 @@ search_info = f"<span style='color:#ffeb3b;'>[검색조건: {' + '.join(conds)}]
 st.markdown(f"#### 📋 상세 내역 {search_info} <span style='font-size:12px; color:#cbd5e1; font-weight:normal; margin-left:10px;'>(제목 클릭 시 정렬)</span>", unsafe_allow_html=True)
 
 # ==========================================
-# 📋 메인 테이블 (마우스 오버 효과 추가 버전)
+# 📋 메인 테이블 (50개 단위 페이지네이션 적용)
 # ==========================================
 if filtered_df.empty:
     st.warning("👀 조건에 맞는 데이터가 없습니다.")
@@ -382,34 +396,15 @@ else:
     .tc {{ text-align: center; }} .tl {{ text-align: left; }} .tr {{ text-align: right; }}
     .bold-col {{ font-weight: 900; color: black !important; }}
     .custom-table tr:nth-child(even) td {{ background-color: #f8f9fa; }}
-    
-    /* 💡 마우스 오버 효과 (배경색 변경) */
-    .custom-table tr:hover td {{ 
-        background-color: #e2e6ea !important; 
-        cursor: pointer;
-        transition: background-color 0.1s ease;
-    }}
-    
+    .custom-table tr:hover td {{ background-color: #e2e6ea !important; cursor: pointer; transition: background-color 0.1s ease; }}
     .sort-icon {{ font-size: 10px; color: #ffeb3b; margin-left: 5px; }}
-    
-    .pagination-container {{ 
-        text-align: center; padding: 15px 0; background: #2b323c; 
-        display: flex; justify-content: center; align-items: center; gap: 5px;
-    }}
-    .page-btn {{ 
-        padding: 6px 12px; cursor: pointer; background: #4e8cff; color: white; 
-        border: none; border-radius: 4px; font-weight: bold; font-size: 14px;
-    }}
+    .pagination-container {{ text-align: center; padding: 15px 0; background: #2b323c; display: flex; justify-content: center; align-items: center; gap: 5px; }}
+    .page-btn {{ padding: 6px 12px; cursor: pointer; background: #4e8cff; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 14px; }}
     .page-btn:disabled {{ background: #4a5568; cursor: not-allowed; opacity: 0.6; }}
-    .page-num {{ 
-        padding: 6px 12px; cursor: pointer; background: #525252; color: #ddd; 
-        border: none; border-radius: 4px; font-size: 14px;
-    }}
+    .page-num {{ padding: 6px 12px; cursor: pointer; background: #525252; color: #ddd; border: none; border-radius: 4px; font-size: 14px; }}
     .page-num.active {{ background: #ffeb3b; color: #000; font-weight: 800; }}
     </style></head><body>
-    
     <div id='nav-top' class='pagination-container'></div>
-
     <table class='custom-table' id='mainTable'>
     <thead><tr>
     """
@@ -419,47 +414,34 @@ else:
     
     t_html += f"""
         </tr></thead><tbody id='tableBody'>{''.join(rows_html)}</tbody></table>
-
     <script>
-    let sortOrder = 1; 
-    let currentPage = 1; 
-    const rowsPerPage = 50; 
-
+    let sortOrder = 1; let currentPage = 1; const rowsPerPage = 50; 
     function renderTable() {{
         const tbody = document.getElementById("tableBody");
         const rows = Array.from(tbody.rows);
-        const totalRows = rows.length;
-        const totalPages = Math.ceil(totalRows / rowsPerPage);
-        
+        const totalPages = Math.ceil(rows.length / rowsPerPage);
         if (currentPage < 1) currentPage = 1;
         if (currentPage > totalPages) currentPage = totalPages;
-
         rows.forEach((row, index) => {{
             const start = (currentPage - 1) * rowsPerPage;
             const end = start + rowsPerPage;
             row.style.display = (index >= start && index < end) ? "" : "none";
         }});
-
         updatePagination(totalPages);
         window.scrollTo(0,0); 
     }}
-
     function updatePagination(totalPages) {{
         const container = document.getElementById('nav-top');
         container.innerHTML = "";
         if (totalPages <= 1) return;
-
         const prevBtn = document.createElement("button");
-        prevBtn.className = "page-btn";
-        prevBtn.innerText = "◀ 이전";
+        prevBtn.className = "page-btn"; prevBtn.innerText = "◀ 이전";
         prevBtn.disabled = (currentPage === 1);
         prevBtn.onclick = () => {{ currentPage--; renderTable(); }};
         container.appendChild(prevBtn);
-
         let startPage = Math.max(1, currentPage - 4);
         let endPage = Math.min(totalPages, startPage + 9);
         if (endPage - startPage < 9) startPage = Math.max(1, endPage - 9);
-
         for (let i = startPage; i <= endPage; i++) {{
             if (i < 1) continue;
             const pageNum = document.createElement("button");
@@ -468,41 +450,27 @@ else:
             pageNum.onclick = () => {{ currentPage = i; renderTable(); }};
             container.appendChild(pageNum);
         }}
-
         const nextBtn = document.createElement("button");
-        nextBtn.className = "page-btn";
-        nextBtn.innerText = "다음 ▶";
+        nextBtn.className = "page-btn"; nextBtn.innerText = "다음 ▶";
         nextBtn.disabled = (currentPage === totalPages);
         nextBtn.onclick = () => {{ currentPage++; renderTable(); }};
         container.appendChild(nextBtn);
     }}
-
     function sortTable(n) {{
-        const tbody = document.getElementById("tableBody"); 
-        const rows = Array.from(tbody.rows); 
-        sortOrder *= -1;
+        const tbody = document.getElementById("tableBody"); const rows = Array.from(tbody.rows); sortOrder *= -1;
         document.querySelectorAll('.sort-icon').forEach(icon => icon.innerText = '');
         document.getElementById('icon-' + n).innerText = sortOrder === 1 ? " ▲" : " ▼";
-        
         rows.sort((a, b) => {{
-            let tA = a.cells[n].innerText.trim(); 
-            let tB = b.cells[n].innerText.trim();
-            let nA = parseFloat(tA.replace(/,/g, '')); 
-            let nB = parseFloat(tB.replace(/,/g, ''));
+            let tA = a.cells[n].innerText.trim(); let tB = b.cells[n].innerText.trim();
+            let nA = parseFloat(tA.replace(/,/g, '')); let nB = parseFloat(tB.replace(/,/g, ''));
             if (!isNaN(nA) && !isNaN(nB)) {{ return (nA - nB) * sortOrder; }}
             return tA.localeCompare(tB, 'ko') * sortOrder;
         }});
-        
-        rows.forEach(row => tbody.appendChild(row)); 
-        currentPage = 1; 
-        renderTable();
+        rows.forEach(row => tbody.appendChild(row)); currentPage = 1; renderTable();
     }}
-
     window.onload = renderTable;
     </script></body></html>
     """
-    
     display_rows = min(len(filtered_df), 50)
     dynamic_height = (display_rows * 42) + 120
-    
     components.html(t_html, height=dynamic_height, scrolling=False)
