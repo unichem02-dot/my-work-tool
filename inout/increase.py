@@ -192,14 +192,14 @@ data = data.fillna("")
 # ==========================================
 # 🛠️ 상태 관리 (검색/전체보기 전용 로직)
 # ==========================================
-# 1) 실제로 화면 필터링에 반영될 저장된 검색 조건들 (초기값: 전체)
-if 'active_vendor' not in st.session_state: st.session_state.active_vendor = "전체"
-if 'active_item' not in st.session_state: st.session_state.active_item = "전체"
+# 1) 실제로 화면 필터링에 반영될 저장된 검색 조건들 (업체명/물품명은 빈칸 기본)
+if 'active_vendor' not in st.session_state: st.session_state.active_vendor = ""
+if 'active_item' not in st.session_state: st.session_state.active_item = ""
 if 'active_year' not in st.session_state: st.session_state.active_year = "전체"
 
-# 2) UI 껍데기(드롭다운/입력창) 상태
-if 'ui_vendor' not in st.session_state: st.session_state.ui_vendor = "전체"
-if 'ui_item' not in st.session_state: st.session_state.ui_item = "전체"
+# 2) UI 껍데기(드롭다운/입력창) 상태 (업체명/물품명은 빈칸 기본)
+if 'ui_vendor' not in st.session_state: st.session_state.ui_vendor = ""
+if 'ui_item' not in st.session_state: st.session_state.ui_item = ""
 if 'ui_year' not in st.session_state: st.session_state.ui_year = "전체"
 
 def do_search():
@@ -208,18 +208,18 @@ def do_search():
     st.session_state.active_item = st.session_state.ui_item
     st.session_state.active_year = st.session_state.ui_year
     
-    # 💡 조건은 저장했으니 드롭다운 선택창은 다시 '전체'로 깔끔하게 초기화합니다.
-    st.session_state.ui_vendor = "전체"
-    st.session_state.ui_item = "전체"
+    # 💡 조건은 저장했으니 드롭다운 선택창은 다시 빈칸과 '전체'로 깔끔하게 초기화합니다.
+    st.session_state.ui_vendor = ""
+    st.session_state.ui_item = ""
     st.session_state.ui_year = "전체"
 
 def do_reset():
     """모든 조건과 입력창을 싹 다 비우는 완전 초기화(전체보기) 함수"""
-    st.session_state.active_vendor = "전체"
-    st.session_state.active_item = "전체"
+    st.session_state.active_vendor = ""
+    st.session_state.active_item = ""
     st.session_state.active_year = "전체"
-    st.session_state.ui_vendor = "전체"
-    st.session_state.ui_item = "전체"
+    st.session_state.ui_vendor = ""
+    st.session_state.ui_item = ""
     st.session_state.ui_year = "전체"
 
 def do_full_refresh():
@@ -259,11 +259,12 @@ if col_date in data.columns:
                 elif len(y) == 4: years_set.add(y)       # '2026' -> '2026'
 year_list = ["전체"] + [f"{y}년" for y in sorted(list(years_set), reverse=True)]
 
+# "전체" 대신 빈칸("")을 리스트 첫번째에 두어 기본 상태를 텅 비게 만듭니다.
 vendor_raw = [str(v).strip() for v in data[col_vendor].unique() if str(v).strip() != ""]
-vendor_list = ["전체"] + sorted(vendor_raw)
+vendor_list = [""] + sorted(vendor_raw)
 
 item_raw = [str(v).strip() for v in data[col_item].unique() if str(v).strip() != ""]
-item_list = ["전체"] + sorted(item_raw)
+item_list = [""] + sorted(item_raw)
 
 
 # 1. 상세 검색 영역 (5단 배치: 업체명 / 물품명 / 연도 / 검색 / 전체보기)
@@ -291,12 +292,12 @@ with search_col5:
 # 2. 필터링 로직 (AND 조건)
 filtered_df = data.copy()
 
-# 업체명 필터 적용 ("전체"가 아닐 때만)
-if st.session_state.active_vendor != "전체":
+# 업체명 필터 적용 (빈칸이 아닐 때만)
+if st.session_state.active_vendor != "":
     filtered_df = filtered_df[filtered_df[col_vendor].astype(str).str.contains(st.session_state.active_vendor, case=False, na=False)]
 
-# 물품명 필터 적용 ("전체"가 아닐 때만, 위 결과에 이어서 교집합(AND) 적용)
-if st.session_state.active_item != "전체":
+# 물품명 필터 적용 (빈칸이 아닐 때만, 위 결과에 이어서 교집합(AND) 적용)
+if st.session_state.active_item != "":
     filtered_df = filtered_df[filtered_df[col_item].astype(str).str.contains(st.session_state.active_item, case=False, na=False)]
 
 # 연도 필터 적용
@@ -350,7 +351,7 @@ with col_bar:
 html_table = filtered_df.to_html(index=False, escape=True)
 html_table = html_table.replace('border="1" class="dataframe"', 'class="custom-table"')
 
-# 프린트용 화면에서도 칸 너비 강제 조정 적용 (물품명 18%, 메모 34%, 기존가날짜 8%)
+# 프린트용 화면에서도 칸 너비 강제 조정 적용
 html_table = html_table.replace('<th>물품명</th>', '<th style="width: 18%;">물품명</th>')
 html_table = html_table.replace('<th>메모</th>', '<th style="width: 34%;">메모</th>')
 html_table = html_table.replace('<th>기존가날짜</th>', '<th style="width: 8%;">기존가날짜</th>')
@@ -459,7 +460,7 @@ with col_excel:
                     cell.border = border_thin
                     
                     col_letter = openpyxl.utils.get_column_letter(col_idx)
-                    # 엑셀 셀 너비도 뷰 비율에 맞춰 조정 (물품명 확대, 메모 축소, 기존가날짜 확대)
+                    
                     if "물품명" in c_lower: ws.column_dimensions[col_letter].width = 18
                     elif "메모" in c_lower: ws.column_dimensions[col_letter].width = 34
                     elif "기존가날짜" in c_lower: ws.column_dimensions[col_letter].width = 11
@@ -487,8 +488,8 @@ with col_excel:
 # 5. 데이터프레임 헤더 (타이틀 및 검색 조건 표시)
 # ==========================================
 cond_texts = []
-if st.session_state.active_vendor != "전체": cond_texts.append(f"업체({st.session_state.active_vendor})")
-if st.session_state.active_item != "전체": cond_texts.append(f"물품({st.session_state.active_item})")
+if st.session_state.active_vendor != "": cond_texts.append(f"업체({st.session_state.active_vendor})")
+if st.session_state.active_item != "": cond_texts.append(f"물품({st.session_state.active_item})")
 if st.session_state.active_year != "전체": cond_texts.append(f"연도({st.session_state.active_year})")
 
 if cond_texts:
@@ -568,7 +569,6 @@ else:
     for i, col in enumerate(filtered_df.columns):
         th_class = get_th_class(col)
         
-        # 💡 물품명 칸 크기 확대, 메모 칸 크기 소폭 축소, 기존가날짜 유지 확대 비율
         width_style = ""
         if "물품명" in str(col):
             width_style = "width: 18%;"
