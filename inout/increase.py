@@ -3,12 +3,13 @@ import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 import math
 import html
+import time
 
 # 1. 페이지 기본 설정 (와이드 모드 유지)
 st.set_page_config(page_title="유니매입가격정보 - 인상공문 검색", page_icon="📈", layout="wide")
 
 # ==========================================
-# 🎨 커스텀 CSS (텍스트 30% 확대 및 디자인 업그레이드)
+# 🎨 커스텀 CSS (텍스트 확대, 클릭 버튼 및 디자인 업그레이드)
 # ==========================================
 st.markdown("""
     <style>
@@ -33,22 +34,32 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     
-    /* ---------------------------------
-       텍스트 크기 30% 확대 적용 영역 
-       --------------------------------- */
-    .stMarkdown p, .stMarkdown li {
-        font-size: 1.2rem !important;
-    }
+    /* 텍스트 크기 확대 적용 */
+    .stMarkdown p, .stMarkdown li { font-size: 1.2rem !important; }
     .stMultiSelect label, .stTextInput label {
         font-size: 1.15rem !important;
         font-weight: 600 !important;
         color: #333333;
     }
-    div[data-testid="metric-container"] label {
-        font-size: 1.15rem !important;
+    div[data-testid="metric-container"] label { font-size: 1.15rem !important; }
+    div[data-testid="metric-container"] div { font-size: 2.3rem !important; }
+
+    /* 타이틀 텍스트 버튼 (Tertiary) 스타일링 - 제목 클릭 새로고침용 */
+    button[kind="tertiary"] {
+        display: flex !important;
+        justify-content: flex-start !important;
+        padding: 0 !important;
+        background-color: transparent !important;
     }
-    div[data-testid="metric-container"] div {
+    button[kind="tertiary"] p {
         font-size: 2.3rem !important;
+        font-weight: 800 !important;
+        color: #31333F !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    button[kind="tertiary"]:hover p {
+        color: #ff4b4b !important; /* 마우스 올리면 빨간색으로 변함 */
     }
 
     /* 커스텀 데이터 표(Table) 스타일링 */
@@ -64,6 +75,12 @@ st.markdown("""
         padding: 14px 16px;
         border-bottom: 2px solid #e6e6e6;
         text-align: left;
+        cursor: pointer; /* 마우스 오버 시 손가락 모양 (클릭 가능 표시) */
+        transition: background-color 0.2s;
+        user-select: none; /* 클릭 시 텍스트 드래그 방지 */
+    }
+    .custom-table th:hover {
+        background-color: #e2e6ea; /* 마우스 올렸을 때 색상 변화 */
     }
     .custom-table td {
         padding: 14px 16px;
@@ -77,23 +94,56 @@ st.markdown("""
         font-weight: 900 !important;
         color: #000000 !important;
     }
+    
+    /* 하단 JS 페이지 이동 버튼 스타일 */
+    .page-btn {
+        padding: 8px 16px;
+        font-size: 1.15rem;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: #fff;
+        color: #333;
+        transition: 0.2s;
+    }
+    .page-btn:hover:not(:disabled) {
+        background-color: #f8f9fa;
+        border-color: #ff4b4b;
+        color: #ff4b4b;
+    }
+    .page-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 🔒 로그인 기능 (비밀번호 확인)
+# 🔒 로그인 기능 (비밀번호 확인 + 3시간 세션 유지)
 # ==========================================
 def check_password():
+    TIMEOUT_SECONDS = 10800  # 3시간 (3 * 60 * 60 초)
+    
+    # 1. URL 파라미터를 이용한 세션 복구 (F5 새로고침 생존 로직)
+    if st.query_params.get("auth") == "true":
+        login_ts = float(st.query_params.get("ts", 0))
+        if time.time() - login_ts < TIMEOUT_SECONDS:
+            st.session_state["authenticated"] = True
+        else:
+            # 3시간 경과 시 로그인 만료 및 URL 초기화
+            st.session_state["authenticated"] = False
+            st.query_params.clear()
+
     if "authenticated" not in st.session_state:
         st.session_state["authenticated"] = False
 
     if not st.session_state["authenticated"]:
-        # 로그인 화면 중앙 정렬을 위한 여백 추가
         st.markdown("<br><br>", unsafe_allow_html=True)
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.title("🔒 보안 접속")
-            st.info("유니매입가격정보를 열람하시려면 비밀번호를 입력해주세요.")
+            st.info("유니매입가격정보를 열람하시려면 비밀번호를 입력해주세요. (로그인 시 3시간 유지됩니다.)")
             
             with st.form("login_form"):
                 pwd = st.text_input("비밀번호", type="password", placeholder="비밀번호 입력")
@@ -102,6 +152,9 @@ def check_password():
                 if submit:
                     if pwd == str(st.secrets.get("tom_password", "")):
                         st.session_state["authenticated"] = True
+                        # URL 파라미터에 인증 상태 및 로그인 시간 기록 (새로고침 방어용)
+                        st.query_params["auth"] = "true"
+                        st.query_params["ts"] = str(time.time())
                         st.rerun()
                     else:
                         st.error("🚨 비밀번호가 일치하지 않습니다.")
@@ -117,9 +170,8 @@ def load_data():
     conn = st.connection("gsheets", type=GSheetsConnection)
     df = conn.read(worksheet="시트1") 
     
-    # 데이터 전처리 (빈 행 제거 및 엑셀 특유의 '투명한 빈 열' 제거)
     df = df.dropna(how="all")
-    df = df.dropna(axis=1, how="all")
+    df = df.loc[:, ~df.columns.str.contains('^Unnamed')] 
     df.columns = df.columns.astype(str).str.strip()
     return df
 
@@ -129,7 +181,6 @@ except Exception as e:
     st.error("구글 시트를 불러오는 데 실패했습니다. '.streamlit/secrets.toml' 설정과 공유 상태를 확인해주세요.")
     st.stop()
 
-# 엑셀 데이터에 맞춘 실제 컬럼명
 col_vendor = "업체명"
 col_item = "물품명"
 col_date = "인상날짜"
@@ -148,13 +199,27 @@ data = data.fillna("")
 # UI 레이아웃 시작
 # ==========================================
 
-st.title("📈 유니매입가격정보")
-st.markdown("단가 인상 내역(기존가, 인상폭, 메모 등)을 빠르고 정확하게 검색하세요.")
+# 상단 헤더 영역 (타이틀버튼 + 로그아웃)
 st.markdown("<br>", unsafe_allow_html=True)
+header_col1, header_col2 = st.columns([5, 1])
 
-# ==========================================
-# 1. 상세 검색 영역 (박스형 컨테이너 적용)
-# ==========================================
+with header_col1:
+    # 제목을 클릭 가능한 버튼으로 생성 (캐시 강제 초기화 및 새로고침)
+    if st.button("📈 유니매입가격정보", type="tertiary", help="클릭하면 구글 시트의 최신 데이터를 다시 불러옵니다."):
+        load_data.clear() # 기존 캐시 지우기
+        st.rerun() # 화면 새로고침
+        
+    st.markdown("<p style='font-size: 1.2rem; color: #555; margin-top: -10px; margin-bottom: 20px;'>단가 인상 내역을 검색하세요. <b>(글자를 클릭하면 최신 데이터로 새로고침 됩니다!)</b></p>", unsafe_allow_html=True)
+
+with header_col2:
+    # 우측 상단 로그인 상태 및 로그아웃 버튼
+    st.markdown("<div style='text-align: right; font-size: 0.95rem; color: #28a745; margin-bottom: 5px; font-weight: 600;'>🟢 안전하게 로그인됨</div>", unsafe_allow_html=True)
+    if st.button("🔓 로그아웃", use_container_width=True):
+        st.session_state["authenticated"] = False
+        st.query_params.clear() # 유지되던 URL 정보 삭제
+        st.rerun()
+
+# 1. 상세 검색 영역
 with st.container(border=True):
     st.markdown("##### 🔍 상세 검색")
     search_col1, search_col2, search_col3 = st.columns(3)
@@ -172,9 +237,7 @@ with st.container(border=True):
         date_list = ["전체"] + sorted(date_raw, reverse=True)
         selected_dates = st.multiselect("📅 인상날짜", date_list, default=["전체"])
 
-# ==========================================
 # 2. 필터링 로직 적용
-# ==========================================
 filtered_df = data.copy()
 
 if "전체" not in selected_vendors and len(selected_vendors) > 0:
@@ -186,6 +249,7 @@ if "전체" not in selected_dates and len(selected_dates) > 0:
 if search_item:
     filtered_df = filtered_df[filtered_df[col_item].astype(str).str.contains(search_item, case=False, na=False)]
 
+# 기본 초기 정렬 설정
 sort_cols = [c for c in [col_date, col_vendor, col_item] if c in filtered_df.columns]
 if sort_cols:
     asc_rules = [False if c == col_date else True for c in sort_cols]
@@ -193,9 +257,7 @@ if sort_cols:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ==========================================
 # 3. 요약 지표 (Metrics)
-# ==========================================
 col1, col2, col3 = st.columns(3)
 with col1:
     st.metric(label="총 검색된 건수", value=f"{len(filtered_df):,} 건")
@@ -216,75 +278,142 @@ with col3:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ==========================================
-# 4. 데이터프레임 (상세 내역) 출력 및 페이지네이션
+# 4. 데이터프레임 (JS 정렬 & 페이지네이션이 포함된 최적화 테이블)
 # ==========================================
 if filtered_df.empty:
     st.warning("👀 검색 조건에 맞는 데이터가 없습니다. 다른 조건으로 검색해 보세요.")
 else:
-    ROWS_PER_PAGE = 100
-    total_pages = math.ceil(len(filtered_df) / ROWS_PER_PAGE)
-
-    # 검색 조건이 변경되면 페이지를 1로 자동 초기화하는 스마트 로직
-    filter_hash = hash(str(selected_vendors) + str(search_item) + str(selected_dates))
-    if st.session_state.get('last_filter_hash') != filter_hash:
-        st.session_state.current_page = 1
-        st.session_state.last_filter_hash = filter_hash
-
-    if 'current_page' not in st.session_state:
-        st.session_state.current_page = 1
-        
-    # 현재 페이지에 해당하는 100개 데이터 자르기
-    start_idx = (st.session_state.current_page - 1) * ROWS_PER_PAGE
-    end_idx = start_idx + ROWS_PER_PAGE
-    display_df = filtered_df.iloc[start_idx:end_idx]
-    
-    # --- 스크롤 없는 맞춤형 HTML 표 생성 (굵은 글씨 및 텍스트 크기 완벽 적용) ---
-    table_html = "<table class='custom-table'><thead><tr>"
-    for col in display_df.columns:
-        table_html += f"<th>{html.escape(str(col))}</th>"
-    table_html += "</tr></thead><tbody>"
+    # --- 제목 클릭 시 JS 정렬 함수(sortTable) 호출 ---
+    table_html = "<table class='custom-table' id='myTable'><thead><tr>"
+    for i, col in enumerate(filtered_df.columns):
+        table_html += f"<th onclick='sortTable({i})' title='클릭하여 {html.escape(str(col))} 기준 정렬'>{html.escape(str(col))} <span class='sort-icon' id='icon-{i}'></span></th>"
+    table_html += "</tr></thead><tbody id='tableBody'>"
     
     # 강조할 열 지정
     bold_cols = ["물품명", "인상폭"]
     
-    for _, row in display_df.iterrows():
+    # 100개가 아닌 '전체' 데이터를 HTML로 렌더링 (이후 JS로 100개씩 나눠서 보여줌)
+    for _, row in filtered_df.iterrows():
         table_html += "<tr>"
-        for col in display_df.columns:
+        for col in filtered_df.columns:
             val = row[col]
-            if pd.isna(val) or val == "": 
-                safe_val = ""
-            else:
-                safe_val = html.escape(str(val))
+            safe_val = "" if pd.isna(val) or val == "" else html.escape(str(val))
             
-            # 물품명, 인상폭 열은 굵은 글씨 클래스 적용
             if col in bold_cols:
                 table_html += f"<td class='bold-col'>{safe_val}</td>"
             else:
                 table_html += f"<td>{safe_val}</td>"
         table_html += "</tr>"
     table_html += "</tbody></table>"
-    
-    # 화면에 표출
-    st.markdown(table_html, unsafe_allow_html=True)
-    
-    # 페이지 이동(Pagination) 하단 버튼 UI
-    if total_pages > 1:
-        st.markdown("<br>", unsafe_allow_html=True)
-        page_cols = st.columns([4, 1, 1, 1, 4])
+
+    # 페이지 이동 버튼 및 깜빡임 없는 초고속 자바스크립트 동작 코드
+    table_html += """
+    <div id='paginationControls' style='display: none; text-align: center; margin-top: 30px; margin-bottom: 25px;'>
+        <button class='page-btn' onclick='changePage(-1)' id='prevBtn'>◀ 이전</button>
+        <span id='pageInfo' style='margin: 0 25px; font-weight: 700; font-size: 1.2rem; color: #31333F;'>1 / 1</span>
+        <button class='page-btn' onclick='changePage(1)' id='nextBtn'>다음 ▶</button>
+    </div>
+
+    <script>
+    const ROWS_PER_PAGE = 100;
+    let currentPage = 1;
+    let sortCol = -1;
+    let sortAsc = true;
+
+    // 테이블 100개씩 잘라서 보여주기 기능
+    function updateTable() {
+        const tbody = document.getElementById("tableBody");
+        if (!tbody) return;
+        const rows = Array.from(tbody.getElementsByTagName("tr"));
+        const totalPages = Math.ceil(rows.length / ROWS_PER_PAGE) || 1;
         
-        with page_cols[1]:
-            if st.button("◀ 이전", disabled=st.session_state.current_page <= 1, use_container_width=True):
-                st.session_state.current_page -= 1
-                st.rerun()
-                
-        with page_cols[2]:
-            st.markdown(f"<div style='text-align: center; padding-top: 7px; font-weight: 600; font-size: 1.15rem; color: #333;'>{st.session_state.current_page} / {total_pages}</div>", unsafe_allow_html=True)
+        if (currentPage < 1) currentPage = 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        rows.forEach((row, index) => {
+            if (index >= (currentPage - 1) * ROWS_PER_PAGE && index < currentPage * ROWS_PER_PAGE) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        });
+
+        document.getElementById("pageInfo").innerText = currentPage + " / " + totalPages;
+        document.getElementById("prevBtn").disabled = currentPage === 1;
+        document.getElementById("nextBtn").disabled = currentPage === totalPages;
+        
+        if (rows.length > ROWS_PER_PAGE) {
+            document.getElementById("paginationControls").style.display = "block";
+        } else {
+            document.getElementById("paginationControls").style.display = "none";
+        }
+    }
+
+    function changePage(delta) {
+        currentPage += delta;
+        updateTable();
+    }
+
+    // 클릭 시 테이블 정렬 기능
+    function sortTable(n) {
+        const tbody = document.getElementById("tableBody");
+        if (!tbody) return;
+        const rows = Array.from(tbody.getElementsByTagName("tr"));
+        
+        // 동일한 열 클릭 시 오름/내림차순 반전, 다른 열 클릭 시 오름차순
+        if (sortCol === n) {
+            sortAsc = !sortAsc;
+        } else {
+            sortCol = n;
+            sortAsc = true;
+        }
+
+        // 화살표 아이콘 업데이트
+        document.querySelectorAll('.sort-icon').forEach(icon => icon.innerHTML = '');
+        document.getElementById('icon-' + n).innerHTML = sortAsc ? " <span style='color:#ff4b4b;'>▲</span>" : " <span style='color:#ff4b4b;'>▼</span>";
+
+        // 데이터 정렬 로직 (숫자 우선, 텍스트 차선)
+        rows.sort((a, b) => {
+            let valA = a.getElementsByTagName("td")[n].innerText.trim();
+            let valB = b.getElementsByTagName("td")[n].innerText.trim();
             
-        with page_cols[3]:
-            if st.button("다음 ▶", disabled=st.session_state.current_page >= total_pages, use_container_width=True):
-                st.session_state.current_page += 1
-                st.rerun()
+            // 빈칸은 항상 아래로
+            if (valA === "" && valB !== "") return 1;
+            if (valB === "" && valA !== "") return -1;
+            
+            // 숫자 추출용 콤마(,), 원(원) 제거
+            let cleanA = valA.replace(/,/g, '').replace(/원/g, '').replace(/\\s/g, '');
+            let cleanB = valB.replace(/,/g, '').replace(/원/g, '').replace(/\\s/g, '');
+            
+            let numA = parseFloat(cleanA);
+            let numB = parseFloat(cleanB);
+            
+            // 문자가 섞이지 않은 순수 숫자라면 숫자 기준으로 크기 비교
+            if (!isNaN(numA) && !isNaN(numB) && cleanA == numA && cleanB == numB) {
+                valA = numA;
+                valB = numB;
+            }
+            
+            if (valA < valB) return sortAsc ? -1 : 1;
+            if (valA > valB) return sortAsc ? 1 : -1;
+            return 0;
+        });
+
+        // 정렬된 순서대로 화면에 다시 붙여넣기
+        rows.forEach(row => tbody.appendChild(row));
+        
+        // 정렬 완료 후 무조건 1페이지로 이동
+        currentPage = 1;
+        updateTable();
+    }
+
+    // 처음 로드될 때 페이지 렌더링
+    updateTable();
+    </script>
+    """
+    
+    st.markdown(table_html, unsafe_allow_html=True)
 
 # 하단 안내
 st.markdown("<br><br>", unsafe_allow_html=True)
-st.caption("🔄 데이터 갱신: 구글 시트 수정 후 약 10분 소요 (수동 새로고침: 우측 상단 메뉴 ⋮ > Clear cache)")
+st.caption("💡 표 제목을 클릭하면 즉시 정렬되며, 상단의 큰 제목(유니매입가격정보)을 누르면 구글 시트 내용이 새로고침 됩니다.")
