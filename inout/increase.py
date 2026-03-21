@@ -345,9 +345,10 @@ with col_bar:
 html_table = filtered_df.to_html(index=False, escape=True)
 html_table = html_table.replace('border="1" class="dataframe"', 'class="custom-table"')
 
-# 프린트용 화면에서도 칸 너비 강제 조정 적용
-html_table = html_table.replace('<th>물품명</th>', '<th style="width: 12%;">물품명</th>')
+# 프린트용 화면에서도 칸 너비 강제 조정 적용 (기존가날짜 대폭 축소, 물품명 확대)
+html_table = html_table.replace('<th>물품명</th>', '<th style="width: 15%;">물품명</th>')
 html_table = html_table.replace('<th>메모</th>', '<th style="width: 40%;">메모</th>')
+html_table = html_table.replace('<th>기존가날짜</th>', '<th style="width: 5%;">기존가날짜</th>')
 
 print_html_content = f"""
 <!DOCTYPE html>
@@ -453,9 +454,10 @@ with col_excel:
                     cell.border = border_thin
                     
                     col_letter = openpyxl.utils.get_column_letter(col_idx)
-                    # 엑셀 셀 너비도 비율에 맞춰 조정
-                    if "물품명" in c_lower: ws.column_dimensions[col_letter].width = 12
+                    # 엑셀 셀 너비도 뷰 비율에 맞춰 조정 (기존가날짜 축소, 물품명 확대)
+                    if "물품명" in c_lower: ws.column_dimensions[col_letter].width = 15
                     elif "메모" in c_lower: ws.column_dimensions[col_letter].width = 40
+                    elif "기존가날짜" in c_lower: ws.column_dimensions[col_letter].width = 8
                     else: ws.column_dimensions[col_letter].width = 15
                     
                 for row_idx in range(2, len(filtered_df) + 2):
@@ -561,12 +563,14 @@ else:
     for i, col in enumerate(filtered_df.columns):
         th_class = get_th_class(col)
         
-        # 💡 물품명 칸 크기 1/3로 축소, 메모 칸 크기 2배 확대 적용 (인라인 스타일)
+        # 💡 물품명 칸 크기 확대, 메모 칸 크기 유지, 기존가날짜 축소 적용
         width_style = ""
         if "물품명" in str(col):
-            width_style = "width: 12%;"
+            width_style = "width: 15%;"
         elif "메모" in str(col):
             width_style = "width: 40%;"
+        elif "기존가날짜" in str(col):
+            width_style = "width: 5%;"
             
         iframe_html += f"<th class='{th_class}' style='{width_style}' onclick='sortTable({i})' title='클릭하여 정렬'>{html.escape(str(col))} <span class='sort-icon' id='icon-{i}'></span></th>"
     iframe_html += "</tr></thead><tbody id='tableBody'>"
