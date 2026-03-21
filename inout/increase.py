@@ -217,7 +217,7 @@ def do_full_refresh():
     do_reset()
 
 # ==========================================
-# UI 상단 검색 영역
+# UI 구성
 # ==========================================
 col_t, col_l = st.columns([8.5, 1.5])
 with col_t: 
@@ -291,9 +291,7 @@ sort_cols = [c for c in [col_date, col_vendor, col_item] if c in filtered_df.col
 if sort_cols:
     filtered_df = filtered_df.sort_values(by=sort_cols, ascending=[False if c == col_date else True for c in sort_cols])
 
-# ==========================================
-# 📊 요약 지표 및 버튼 레이아웃
-# ==========================================
+# 요약 지표
 latest_date = "-"
 if not filtered_df.empty:
     valid_dates = [d for d in filtered_df[col_date].tolist() if str(d).strip() != ""]
@@ -352,7 +350,7 @@ search_info = f"<span style='color:#ffeb3b;'>[검색조건: {' + '.join(conds)}]
 st.markdown(f"#### 📋 상세 내역 {search_info} <span style='font-size:12px; color:#cbd5e1; font-weight:normal; margin-left:10px;'>(제목 클릭 시 정렬)</span>", unsafe_allow_html=True)
 
 # ==========================================
-# 📋 메인 테이블 (상단 숫자 페이지네이션 복구 버전)
+# 📋 메인 테이블 (50개 단위 페이지네이션 적용)
 # ==========================================
 if filtered_df.empty:
     st.warning("👀 조건에 맞는 데이터가 없습니다.")
@@ -366,7 +364,6 @@ else:
         return "tr" if any(x in str(col) for x in ["가", "폭", "수량"]) else "tc"
 
     rows_html = []
-    # row[i] 인덱싱을 사용하여 IndexError 원천 차단
     for idx, row in enumerate(filtered_df.itertuples(index=False)):
         rs = "<tr>"
         for i, col_name in enumerate(filtered_df.columns):
@@ -403,7 +400,6 @@ else:
     .page-num.active {{ background: #ffeb3b; color: #000; font-weight: 800; }}
     </style></head><body>
     
-    <!-- 💡 상단 페이지 컨트롤 -->
     <div id='nav-top' class='pagination-container'></div>
 
     <table class='custom-table' id='mainTable'>
@@ -419,7 +415,7 @@ else:
     <script>
     let sortOrder = 1; 
     let currentPage = 1; 
-    const rowsPerPage = 100;
+    const rowsPerPage = 50; // 💡 50개 단위로 변경
 
     function renderTable() {{
         const tbody = document.getElementById("tableBody");
@@ -453,7 +449,7 @@ else:
         prevBtn.onclick = () => {{ currentPage--; renderTable(); }};
         container.appendChild(prevBtn);
 
-        // 숫자 버튼 복구
+        // 숫자 버튼 복구 및 Math 함수 수정
         let startPage = Math.max(1, currentPage - 4);
         let endPage = Math.min(totalPages, startPage + 9);
         if (endPage - startPage < 9) startPage = Math.max(1, endPage - 9);
@@ -501,8 +497,8 @@ else:
     </script></body></html>
     """
     
-    display_rows = min(len(filtered_df), 100)
-    # 상단 버튼 영역 포함하여 높이 계산
+    # 💡 동적 높이 계산 (50개 표시 기준)
+    display_rows = min(len(filtered_df), 50)
     dynamic_height = (display_rows * 42) + 120
     
     components.html(t_html, height=dynamic_height, scrolling=False)
