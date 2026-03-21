@@ -192,50 +192,49 @@ data = data.fillna("")
 # ==========================================
 # 🛠️ 상태 관리 (검색/전체보기 전용 로직)
 # ==========================================
-# 1) 실제로 화면 필터링에 반영될 저장된 검색 조건들 (초기값: 비어있음)
-if 'active_vendor' not in st.session_state: st.session_state.active_vendor = ""
-if 'active_item' not in st.session_state: st.session_state.active_item = ""
+# 1) 실제로 화면 필터링에 반영될 저장된 검색 조건들 (초기값: 전체)
+if 'active_vendor' not in st.session_state: st.session_state.active_vendor = "전체"
+if 'active_item' not in st.session_state: st.session_state.active_item = "전체"
 if 'active_year' not in st.session_state: st.session_state.active_year = "전체"
 
-# 2) UI 껍데기(입력창) 상태
-if 'ui_vendor' not in st.session_state: st.session_state.ui_vendor = ""
-if 'ui_item' not in st.session_state: st.session_state.ui_item = ""
+# 2) UI 껍데기(드롭다운/입력창) 상태
+if 'ui_vendor' not in st.session_state: st.session_state.ui_vendor = "전체"
+if 'ui_item' not in st.session_state: st.session_state.ui_item = "전체"
 if 'ui_year' not in st.session_state: st.session_state.ui_year = "전체"
 
 def do_search():
     """검색 버튼을 눌렀을 때만 UI값을 실제 필터값으로 복사 적용 후 입력창 비우기"""
-    st.session_state.active_vendor = st.session_state.ui_vendor.strip()
-    st.session_state.active_item = st.session_state.ui_item.strip()
+    st.session_state.active_vendor = st.session_state.ui_vendor
+    st.session_state.active_item = st.session_state.ui_item
     st.session_state.active_year = st.session_state.ui_year
     
-    # 💡 조건은 저장했으니 입력창 텍스트는 깔끔하게 싹 비워줍니다.
-    st.session_state.ui_vendor = ""
-    st.session_state.ui_item = ""
+    # 💡 조건은 저장했으니 드롭다운 선택창은 다시 '전체'로 깔끔하게 초기화합니다.
+    st.session_state.ui_vendor = "전체"
+    st.session_state.ui_item = "전체"
     st.session_state.ui_year = "전체"
 
 def do_reset():
     """모든 조건과 입력창을 싹 다 비우는 완전 초기화(전체보기) 함수"""
-    st.session_state.active_vendor = ""
-    st.session_state.active_item = ""
+    st.session_state.active_vendor = "전체"
+    st.session_state.active_item = "전체"
     st.session_state.active_year = "전체"
-    st.session_state.ui_vendor = ""
-    st.session_state.ui_item = ""
+    st.session_state.ui_vendor = "전체"
+    st.session_state.ui_item = "전체"
     st.session_state.ui_year = "전체"
+
+def do_full_refresh():
+    """타이틀 클릭 시: 최신 데이터 갱신 + 완전 초기화"""
+    load_data.clear() # 캐시 강제 삭제 (최신 데이터 불러오기)
+    do_reset()        # 검색 조건도 모두 비우기
 
 
 # ==========================================
 # UI 레이아웃 시작 (상단 상태바)
 # ==========================================
-col_t, col_r, col_l = st.columns([6.5, 1.5, 1.5])
+col_t, col_l = st.columns([8.5, 1.5])
 with col_t: 
-    # 클릭 가능한 타이틀 (클릭 시 전체보기 로직 실행)
-    st.button("📈 유니매입가격정보 (인상공문 현황)", type="tertiary", help="클릭하면 모든 검색 조건이 지워지고 전체보기 화면으로 돌아갑니다.", on_click=do_reset)
-
-with col_r: 
-    if st.button("🔄 새로고침", use_container_width=True, type="primary"):
-        load_data.clear() # 확실한 새로고침을 위해 함수 캐시 강제 삭제
-        do_reset()        # 입력값도 싹 다 초기화
-        st.rerun()
+    # 클릭 가능한 타이틀 (클릭 시 최신 데이터 갱신 + 초기 화면 로직 실행)
+    st.button("📈 유니매입가격정보 (인상공문 현황)", type="tertiary", help="클릭하면 최신 데이터를 불러오고 전체보기 화면으로 돌아갑니다.", on_click=do_full_refresh)
 
 with col_l:
     if st.button("🔓 LOGOUT", use_container_width=True, type="secondary"):
@@ -246,7 +245,7 @@ with col_l:
 st.markdown("<hr>", unsafe_allow_html=True)
 
 # ==========================================
-# 연도 자동 추출
+# 드롭다운 고유 항목 리스트 추출
 # ==========================================
 years_set = set()
 if col_date in data.columns:
@@ -258,25 +257,31 @@ if col_date in data.columns:
                 y = parts[0]
                 if len(y) == 2: years_set.add("20" + y)  # '26' -> '2026'
                 elif len(y) == 4: years_set.add(y)       # '2026' -> '2026'
-                
 year_list = ["전체"] + [f"{y}년" for y in sorted(list(years_set), reverse=True)]
+
+vendor_raw = [str(v).strip() for v in data[col_vendor].unique() if str(v).strip() != ""]
+vendor_list = ["전체"] + sorted(vendor_raw)
+
+item_raw = [str(v).strip() for v in data[col_item].unique() if str(v).strip() != ""]
+item_list = ["전체"] + sorted(item_raw)
+
 
 # 1. 상세 검색 영역 (5단 배치: 업체명 / 물품명 / 연도 / 검색 / 전체보기)
 search_col1, search_col2, search_col3, search_col4, search_col5 = st.columns([2.5, 2.5, 1.5, 1.2, 1.2])
 
 with search_col1:
-    # 텍스트 전용 검색창 (빈칸 허용, 글씨 지울 필요 없음)
-    st.text_input("🏢 업체명 검색", placeholder="예: 부흥 (빈칸은 전체)", key="ui_vendor")
+    # Selectbox를 사용하여 드롭다운 리스트 및 텍스트 검색 동시 지원
+    st.selectbox("🏢 업체명 검색", vendor_list, key="ui_vendor")
 
 with search_col2:
-    st.text_input("📦 물품명 검색", placeholder="예: 황산 (빈칸은 전체)", key="ui_item")
+    st.selectbox("📦 물품명 검색", item_list, key="ui_item")
 
 with search_col3:
     st.selectbox("📅 인상 연도", year_list, key="ui_year")
 
 with search_col4:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-    # 검색 버튼을 누를 때만 동작함 (엔터키 검색 방지)
+    # 검색 버튼을 누를 때만 동작함 (엔터키 자동 검색 방지)
     st.button("🔍 검색", use_container_width=True, type="primary", on_click=do_search)
 
 with search_col5:
@@ -286,12 +291,12 @@ with search_col5:
 # 2. 필터링 로직 (AND 조건)
 filtered_df = data.copy()
 
-# 업체명 필터 적용 (입력값이 있을 때만)
-if st.session_state.active_vendor != "":
+# 업체명 필터 적용 ("전체"가 아닐 때만)
+if st.session_state.active_vendor != "전체":
     filtered_df = filtered_df[filtered_df[col_vendor].astype(str).str.contains(st.session_state.active_vendor, case=False, na=False)]
 
-# 물품명 필터 적용 (입력값이 있을 때만, 위 결과에 이어서 교집합(AND) 적용)
-if st.session_state.active_item != "":
+# 물품명 필터 적용 ("전체"가 아닐 때만, 위 결과에 이어서 교집합(AND) 적용)
+if st.session_state.active_item != "전체":
     filtered_df = filtered_df[filtered_df[col_item].astype(str).str.contains(st.session_state.active_item, case=False, na=False)]
 
 # 연도 필터 적용
@@ -345,7 +350,7 @@ with col_bar:
 html_table = filtered_df.to_html(index=False, escape=True)
 html_table = html_table.replace('border="1" class="dataframe"', 'class="custom-table"')
 
-# 프린트용 화면에서도 칸 너비 강제 조정 적용 (물품명 20% 확대, 메모 축소)
+# 프린트용 화면에서도 칸 너비 강제 조정 적용 (물품명 18%, 메모 34%, 기존가날짜 8%)
 html_table = html_table.replace('<th>물품명</th>', '<th style="width: 18%;">물품명</th>')
 html_table = html_table.replace('<th>메모</th>', '<th style="width: 34%;">메모</th>')
 html_table = html_table.replace('<th>기존가날짜</th>', '<th style="width: 8%;">기존가날짜</th>')
@@ -454,7 +459,7 @@ with col_excel:
                     cell.border = border_thin
                     
                     col_letter = openpyxl.utils.get_column_letter(col_idx)
-                    # 엑셀 셀 너비도 뷰 비율에 맞춰 조정 (물품명 확대, 메모 축소)
+                    # 엑셀 셀 너비도 뷰 비율에 맞춰 조정 (물품명 확대, 메모 축소, 기존가날짜 확대)
                     if "물품명" in c_lower: ws.column_dimensions[col_letter].width = 18
                     elif "메모" in c_lower: ws.column_dimensions[col_letter].width = 34
                     elif "기존가날짜" in c_lower: ws.column_dimensions[col_letter].width = 11
@@ -482,8 +487,8 @@ with col_excel:
 # 5. 데이터프레임 헤더 (타이틀 및 검색 조건 표시)
 # ==========================================
 cond_texts = []
-if st.session_state.active_vendor != "": cond_texts.append(f"업체({st.session_state.active_vendor})")
-if st.session_state.active_item != "": cond_texts.append(f"물품({st.session_state.active_item})")
+if st.session_state.active_vendor != "전체": cond_texts.append(f"업체({st.session_state.active_vendor})")
+if st.session_state.active_item != "전체": cond_texts.append(f"물품({st.session_state.active_item})")
 if st.session_state.active_year != "전체": cond_texts.append(f"연도({st.session_state.active_year})")
 
 if cond_texts:
@@ -563,7 +568,7 @@ else:
     for i, col in enumerate(filtered_df.columns):
         th_class = get_th_class(col)
         
-        # 💡 물품명 칸 크기 확대, 메모 칸 크기 소폭 축소, 기존가날짜 유지 적용
+        # 💡 물품명 칸 크기 확대, 메모 칸 크기 소폭 축소, 기존가날짜 유지 확대 비율
         width_style = ""
         if "물품명" in str(col):
             width_style = "width: 18%;"
