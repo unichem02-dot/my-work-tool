@@ -94,6 +94,10 @@ st.markdown("""
         font-weight: 900 !important;
         color: #000000 !important;
     }
+    .sort-icon {
+        color: #ff4b4b;
+        margin-left: 5px;
+    }
     
     /* 하단 JS 페이지 이동 버튼 스타일 */
     .page-btn {
@@ -286,7 +290,7 @@ else:
     # --- 제목 클릭 시 JS 정렬 함수(sortTable) 호출 ---
     table_html = "<table class='custom-table' id='myTable'><thead><tr>"
     for i, col in enumerate(filtered_df.columns):
-        table_html += f"<th onclick='sortTable({i})' title='클릭하여 {html.escape(str(col))} 기준 정렬'>{html.escape(str(col))} <span class='sort-icon' id='icon-{i}'></span></th>"
+        table_html += f"<th onclick='sortTable({i})' title='클릭하여 {html.escape(str(col), quote=True)} 기준 정렬'>{html.escape(str(col))} <span class='sort-icon' id='icon-{i}'></span></th>"
     table_html += "</tr></thead><tbody id='tableBody'>"
     
     # 강조할 열 지정
@@ -306,109 +310,77 @@ else:
         table_html += "</tr>"
     table_html += "</tbody></table>"
 
-    # 페이지 이동 버튼 및 깜빡임 없는 초고속 자바스크립트 동작 코드
+    # 스트림릿 에러 방지를 위해 자바스크립트 내 줄바꿈과 충돌 기호를 제거한 안전한 압축 버전
     table_html += """
     <div id='paginationControls' style='display: none; text-align: center; margin-top: 30px; margin-bottom: 25px;'>
         <button class='page-btn' onclick='changePage(-1)' id='prevBtn'>◀ 이전</button>
         <span id='pageInfo' style='margin: 0 25px; font-weight: 700; font-size: 1.2rem; color: #31333F;'>1 / 1</span>
         <button class='page-btn' onclick='changePage(1)' id='nextBtn'>다음 ▶</button>
     </div>
-
     <script>
-    const ROWS_PER_PAGE = 100;
-    let currentPage = 1;
-    let sortCol = -1;
-    let sortAsc = true;
-
-    // 테이블 100개씩 잘라서 보여주기 기능
-    function updateTable() {
-        const tbody = document.getElementById("tableBody");
-        if (!tbody) return;
-        const rows = Array.from(tbody.getElementsByTagName("tr"));
-        const totalPages = Math.ceil(rows.length / ROWS_PER_PAGE) || 1;
-        
-        if (currentPage < 1) currentPage = 1;
-        if (currentPage > totalPages) currentPage = totalPages;
-
-        rows.forEach((row, index) => {
-            if (index >= (currentPage - 1) * ROWS_PER_PAGE && index < currentPage * ROWS_PER_PAGE) {
-                row.style.display = "";
-            } else {
-                row.style.display = "none";
+    (function(){
+        var ROWS_PER_PAGE = 100;
+        var currentPage = 1;
+        var sortCol = -1;
+        var sortAsc = true;
+        window.updateTable = function() {
+            var tbody = document.getElementById("tableBody");
+            if (!tbody) return;
+            var rows = Array.prototype.slice.call(tbody.getElementsByTagName("tr"));
+            var totalPages = Math.ceil(rows.length / ROWS_PER_PAGE) || 1;
+            if (currentPage < 1) currentPage = 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            for(var i=0; i<rows.length; i++){
+                if (i >= (currentPage - 1) * ROWS_PER_PAGE && i < currentPage * ROWS_PER_PAGE) {
+                    rows[i].style.display = "";
+                } else {
+                    rows[i].style.display = "none";
+                }
             }
-        });
-
-        document.getElementById("pageInfo").innerText = currentPage + " / " + totalPages;
-        document.getElementById("prevBtn").disabled = currentPage === 1;
-        document.getElementById("nextBtn").disabled = currentPage === totalPages;
-        
-        if (rows.length > ROWS_PER_PAGE) {
-            document.getElementById("paginationControls").style.display = "block";
-        } else {
-            document.getElementById("paginationControls").style.display = "none";
-        }
-    }
-
-    function changePage(delta) {
-        currentPage += delta;
-        updateTable();
-    }
-
-    // 클릭 시 테이블 정렬 기능
-    function sortTable(n) {
-        const tbody = document.getElementById("tableBody");
-        if (!tbody) return;
-        const rows = Array.from(tbody.getElementsByTagName("tr"));
-        
-        // 동일한 열 클릭 시 오름/내림차순 반전, 다른 열 클릭 시 오름차순
-        if (sortCol === n) {
-            sortAsc = !sortAsc;
-        } else {
-            sortCol = n;
-            sortAsc = true;
-        }
-
-        // 화살표 아이콘 업데이트
-        document.querySelectorAll('.sort-icon').forEach(icon => icon.innerHTML = '');
-        document.getElementById('icon-' + n).innerHTML = sortAsc ? " <span style='color:#ff4b4b;'>▲</span>" : " <span style='color:#ff4b4b;'>▼</span>";
-
-        // 데이터 정렬 로직 (숫자 우선, 텍스트 차선)
-        rows.sort((a, b) => {
-            let valA = a.getElementsByTagName("td")[n].innerText.trim();
-            let valB = b.getElementsByTagName("td")[n].innerText.trim();
-            
-            // 빈칸은 항상 아래로
-            if (valA === "" && valB !== "") return 1;
-            if (valB === "" && valA !== "") return -1;
-            
-            // 숫자 추출용 콤마(,), 원(원) 제거
-            let cleanA = valA.replace(/,/g, '').replace(/원/g, '').replace(/\\s/g, '');
-            let cleanB = valB.replace(/,/g, '').replace(/원/g, '').replace(/\\s/g, '');
-            
-            let numA = parseFloat(cleanA);
-            let numB = parseFloat(cleanB);
-            
-            // 문자가 섞이지 않은 순수 숫자라면 숫자 기준으로 크기 비교
-            if (!isNaN(numA) && !isNaN(numB) && cleanA == numA && cleanB == numB) {
-                valA = numA;
-                valB = numB;
-            }
-            
-            if (valA < valB) return sortAsc ? -1 : 1;
-            if (valA > valB) return sortAsc ? 1 : -1;
-            return 0;
-        });
-
-        // 정렬된 순서대로 화면에 다시 붙여넣기
-        rows.forEach(row => tbody.appendChild(row));
-        
-        // 정렬 완료 후 무조건 1페이지로 이동
-        currentPage = 1;
-        updateTable();
-    }
-
-    // 처음 로드될 때 페이지 렌더링
-    updateTable();
+            var pageInfo = document.getElementById("pageInfo");
+            if (pageInfo) pageInfo.innerText = currentPage + " / " + totalPages;
+            var prevBtn = document.getElementById("prevBtn");
+            if (prevBtn) prevBtn.disabled = (currentPage === 1);
+            var nextBtn = document.getElementById("nextBtn");
+            if (nextBtn) nextBtn.disabled = (currentPage === totalPages);
+            var pagControls = document.getElementById("paginationControls");
+            if (pagControls) pagControls.style.display = (rows.length > ROWS_PER_PAGE) ? "block" : "none";
+        };
+        window.changePage = function(delta) {
+            currentPage += delta;
+            window.updateTable();
+        };
+        window.sortTable = function(n) {
+            var tbody = document.getElementById("tableBody");
+            if (!tbody) return;
+            var rows = Array.prototype.slice.call(tbody.getElementsByTagName("tr"));
+            if (sortCol === n) { sortAsc = !sortAsc; } else { sortCol = n; sortAsc = true; }
+            var icons = document.querySelectorAll('.sort-icon');
+            for(var k=0; k<icons.length; k++){ icons[k].innerText = ''; }
+            var iconEl = document.getElementById('icon-' + n);
+            if (iconEl) { iconEl.innerText = sortAsc ? "▲" : "▼"; }
+            rows.sort(function(a, b) {
+                var tdA = a.getElementsByTagName("td")[n];
+                var tdB = b.getElementsByTagName("td")[n];
+                var valA = tdA ? tdA.innerText.trim() : "";
+                var valB = tdB ? tdB.innerText.trim() : "";
+                if (valA === "" && valB !== "") return 1;
+                if (valB === "" && valA !== "") return -1;
+                var cleanA = valA.replace(/,/g, '').replace(/원/g, '').replace(/ /g, '');
+                var cleanB = valB.replace(/,/g, '').replace(/원/g, '').replace(/ /g, '');
+                var numA = parseFloat(cleanA);
+                var numB = parseFloat(cleanB);
+                if (!isNaN(numA) && !isNaN(numB) && cleanA == numA && cleanB == numB) { valA = numA; valB = numB; }
+                if (valA < valB) return sortAsc ? -1 : 1;
+                if (valA > valB) return sortAsc ? 1 : -1;
+                return 0;
+            });
+            for(var j=0; j<rows.length; j++){ tbody.appendChild(rows[j]); }
+            currentPage = 1;
+            window.updateTable();
+        };
+        window.updateTable();
+    })();
     </script>
     """
     
