@@ -237,11 +237,15 @@ def do_full_refresh():
     do_reset()
 
 # ==========================================
-# UI 상단 검색 영역
+# UI 구성 (상단 버튼 배치)
 # ==========================================
-col_t, col_g, col_l = st.columns([7.0, 1.5, 1.5])
+col_t, col_i, col_g, col_l = st.columns([5.5, 1.5, 1.5, 1.5])
 with col_t: 
     st.button("📈 유니매입가격정보 (인상공문 현황)", type="tertiary", on_click=do_full_refresh)
+
+with col_i:
+    # 💡 송장텍스트변환 바로가기 (새 창으로 열림)
+    st.link_button("🧾 송장텍스트변환", "https://my-work-tool-vtpqjyh9zjypweqr8txz77.streamlit.app/", use_container_width=True)
 
 with col_g:
     st.link_button("📂 Google Sheet", "https://drive.google.com/drive/starred", use_container_width=True)
