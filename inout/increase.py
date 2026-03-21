@@ -4,7 +4,14 @@ from streamlit_gsheets import GSheetsConnection
 import math
 import html
 import time
+import io
+import json
+from datetime import datetime, timedelta
 import streamlit.components.v1 as components
+
+# 💡 한국 표준시(KST) 기준 시간 반환
+def get_kst_now():
+    return datetime.utcnow() + timedelta(hours=9)
 
 # 1. 페이지 기본 설정 (와이드 모드 유지)
 st.set_page_config(page_title="유니매입가격정보 - 인상공문 검색", page_icon="📈", layout="wide")
@@ -54,6 +61,18 @@ st.markdown("""
     button[kind="secondary"]:hover { 
         background-color: #646a39 !important; 
         border-color: #646a39 !important; 
+    }
+    
+    /* 💡 EXCEL 다운로드 버튼 전용 올리브색 커스텀 */
+    div[data-testid="stDownloadButton"] button[kind="primary"] {
+        background-color: #757c43 !important;
+        border-color: #757c43 !important;
+        color: white !important;
+    }
+    div[data-testid="stDownloadButton"] button[kind="primary"]:hover {
+        background-color: #646a39 !important;
+        border-color: #646a39 !important;
+        color: white !important;
     }
     
     /* 검색 메뉴 굵게 및 색상 (검색창은 밝게 유지하여 가독성 확보) */
@@ -234,12 +253,146 @@ with col3:
 st.markdown("<hr>", unsafe_allow_html=True)
 
 # ==========================================
-# 4. 데이터프레임 (독립 HTML 컴포넌트로 완벽한 디자인 & 에러 방지 구현)
+# 4. 데이터프레임 헤더 및 [인쇄/엑셀] 버튼 영역
 # ==========================================
-st.markdown("<h4 style='color: #ffffff; margin-bottom: 5px;'>📋 상세 내역 <span style='font-size: 14px; color: #cbd5e1; font-weight: normal;'>(표 제목을 클릭하면 정렬됩니다)</span></h4>", unsafe_allow_html=True)
+col_title, col_print, col_excel = st.columns([6, 1.5, 1.5])
+with col_title:
+    st.markdown("<h4 style='color: #ffffff; margin-bottom: 5px; margin-top: 10px;'>📋 상세 내역 <span style='font-size: 14px; color: #cbd5e1; font-weight: normal;'>(표 제목을 클릭하면 정렬됩니다)</span></h4>", unsafe_allow_html=True)
+
+# --- 🖨️ PRINT 기능용 HTML 생성 ---
+print_html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <title>인쇄 미리보기</title>
+    <meta charset="utf-8">
+    <style>
+        @page {{ size: A4 portrait; margin: 10mm; }}
+        body {{ font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: black; background: white; margin: 0; }}
+        .title {{ font-size: 22px; font-weight: bold; text-align: center; margin-bottom: 20px; }}
+        .info {{ font-size: 12px; margin-bottom: 10px; color: #555; text-align: right; }}
+        .custom-table {{ width: 100%; border-collapse: collapse; font-size: 11.5px; }}
+        .custom-table th, .custom-table td {{ border: 1px solid #aaa; padding: 6px 8px; color: black !important; }}
+        .custom-table th {{ text-align: center; font-weight: bold; background-color: #f1f5f9; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+    </style>
+</head>
+<body>
+    <div class="title">유니매입가격정보 검색 결과</div>
+    <div class="info">출력 일자: {get_kst_now().strftime('%Y-%m-%d %H:%M')} | 총 검색 건수: {len(filtered_df):,}건</div>
+    <table class="custom-table">
+        <thead><tr>
+"""
+for col in filtered_df.columns:
+    print_html_content += f"<th>{html.escape(str(col))}</th>"
+print_html_content += "</tr></thead><tbody>"
+for _, row in filtered_df.iterrows():
+    print_html_content += "<tr>"
+    for col in filtered_df.columns:
+        val = "" if pd.isna(row[col]) or row[col] == "" else str(row[col])
+        print_html_content += f"<td>{html.escape(val)}</td>"
+    print_html_content += "</tr>"
+print_html_content += "</tbody></table></body></html>"
+
+with col_print:
+    components.html(
+        f"""
+        <!DOCTYPE html>
+        <html><head>
+        <style>
+            body {{ margin: 0; padding: 0; overflow: hidden; background-color: transparent; }}
+            .btn-print {{
+                width: 100%; height: 40px; background-color: #757c43; color: white;
+                border: 1px solid #757c43; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px;
+                font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+                display: flex; align-items: center; justify-content: center; box-sizing: border-box;
+                margin-top: 5px;
+            }}
+            .btn-print:hover {{ background-color: #646a39; border-color: #646a39; }}
+        </style>
+        <script>
+            function fastPrint() {{
+                const htmlContent = {json.dumps(print_html_content)};
+                let iframe = document.getElementById('print-frame');
+                if (iframe) {{ document.body.removeChild(iframe); }}
+                iframe = document.createElement('iframe');
+                iframe.id = 'print-frame';
+                iframe.style.position = 'absolute'; iframe.style.width = '1px'; iframe.style.height = '1px'; 
+                iframe.style.opacity = '0'; iframe.style.pointerEvents = 'none';
+                document.body.appendChild(iframe);
+                const doc = iframe.contentWindow.document;
+                doc.open(); doc.write(htmlContent); doc.close();
+                setTimeout(function() {{ 
+                    iframe.contentWindow.focus(); 
+                    iframe.contentWindow.print(); 
+                }}, 150);
+            }}
+        </script>
+        </head>
+        <body>
+            <button class="btn-print" onclick="fastPrint()">🖨️ PRINT</button>
+        </body></html>
+        """, height=50
+    )
+
+with col_excel:
+    # --- 💾 EXCEL 추출 로직 (오류 100% 방지 자동화) ---
+    excel_output = io.BytesIO()
+    has_openpyxl = False
+    try:
+        import openpyxl
+        from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+        has_openpyxl = True
+    except ImportError:
+        pass
+        
+    if has_openpyxl and not filtered_df.empty:
+        try:
+            with pd.ExcelWriter(excel_output, engine='openpyxl') as writer:
+                filtered_df.to_excel(writer, index=False, sheet_name='검색결과')
+                ws = writer.sheets['검색결과']
+                
+                # 디자인 설정 (헤더 색상 맞춤)
+                font_white = Font(color="FFFFFF", bold=True)
+                align_center = Alignment(horizontal="center", vertical="center")
+                border_thin = Border(left=Side(style='thin', color='D0D0D0'), right=Side(style='thin', color='D0D0D0'), 
+                                     top=Side(style='thin', color='D0D0D0'), bottom=Side(style='thin', color='D0D0D0'))
+                
+                for col_idx, col_name in enumerate(filtered_df.columns, 1):
+                    c_lower = str(col_name).lower()
+                    if "기존" in c_lower: fill_color = "3B5B88"
+                    elif "인상" in c_lower: fill_color = "B8860B"
+                    elif "메모" in c_lower: fill_color = "757C43"
+                    else: fill_color = "353B48"
+                    
+                    cell = ws.cell(row=1, column=col_idx)
+                    cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+                    cell.font = font_white
+                    cell.alignment = align_center
+                    cell.border = border_thin
+                    
+                    # 컬럼 너비 자동 설정 (약식)
+                    col_letter = openpyxl.utils.get_column_letter(col_idx)
+                    ws.column_dimensions[col_letter].width = 15
+                    
+                # 본문 보더 적용
+                for row_idx in range(2, len(filtered_df) + 2):
+                    for col_idx in range(1, len(filtered_df.columns) + 1):
+                        cell = ws.cell(row=row_idx, column=col_idx)
+                        cell.border = border_thin
+                        cell.alignment = Alignment(vertical="center")
+
+            excel_data = excel_output.getvalue()
+            st.download_button("💾 EXCEL", data=excel_data, file_name=f"유니매입단가인상_{get_kst_now().strftime('%Y%m%d')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
+        except Exception as e:
+            st.error(f"엑셀 생성 오류: {e}")
+    else:
+        # openpyxl 모듈이 없거나 에러 날 경우 CSV로 안전하게 대체
+        csv_data = filtered_df.to_csv(index=False).encode('utf-8-sig')
+        st.download_button("💾 EXCEL (기본)", data=csv_data, file_name=f"유니매입단가인상_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
+
 
 if filtered_df.empty:
-    st.warning("👀 검색 조건에 맞는 데이터가 없습니다. 다른 조건으로 검색해 보세요.")
+    pass # 경고 메시지는 위에서 이미 출력
 else:
     # 각 헤더 컬럼의 성격에 따라 클래스 이름 부여 (원하시는 테이블 디자인 색상 적용)
     def get_th_class(col_name):
