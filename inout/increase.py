@@ -2,12 +2,13 @@ import streamlit as st
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 import math
+import html
 
 # 1. 페이지 기본 설정 (와이드 모드 유지)
 st.set_page_config(page_title="유니매입가격정보 - 인상공문 검색", page_icon="📈", layout="wide")
 
 # ==========================================
-# 🎨 커스텀 CSS (프로페셔널한 앱 느낌으로 디자인 업그레이드)
+# 🎨 커스텀 CSS (텍스트 30% 확대 및 디자인 업그레이드)
 # ==========================================
 st.markdown("""
     <style>
@@ -32,10 +33,49 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     
-    /* 검색창 라벨 폰트 강조 */
+    /* ---------------------------------
+       텍스트 크기 30% 확대 적용 영역 
+       --------------------------------- */
+    .stMarkdown p, .stMarkdown li {
+        font-size: 1.2rem !important;
+    }
     .stMultiSelect label, .stTextInput label {
+        font-size: 1.15rem !important;
         font-weight: 600 !important;
         color: #333333;
+    }
+    div[data-testid="metric-container"] label {
+        font-size: 1.15rem !important;
+    }
+    div[data-testid="metric-container"] div {
+        font-size: 2.3rem !important;
+    }
+
+    /* 커스텀 데이터 표(Table) 스타일링 */
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 1.15rem; /* 약 30% 확대 */
+    }
+    .custom-table th {
+        background-color: #f8f9fa;
+        color: #31333F;
+        font-weight: 700;
+        padding: 14px 16px;
+        border-bottom: 2px solid #e6e6e6;
+        text-align: left;
+    }
+    .custom-table td {
+        padding: 14px 16px;
+        border-bottom: 1px solid #f0f2f6;
+        color: #31333F;
+    }
+    .custom-table tr:hover td {
+        background-color: #f1f3f5;
+    }
+    .bold-col {
+        font-weight: 900 !important;
+        color: #000000 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -198,16 +238,34 @@ else:
     end_idx = start_idx + ROWS_PER_PAGE
     display_df = filtered_df.iloc[start_idx:end_idx]
     
-    # 스크롤바 없이 100개가 다 보이도록 동적 높이 계산 (1줄 약 36px + 헤더 43px)
-    table_height = max(len(display_df) * 36 + 43, 100)
+    # --- 스크롤 없는 맞춤형 HTML 표 생성 (굵은 글씨 및 텍스트 크기 완벽 적용) ---
+    table_html = "<table class='custom-table'><thead><tr>"
+    for col in display_df.columns:
+        table_html += f"<th>{html.escape(str(col))}</th>"
+    table_html += "</tr></thead><tbody>"
     
-    # 꽉 찬 화면, 인덱스 숨김 처리하여 표출 (자동 높이 적용)
-    st.dataframe(
-        display_df, 
-        use_container_width=True, 
-        hide_index=True, 
-        height=table_height
-    )
+    # 강조할 열 지정
+    bold_cols = ["물품명", "인상폭"]
+    
+    for _, row in display_df.iterrows():
+        table_html += "<tr>"
+        for col in display_df.columns:
+            val = row[col]
+            if pd.isna(val) or val == "": 
+                safe_val = ""
+            else:
+                safe_val = html.escape(str(val))
+            
+            # 물품명, 인상폭 열은 굵은 글씨 클래스 적용
+            if col in bold_cols:
+                table_html += f"<td class='bold-col'>{safe_val}</td>"
+            else:
+                table_html += f"<td>{safe_val}</td>"
+        table_html += "</tr>"
+    table_html += "</tbody></table>"
+    
+    # 화면에 표출
+    st.markdown(table_html, unsafe_allow_html=True)
     
     # 페이지 이동(Pagination) 하단 버튼 UI
     if total_pages > 1:
@@ -220,7 +278,7 @@ else:
                 st.rerun()
                 
         with page_cols[2]:
-            st.markdown(f"<div style='text-align: center; padding-top: 7px; font-weight: 600; color: #333;'>{st.session_state.current_page} / {total_pages}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='text-align: center; padding-top: 7px; font-weight: 600; font-size: 1.15rem; color: #333;'>{st.session_state.current_page} / {total_pages}</div>", unsafe_allow_html=True)
             
         with page_cols[3]:
             if st.button("다음 ▶", disabled=st.session_state.current_page >= total_pages, use_container_width=True):
