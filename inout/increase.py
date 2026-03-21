@@ -345,6 +345,10 @@ with col_bar:
 html_table = filtered_df.to_html(index=False, escape=True)
 html_table = html_table.replace('border="1" class="dataframe"', 'class="custom-table"')
 
+# 프린트용 화면에서도 칸 너비 강제 조정 적용
+html_table = html_table.replace('<th>물품명</th>', '<th style="width: 12%;">물품명</th>')
+html_table = html_table.replace('<th>메모</th>', '<th style="width: 40%;">메모</th>')
+
 print_html_content = f"""
 <!DOCTYPE html>
 <html>
@@ -449,7 +453,10 @@ with col_excel:
                     cell.border = border_thin
                     
                     col_letter = openpyxl.utils.get_column_letter(col_idx)
-                    ws.column_dimensions[col_letter].width = 15
+                    # 엑셀 셀 너비도 비율에 맞춰 조정
+                    if "물품명" in c_lower: ws.column_dimensions[col_letter].width = 12
+                    elif "메모" in c_lower: ws.column_dimensions[col_letter].width = 40
+                    else: ws.column_dimensions[col_letter].width = 15
                     
                 for row_idx in range(2, len(filtered_df) + 2):
                     for col_idx in range(1, len(filtered_df.columns) + 1):
@@ -518,7 +525,7 @@ else:
                 background-color: #2b323c; 
             }}
             .custom-table-container {{ width: 100%; margin-top: 5px; }}
-            .custom-table {{ width: 100%; border-collapse: collapse; font-size: 15px; background-color: white; }}
+            .custom-table {{ width: 100%; border-collapse: collapse; font-size: 15px; background-color: white; table-layout: auto; }}
             .custom-table th, .custom-table td {{ border: 1px solid #d0d0d0; padding: 8px 10px; color: #1e293b; }}
             
             .custom-table th {{ 
@@ -553,7 +560,15 @@ else:
     
     for i, col in enumerate(filtered_df.columns):
         th_class = get_th_class(col)
-        iframe_html += f"<th class='{th_class}' onclick='sortTable({i})' title='클릭하여 정렬'>{html.escape(str(col))} <span class='sort-icon' id='icon-{i}'></span></th>"
+        
+        # 💡 물품명 칸 크기 1/3로 축소, 메모 칸 크기 2배 확대 적용 (인라인 스타일)
+        width_style = ""
+        if "물품명" in str(col):
+            width_style = "width: 12%;"
+        elif "메모" in str(col):
+            width_style = "width: 40%;"
+            
+        iframe_html += f"<th class='{th_class}' style='{width_style}' onclick='sortTable({i})' title='클릭하여 정렬'>{html.escape(str(col))} <span class='sort-icon' id='icon-{i}'></span></th>"
     iframe_html += "</tr></thead><tbody id='tableBody'>"
     
     # --- 🖥️ 화면 렌더링 속도 최적화 (itertuples 사용) ---
