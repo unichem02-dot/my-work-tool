@@ -55,7 +55,7 @@ st.markdown("""
         color: white !important;
     }
     
-    /* 💡 💾 EXCEL/CSV 버튼 정렬 및 스타일 (높이 42px 강제 일치) */
+    /* 💾 EXCEL/CSV 버튼 정렬 및 스타일 (높이 42px 강제 일치) */
     div[data-testid="stDownloadButton"] {
         display: flex;
         align-items: center;
@@ -75,7 +75,6 @@ st.markdown("""
     }
     div[data-testid="stDownloadButton"] button:hover {
         background-color: #3f3f3f !important;
-        border-color: #3f3f3f !important;
     }
     
     /* 타이틀 클릭 버튼 */
@@ -169,7 +168,7 @@ col_vendor, col_item, col_date = "업체명", "물품명", "인상날짜"
 data = data.fillna("")
 
 # ==========================================
-# 🛠️ 상태 관리 (입력창 자동 리셋 로직)
+# 🛠️ 상태 관리
 # ==========================================
 if 'act_mode' not in st.session_state: st.session_state.act_mode = "init"
 if 'act_t1_v' not in st.session_state: st.session_state.act_t1_v = ""
@@ -184,7 +183,6 @@ def do_search_t1():
     st.session_state.act_t1_v = st.session_state.ui_t1_v
     st.session_state.act_t1_i = st.session_state.ui_t1_i
     st.session_state.act_t1_y = st.session_state.ui_t1_y
-    # 입력창 리셋
     st.session_state.ui_t1_v = ""
     st.session_state.ui_t1_i = ""
     st.session_state.ui_t1_y = "전체"
@@ -194,7 +192,6 @@ def do_search_t2():
     st.session_state.act_t2_v = st.session_state.ui_t2_v
     st.session_state.act_t2_i = st.session_state.ui_t2_i
     st.session_state.act_t2_y = st.session_state.ui_t2_y
-    # 입력창 리셋
     st.session_state.ui_t2_v = "전체"
     st.session_state.ui_t2_i = "전체"
     st.session_state.ui_t2_y = "전체"
@@ -232,6 +229,7 @@ with col_l:
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
+# 리스트 생성
 years_set = set()
 if col_date in data.columns:
     for d in data[col_date].dropna().unique():
@@ -294,7 +292,7 @@ if sort_cols:
     filtered_df = filtered_df.sort_values(by=sort_cols, ascending=[False if c == col_date else True for c in sort_cols])
 
 # ==========================================
-# 📊 요약 지표 및 버튼 정렬 최적화
+# 📊 요약 지표 및 버튼 레이아웃
 # ==========================================
 latest_date = "-"
 if not filtered_df.empty:
@@ -317,7 +315,7 @@ with col_bar:
         </div>
     """, unsafe_allow_html=True)
 
-# 2. 🖨️ PRINT 버튼 (높이 42px 정밀 고정)
+# 2. 🖨️ PRINT 버튼 (높이 42px)
 html_table_p = filtered_df.to_html(index=False, escape=True)
 html_table_p = html_table_p.replace('border="1" class="dataframe"', 'class="custom-table"')
 html_table_p = html_table_p.replace('<th>물품명</th>', '<th style="width: 18%;">물품명</th>').replace('<th>메모</th>', '<th style="width: 34%;">메모</th>').replace('<th>기존가날짜</th>', '<th style="width: 8%;">기존가날짜</th>')
@@ -327,30 +325,15 @@ with col_print:
     components.html(f"""
         <html><body style='margin:0; padding:0;'>
         <style>
-            .btn {{ 
-                width: 100%; height: 42px; 
-                background: #525252; color: white; 
-                border: none; border-radius: 8px; 
-                font-weight: bold; cursor: pointer;
-                font-family: 'Malgun Gothic', sans-serif;
-                font-size: 14px;
-                display: flex; align-items: center; justify-content: center;
-            }}
+            .btn {{ width: 100%; height: 42px; background: #525252; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-family: 'Malgun Gothic'; font-size: 14px; display: flex; align-items: center; justify-content: center; }}
             .btn:hover {{ background: #3f3f3f; }}
         </style>
         <button class='btn' onclick='pr()'>🖨️ PRINT</button>
-        <script>
-            function pr(){{
-                var w=window.open('','_blank');
-                w.document.write({json.dumps(p_content)});
-                w.document.close();
-                setTimeout(function(){{w.print();}},250);
-            }}
-        </script>
+        <script>function pr(){{var w=window.open('','_blank');w.document.write({json.dumps(p_content)});w.document.close();setTimeout(function(){{w.print();}},250);}}</script>
         </body></html>
     """, height=42)
 
-# 3. 💾 EXCEL 버튼 (CSS로 높이 42px 및 마진 강제 교정)
+# 3. 💾 EXCEL 버튼
 with col_excel:
     try:
         excel_io = io.BytesIO()
@@ -360,7 +343,7 @@ with col_excel:
     except:
         st.download_button("💾 CSV", data=filtered_df.to_csv(index=False).encode('utf-8-sig'), file_name="export.csv", use_container_width=True)
 
-# 검색 조건 정보 표시
+# 검색 조건 정보
 conds = []
 if st.session_state.act_mode == "text":
     if st.session_state.act_t1_v: conds.append(f"업체({st.session_state.act_t1_v})")
@@ -374,7 +357,7 @@ search_info = f"<span style='color:#ffeb3b;'>[검색조건: {' + '.join(conds)}]
 st.markdown(f"#### 📋 상세 내역 {search_info} <span style='font-size:12px; color:#cbd5e1; font-weight:normal; margin-left:10px;'>(제목 클릭 시 정렬)</span>", unsafe_allow_html=True)
 
 # ==========================================
-# 📋 메인 테이블 렌더링 (자바스크립트 정렬 복구)
+# 📋 메인 테이블 렌더링 (💡 페이지네이션 & 정렬 복구)
 # ==========================================
 if filtered_df.empty:
     st.warning("👀 조건에 맞는 데이터가 없습니다.")
@@ -388,10 +371,9 @@ else:
         return "tr" if any(x in str(col) for x in ["가", "폭", "수량"]) else "tc"
 
     rows_html = []
-    # itertuples(index=False)는 row[0]부터 데이터가 시작됩니다 (IndexError 해결)
     for idx, row in enumerate(filtered_df.itertuples(index=False)):
-        ds = "" if idx < 100 else " style='display:none;'"
-        rs = f"<tr{ds}>"
+        # 모든 행을 일단 생성하되, JS에서 페이지별로 보여줌
+        rs = "<tr>"
         for i, col_name in enumerate(filtered_df.columns):
             val = html.escape(str(row[i])) if row[i] != "" else ""
             cls = get_td_class(col_name) + (" bold-col" if col_name in ["물품명", "인상폭"] else "")
@@ -400,7 +382,7 @@ else:
 
     t_html = f"""
     <!DOCTYPE html><html><head><meta charset='utf-8'><style>
-    body {{ background: #2b323c; font-family: 'Malgun Gothic'; margin: 0; color: #1e293b; overflow-x: hidden; }}
+    body {{ background: #2b323c; font-family: 'Malgun Gothic'; margin: 0; color: #1e293b; }}
     .custom-table {{ width: 100%; border-collapse: collapse; background: white; font-size: 15px; table-layout: fixed; }}
     .custom-table th, .custom-table td {{ border: 1px solid #d0d0d0; padding: 8px 10px; word-wrap: break-word; }}
     .custom-table th {{ color: white; background: #353b48; font-weight: bold; cursor: pointer; user-select: none; position: relative; }}
@@ -409,6 +391,12 @@ else:
     .bold-col {{ font-weight: 900; color: black !important; }}
     .custom-table tr:nth-child(even) td {{ background-color: #f8f9fa; }}
     .sort-icon {{ font-size: 10px; color: #ffeb3b; margin-left: 5px; }}
+    
+    /* 페이지네이션 디자인 */
+    .pagination {{ text-align: center; padding: 20px; background: #2b323c; }}
+    .page-btn {{ padding: 8px 16px; margin: 0 5px; cursor: pointer; background: #4e8cff; color: white; border: none; border-radius: 4px; font-weight: bold; }}
+    .page-btn:disabled {{ background: #4a5568; cursor: not-allowed; }}
+    .page-info {{ color: white; margin: 0 15px; font-weight: bold; }}
     </style></head><body>
     <table class='custom-table' id='mainTable'>
     <thead><tr>
@@ -419,15 +407,51 @@ else:
     
     t_html += f"""
     </tr></thead><tbody id='tableBody'>{''.join(rows_html)}</tbody></table>
+    <div id='nav' class='pagination'>
+        <button id='prev' class='page-btn' onclick='changePage(-1)'>◀ 이전</button>
+        <span id='pageLabel' class='page-info'></span>
+        <button id='next' class='page-btn' onclick='changePage(1)'>다음 ▶</button>
+    </div>
+    
     <script>
     let sortOrder = 1;
+    let currentPage = 1;
+    const rowsPerPage = 100;
+
+    function renderTable() {{
+        const tbody = document.getElementById("tableBody");
+        const rows = Array.from(tbody.rows);
+        const totalPages = Math.ceil(rows.length / rowsPerPage);
+        
+        if (currentPage < 1) currentPage = 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        rows.forEach((row, index) => {{
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            row.style.display = (index >= start && index < end) ? "" : "none";
+        }});
+
+        document.getElementById("pageLabel").innerText = currentPage + " / " + (totalPages || 1);
+        document.getElementById("prev").disabled = (currentPage === 1);
+        document.getElementById("next").disabled = (currentPage === totalPages || totalPages === 0);
+        document.getElementById("nav").style.display = rows.length > rowsPerPage ? "block" : "none";
+    }}
+
+    function changePage(delta) {{
+        currentPage += delta;
+        renderTable();
+        window.scrollTo(0,0);
+    }}
+
     function sortTable(n) {{
-        const table = document.getElementById("mainTable");
         const tbody = document.getElementById("tableBody");
         const rows = Array.from(tbody.rows);
         sortOrder *= -1;
+        
         document.querySelectorAll('.sort-icon').forEach(icon => icon.innerText = '');
         document.getElementById('icon-' + n).innerText = sortOrder === 1 ? " ▲" : " ▼";
+        
         rows.sort((a, b) => {{
             let tA = a.cells[n].innerText.trim();
             let tB = b.cells[n].innerText.trim();
@@ -436,9 +460,15 @@ else:
             if (!isNaN(nA) && !isNaN(nB)) {{ return (nA - nB) * sortOrder; }}
             return tA.localeCompare(tB, 'ko') * sortOrder;
         }});
+        
         rows.forEach(row => tbody.appendChild(row));
+        currentPage = 1; // 정렬 후 첫 페이지로 이동
+        renderTable();
     }}
+
+    window.onload = renderTable;
     </script>
     </body></html>
     """
-    components.html(t_html, height=min(len(filtered_df)*42+100, 800), scrolling=True)
+    # 높이 계산 (최대 100행 기준 + 네비게이션바)
+    components.html(t_html, height=850, scrolling=True)
