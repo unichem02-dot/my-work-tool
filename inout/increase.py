@@ -88,10 +88,6 @@ st.markdown("""
     }
     div[data-baseweb="select"] span { color: #1e293b !important; }
     
-    /* 요약 지표 폰트 오버라이드 (다크 대시보드 전용) */
-    [data-testid="stMetricValue"] { color: #ffffff !important; font-size: 2.3rem !important; }
-    [data-testid="stMetricLabel"] { color: #cbd5e1 !important; font-size: 1.15rem !important; }
-    
     /* 구분선 라인 색상 */
     hr { margin: 15px 0px 15px 0px; border: 0.5px solid #4a5568 !important; }
     </style>
@@ -199,8 +195,7 @@ with col_l:
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
-# 1. 상세 검색 영역 (깔끔한 3단 텍스트 입력 배치)
-st.markdown("<h4 style='color: #4e8cff;'>🔍 상세 검색</h4>", unsafe_allow_html=True)
+# 1. 상세 검색 영역 (깔끔한 3단 텍스트 입력 배치, 텍스트 타이틀 숨김)
 search_col1, search_col2, search_col3 = st.columns(3)
 
 with search_col1:
@@ -230,27 +225,29 @@ if sort_cols:
     asc_rules = [False if c == col_date else True for c in sort_cols]
     filtered_df = filtered_df.sort_values(by=sort_cols, ascending=asc_rules)
 
-st.markdown("<br>", unsafe_allow_html=True)
 
-# 3. 요약 지표 (Metrics)
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.metric(label="총 검색된 건수", value=f"{len(filtered_df):,} 건")
-with col2:
-    if not filtered_df.empty and col_date in filtered_df.columns:
-        valid_dates = [d for d in filtered_df[col_date].tolist() if str(d).strip() != ""]
-        latest_date = max(valid_dates) if valid_dates else "-"
-        st.metric(label="최근 인상 날짜", value=str(latest_date))
-    else:
-        st.metric(label="최근 인상 날짜", value="-")
-with col3:
-    if not filtered_df.empty:
-        valid_vendors = [v for v in filtered_df[col_vendor].unique() if str(v).strip() != ""]
-        st.metric(label="검색된 업체 수", value=f"{len(valid_vendors):,} 개사")
-    else:
-        st.metric(label="검색된 업체 수", value="0 개사")
+# 3. 요약 지표 (Metrics) - 1줄 가로 배치로 최적화
+latest_date = "-"
+if not filtered_df.empty and col_date in filtered_df.columns:
+    valid_dates = [d for d in filtered_df[col_date].tolist() if str(d).strip() != ""]
+    if valid_dates:
+        latest_date = max(valid_dates)
 
-st.markdown("<hr>", unsafe_allow_html=True)
+valid_vendors_cnt = 0
+if not filtered_df.empty:
+    valid_vendors = [v for v in filtered_df[col_vendor].unique() if str(v).strip() != ""]
+    valid_vendors_cnt = len(valid_vendors)
+
+st.markdown(f"""
+    <div style="background-color: #353b48; padding: 12px 20px; border-radius: 8px; color: #ffffff; font-size: 15px; display: flex; justify-content: space-around; align-items: center; border: 1px solid #4a5568; margin-top: 15px;">
+        <span>🔍 총 검색된 건수 : <span style="color: #4e8cff; font-size: 18px; font-weight: bold;">{len(filtered_df):,}</span> 건</span>
+        <span style="color: #4a5568;">|</span>
+        <span>📅 최근 인상 날짜 : <span style="color: #4e8cff; font-size: 18px; font-weight: bold;">{latest_date}</span></span>
+        <span style="color: #4a5568;">|</span>
+        <span>🏢 검색된 업체 수 : <span style="color: #4e8cff; font-size: 18px; font-weight: bold;">{valid_vendors_cnt:,}</span> 개사</span>
+    </div>
+""", unsafe_allow_html=True)
+
 
 # ==========================================
 # 4. 데이터프레임 헤더 및 [인쇄/엑셀] 버튼 영역
