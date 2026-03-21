@@ -185,6 +185,10 @@ with col_t:
 with col_r: 
     if st.button("🔄 새로고침", use_container_width=True, type="primary"):
         load_data.clear() # 확실한 새로고침을 위해 함수 캐시 강제 삭제
+        # 검색창에 입력된 텍스트 값들을 모두 지워서 초기화합니다.
+        for key in ["search_vendor_key", "search_item_key", "search_date_key"]:
+            if key in st.session_state:
+                del st.session_state[key]
         st.rerun()
 
 with col_l:
@@ -200,13 +204,13 @@ st.markdown("<h4 style='color: #4e8cff;'>🔍 상세 검색</h4>", unsafe_allow_
 search_col1, search_col2, search_col3 = st.columns(3)
 
 with search_col1:
-    search_vendor = st.text_input("🏢 업체명 검색", placeholder="예: 부흥산업사 등 부분 검색 가능")
+    search_vendor = st.text_input("🏢 업체명 검색", placeholder="예: 부흥산업사 등 부분 검색 가능", key="search_vendor_key")
 
 with search_col2:
-    search_item = st.text_input("📦 물품명 검색", placeholder="예: 황산, 소다 등 부분 검색 가능")
+    search_item = st.text_input("📦 물품명 검색", placeholder="예: 황산, 소다 등 부분 검색 가능", key="search_item_key")
 
 with search_col3:
-    search_date = st.text_input("📅 인상날짜 검색", placeholder="예: 26.03.20 또는 03 (자유롭게 텍스트로 검색)")
+    search_date = st.text_input("📅 인상날짜 검색", placeholder="예: 26.03.20 또는 03 (자유롭게 텍스트로 검색)", key="search_date_key")
 
 # 2. 필터링 로직
 filtered_df = data.copy()
