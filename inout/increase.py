@@ -13,7 +13,7 @@ import streamlit.components.v1 as components
 def get_kst_now():
     return datetime.utcnow() + timedelta(hours=9)
 
-# 1. 페이지 기본 설정 (와이드 모드 유지)
+# 1. 페이지 기본 설정
 st.set_page_config(page_title="유니매입가격정보 - 인상공문 검색", page_icon="📈", layout="wide")
 
 # ==========================================
@@ -21,18 +21,15 @@ st.set_page_config(page_title="유니매입가격정보 - 인상공문 검색", 
 # ==========================================
 st.markdown("""
     <style>
-    /* 스트림릿 기본 UI 요소를 완벽하게 숨기기 */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden !important;}
     [data-testid="stHeader"] {display: none !important;}
     
-    /* 전체 여백 최적화 및 다크 테마 배경 */
     [data-testid="stAppViewContainer"] { background-color: #2b323c; }
     .main .block-container { padding-top: 1rem; max-width: 98%; }
     
-    /* 텍스트 기본 색상 흰색 (가독성 최적화) */
-    h1, h2, h3, h4, p, span, label { color: #ffffff !important; }
+    h1, h2, h3, h4, h5, p, span, label { color: #ffffff !important; }
     
     /* 버튼 공통 스타일 */
     div.stButton > button {
@@ -41,7 +38,7 @@ st.markdown("""
         padding: 0px 10px !important;
     }
     
-    /* Primary 버튼 (검색 등) -> 파란색 */
+    /* 검색 버튼 (Primary) -> 파란색 */
     button[kind="primary"] {
         background-color: #4e8cff !important;
         border-color: #4e8cff !important;
@@ -49,41 +46,42 @@ st.markdown("""
     }
     button[kind="primary"]:hover { 
         background-color: #3b76e5 !important; 
-        border-color: #3b76e5 !important; 
     }
 
-    /* Secondary 버튼 (전체보기, 로그아웃 등) -> 올리브색 */
+    /* 전체보기/로그아웃 (Secondary) -> 올리브색 */
     button[kind="secondary"] {
         background-color: #757c43 !important;
         border-color: #757c43 !important;
         color: white !important;
     }
-    button[kind="secondary"]:hover { 
-        background-color: #646a39 !important; 
-        border-color: #646a39 !important; 
+    
+    /* 💡 EXCEL 다운로드 버튼 전용 스타일 (진한 회색 및 높이 교정) */
+    div[data-testid="stDownloadButton"] button {
+        background-color: #525252 !important;
+        border-color: #525252 !important;
+        color: white !important;
+        height: 42px !important;
+        margin-top: 0px !important; /* 높이 정렬을 위해 마진 제거 */
+    }
+    div[data-testid="stDownloadButton"] button:hover {
+        background-color: #3f3f3f !important;
     }
     
-    /* 타이틀 버튼 (Tertiary) 스타일링 */
+    /* 타이틀 클릭 버튼 */
     button[kind="tertiary"] {
         display: flex !important;
         justify-content: flex-start !important;
         padding: 0 !important;
         background-color: transparent !important;
         border: none !important;
-        box-shadow: none !important;
         margin-top: 5px !important;
-        outline: none !important;
     }
     button[kind="tertiary"] p {
         font-size: 1.8rem !important;
         font-weight: 800 !important;
         color: #ffffff !important;
-        margin: 0 !important;
-        padding: 0 !important;
     }
-    button[kind="tertiary"]:hover p {
-        color: #4e8cff !important;
-    }
+    button[kind="tertiary"]:hover p { color: #4e8cff !important; }
     
     /* 입력창 내부 디자인 */
     div[data-testid="stTextInput"] input, div[data-baseweb="select"] > div {
@@ -91,9 +89,7 @@ st.markdown("""
         font-weight: bold !important;
         background-color: #f8f9fa !important;
     }
-    div[data-baseweb="select"] span { color: #1e293b !important; }
     
-    /* 구분선 라인 색상 */
     hr { margin: 12px 0px 12px 0px; border: 0.5px solid #4a5568 !important; }
     </style>
 """, unsafe_allow_html=True)
@@ -140,7 +136,7 @@ def check_password():
 if not check_password():
     st.stop()
 
-# 2. 구글 시트 데이터 불러오기
+# 2. 데이터 불러오기
 @st.cache_data(ttl=5)
 def load_data():
     conn = st.connection("gsheets", type=GSheetsConnection)
@@ -163,31 +159,26 @@ data = data.fillna("")
 # 🛠️ 상태 관리 (독립적 검색 대응)
 # ==========================================
 if 'act_mode' not in st.session_state: st.session_state.act_mode = "init"
-# 1라인 데이터
 if 'act_t1_v' not in st.session_state: st.session_state.act_t1_v = ""
 if 'act_t1_i' not in st.session_state: st.session_state.act_t1_i = ""
 if 'act_t1_y' not in st.session_state: st.session_state.act_t1_y = "전체"
-# 2라인 데이터
 if 'act_t2_v' not in st.session_state: st.session_state.act_t2_v = "전체"
 if 'act_t2_i' not in st.session_state: st.session_state.act_t2_i = "전체"
 if 'act_t2_y' not in st.session_state: st.session_state.act_t2_y = "전체"
 
 def do_search_t1():
-    """라인 1 검색 버튼 클릭"""
     st.session_state.act_mode = "text"
     st.session_state.act_t1_v = st.session_state.ui_t1_v
     st.session_state.act_t1_i = st.session_state.ui_t1_i
     st.session_state.act_t1_y = st.session_state.ui_t1_y
 
 def do_search_t2():
-    """라인 2 검색 버튼 클릭"""
     st.session_state.act_mode = "dropdown"
     st.session_state.act_t2_v = st.session_state.ui_t2_v
     st.session_state.act_t2_i = st.session_state.ui_t2_i
     st.session_state.act_t2_y = st.session_state.ui_t2_y
 
 def do_reset():
-    """초기화"""
     st.session_state.act_mode = "init"
     st.session_state.act_t1_v = ""
     st.session_state.act_t1_i = ""
@@ -195,7 +186,6 @@ def do_reset():
     st.session_state.act_t2_v = "전체"
     st.session_state.act_t2_i = "전체"
     st.session_state.act_t2_y = "전체"
-    # UI 위젯 값들 초기화
     st.session_state.ui_t1_v = ""
     st.session_state.ui_t1_i = ""
     st.session_state.ui_t1_y = "전체"
@@ -208,12 +198,11 @@ def do_full_refresh():
     do_reset()
 
 # ==========================================
-# UI 레이아웃 시작
+# UI 상단 영역
 # ==========================================
 col_t, col_l = st.columns([8.5, 1.5])
 with col_t: 
     st.button("📈 유니매입가격정보 (인상공문 현황)", type="tertiary", on_click=do_full_refresh)
-
 with col_l:
     if st.button("🔓 LOGOUT", use_container_width=True, type="secondary"):
         st.session_state["authenticated"] = False
@@ -226,8 +215,8 @@ st.markdown("<hr>", unsafe_allow_html=True)
 years_set = set()
 if col_date in data.columns:
     for d in data[col_date].dropna().unique():
-        s = str(d).strip()
-        parts = s.replace('-', '.').replace('/', '.').split('.')
+        s = str(d).strip().replace('-', '.').replace('/', '.')
+        parts = s.split('.')
         if parts and parts[0].isdigit():
             y = parts[0]
             if len(y) == 2: years_set.add("20" + y)
@@ -237,23 +226,19 @@ year_list = ["전체"] + [f"{y}년" for y in sorted(list(years_set), reverse=Tru
 vendor_list = ["전체"] + sorted([str(v).strip() for v in data[col_vendor].unique() if str(v).strip() != ""])
 item_list = ["전체"] + sorted([str(v).strip() for v in data[col_item].unique() if str(v).strip() != ""])
 
-# ------------------------------------------
-# 라인 1: 텍스트 검색 영역 (독립 버튼)
-# ------------------------------------------
+# 1라인 검색
 c1_1, c1_2, c1_3, c1_4, c1_5 = st.columns([2.5, 2.5, 1.5, 1.7, 1.8])
-with c1_1: st.text_input("🏢 업체명 타이핑", placeholder="부분 검색어 입력", key="ui_t1_v")
-with c1_2: st.text_input("📦 물품명 타이핑", placeholder="부분 검색어 입력", key="ui_t1_i")
+with c1_1: st.text_input("🏢 업체명 타이핑", placeholder="부분 일치 검색", key="ui_t1_v")
+with c1_2: st.text_input("📦 물품명 타이핑", placeholder="부분 일치 검색", key="ui_t1_i")
 with c1_3: st.selectbox("📅 인상연도", year_list, key="ui_t1_y")
 with c1_4:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
     st.button("🔍 텍스트 검색", use_container_width=True, type="primary", on_click=do_search_t1)
 with c1_5:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-    st.button("📂 전체보기", use_container_width=True, type="secondary", on_click=do_reset, key="btn_reset_t1")
+    st.button("📂 전체보기", use_container_width=True, type="secondary", on_click=do_reset, key="res1")
 
-# ------------------------------------------
-# 라인 2: 드롭다운 검색 영역 (독립 버튼)
-# ------------------------------------------
+# 2라인 검색
 c2_1, c2_2, c2_3, c2_4, c2_5 = st.columns([2.5, 2.5, 1.5, 1.7, 1.8])
 with c2_1: st.selectbox("🏢 업체명 선택", vendor_list, key="ui_t2_v")
 with c2_2: st.selectbox("📦 물품명 선택", item_list, key="ui_t2_i")
@@ -263,43 +248,37 @@ with c2_4:
     st.button("🔍 선택 검색", use_container_width=True, type="primary", on_click=do_search_t2)
 with c2_5:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-    st.button("📂 전체보기", use_container_width=True, type="secondary", on_click=do_reset, key="btn_reset_t2")
+    st.button("📂 전체보기", use_container_width=True, type="secondary", on_click=do_reset, key="res2")
 
 # ==========================================
-# 필터링 로직 (모드별 독립 적용)
+# 필터링 로직
 # ==========================================
 filtered_df = data.copy()
 
 if st.session_state.act_mode == "text":
-    # 라인 1 필터만 적용
     if st.session_state.act_t1_v:
         filtered_df = filtered_df[filtered_df[col_vendor].astype(str).str.contains(st.session_state.act_t1_v, case=False, na=False)]
     if st.session_state.act_t1_i:
         filtered_df = filtered_df[filtered_df[col_item].astype(str).str.contains(st.session_state.act_t1_i, case=False, na=False)]
     if st.session_state.act_t1_y != "전체":
-        target_y = st.session_state.act_t1_y.replace("년", "")
-        target_y_short = target_y[2:]
-        filtered_df = filtered_df[filtered_df[col_date].apply(lambda d: str(d).strip().split('.')[0] in [target_y, target_y_short])]
+        ty = st.session_state.act_t1_y.replace("년", "")
+        filtered_df = filtered_df[filtered_df[col_date].apply(lambda d: str(d).strip().replace('-', '.').replace('/', '.').split('.')[0] in [ty, ty[2:]])]
 
 elif st.session_state.act_mode == "dropdown":
-    # 라인 2 필터만 적용
     if st.session_state.act_t2_v != "전체":
         filtered_df = filtered_df[filtered_df[col_vendor].astype(str) == st.session_state.act_t2_v]
     if st.session_state.act_t2_i != "전체":
         filtered_df = filtered_df[filtered_df[col_item].astype(str) == st.session_state.act_t2_i]
     if st.session_state.act_t2_y != "전체":
-        target_y = st.session_state.act_t2_y.replace("년", "")
-        target_y_short = target_y[2:]
-        filtered_df = filtered_df[filtered_df[col_date].apply(lambda d: str(d).strip().split('.')[0] in [target_y, target_y_short])]
+        ty = st.session_state.act_t2_y.replace("년", "")
+        filtered_df = filtered_df[filtered_df[col_date].apply(lambda d: str(d).strip().replace('-', '.').replace('/', '.').split('.')[0] in [ty, ty[2:]])]
 
-# 정렬
 sort_cols = [c for c in [col_date, col_vendor, col_item] if c in filtered_df.columns]
 if sort_cols:
-    asc_rules = [False if c == col_date else True for c in sort_cols]
-    filtered_df = filtered_df.sort_values(by=sort_cols, ascending=asc_rules)
+    filtered_df = filtered_df.sort_values(by=sort_cols, ascending=[False if c == col_date else True for c in sort_cols])
 
 # ==========================================
-# 요약 지표 및 하단 기능
+# 요약 지표 및 버튼 레이아웃
 # ==========================================
 latest_date = "-"
 if not filtered_df.empty:
@@ -320,35 +299,58 @@ with col_bar:
         </div>
     """, unsafe_allow_html=True)
 
-# PRINT / EXCEL
+# --- 🖨️ PRINT / 💾 EXCEL 디자인 수정 (진한 회색 및 높이 통일) ---
 html_table_p = filtered_df.to_html(index=False, escape=True)
 html_table_p = html_table_p.replace('border="1" class="dataframe"', 'class="custom-table"')
 html_table_p = html_table_p.replace('<th>물품명</th>', '<th style="width: 18%;">물품명</th>').replace('<th>메모</th>', '<th style="width: 34%;">메모</th>').replace('<th>기존가날짜</th>', '<th style="width: 8%;">기존가날짜</th>')
-p_content = f"<html><head><style>body {{ font-family: 'Malgun Gothic'; }} .custom-table {{ width: 100%; border-collapse: collapse; }} th, td {{ border: 1px solid #aaa; padding: 6px; text-align: center; }} th {{ background: #f1f5f9; }}</style></head><body><h2 style='text-align:center;'>인상공문 검색결과</h2>{html_table_p}</body></html>"
+p_content = f"<html><head><style>body {{ font-family: 'Malgun Gothic'; }} .custom-table {{ width: 100%; border-collapse: collapse; }} th, td {{ border: 1px solid #aaa; padding: 6px; text-align: center; }} th {{ background: #f1f5f9; }}</style></head><body><h2 style='text-align:center;'>검색결과</h2>{html_table_p}</body></html>"
 
 with col_print:
-    components.html(f"<html><body><style>.btn {{ width: 100%; height: 42px; background: #757c43; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }}</style><button class='btn' onclick='pr()'>🖨️ PRINT</button><script>function pr(){{var w=window.open('','_blank');w.document.write({json.dumps(p_content)});w.document.close();setTimeout(function(){{w.print();}},250);}}</script></body></html>", height=45)
+    components.html(f"""
+        <html><body>
+        <style>
+            .btn {{ 
+                width: 100%; height: 42px; 
+                background: #525252; color: white; 
+                border: none; border-radius: 8px; 
+                font-weight: bold; cursor: pointer;
+                font-family: 'Malgun Gothic';
+                margin: 0; padding: 0;
+            }}
+            .btn:hover {{ background: #3f3f3f; }}
+        </style>
+        <button class='btn' onclick='pr()'>🖨️ PRINT</button>
+        <script>
+            function pr(){{
+                var w=window.open('','_blank');
+                w.document.write({json.dumps(p_content)});
+                w.document.close();
+                setTimeout(function(){{w.print();}},250);
+            }}
+        </script>
+        </body></html>
+    """, height=42)
 
 with col_excel:
     try:
         excel_io = io.BytesIO()
         with pd.ExcelWriter(excel_io, engine='openpyxl') as wr:
             filtered_df.to_excel(wr, index=False, sheet_name='Sheet1')
-        st.download_button("💾 EXCEL", data=excel_io.getvalue(), file_name=f"export_{get_kst_now().strftime('%Y%m%d')}.xlsx", use_container_width=True, type="primary")
+        st.download_button("💾 EXCEL", data=excel_io.getvalue(), file_name=f"export_{get_kst_now().strftime('%Y%m%d')}.xlsx", use_container_width=True)
     except:
-        st.download_button("💾 CSV", data=filtered_df.to_csv(index=False).encode('utf-8-sig'), file_name="export.csv", use_container_width=True, type="primary")
+        st.download_button("💾 CSV", data=filtered_df.to_csv(index=False).encode('utf-8-sig'), file_name="export.csv", use_container_width=True)
 
-# 검색 조건 정보 표시
+# 검색 조건 표시
 conds = []
 if st.session_state.act_mode == "text":
-    if st.session_state.act_t1_v: conds.append(f"업체타이핑:{st.session_state.act_t1_v}")
-    if st.session_state.act_t1_i: conds.append(f"물품타이핑:{st.session_state.act_t1_i}")
-    if st.session_state.act_t1_y != "전체": conds.append(f"연도:{st.session_state.act_t1_y}")
+    if st.session_state.act_t1_v: conds.append(f"업체({st.session_state.act_t1_v})")
+    if st.session_state.act_t1_i: conds.append(f"물품({st.session_state.act_t1_i})")
+    if st.session_state.act_t1_y != "전체": conds.append(f"연도({st.session_state.act_t1_y})")
 elif st.session_state.act_mode == "dropdown":
-    if st.session_state.act_t2_v != "전체": conds.append(f"업체선택:{st.session_state.act_t2_v}")
-    if st.session_state.act_t2_i != "전체": conds.append(f"물품선택:{st.session_state.act_t2_i}")
-    if st.session_state.act_t2_y != "전체": conds.append(f"연도:{st.session_state.act_t2_y}")
-search_info = f"<span style='color:#ffeb3b;'>[검색모드: {st.session_state.act_mode.upper()} / {' + '.join(conds)}]</span>" if conds else "(전체 데이터)"
+    if st.session_state.act_t2_v != "전체": conds.append(f"업체({st.session_state.act_t2_v})")
+    if st.session_state.act_t2_i != "전체": conds.append(f"물품({st.session_state.act_t2_i})")
+    if st.session_state.act_t2_y != "전체": conds.append(f"연도({st.session_state.act_t2_y})")
+search_info = f"<span style='color:#ffeb3b;'>[검색조건: {' + '.join(conds)}]</span>" if conds else "(전체 데이터)"
 st.markdown(f"#### 📋 상세 내역 {search_info}", unsafe_allow_html=True)
 
 # 메인 테이블 출력
@@ -368,16 +370,16 @@ else:
         ds = "" if idx < 100 else " style='display:none;'"
         rs = f"<tr{ds}>"
         for i, col_name in enumerate(filtered_df.columns):
-            val = html.escape(str(row[i+1])) if row[i+1] != "" else ""
+            val = html.escape(str(row[i])) if row[i] != "" else ""
             cls = get_td_class(col_name) + (" bold-col" if col_name in ["물품명", "인상폭"] else "")
             rs += f"<td class='{cls}'>{val}</td>"
         rows.append(rs + "</tr>")
 
     t_html = f"""
     <!DOCTYPE html><html><head><meta charset='utf-8'><style>
-    body {{ background: #2b323c; font-family: 'Malgun Gothic'; margin: 0; color: #1e293b; }}
+    body {{ background: #2b323c; font-family: 'Malgun Gothic'; margin: 0; color: #1e293b; overflow-x: hidden; }}
     .custom-table {{ width: 100%; border-collapse: collapse; background: white; font-size: 15px; table-layout: fixed; }}
-    .custom-table th, .custom-table td {{ border: 1px solid #d0d0d0; padding: 8px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
+    .custom-table th, .custom-table td {{ border: 1px solid #d0d0d0; padding: 8px 10px; word-wrap: break-word; }}
     .custom-table th {{ color: white; font-weight: bold; }}
     .th-base {{ background: #353b48; }} .th-in {{ background: #3b5b88; }} .th-out {{ background: #b8860b; }} .th-etc {{ background: #757c43; }}
     .tc {{ text-align: center; }} .tl {{ text-align: left; }} .tr {{ text-align: right; }}
@@ -389,4 +391,4 @@ else:
         w = "width:18%;" if "물품" in col else "width:34%;" if "메모" in col else "width:8%;" if "기존가날짜" in col else ""
         t_html += f"<th class='{get_th_class(col)}' style='{w}'>{col}</th>"
     t_html += f"</tr></thead><tbody>{''.join(rows)}</tbody></table></body></html>"
-    components.html(t_html, height=min(len(filtered_df)*40+60, 800), scrolling=True)
+    components.html(t_html, height=min(len(filtered_df)*42+80, 800), scrolling=True)
