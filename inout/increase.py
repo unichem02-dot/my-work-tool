@@ -352,7 +352,7 @@ search_info = f"<span style='color:#ffeb3b;'>[검색조건: {' + '.join(conds)}]
 st.markdown(f"#### 📋 상세 내역 {search_info} <span style='font-size:12px; color:#cbd5e1; font-weight:normal; margin-left:10px;'>(제목 클릭 시 정렬)</span>", unsafe_allow_html=True)
 
 # ==========================================
-# 📋 메인 테이블 (상단 전용 숫자 페이지네이션 버전)
+# 📋 메인 테이블 (상단 숫자 페이지네이션 복구 버전)
 # ==========================================
 if filtered_df.empty:
     st.warning("👀 조건에 맞는 데이터가 없습니다.")
@@ -366,6 +366,7 @@ else:
         return "tr" if any(x in str(col) for x in ["가", "폭", "수량"]) else "tc"
 
     rows_html = []
+    # row[i] 인덱싱을 사용하여 IndexError 원천 차단
     for idx, row in enumerate(filtered_df.itertuples(index=False)):
         rs = "<tr>"
         for i, col_name in enumerate(filtered_df.columns):
@@ -402,7 +403,7 @@ else:
     .page-num.active {{ background: #ffeb3b; color: #000; font-weight: 800; }}
     </style></head><body>
     
-    <!-- 상단 페이지 컨트롤만 남김 -->
+    <!-- 💡 상단 페이지 컨트롤 -->
     <div id='nav-top' class='pagination-container'></div>
 
     <table class='custom-table' id='mainTable'>
@@ -424,7 +425,7 @@ else:
         const tbody = document.getElementById("tableBody");
         const rows = Array.from(tbody.rows);
         const totalRows = rows.length;
-        const totalPages = math.ceil(totalRows / rowsPerPage);
+        const totalPages = Math.ceil(totalRows / rowsPerPage);
         
         if (currentPage < 1) currentPage = 1;
         if (currentPage > totalPages) currentPage = totalPages;
@@ -444,6 +445,7 @@ else:
         container.innerHTML = "";
         if (totalPages <= 1) return;
 
+        // 이전 버튼
         const prevBtn = document.createElement("button");
         prevBtn.className = "page-btn";
         prevBtn.innerText = "◀ 이전";
@@ -451,9 +453,10 @@ else:
         prevBtn.onclick = () => {{ currentPage--; renderTable(); }};
         container.appendChild(prevBtn);
 
-        let startPage = math.max(1, currentPage - 4);
-        let endPage = math.min(totalPages, startPage + 9);
-        if (endPage - startPage < 9) startPage = math.max(1, endPage - 9);
+        // 숫자 버튼 복구
+        let startPage = Math.max(1, currentPage - 4);
+        let endPage = Math.min(totalPages, startPage + 9);
+        if (endPage - startPage < 9) startPage = Math.max(1, endPage - 9);
 
         for (let i = startPage; i <= endPage; i++) {{
             if (i < 1) continue;
@@ -464,6 +467,7 @@ else:
             container.appendChild(pageNum);
         }}
 
+        // 다음 버튼
         const nextBtn = document.createElement("button");
         nextBtn.className = "page-btn";
         nextBtn.innerText = "다음 ▶";
@@ -498,7 +502,7 @@ else:
     """
     
     display_rows = min(len(filtered_df), 100)
-    # 하단 버튼이 빠진 만큼 높이 조정 (180 -> 120)
+    # 상단 버튼 영역 포함하여 높이 계산
     dynamic_height = (display_rows * 42) + 120
     
     components.html(t_html, height=dynamic_height, scrolling=False)
