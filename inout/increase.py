@@ -168,7 +168,7 @@ col_vendor, col_item, col_date = "업체명", "물품명", "인상날짜"
 data = data.fillna("")
 
 # ==========================================
-# 🛠️ 상태 관리
+# 🛠️ 상태 관리 (입력창 자동 리셋 로직)
 # ==========================================
 if 'act_mode' not in st.session_state: st.session_state.act_mode = "init"
 if 'act_t1_v' not in st.session_state: st.session_state.act_t1_v = ""
@@ -216,7 +216,7 @@ def do_full_refresh():
     do_reset()
 
 # ==========================================
-# UI 상단 검색 영역
+# UI 구성
 # ==========================================
 col_t, col_l = st.columns([8.5, 1.5])
 with col_t: 
@@ -351,7 +351,7 @@ search_info = f"<span style='color:#ffeb3b;'>[검색조건: {' + '.join(conds)}]
 st.markdown(f"#### 📋 상세 내역 {search_info} <span style='font-size:12px; color:#cbd5e1; font-weight:normal; margin-left:10px;'>(제목 클릭 시 정렬)</span>", unsafe_allow_html=True)
 
 # ==========================================
-# 📋 메인 테이블 (스크롤바 제거 버전)
+# 📋 메인 테이블 (페이지네이션 고도화 버전)
 # ==========================================
 if filtered_df.empty:
     st.warning("👀 조건에 맞는 데이터가 없습니다.")
@@ -365,6 +365,7 @@ else:
         return "tr" if any(x in str(col) for x in ["가", "폭", "수량"]) else "tc"
 
     rows_html = []
+    # row[i] 인덱싱을 사용하여 IndexError 원천 차단
     for idx, row in enumerate(filtered_df.itertuples(index=False)):
         rs = "<tr>"
         for i, col_name in enumerate(filtered_df.columns):
@@ -384,11 +385,28 @@ else:
     .bold-col {{ font-weight: 900; color: black !important; }}
     .custom-table tr:nth-child(even) td {{ background-color: #f8f9fa; }}
     .sort-icon {{ font-size: 10px; color: #ffeb3b; margin-left: 5px; }}
-    .pagination {{ text-align: center; padding: 20px; background: #2b323c; }}
-    .page-btn {{ padding: 8px 16px; margin: 0 5px; cursor: pointer; background: #4e8cff; color: white; border: none; border-radius: 4px; font-weight: bold; }}
-    .page-btn:disabled {{ background: #4a5568; cursor: not-allowed; }}
-    .page-info {{ color: white; margin: 0 15px; font-weight: bold; }}
+    
+    /* 💡 페이지네이션 컨트롤 스타일 */
+    .pagination-container {{ 
+        text-align: center; padding: 15px 0; background: #2b323c; 
+        display: flex; justify-content: center; align-items: center; gap: 5px;
+    }}
+    .page-btn {{ 
+        padding: 6px 12px; cursor: pointer; background: #4e8cff; color: white; 
+        border: none; border-radius: 4px; font-weight: bold; font-size: 14px;
+    }}
+    .page-btn:hover:not(:disabled) {{ background: #3b76e5; }}
+    .page-btn:disabled {{ background: #4a5568; cursor: not-allowed; opacity: 0.6; }}
+    .page-num {{ 
+        padding: 6px 12px; cursor: pointer; background: #525252; color: #ddd; 
+        border: none; border-radius: 4px; font-size: 14px;
+    }}
+    .page-num.active {{ background: #ffeb3b; color: #000; font-weight: 800; }}
     </style></head><body>
+    
+    <!-- 상단 페이지 컨트롤 -->
+    <div id='nav-top' class='pagination-container'></div>
+
     <table class='custom-table' id='mainTable'>
     <thead><tr>
     """
@@ -398,49 +416,97 @@ else:
     
     t_html += f"""
     </tr></thead><tbody id='tableBody'>{''.join(rows_html)}</tbody></table>
-    <div id='nav' class='pagination'>
-        <button id='prev' class='page-btn' onclick='changePage(-1)'>◀ 이전</button>
-        <span id='pageLabel' class='page-info'></span>
-        <button id='next' class='page-btn' onclick='changePage(1)'>다음 ▶</button>
-    </div>
+    
+    <!-- 하단 페이지 컨트롤 -->
+    <div id='nav-bottom' class='pagination-container'></div>
+
     <script>
-    let sortOrder = 1; let currentPage = 1; const rowsPerPage = 100;
+    let sortOrder = 1; 
+    let currentPage = 1; 
+    const rowsPerPage = 100;
+
     function renderTable() {{
         const tbody = document.getElementById("tableBody");
         const rows = Array.from(tbody.rows);
-        const totalPages = Math.ceil(rows.length / rowsPerPage);
+        const totalRows = rows.length;
+        const totalPages = Math.ceil(totalRows / rowsPerPage);
+        
         if (currentPage < 1) currentPage = 1;
         if (currentPage > totalPages) currentPage = totalPages;
+
         rows.forEach((row, index) => {{
             const start = (currentPage - 1) * rowsPerPage;
             const end = start + rowsPerPage;
             row.style.display = (index >= start && index < end) ? "" : "none";
         }});
-        document.getElementById("pageLabel").innerText = currentPage + " / " + (totalPages || 1);
-        document.getElementById("prev").disabled = (currentPage === 1);
-        document.getElementById("next").disabled = (currentPage === totalPages || totalPages === 0);
-        document.getElementById("nav").style.display = rows.length > rowsPerPage ? "block" : "none";
+
+        updatePagination(totalPages);
     }}
-    function changePage(delta) {{ currentPage += delta; renderTable(); window.scrollTo(0,0); }}
+
+    function updatePagination(totalPages) {{
+        const containers = [document.getElementById('nav-top'), document.getElementById('nav-bottom')];
+        
+        containers.forEach(container => {{
+            container.innerHTML = "";
+            if (totalPages <= 1) return;
+
+            // 이전 버튼
+            const prevBtn = document.createElement("button");
+            prevBtn.className = "page-btn";
+            prevBtn.innerText = "◀";
+            prevBtn.disabled = (currentPage === 1);
+            prevBtn.onclick = () => {{ currentPage--; renderTable(); scroll(0,0); }};
+            container.appendChild(prevBtn);
+
+            // 페이지 번호 (최대 10개씩 표시)
+            let startPage = Math.max(1, currentPage - 4);
+            let endPage = Math.min(totalPages, startPage + 9);
+            if (endPage - startPage < 9) startPage = Math.max(1, endPage - 9);
+
+            for (let i = startPage; i <= endPage; i++) {{
+                const pageNum = document.createElement("button");
+                pageNum.className = (i === currentPage) ? "page-num active" : "page-num";
+                pageNum.innerText = i;
+                pageNum.onclick = () => {{ currentPage = i; renderTable(); scroll(0,0); }};
+                container.appendChild(pageNum);
+            }}
+
+            // 다음 버튼
+            const nextBtn = document.createElement("button");
+            nextBtn.className = "page-btn";
+            nextBtn.innerText = "▶";
+            nextBtn.disabled = (currentPage === totalPages);
+            nextBtn.onclick = () => {{ currentPage++; renderTable(); scroll(0,0); }};
+            container.appendChild(nextBtn);
+        }});
+    }}
+
     function sortTable(n) {{
-        const tbody = document.getElementById("tableBody"); const rows = Array.from(tbody.rows); sortOrder *= -1;
+        const tbody = document.getElementById("tableBody"); 
+        const rows = Array.from(tbody.rows); 
+        sortOrder *= -1;
         document.querySelectorAll('.sort-icon').forEach(icon => icon.innerText = '');
         document.getElementById('icon-' + n).innerText = sortOrder === 1 ? " ▲" : " ▼";
+        
         rows.sort((a, b) => {{
-            let tA = a.cells[n].innerText.trim(); let tB = b.cells[n].innerText.trim();
-            let nA = parseFloat(tA.replace(/,/g, '')); let nB = parseFloat(tB.replace(/,/g, ''));
+            let tA = a.cells[n].innerText.trim(); 
+            let tB = b.cells[n].innerText.trim();
+            let nA = parseFloat(tA.replace(/,/g, '')); 
+            let nB = parseFloat(tB.replace(/,/g, ''));
             if (!isNaN(nA) && !isNaN(nB)) {{ return (nA - nB) * sortOrder; }}
             return tA.localeCompare(tB, 'ko') * sortOrder;
         }});
-        rows.forEach(row => tbody.appendChild(row)); currentPage = 1; renderTable();
+        
+        rows.forEach(row => tbody.appendChild(row)); 
+        currentPage = 1; 
+        renderTable();
     }}
+
     window.onload = renderTable;
     </script></body></html>
     """
-    # 💡 데이터 개수에 따라 높이를 동적으로 계산 (스크롤 방지 핵심)
+    # 💡 페이지 버튼이 상/하단에 추가되었으므로 높이 계산 여유를 줍니다.
     display_rows = min(len(filtered_df), 100)
-    # 한 행당 약 45px + 헤더/푸터 약 130px
-    dynamic_height = (display_rows * 45) + 130
-    if len(filtered_df) > 100: dynamic_height += 40 # 네비게이션 공간 추가
+    dynamic_height = (display_rows * 45) + 200 
     
     components.html(t_html, height=dynamic_height, scrolling=False)
