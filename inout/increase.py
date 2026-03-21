@@ -94,7 +94,7 @@ st.markdown("""
     div[data-baseweb="select"] span { color: #1e293b !important; }
     
     /* 구분선 라인 색상 */
-    hr { margin: 15px 0px 15px 0px; border: 0.5px solid #4a5568 !important; }
+    hr { margin: 12px 0px 12px 0px; border: 0.5px solid #4a5568 !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -160,39 +160,50 @@ col_vendor, col_item, col_date = "업체명", "물품명", "인상날짜"
 data = data.fillna("")
 
 # ==========================================
-# 🛠️ 상태 관리 (2개 라인 검색 대응)
+# 🛠️ 상태 관리 (독립적 검색 대응)
 # ==========================================
-# 실제 검색 실행용 필터값 (Active)
-if 'act_txt_vendor' not in st.session_state: st.session_state.act_txt_vendor = ""
-if 'act_txt_item' not in st.session_state: st.session_state.act_txt_item = ""
-if 'act_sel_vendor' not in st.session_state: st.session_state.act_sel_vendor = "전체"
-if 'act_sel_item' not in st.session_state: st.session_state.act_sel_item = "전체"
-if 'act_sel_year' not in st.session_state: st.session_state.act_sel_year = "전체"
+if 'act_mode' not in st.session_state: st.session_state.act_mode = "init"
+# 1라인 데이터
+if 'act_t1_v' not in st.session_state: st.session_state.act_t1_v = ""
+if 'act_t1_i' not in st.session_state: st.session_state.act_t1_i = ""
+if 'act_t1_y' not in st.session_state: st.session_state.act_t1_y = "전체"
+# 2라인 데이터
+if 'act_t2_v' not in st.session_state: st.session_state.act_t2_v = "전체"
+if 'act_t2_i' not in st.session_state: st.session_state.act_t2_i = "전체"
+if 'act_t2_y' not in st.session_state: st.session_state.act_t2_y = "전체"
 
-def do_search():
-    """검색 버튼 클릭 시: UI 입력값을 Active 필터로 복사"""
-    st.session_state.act_txt_vendor = st.session_state.ui_txt_vendor
-    st.session_state.act_txt_item = st.session_state.ui_txt_item
-    st.session_state.act_sel_vendor = st.session_state.ui_sel_vendor
-    st.session_state.act_sel_item = st.session_state.ui_sel_item
-    st.session_state.act_sel_year = st.session_state.ui_sel_year
+def do_search_t1():
+    """라인 1 검색 버튼 클릭"""
+    st.session_state.act_mode = "text"
+    st.session_state.act_t1_v = st.session_state.ui_t1_v
+    st.session_state.act_t1_i = st.session_state.ui_t1_i
+    st.session_state.act_t1_y = st.session_state.ui_t1_y
+
+def do_search_t2():
+    """라인 2 검색 버튼 클릭"""
+    st.session_state.act_mode = "dropdown"
+    st.session_state.act_t2_v = st.session_state.ui_t2_v
+    st.session_state.act_t2_i = st.session_state.ui_t2_i
+    st.session_state.act_t2_y = st.session_state.ui_t2_y
 
 def do_reset():
-    """모든 필터 초기화"""
-    st.session_state.act_txt_vendor = ""
-    st.session_state.act_txt_item = ""
-    st.session_state.act_sel_vendor = "전체"
-    st.session_state.act_sel_item = "전체"
-    st.session_state.act_sel_year = "전체"
-    # UI 위젯 상태도 초기화
-    st.session_state.ui_txt_vendor = ""
-    st.session_state.ui_txt_item = ""
-    st.session_state.ui_sel_vendor = "전체"
-    st.session_state.ui_sel_item = "전체"
-    st.session_state.ui_sel_year = "전체"
+    """초기화"""
+    st.session_state.act_mode = "init"
+    st.session_state.act_t1_v = ""
+    st.session_state.act_t1_i = ""
+    st.session_state.act_t1_y = "전체"
+    st.session_state.act_t2_v = "전체"
+    st.session_state.act_t2_i = "전체"
+    st.session_state.act_t2_y = "전체"
+    # UI 위젯 값들 초기화
+    st.session_state.ui_t1_v = ""
+    st.session_state.ui_t1_i = ""
+    st.session_state.ui_t1_y = "전체"
+    st.session_state.ui_t2_v = "전체"
+    st.session_state.ui_t2_i = "전체"
+    st.session_state.ui_t2_y = "전체"
 
 def do_full_refresh():
-    """타이틀 클릭: 데이터 강제 갱신 + 완전 초기화"""
     load_data.clear()
     do_reset()
 
@@ -211,7 +222,7 @@ with col_l:
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
-# 드롭다운 리스트 생성
+# 리스트 생성
 years_set = set()
 if col_date in data.columns:
     for d in data[col_date].dropna().unique():
@@ -227,53 +238,56 @@ vendor_list = ["전체"] + sorted([str(v).strip() for v in data[col_vendor].uniq
 item_list = ["전체"] + sorted([str(v).strip() for v in data[col_item].unique() if str(v).strip() != ""])
 
 # ------------------------------------------
-# 검색 라인 1: 텍스트 검색
+# 라인 1: 텍스트 검색 영역 (독립 버튼)
 # ------------------------------------------
-st.markdown("<h5 style='color: #4e8cff; margin-bottom: -10px;'>⌨️ 라인 1 : 텍스트 검색 (부분 일치 검색)</h5>", unsafe_allow_html=True)
-c1_1, c1_2, c1_3, c1_4 = st.columns([3.5, 3.5, 1.5, 1.5])
-with c1_1:
-    st.text_input("🏢 업체명 타이핑", placeholder="검색어 입력...", key="ui_txt_vendor")
-with c1_2:
-    st.text_input("📦 물품명 타이핑", placeholder="검색어 입력...", key="ui_txt_item")
-with c1_3:
-    st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-    st.button("🔍 검색 실행", use_container_width=True, type="primary", on_click=do_search)
+c1_1, c1_2, c1_3, c1_4 = st.columns([3, 3, 2, 2])
+with c1_1: st.text_input("🏢 업체명 타이핑", placeholder="부분 검색어 입력", key="ui_t1_v")
+with c1_2: st.text_input("📦 물품명 타이핑", placeholder="부분 검색어 입력", key="ui_t1_i")
+with c1_3: st.selectbox("📅 인상연도", year_list, key="ui_t1_y")
 with c1_4:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-    st.button("📂 전체보기", use_container_width=True, type="secondary", on_click=do_reset)
+    st.button("🔍 텍스트 검색", use_container_width=True, type="primary", on_click=do_search_t1)
 
 # ------------------------------------------
-# 검색 라인 2: 드롭다운 검색
+# 라인 2: 드롭다운 검색 영역 (독립 버튼)
 # ------------------------------------------
-st.markdown("<h5 style='color: #4e8cff; margin-top: 10px; margin-bottom: -10px;'>🖱️ 라인 2 : 드롭다운 검색 (항목 선택)</h5>", unsafe_allow_html=True)
-c2_1, c2_2, c2_3 = st.columns(3)
-with c2_1:
-    st.selectbox("🏢 업체명 선택", vendor_list, key="ui_sel_vendor")
-with c2_2:
-    st.selectbox("📦 물품명 선택", item_list, key="ui_sel_item")
-with c2_3:
-    st.selectbox("📅 인상 연도 선택", year_list, key="ui_sel_year")
+c2_1, c2_2, c2_3, c2_4, c2_5 = st.columns([2.5, 2.5, 1.5, 1.7, 1.8])
+with c2_1: st.selectbox("🏢 업체명 선택", vendor_list, key="ui_t2_v")
+with c2_2: st.selectbox("📦 물품명 선택", item_list, key="ui_t2_i")
+with c2_3: st.selectbox("📅 연도 선택", year_list, key="ui_t2_y")
+with c2_4:
+    st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+    st.button("🔍 선택 검색", use_container_width=True, type="primary", on_click=do_search_t2)
+with c2_5:
+    st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+    st.button("📂 전체보기(초기화)", use_container_width=True, type="secondary", on_click=do_reset)
 
 # ==========================================
-# 2. 필터링 로직 (모든 조건 AND 결합)
+# 필터링 로직 (모드별 독립 적용)
 # ==========================================
 filtered_df = data.copy()
 
-# 라인 1: 텍스트 필터
-if st.session_state.act_txt_vendor:
-    filtered_df = filtered_df[filtered_df[col_vendor].astype(str).str.contains(st.session_state.act_txt_vendor, case=False, na=False)]
-if st.session_state.act_txt_item:
-    filtered_df = filtered_df[filtered_df[col_item].astype(str).str.contains(st.session_state.act_txt_item, case=False, na=False)]
+if st.session_state.act_mode == "text":
+    # 라인 1 필터만 적용
+    if st.session_state.act_t1_v:
+        filtered_df = filtered_df[filtered_df[col_vendor].astype(str).str.contains(st.session_state.act_t1_v, case=False, na=False)]
+    if st.session_state.act_t1_i:
+        filtered_df = filtered_df[filtered_df[col_item].astype(str).str.contains(st.session_state.act_t1_i, case=False, na=False)]
+    if st.session_state.act_t1_y != "전체":
+        target_y = st.session_state.act_t1_y.replace("년", "")
+        target_y_short = target_y[2:]
+        filtered_df = filtered_df[filtered_df[col_date].apply(lambda d: str(d).strip().split('.')[0] in [target_y, target_y_short])]
 
-# 라인 2: 드롭다운 필터
-if st.session_state.act_sel_vendor != "전체":
-    filtered_df = filtered_df[filtered_df[col_vendor].astype(str) == st.session_state.act_sel_vendor]
-if st.session_state.act_sel_item != "전체":
-    filtered_df = filtered_df[filtered_df[col_item].astype(str) == st.session_state.act_sel_item]
-if st.session_state.act_sel_year != "전체":
-    target_y = st.session_state.act_sel_year.replace("년", "")
-    target_y_short = target_y[2:]
-    filtered_df = filtered_df[filtered_df[col_date].apply(lambda d: str(d).strip().split('.')[0] in [target_y, target_y_short])]
+elif st.session_state.act_mode == "dropdown":
+    # 라인 2 필터만 적용
+    if st.session_state.act_t2_v != "전체":
+        filtered_df = filtered_df[filtered_df[col_vendor].astype(str) == st.session_state.act_t2_v]
+    if st.session_state.act_t2_i != "전체":
+        filtered_df = filtered_df[filtered_df[col_item].astype(str) == st.session_state.act_t2_i]
+    if st.session_state.act_t2_y != "전체":
+        target_y = st.session_state.act_t2_y.replace("년", "")
+        target_y_short = target_y[2:]
+        filtered_df = filtered_df[filtered_df[col_date].apply(lambda d: str(d).strip().split('.')[0] in [target_y, target_y_short])]
 
 # 정렬
 sort_cols = [c for c in [col_date, col_vendor, col_item] if c in filtered_df.columns]
@@ -282,7 +296,7 @@ if sort_cols:
     filtered_df = filtered_df.sort_values(by=sort_cols, ascending=asc_rules)
 
 # ==========================================
-# 3. 요약 지표 바 및 하단 기능
+# 요약 지표 및 하단 기능
 # ==========================================
 latest_date = "-"
 if not filtered_df.empty:
@@ -303,35 +317,38 @@ with col_bar:
         </div>
     """, unsafe_allow_html=True)
 
-# PRINT / EXCEL (너비 설정 포함)
-html_table_print = filtered_df.to_html(index=False, escape=True)
-html_table_print = html_table_print.replace('border="1" class="dataframe"', 'class="custom-table"')
-html_table_print = html_table_print.replace('<th>물품명</th>', '<th style="width: 18%;">물품명</th>').replace('<th>메모</th>', '<th style="width: 34%;">메모</th>').replace('<th>기존가날짜</th>', '<th style="width: 8%;">기존가날짜</th>')
-print_content = f"<html><head><style>body {{ font-family: 'Malgun Gothic'; }} .custom-table {{ width: 100%; border-collapse: collapse; }} .custom-table th, .custom-table td {{ border: 1px solid #aaa; padding: 6px; text-align: center; }} .custom-table th {{ background: #f1f5f9; }}</style></head><body><h2 style='text-align:center;'>검색결과</h2>{html_table_print}</body></html>"
+# PRINT / EXCEL
+html_table_p = filtered_df.to_html(index=False, escape=True)
+html_table_p = html_table_p.replace('border="1" class="dataframe"', 'class="custom-table"')
+html_table_p = html_table_p.replace('<th>물품명</th>', '<th style="width: 18%;">물품명</th>').replace('<th>메모</th>', '<th style="width: 34%;">메모</th>').replace('<th>기존가날짜</th>', '<th style="width: 8%;">기존가날짜</th>')
+p_content = f"<html><head><style>body {{ font-family: 'Malgun Gothic'; }} .custom-table {{ width: 100%; border-collapse: collapse; }} th, td {{ border: 1px solid #aaa; padding: 6px; text-align: center; }} th {{ background: #f1f5f9; }}</style></head><body><h2 style='text-align:center;'>인상공문 검색결과</h2>{html_table_p}</body></html>"
 
 with col_print:
-    components.html(f"<html><body><style>.btn {{ width: 100%; height: 42px; background: #757c43; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }}</style><button class='btn' onclick='p()'>🖨️ PRINT</button><script>function p(){{var w=window.open('','_blank');w.document.write({json.dumps(print_content)});w.document.close();setTimeout(function(){{w.print();}},250);}}</script></body></html>", height=45)
+    components.html(f"<html><body><style>.btn {{ width: 100%; height: 42px; background: #757c43; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }}</style><button class='btn' onclick='pr()'>🖨️ PRINT</button><script>function pr(){{var w=window.open('','_blank');w.document.write({json.dumps(p_content)});w.document.close();setTimeout(function(){{w.print();}},250);}}</script></body></html>", height=45)
 
 with col_excel:
-    excel_io = io.BytesIO()
     try:
+        excel_io = io.BytesIO()
         with pd.ExcelWriter(excel_io, engine='openpyxl') as wr:
             filtered_df.to_excel(wr, index=False, sheet_name='Sheet1')
         st.download_button("💾 EXCEL", data=excel_io.getvalue(), file_name=f"export_{get_kst_now().strftime('%Y%m%d')}.xlsx", use_container_width=True, type="primary")
     except:
         st.download_button("💾 CSV", data=filtered_df.to_csv(index=False).encode('utf-8-sig'), file_name="export.csv", use_container_width=True, type="primary")
 
-# 검색 조건 텍스트 표시
+# 검색 조건 정보 표시
 conds = []
-if st.session_state.act_txt_vendor: conds.append(f"업체명(텍스트:{st.session_state.act_txt_vendor})")
-if st.session_state.act_txt_item: conds.append(f"물품명(텍스트:{st.session_state.act_txt_item})")
-if st.session_state.act_sel_vendor != "전체": conds.append(f"업체명(선택:{st.session_state.act_sel_vendor})")
-if st.session_state.act_sel_item != "전체": conds.append(f"물품명(선택:{st.session_state.act_sel_item})")
-if st.session_state.act_sel_year != "전체": conds.append(f"연도({st.session_state.act_sel_year})")
-search_info = f"<span style='color:#ffeb3b;'>[검색조건: {' + '.join(conds)}]</span>" if conds else "(전체 데이터)"
+if st.session_state.act_mode == "text":
+    if st.session_state.act_t1_v: conds.append(f"업체타이핑:{st.session_state.act_t1_v}")
+    if st.session_state.act_t1_i: conds.append(f"물품타이핑:{st.session_state.act_t1_i}")
+    if st.session_state.act_t1_y != "전체": conds.append(f"연도:{st.session_state.act_t1_y}")
+elif st.session_state.act_mode == "dropdown":
+    if st.session_state.act_t2_v != "전체": conds.append(f"업체선택:{st.session_state.act_t2_v}")
+    if st.session_state.act_t2_i != "전체": conds.append(f"물품선택:{st.session_state.act_t2_i}")
+    if st.session_state.act_t2_y != "전체": conds.append(f"연도:{st.session_state.act_t2_y}")
+search_info = f"<span style='color:#ffeb3b;'>[검색모드: {st.session_state.act_mode.upper()} / {' + '.join(conds)}]</span>" if conds else "(전체 데이터)"
 st.markdown(f"#### 📋 상세 내역 {search_info}", unsafe_allow_html=True)
 
-# 독립 HTML 테이블 (itertuples 속도 최적화)
+# 메인 테이블 출력
 if filtered_df.empty:
     st.warning("👀 조건에 맞는 데이터가 없습니다.")
 else:
