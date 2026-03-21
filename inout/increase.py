@@ -203,10 +203,15 @@ if 'ui_item' not in st.session_state: st.session_state.ui_item = ""
 if 'ui_year' not in st.session_state: st.session_state.ui_year = "전체"
 
 def do_search():
-    """검색 버튼을 눌렀을 때만 UI값을 실제 필터값으로 복사 적용"""
+    """검색 버튼을 눌렀을 때만 UI값을 실제 필터값으로 복사 적용 후 입력창 비우기"""
     st.session_state.active_vendor = st.session_state.ui_vendor.strip()
     st.session_state.active_item = st.session_state.ui_item.strip()
     st.session_state.active_year = st.session_state.ui_year
+    
+    # 💡 조건은 저장했으니 입력창 텍스트는 깔끔하게 싹 비워줍니다.
+    st.session_state.ui_vendor = ""
+    st.session_state.ui_item = ""
+    st.session_state.ui_year = "전체"
 
 def do_reset():
     """모든 조건과 입력창을 싹 다 비우는 완전 초기화(전체보기) 함수"""
