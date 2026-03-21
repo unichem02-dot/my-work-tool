@@ -34,6 +34,17 @@ col_vendor = "업체명"
 col_item = "품목명"
 col_date = "공문일자"
 
+# --- 추가된 에러 방지 코드: 컬럼명 확인 ---
+required_cols = [col_vendor, col_item, col_date]
+missing_cols = [col for col in required_cols if col not in data.columns]
+
+if missing_cols:
+    st.error(f"🚨 컬럼명 오류: 구글 시트에서 '{', '.join(missing_cols)}' 열을 찾을 수 없습니다.")
+    st.info(f"💡 현재 시트에 있는 실제 1열 제목들: {', '.join(map(str, data.columns))}")
+    st.warning("👉 해결방법: 파이썬 코드의 37~39번째 줄 글자를 아래 시트 제목과 똑같이(띄어쓰기 포함) 바꾸거나, 구글 시트의 첫 번째 줄 제목을 바꿔주세요!")
+    st.stop()
+# ------------------------------------------
+
 # 업체명 필터 (다중 선택)
 vendor_list = ["전체"] + list(data[col_vendor].dropna().unique())
 selected_vendors = st.sidebar.multiselect("🏢 업체명 선택", vendor_list, default=["전체"])
