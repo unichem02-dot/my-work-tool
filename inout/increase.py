@@ -85,6 +85,7 @@ st.markdown("""
         background-color: transparent !important;
         border: none !important;
         margin-top: 5px !important;
+        outline: none !important;
     }
     button[kind="tertiary"] p {
         font-size: 1.8rem !important;
@@ -168,7 +169,7 @@ col_vendor, col_item, col_date = "업체명", "물품명", "인상날짜"
 data = data.fillna("")
 
 # ==========================================
-# 🛠️ 상태 관리 (입력창 자동 리셋 로직)
+# 🛠️ 상태 관리
 # ==========================================
 if 'act_mode' not in st.session_state: st.session_state.act_mode = "init"
 if 'act_t1_v' not in st.session_state: st.session_state.act_t1_v = ""
@@ -216,7 +217,7 @@ def do_full_refresh():
     do_reset()
 
 # ==========================================
-# UI 구성
+# UI 상단 검색 영역
 # ==========================================
 col_t, col_l = st.columns([8.5, 1.5])
 with col_t: 
@@ -351,7 +352,7 @@ search_info = f"<span style='color:#ffeb3b;'>[검색조건: {' + '.join(conds)}]
 st.markdown(f"#### 📋 상세 내역 {search_info} <span style='font-size:12px; color:#cbd5e1; font-weight:normal; margin-left:10px;'>(제목 클릭 시 정렬)</span>", unsafe_allow_html=True)
 
 # ==========================================
-# 📋 메인 테이블 (페이지네이션 고도화 버전)
+# 📋 메인 테이블 (배경만 나오는 현상 완벽 해결 버전)
 # ==========================================
 if filtered_df.empty:
     st.warning("👀 조건에 맞는 데이터가 없습니다.")
@@ -365,7 +366,6 @@ else:
         return "tr" if any(x in str(col) for x in ["가", "폭", "수량"]) else "tc"
 
     rows_html = []
-    # row[i] 인덱싱을 사용하여 IndexError 원천 차단
     for idx, row in enumerate(filtered_df.itertuples(index=False)):
         rs = "<tr>"
         for i, col_name in enumerate(filtered_df.columns):
@@ -377,6 +377,7 @@ else:
     t_html = f"""
     <!DOCTYPE html><html><head><meta charset='utf-8'><style>
     body {{ background: #2b323c; font-family: 'Malgun Gothic'; margin: 0; padding: 0; color: #1e293b; overflow: hidden; }}
+    #container {{ min-height: 4800px; padding-bottom: 50px; }} /* 💡 높이 고정으로 빈 배경 현상 방지 */
     .custom-table {{ width: 100%; border-collapse: collapse; background: white; font-size: 15px; table-layout: fixed; }}
     .custom-table th, .custom-table td {{ border: 1px solid #d0d0d0; padding: 8px 10px; word-wrap: break-word; }}
     .custom-table th {{ color: white; background: #353b48; font-weight: bold; cursor: pointer; user-select: none; position: relative; }}
@@ -386,16 +387,14 @@ else:
     .custom-table tr:nth-child(even) td {{ background-color: #f8f9fa; }}
     .sort-icon {{ font-size: 10px; color: #ffeb3b; margin-left: 5px; }}
     
-    /* 💡 페이지네이션 컨트롤 스타일 */
     .pagination-container {{ 
-        text-align: center; padding: 15px 0; background: #2b323c; 
+        text-align: center; padding: 20px 0; background: #2b323c; 
         display: flex; justify-content: center; align-items: center; gap: 5px;
     }}
     .page-btn {{ 
         padding: 6px 12px; cursor: pointer; background: #4e8cff; color: white; 
         border: none; border-radius: 4px; font-weight: bold; font-size: 14px;
     }}
-    .page-btn:hover:not(:disabled) {{ background: #3b76e5; }}
     .page-btn:disabled {{ background: #4a5568; cursor: not-allowed; opacity: 0.6; }}
     .page-num {{ 
         padding: 6px 12px; cursor: pointer; background: #525252; color: #ddd; 
@@ -404,21 +403,21 @@ else:
     .page-num.active {{ background: #ffeb3b; color: #000; font-weight: 800; }}
     </style></head><body>
     
-    <!-- 상단 페이지 컨트롤 -->
-    <div id='nav-top' class='pagination-container'></div>
+    <div id='container'>
+        <div id='nav-top' class='pagination-container'></div>
 
-    <table class='custom-table' id='mainTable'>
-    <thead><tr>
+        <table class='custom-table' id='mainTable'>
+        <thead><tr>
     """
     for i, col in enumerate(filtered_df.columns):
         w = "width:18%;" if "물품" in col else "width:34%;" if "메모" in col else "width:8%;" if "기존가날짜" in col else ""
         t_html += f"<th class='{get_th_class(col)}' style='{w}' onclick='sortTable({i})'>{col}<span class='sort-icon' id='icon-{i}'></span></th>"
     
     t_html += f"""
-    </tr></thead><tbody id='tableBody'>{''.join(rows_html)}</tbody></table>
-    
-    <!-- 하단 페이지 컨트롤 -->
-    <div id='nav-bottom' class='pagination-container'></div>
+        </tr></thead><tbody id='tableBody'>{''.join(rows_html)}</tbody></table>
+        
+        <div id='nav-bottom' class='pagination-container'></div>
+    </div>
 
     <script>
     let sortOrder = 1; 
@@ -441,42 +440,40 @@ else:
         }});
 
         updatePagination(totalPages);
+        window.scrollTo(0,0); // 💡 페이지 전환 시 항상 표 상단으로 이동
     }}
 
     function updatePagination(totalPages) {{
         const containers = [document.getElementById('nav-top'), document.getElementById('nav-bottom')];
-        
         containers.forEach(container => {{
             container.innerHTML = "";
             if (totalPages <= 1) return;
 
-            // 이전 버튼
             const prevBtn = document.createElement("button");
             prevBtn.className = "page-btn";
             prevBtn.innerText = "◀";
             prevBtn.disabled = (currentPage === 1);
-            prevBtn.onclick = () => {{ currentPage--; renderTable(); scroll(0,0); }};
+            prevBtn.onclick = () => {{ currentPage--; renderTable(); }};
             container.appendChild(prevBtn);
 
-            // 페이지 번호 (최대 10개씩 표시)
-            let startPage = Math.max(1, currentPage - 4);
-            let endPage = Math.min(totalPages, startPage + 9);
-            if (endPage - startPage < 9) startPage = Math.max(1, endPage - 9);
+            let startPage = math.max(1, currentPage - 4);
+            let endPage = math.min(totalPages, startPage + 9);
+            if (endPage - startPage < 9) startPage = math.max(1, endPage - 9);
 
             for (let i = startPage; i <= endPage; i++) {{
+                if (i < 1) continue;
                 const pageNum = document.createElement("button");
                 pageNum.className = (i === currentPage) ? "page-num active" : "page-num";
                 pageNum.innerText = i;
-                pageNum.onclick = () => {{ currentPage = i; renderTable(); scroll(0,0); }};
+                pageNum.onclick = () => {{ currentPage = i; renderTable(); }};
                 container.appendChild(pageNum);
             }}
 
-            // 다음 버튼
             const nextBtn = document.createElement("button");
             nextBtn.className = "page-btn";
             nextBtn.innerText = "▶";
             nextBtn.disabled = (currentPage === totalPages);
-            nextBtn.onclick = () => {{ currentPage++; renderTable(); scroll(0,0); }};
+            nextBtn.onclick = () => {{ currentPage++; renderTable(); }};
             container.appendChild(nextBtn);
         }});
     }}
@@ -505,8 +502,6 @@ else:
     window.onload = renderTable;
     </script></body></html>
     """
-    # 💡 페이지 버튼이 상/하단에 추가되었으므로 높이 계산 여유를 줍니다.
-    display_rows = min(len(filtered_df), 100)
-    dynamic_height = (display_rows * 45) + 200 
-    
+    # 💡 Iframe 높이를 고정하여 페이지 이동 시 브라우저 스크롤 위치 보존
+    dynamic_height = 4900 
     components.html(t_html, height=dynamic_height, scrolling=False)
