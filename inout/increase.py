@@ -4,13 +4,13 @@ from streamlit_gsheets import GSheetsConnection
 import math
 import html
 import time
-import streamlit.components.v1 as components # 독립 HTML 렌더링을 위한 패키지 추가
+import streamlit.components.v1 as components
 
 # 1. 페이지 기본 설정 (와이드 모드 유지)
 st.set_page_config(page_title="유니매입가격정보 - 인상공문 검색", page_icon="📈", layout="wide")
 
 # ==========================================
-# 🎨 앱 전반의 커스텀 CSS (표 스타일은 HTML 내부로 이동)
+# 🎨 앱 전반의 커스텀 CSS (디자인 완벽 복원)
 # ==========================================
 st.markdown("""
     <style>
@@ -26,7 +26,7 @@ st.markdown("""
         max-width: 95%;
     }
     
-    /* 요약 지표(Metric) 카드 스타일링 */
+    /* 요약 지표(Metric) 스타일링 */
     div[data-testid="metric-container"] {
         background-color: #f8f9fa;
         border: 1px solid #e9ecef;
@@ -36,7 +36,7 @@ st.markdown("""
     }
     
     /* 텍스트 크기 확대 적용 */
-    .stMarkdown p, .stMarkdown li { font-size: 1.2rem !important; }
+    .stMarkdown p, .stMarkdown li { font-size: 1.15rem !important; }
     .stMultiSelect label, .stTextInput label {
         font-size: 1.15rem !important;
         font-weight: 600 !important;
@@ -45,7 +45,7 @@ st.markdown("""
     div[data-testid="metric-container"] label { font-size: 1.15rem !important; }
     div[data-testid="metric-container"] div { font-size: 2.3rem !important; }
 
-    /* 타이틀 텍스트 버튼 (Tertiary) 스타일링 - 제목 클릭 새로고침용 */
+    /* 타이틀 텍스트 버튼 (제목 클릭 새로고침용) 스타일 완벽 일치 */
     button[kind="tertiary"] {
         display: flex !important;
         justify-content: flex-start !important;
@@ -53,8 +53,8 @@ st.markdown("""
         background-color: transparent !important;
     }
     button[kind="tertiary"] p {
-        font-size: 2.3rem !important;
-        font-weight: 800 !important;
+        font-size: 2.5rem !important; /* H1 타이틀 크기 */
+        font-weight: 700 !important;
         color: #31333F !important;
         margin: 0 !important;
         padding: 0 !important;
@@ -69,13 +69,18 @@ st.markdown("""
 # 🔒 로그인 기능 (비밀번호 확인 + 3시간 세션 유지)
 # ==========================================
 def check_password():
-    TIMEOUT_SECONDS = 10800  # 3시간 (3 * 60 * 60 초)
+    TIMEOUT_SECONDS = 10800  # 3시간 유지
     
+    # URL 파라미터 확인 시 오류 방지 처리
     if st.query_params.get("auth") == "true":
-        login_ts = float(st.query_params.get("ts", 0))
-        if time.time() - login_ts < TIMEOUT_SECONDS:
-            st.session_state["authenticated"] = True
-        else:
+        try:
+            login_ts = float(st.query_params.get("ts", 0))
+            if time.time() - login_ts < TIMEOUT_SECONDS:
+                st.session_state["authenticated"] = True
+            else:
+                st.session_state["authenticated"] = False
+                st.query_params.clear()
+        except:
             st.session_state["authenticated"] = False
             st.query_params.clear()
 
@@ -87,7 +92,7 @@ def check_password():
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.title("🔒 보안 접속")
-            st.info("유니매입가격정보를 열람하시려면 비밀번호를 입력해주세요. (로그인 시 3시간 유지됩니다.)")
+            st.info("유니매입가격정보를 열람하시려면 비밀번호를 입력해주세요.")
             
             with st.form("login_form"):
                 pwd = st.text_input("비밀번호", type="password", placeholder="비밀번호 입력")
@@ -113,6 +118,7 @@ def load_data():
     conn = st.connection("gsheets", type=GSheetsConnection)
     df = conn.read(worksheet="시트1", ttl=5) 
     
+    # 에러 방지: 완전 빈 행 제거 및 이름 없는 유령 열 제거
     df = df.dropna(how="all")
     df = df.loc[:, ~df.columns.str.contains('^Unnamed')] 
     df.columns = df.columns.astype(str).str.strip()
@@ -139,7 +145,7 @@ if missing_cols:
 data = data.fillna("")
 
 # ==========================================
-# UI 레이아웃 시작
+# UI 레이아웃 시작 (스크린샷 디자인 완벽 복원)
 # ==========================================
 
 # 상단 헤더 영역
@@ -147,36 +153,37 @@ st.markdown("<br>", unsafe_allow_html=True)
 header_col1, header_col2 = st.columns([5, 1])
 
 with header_col1:
-    if st.button("📈 유니매입가격정보", type="tertiary", help="클릭하면 구글 시트의 최신 데이터를 강제로 다시 불러옵니다."):
+    # 클릭 시 새로고침 되는 기능 유지하되 제목 디자인은 원본 스크린샷과 동일하게
+    if st.button("📈 유니매입가격정보 (인상공문 현황)", type="tertiary", help="클릭하면 데이터를 강제로 새로고침 합니다."):
         st.cache_data.clear()
         st.rerun()
-        
-    st.markdown("<p style='font-size: 1.2rem; color: #555; margin-top: -10px; margin-bottom: 20px;'>단가 인상 내역을 검색하세요. <b>(글자를 클릭하면 최신 데이터로 새로고침 됩니다!)</b></p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size: 1.15rem; color: #333; margin-top: -10px; margin-bottom: 0px;'>단가 인상 내역을 <b>업체명, 물품명, 날짜</b>로 쉽고 빠르게 교차 검색해 보세요.</p>", unsafe_allow_html=True)
 
 with header_col2:
-    st.markdown("<div style='text-align: right; font-size: 0.95rem; color: #28a745; margin-bottom: 5px; font-weight: 600;'>🟢 안전하게 로그인됨</div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align: right; font-size: 0.9rem; color: #28a745; margin-bottom: 5px; font-weight: 600;'>🟢 로그인됨</div>", unsafe_allow_html=True)
     if st.button("🔓 로그아웃", use_container_width=True):
         st.session_state["authenticated"] = False
         st.query_params.clear()
         st.rerun()
 
-# 1. 상세 검색 영역
-with st.container(border=True):
-    st.markdown("##### 🔍 상세 검색")
-    search_col1, search_col2, search_col3 = st.columns(3)
+st.markdown("---")
 
-    with search_col1:
-        vendor_raw = [str(v).strip() for v in data[col_vendor].unique() if str(v).strip() != ""]
-        vendor_list = ["전체"] + sorted(vendor_raw)
-        selected_vendors = st.multiselect("🏢 업체명", vendor_list, default=["전체"])
+# 1. 상세 검색 영역 (박스 제거, 깔끔한 3단 배치)
+st.markdown("#### 🔍 상세 검색")
+search_col1, search_col2, search_col3 = st.columns(3)
 
-    with search_col2:
-        search_item = st.text_input("📦 물품명 검색", placeholder="예: 황산, 소다 등 입력")
+with search_col1:
+    vendor_raw = [str(v).strip() for v in data[col_vendor].unique() if str(v).strip() != ""]
+    vendor_list = ["전체"] + sorted(vendor_raw)
+    selected_vendors = st.multiselect("🏢 업체명 선택", vendor_list, default=["전체"])
 
-    with search_col3:
-        date_raw = [str(d).strip() for d in data[col_date].unique() if str(d).strip() != ""]
-        date_list = ["전체"] + sorted(date_raw, reverse=True)
-        selected_dates = st.multiselect("📅 인상날짜", date_list, default=["전체"])
+with search_col2:
+    search_item = st.text_input("📦 물품명 검색", placeholder="예: 황산, 소다 등 부분 검색 가능")
+
+with search_col3:
+    date_raw = [str(d).strip() for d in data[col_date].unique() if str(d).strip() != ""]
+    date_list = ["전체"] + sorted(date_raw, reverse=True)
+    selected_dates = st.multiselect("📅 인상날짜 선택", date_list, default=["전체"])
 
 # 2. 필터링 로직
 filtered_df = data.copy()
@@ -216,7 +223,8 @@ with col3:
     else:
         st.metric(label="검색된 업체 수", value="0 개사")
 
-st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("---")
+st.markdown("#### 📋 상세 내역")
 
 # ==========================================
 # 4. 데이터프레임 (JS 정렬 오류 완벽 해결을 위한 독립 HTML 컴포넌트)
@@ -299,7 +307,6 @@ else:
 
             window.onload = function() {
                 const tbody = document.getElementById("tableBody");
-                // 자바스크립트가 안전하게 모든 행을 배열로 저장
                 allRows = Array.from(tbody.getElementsByTagName("tr"));
                 updateTable();
             };
@@ -311,17 +318,15 @@ else:
                 if (currentPage < 1) currentPage = 1;
                 if (currentPage > totalPages) currentPage = totalPages;
 
-                // 기존 화면의 행을 지우고, 현재 페이지에 맞는 행만 다시 부착 (초고속 화면 전환)
                 tbody.innerHTML = "";
                 const startIdx = (currentPage - 1) * ROWS_PER_PAGE;
                 const endIdx = startIdx + ROWS_PER_PAGE;
                 
                 for(let i = startIdx; i < endIdx && i < allRows.length; i++) {
-                    allRows[i].style.display = ""; // 숨겼던 행 보이게 처리
+                    allRows[i].style.display = ""; 
                     tbody.appendChild(allRows[i]);
                 }
 
-                // 하단 페이지 번호 업데이트
                 document.getElementById("pageInfo").innerText = currentPage + " / " + totalPages;
                 document.getElementById("prevBtn").disabled = (currentPage === 1);
                 document.getElementById("nextBtn").disabled = (currentPage === totalPages);
@@ -331,20 +336,17 @@ else:
             function changePage(delta) {
                 currentPage += delta;
                 updateTable();
-                window.scrollTo(0, 0); // 다음 페이지로 넘어가면 표 맨 위로 스크롤
+                window.scrollTo(0, 0); 
             }
 
             function sortTable(n) {
-                // 클릭한 열(기둥)이 이전과 같으면 오름/내림차순 반전, 다르면 무조건 오름차순(가나다순)
                 if (sortCol === n) { sortAsc = !sortAsc; } 
                 else { sortCol = n; sortAsc = true; }
                 
-                // 화살표 UI 업데이트
                 document.querySelectorAll('.sort-icon').forEach(icon => icon.innerHTML = '');
                 const iconEl = document.getElementById('icon-' + n);
                 if (iconEl) { iconEl.innerHTML = sortAsc ? "<span style='color:#ff4b4b;'>▲</span>" : "<span style='color:#ff4b4b;'>▼</span>"; }
                 
-                // 정렬 핵심 로직 (숫자와 텍스트 완벽 구분)
                 allRows.sort((a, b) => {
                     const tdA = a.getElementsByTagName("td")[n];
                     const tdB = b.getElementsByTagName("td")[n];
@@ -360,7 +362,6 @@ else:
                     const numA = parseFloat(cleanA);
                     const numB = parseFloat(cleanB);
                     
-                    // 순수 숫자인지 확인 후 비교, 아니면 글자 비교
                     let cmpA = (!isNaN(numA) && cleanA === numA.toString()) ? numA : valA;
                     let cmpB = (!isNaN(numB) && cleanB === numB.toString()) ? numB : valB;
                     
@@ -369,7 +370,6 @@ else:
                     return 0;
                 });
                 
-                // 정렬 후엔 항상 1페이지로 돌아감
                 currentPage = 1;
                 updateTable();
             }
@@ -380,7 +380,6 @@ else:
 
     # 컴포넌트의 높이를 동적으로 계산하여 스크롤바 방지
     num_rows = min(len(filtered_df), 100)
-    # 80(기본여백) + (행 개수 * 53픽셀) + 100(페이지네이션 여백)
     iframe_height = 80 + (num_rows * 53) + (100 if len(filtered_df) > 100 else 20)
     
     # 스트림릿 전용 컴포넌트로 안전하고 완벽하게 HTML/JS 렌더링
@@ -388,4 +387,4 @@ else:
 
 # 하단 안내
 st.markdown("<br><br>", unsafe_allow_html=True)
-st.caption("💡 표 제목을 클릭하면 즉시 정렬되며, 상단의 큰 제목(유니매입가격정보)을 누르면 구글 시트 내용이 새로고침 됩니다.")
+st.caption("💡 표 제목을 클릭하면 즉시 정렬되며, 상단의 큰 제목(유니매입가격정보)을 누르면 구글 시트 내용이 강제 새로고침 됩니다.")
