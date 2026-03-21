@@ -4,12 +4,13 @@ from streamlit_gsheets import GSheetsConnection
 import math
 import html
 import time
+import streamlit.components.v1 as components # 독립 HTML 렌더링을 위한 패키지 추가
 
 # 1. 페이지 기본 설정 (와이드 모드 유지)
 st.set_page_config(page_title="유니매입가격정보 - 인상공문 검색", page_icon="📈", layout="wide")
 
 # ==========================================
-# 🎨 커스텀 CSS (텍스트 확대, 클릭 버튼 및 디자인 업그레이드)
+# 🎨 앱 전반의 커스텀 CSS (표 스타일은 HTML 내부로 이동)
 # ==========================================
 st.markdown("""
     <style>
@@ -59,66 +60,7 @@ st.markdown("""
         padding: 0 !important;
     }
     button[kind="tertiary"]:hover p {
-        color: #ff4b4b !important; /* 마우스 올리면 빨간색으로 변함 */
-    }
-
-    /* 커스텀 데이터 표(Table) 스타일링 */
-    .custom-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 1.15rem; /* 약 30% 확대 */
-    }
-    .custom-table th {
-        background-color: #f8f9fa;
-        color: #31333F;
-        font-weight: 700;
-        padding: 14px 16px;
-        border-bottom: 2px solid #e6e6e6;
-        text-align: left;
-        cursor: pointer; /* 마우스 오버 시 손가락 모양 (클릭 가능 표시) */
-        transition: background-color 0.2s;
-        user-select: none; /* 클릭 시 텍스트 드래그 방지 */
-    }
-    .custom-table th:hover {
-        background-color: #e2e6ea; /* 마우스 올렸을 때 색상 변화 */
-    }
-    .custom-table td {
-        padding: 14px 16px;
-        border-bottom: 1px solid #f0f2f6;
-        color: #31333F;
-    }
-    .custom-table tr:hover td {
-        background-color: #f1f3f5;
-    }
-    .bold-col {
-        font-weight: 900 !important;
-        color: #000000 !important;
-    }
-    .sort-icon {
-        color: #ff4b4b;
-        margin-left: 5px;
-    }
-    
-    /* 하단 JS 페이지 이동 버튼 스타일 */
-    .page-btn {
-        padding: 8px 16px;
-        font-size: 1.15rem;
-        font-weight: 600;
-        cursor: pointer;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        background-color: #fff;
-        color: #333;
-        transition: 0.2s;
-    }
-    .page-btn:hover:not(:disabled) {
-        background-color: #f8f9fa;
-        border-color: #ff4b4b;
-        color: #ff4b4b;
-    }
-    .page-btn:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
+        color: #ff4b4b !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -129,13 +71,11 @@ st.markdown("""
 def check_password():
     TIMEOUT_SECONDS = 10800  # 3시간 (3 * 60 * 60 초)
     
-    # 1. URL 파라미터를 이용한 세션 복구 (F5 새로고침 생존 로직)
     if st.query_params.get("auth") == "true":
         login_ts = float(st.query_params.get("ts", 0))
         if time.time() - login_ts < TIMEOUT_SECONDS:
             st.session_state["authenticated"] = True
         else:
-            # 3시간 경과 시 로그인 만료 및 URL 초기화
             st.session_state["authenticated"] = False
             st.query_params.clear()
 
@@ -156,7 +96,6 @@ def check_password():
                 if submit:
                     if pwd == str(st.secrets.get("tom_password", "")):
                         st.session_state["authenticated"] = True
-                        # URL 파라미터에 인증 상태 및 로그인 시간 기록 (새로고침 방어용)
                         st.query_params["auth"] = "true"
                         st.query_params["ts"] = str(time.time())
                         st.rerun()
@@ -168,12 +107,10 @@ def check_password():
 if not check_password():
     st.stop()
 
-# 2. 구글 시트 데이터 불러오기
-# 실시간 연동을 위해 캐시(저장) 시간을 5초로 매우 짧게 변경 (구글 API 차단 방지용 최소 시간)
+# 2. 구글 시트 데이터 불러오기 (실시간 5초 캐시 유지)
 @st.cache_data(ttl=5)
 def load_data():
     conn = st.connection("gsheets", type=GSheetsConnection)
-    # connection 자체의 기본 캐시 기능도 무력화하여 항상 최신 데이터(5초 이내)를 가져옴
     df = conn.read(worksheet="시트1", ttl=5) 
     
     df = df.dropna(how="all")
@@ -205,24 +142,22 @@ data = data.fillna("")
 # UI 레이아웃 시작
 # ==========================================
 
-# 상단 헤더 영역 (타이틀버튼 + 로그아웃)
+# 상단 헤더 영역
 st.markdown("<br>", unsafe_allow_html=True)
 header_col1, header_col2 = st.columns([5, 1])
 
 with header_col1:
-    # 제목을 클릭 가능한 버튼으로 생성 (캐시 강제 초기화 및 새로고침)
     if st.button("📈 유니매입가격정보", type="tertiary", help="클릭하면 구글 시트의 최신 데이터를 강제로 다시 불러옵니다."):
-        st.cache_data.clear() # 숨어있는 모든 캐시 완벽히 삭제 (강력한 새로고침)
-        st.rerun() # 화면 새로고침
+        st.cache_data.clear()
+        st.rerun()
         
     st.markdown("<p style='font-size: 1.2rem; color: #555; margin-top: -10px; margin-bottom: 20px;'>단가 인상 내역을 검색하세요. <b>(글자를 클릭하면 최신 데이터로 새로고침 됩니다!)</b></p>", unsafe_allow_html=True)
 
 with header_col2:
-    # 우측 상단 로그인 상태 및 로그아웃 버튼
     st.markdown("<div style='text-align: right; font-size: 0.95rem; color: #28a745; margin-bottom: 5px; font-weight: 600;'>🟢 안전하게 로그인됨</div>", unsafe_allow_html=True)
     if st.button("🔓 로그아웃", use_container_width=True):
         st.session_state["authenticated"] = False
-        st.query_params.clear() # 유지되던 URL 정보 삭제
+        st.query_params.clear()
         st.rerun()
 
 # 1. 상세 검색 영역
@@ -243,7 +178,7 @@ with st.container(border=True):
         date_list = ["전체"] + sorted(date_raw, reverse=True)
         selected_dates = st.multiselect("📅 인상날짜", date_list, default=["전체"])
 
-# 2. 필터링 로직 적용
+# 2. 필터링 로직
 filtered_df = data.copy()
 
 if "전체" not in selected_vendors and len(selected_vendors) > 0:
@@ -255,7 +190,7 @@ if "전체" not in selected_dates and len(selected_dates) > 0:
 if search_item:
     filtered_df = filtered_df[filtered_df[col_item].astype(str).str.contains(search_item, case=False, na=False)]
 
-# 기본 초기 정렬 설정
+# 초기 정렬(Python)
 sort_cols = [c for c in [col_date, col_vendor, col_item] if c in filtered_df.columns]
 if sort_cols:
     asc_rules = [False if c == col_date else True for c in sort_cols]
@@ -284,110 +219,173 @@ with col3:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ==========================================
-# 4. 데이터프레임 (JS 정렬 & 페이지네이션이 포함된 최적화 테이블)
+# 4. 데이터프레임 (JS 정렬 오류 완벽 해결을 위한 독립 HTML 컴포넌트)
 # ==========================================
 if filtered_df.empty:
     st.warning("👀 검색 조건에 맞는 데이터가 없습니다. 다른 조건으로 검색해 보세요.")
 else:
-    # --- 제목 클릭 시 JS 정렬 함수(sortTable) 호출 ---
-    table_html = "<table class='custom-table' id='myTable'><thead><tr>"
+    # 스트림릿의 보안 차단을 우회하기 위해 완벽한 형태의 HTML 문서 구조로 작성
+    iframe_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            body {{
+                margin: 0; padding: 0; 
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                background-color: white;
+            }}
+            .custom-table {{ width: 100%; border-collapse: collapse; font-size: 1.15rem; }}
+            .custom-table th {{
+                background-color: #f8f9fa; color: #31333F; font-weight: 700; 
+                padding: 14px 16px; border-bottom: 2px solid #e6e6e6; text-align: left; 
+                cursor: pointer; transition: background-color 0.2s; user-select: none;
+            }}
+            .custom-table th:hover {{ background-color: #e2e6ea; }}
+            .custom-table td {{ padding: 14px 16px; border-bottom: 1px solid #f0f2f6; color: #31333F; }}
+            .custom-table tr:hover td {{ background-color: #f1f3f5; }}
+            .bold-col {{ font-weight: 900 !important; color: #000000 !important; }}
+            .sort-icon {{ color: #ff4b4b; margin-left: 5px; }}
+            .page-btn {{
+                padding: 8px 16px; font-size: 1.15rem; font-weight: 600; cursor: pointer;
+                border: 1px solid #ddd; border-radius: 5px; background-color: #fff; color: #333; transition: 0.2s;
+            }}
+            .page-btn:hover:not(:disabled) {{ background-color: #f8f9fa; border-color: #ff4b4b; color: #ff4b4b; }}
+            .page-btn:disabled {{ opacity: 0.4; cursor: not-allowed; }}
+        </style>
+    </head>
+    <body>
+        <table class='custom-table' id='myTable'>
+            <thead><tr>
+    """
+    
+    # 1. 헤더 생성
     for i, col in enumerate(filtered_df.columns):
-        table_html += f"<th onclick='sortTable({i})' title='클릭하여 {html.escape(str(col), quote=True)} 기준 정렬'>{html.escape(str(col))} <span class='sort-icon' id='icon-{i}'></span></th>"
-    table_html += "</tr></thead><tbody id='tableBody'>"
+        iframe_html += f"<th onclick='sortTable({i})' title='클릭하여 정렬'>{html.escape(str(col))} <span class='sort-icon' id='icon-{i}'></span></th>"
+    iframe_html += "</tr></thead><tbody id='tableBody'>"
     
-    # 강조할 열 지정
+    # 2. 본문 데이터 삽입 (초기 깜빡임 방지를 위해 100개 이후는 숨김 처리)
     bold_cols = ["물품명", "인상폭"]
-    
-    # 100개가 아닌 '전체' 데이터를 HTML로 렌더링 (이후 JS로 100개씩 나눠서 보여줌)
-    for _, row in filtered_df.iterrows():
-        table_html += "<tr>"
+    for idx, (_, row) in enumerate(filtered_df.iterrows()):
+        display_style = "" if idx < 100 else " style='display: none;'"
+        iframe_html += f"<tr{display_style}>"
         for col in filtered_df.columns:
             val = row[col]
             safe_val = "" if pd.isna(val) or val == "" else html.escape(str(val))
-            
             if col in bold_cols:
-                table_html += f"<td class='bold-col'>{safe_val}</td>"
+                iframe_html += f"<td class='bold-col'>{safe_val}</td>"
             else:
-                table_html += f"<td>{safe_val}</td>"
-        table_html += "</tr>"
-    table_html += "</tbody></table>"
+                iframe_html += f"<td>{safe_val}</td>"
+        iframe_html += "</tr>"
+        
+    iframe_html += """
+            </tbody>
+        </table>
+        
+        <!-- 하단 페이지네이션 컨트롤 -->
+        <div id='paginationControls' style='display: none; text-align: center; margin-top: 30px; margin-bottom: 25px;'>
+            <button class='page-btn' onclick='changePage(-1)' id='prevBtn'>◀ 이전</button>
+            <span id='pageInfo' style='margin: 0 25px; font-weight: 700; font-size: 1.2rem; color: #31333F;'></span>
+            <button class='page-btn' onclick='changePage(1)' id='nextBtn'>다음 ▶</button>
+        </div>
 
-    # 스트림릿 에러 방지를 위해 자바스크립트 내 줄바꿈과 충돌 기호를 제거한 안전한 압축 버전
-    table_html += """
-    <div id='paginationControls' style='display: none; text-align: center; margin-top: 30px; margin-bottom: 25px;'>
-        <button class='page-btn' onclick='changePage(-1)' id='prevBtn'>◀ 이전</button>
-        <span id='pageInfo' style='margin: 0 25px; font-weight: 700; font-size: 1.2rem; color: #31333F;'>1 / 1</span>
-        <button class='page-btn' onclick='changePage(1)' id='nextBtn'>다음 ▶</button>
-    </div>
-    <script>
-    (function(){
-        var ROWS_PER_PAGE = 100;
-        var currentPage = 1;
-        var sortCol = -1;
-        var sortAsc = true;
-        window.updateTable = function() {
-            var tbody = document.getElementById("tableBody");
-            if (!tbody) return;
-            var rows = Array.prototype.slice.call(tbody.getElementsByTagName("tr"));
-            var totalPages = Math.ceil(rows.length / ROWS_PER_PAGE) || 1;
-            if (currentPage < 1) currentPage = 1;
-            if (currentPage > totalPages) currentPage = totalPages;
-            for(var i=0; i<rows.length; i++){
-                if (i >= (currentPage - 1) * ROWS_PER_PAGE && i < currentPage * ROWS_PER_PAGE) {
-                    rows[i].style.display = "";
-                } else {
-                    rows[i].style.display = "none";
+        <script>
+            const ROWS_PER_PAGE = 100;
+            let currentPage = 1;
+            let sortCol = -1;
+            let sortAsc = true;
+            let allRows = [];
+
+            window.onload = function() {
+                const tbody = document.getElementById("tableBody");
+                // 자바스크립트가 안전하게 모든 행을 배열로 저장
+                allRows = Array.from(tbody.getElementsByTagName("tr"));
+                updateTable();
+            };
+
+            function updateTable() {
+                const tbody = document.getElementById("tableBody");
+                const totalPages = Math.ceil(allRows.length / ROWS_PER_PAGE) || 1;
+                
+                if (currentPage < 1) currentPage = 1;
+                if (currentPage > totalPages) currentPage = totalPages;
+
+                // 기존 화면의 행을 지우고, 현재 페이지에 맞는 행만 다시 부착 (초고속 화면 전환)
+                tbody.innerHTML = "";
+                const startIdx = (currentPage - 1) * ROWS_PER_PAGE;
+                const endIdx = startIdx + ROWS_PER_PAGE;
+                
+                for(let i = startIdx; i < endIdx && i < allRows.length; i++) {
+                    allRows[i].style.display = ""; // 숨겼던 행 보이게 처리
+                    tbody.appendChild(allRows[i]);
                 }
+
+                // 하단 페이지 번호 업데이트
+                document.getElementById("pageInfo").innerText = currentPage + " / " + totalPages;
+                document.getElementById("prevBtn").disabled = (currentPage === 1);
+                document.getElementById("nextBtn").disabled = (currentPage === totalPages);
+                document.getElementById("paginationControls").style.display = (allRows.length > ROWS_PER_PAGE) ? "block" : "none";
             }
-            var pageInfo = document.getElementById("pageInfo");
-            if (pageInfo) pageInfo.innerText = currentPage + " / " + totalPages;
-            var prevBtn = document.getElementById("prevBtn");
-            if (prevBtn) prevBtn.disabled = (currentPage === 1);
-            var nextBtn = document.getElementById("nextBtn");
-            if (nextBtn) nextBtn.disabled = (currentPage === totalPages);
-            var pagControls = document.getElementById("paginationControls");
-            if (pagControls) pagControls.style.display = (rows.length > ROWS_PER_PAGE) ? "block" : "none";
-        };
-        window.changePage = function(delta) {
-            currentPage += delta;
-            window.updateTable();
-        };
-        window.sortTable = function(n) {
-            var tbody = document.getElementById("tableBody");
-            if (!tbody) return;
-            var rows = Array.prototype.slice.call(tbody.getElementsByTagName("tr"));
-            if (sortCol === n) { sortAsc = !sortAsc; } else { sortCol = n; sortAsc = true; }
-            var icons = document.querySelectorAll('.sort-icon');
-            for(var k=0; k<icons.length; k++){ icons[k].innerText = ''; }
-            var iconEl = document.getElementById('icon-' + n);
-            if (iconEl) { iconEl.innerText = sortAsc ? "▲" : "▼"; }
-            rows.sort(function(a, b) {
-                var tdA = a.getElementsByTagName("td")[n];
-                var tdB = b.getElementsByTagName("td")[n];
-                var valA = tdA ? tdA.innerText.trim() : "";
-                var valB = tdB ? tdB.innerText.trim() : "";
-                if (valA === "" && valB !== "") return 1;
-                if (valB === "" && valA !== "") return -1;
-                var cleanA = valA.replace(/,/g, '').replace(/원/g, '').replace(/ /g, '');
-                var cleanB = valB.replace(/,/g, '').replace(/원/g, '').replace(/ /g, '');
-                var numA = parseFloat(cleanA);
-                var numB = parseFloat(cleanB);
-                if (!isNaN(numA) && !isNaN(numB) && cleanA == numA && cleanB == numB) { valA = numA; valB = numB; }
-                if (valA < valB) return sortAsc ? -1 : 1;
-                if (valA > valB) return sortAsc ? 1 : -1;
-                return 0;
-            });
-            for(var j=0; j<rows.length; j++){ tbody.appendChild(rows[j]); }
-            currentPage = 1;
-            window.updateTable();
-        };
-        window.updateTable();
-    })();
-    </script>
+
+            function changePage(delta) {
+                currentPage += delta;
+                updateTable();
+                window.scrollTo(0, 0); // 다음 페이지로 넘어가면 표 맨 위로 스크롤
+            }
+
+            function sortTable(n) {
+                // 클릭한 열(기둥)이 이전과 같으면 오름/내림차순 반전, 다르면 무조건 오름차순(가나다순)
+                if (sortCol === n) { sortAsc = !sortAsc; } 
+                else { sortCol = n; sortAsc = true; }
+                
+                // 화살표 UI 업데이트
+                document.querySelectorAll('.sort-icon').forEach(icon => icon.innerHTML = '');
+                const iconEl = document.getElementById('icon-' + n);
+                if (iconEl) { iconEl.innerHTML = sortAsc ? "<span style='color:#ff4b4b;'>▲</span>" : "<span style='color:#ff4b4b;'>▼</span>"; }
+                
+                // 정렬 핵심 로직 (숫자와 텍스트 완벽 구분)
+                allRows.sort((a, b) => {
+                    const tdA = a.getElementsByTagName("td")[n];
+                    const tdB = b.getElementsByTagName("td")[n];
+                    const valA = tdA ? tdA.innerText.trim() : "";
+                    const valB = tdB ? tdB.innerText.trim() : "";
+                    
+                    if (valA === "" && valB !== "") return 1;
+                    if (valB === "" && valA !== "") return -1;
+                    
+                    const cleanA = valA.replace(/,/g, '').replace(/원/g, '').replace(/%/g, '').replace(/ /g, '');
+                    const cleanB = valB.replace(/,/g, '').replace(/원/g, '').replace(/%/g, '').replace(/ /g, '');
+                    
+                    const numA = parseFloat(cleanA);
+                    const numB = parseFloat(cleanB);
+                    
+                    // 순수 숫자인지 확인 후 비교, 아니면 글자 비교
+                    let cmpA = (!isNaN(numA) && cleanA === numA.toString()) ? numA : valA;
+                    let cmpB = (!isNaN(numB) && cleanB === numB.toString()) ? numB : valB;
+                    
+                    if (cmpA < cmpB) return sortAsc ? -1 : 1;
+                    if (cmpA > cmpB) return sortAsc ? 1 : -1;
+                    return 0;
+                });
+                
+                // 정렬 후엔 항상 1페이지로 돌아감
+                currentPage = 1;
+                updateTable();
+            }
+        </script>
+    </body>
+    </html>
     """
+
+    # 컴포넌트의 높이를 동적으로 계산하여 스크롤바 방지
+    num_rows = min(len(filtered_df), 100)
+    # 80(기본여백) + (행 개수 * 53픽셀) + 100(페이지네이션 여백)
+    iframe_height = 80 + (num_rows * 53) + (100 if len(filtered_df) > 100 else 20)
     
-    st.markdown(table_html, unsafe_allow_html=True)
+    # 스트림릿 전용 컴포넌트로 안전하고 완벽하게 HTML/JS 렌더링
+    components.html(iframe_html, height=iframe_height, scrolling=False)
 
 # 하단 안내
 st.markdown("<br><br>", unsafe_allow_html=True)
-st.caption("🔄 **실시간 동기화 지원:** 엑셀 내용 수정 후 약 5초 뒤면 즉시 데이터가 반영됩니다. (수동 즉시 새로고침: 상단 큰 제목 클릭)")
+st.caption("💡 표 제목을 클릭하면 즉시 정렬되며, 상단의 큰 제목(유니매입가격정보)을 누르면 구글 시트 내용이 새로고침 됩니다.")
