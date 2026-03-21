@@ -184,7 +184,7 @@ with col_t:
 
 with col_r: 
     if st.button("🔄 새로고침", use_container_width=True, type="primary"):
-        st.cache_data.clear()
+        load_data.clear() # 확실한 새로고침을 위해 함수 캐시 강제 삭제
         st.rerun()
 
 with col_l:
@@ -195,34 +195,30 @@ with col_l:
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
-# 1. 상세 검색 영역 (깔끔한 3단 배치)
+# 1. 상세 검색 영역 (깔끔한 3단 텍스트 입력 배치)
 st.markdown("<h4 style='color: #4e8cff;'>🔍 상세 검색</h4>", unsafe_allow_html=True)
 search_col1, search_col2, search_col3 = st.columns(3)
 
 with search_col1:
-    vendor_raw = [str(v).strip() for v in data[col_vendor].unique() if str(v).strip() != ""]
-    vendor_list = ["전체"] + sorted(vendor_raw)
-    selected_vendors = st.multiselect("🏢 업체명 선택", vendor_list, default=["전체"])
+    search_vendor = st.text_input("🏢 업체명 검색", placeholder="예: 부흥산업사 등 부분 검색 가능")
 
 with search_col2:
-    search_item = st.text_input("📦 물품명 검색", placeholder="예: 황산, 소다 등")
+    search_item = st.text_input("📦 물품명 검색", placeholder="예: 황산, 소다 등 부분 검색 가능")
 
 with search_col3:
-    date_raw = [str(d).strip() for d in data[col_date].unique() if str(d).strip() != ""]
-    date_list = ["전체"] + sorted(date_raw, reverse=True)
-    selected_dates = st.multiselect("📅 인상날짜 선택", date_list, default=["전체"])
+    search_date = st.text_input("📅 인상날짜 검색", placeholder="예: 26.03.20 또는 03 (자유롭게 텍스트로 검색)")
 
 # 2. 필터링 로직
 filtered_df = data.copy()
 
-if "전체" not in selected_vendors and len(selected_vendors) > 0:
-    filtered_df = filtered_df[filtered_df[col_vendor].isin(selected_vendors)]
-
-if "전체" not in selected_dates and len(selected_dates) > 0:
-    filtered_df = filtered_df[filtered_df[col_date].astype(str).str.strip().isin(selected_dates)]
+if search_vendor:
+    filtered_df = filtered_df[filtered_df[col_vendor].astype(str).str.contains(search_vendor, case=False, na=False)]
 
 if search_item:
     filtered_df = filtered_df[filtered_df[col_item].astype(str).str.contains(search_item, case=False, na=False)]
+
+if search_date:
+    filtered_df = filtered_df[filtered_df[col_date].astype(str).str.contains(search_date, case=False, na=False)]
 
 # 초기 정렬 설정 (파이썬)
 sort_cols = [c for c in [col_date, col_vendor, col_item] if c in filtered_df.columns]
