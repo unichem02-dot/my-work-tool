@@ -211,8 +211,7 @@ def reset_filters():
 # ==========================================
 col_t, col_r, col_l = st.columns([6.5, 1.5, 1.5])
 with col_t: 
-    st.markdown(f"<h3 style='margin:0;'>📈 유니매입가격정보 (인상공문 현황)</h3>", unsafe_allow_html=True)
-    st.markdown("<p style='color: #cbd5e1; margin-top: 5px; font-size: 15px;'>단가 인상 내역을 업체명, 물품명, 날짜로 쉽고 빠르게 교차 검색해 보세요.</p>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='margin-top:5px; margin-bottom:0;'>📈 유니매입가격정보 (인상공문 현황)</h3>", unsafe_allow_html=True)
 
 with col_r: 
     if st.button("🔄 새로고침", use_container_width=True, type="primary"):
