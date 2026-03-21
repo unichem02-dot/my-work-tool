@@ -169,10 +169,12 @@ if not check_password():
     st.stop()
 
 # 2. 구글 시트 데이터 불러오기
-@st.cache_data(ttl=600)
+# 실시간 연동을 위해 캐시(저장) 시간을 5초로 매우 짧게 변경 (구글 API 차단 방지용 최소 시간)
+@st.cache_data(ttl=5)
 def load_data():
     conn = st.connection("gsheets", type=GSheetsConnection)
-    df = conn.read(worksheet="시트1") 
+    # connection 자체의 기본 캐시 기능도 무력화하여 항상 최신 데이터(5초 이내)를 가져옴
+    df = conn.read(worksheet="시트1", ttl=5) 
     
     df = df.dropna(how="all")
     df = df.loc[:, ~df.columns.str.contains('^Unnamed')] 
@@ -209,8 +211,8 @@ header_col1, header_col2 = st.columns([5, 1])
 
 with header_col1:
     # 제목을 클릭 가능한 버튼으로 생성 (캐시 강제 초기화 및 새로고침)
-    if st.button("📈 유니매입가격정보", type="tertiary", help="클릭하면 구글 시트의 최신 데이터를 다시 불러옵니다."):
-        load_data.clear() # 기존 캐시 지우기
+    if st.button("📈 유니매입가격정보", type="tertiary", help="클릭하면 구글 시트의 최신 데이터를 강제로 다시 불러옵니다."):
+        st.cache_data.clear() # 숨어있는 모든 캐시 완벽히 삭제 (강력한 새로고침)
         st.rerun() # 화면 새로고침
         
     st.markdown("<p style='font-size: 1.2rem; color: #555; margin-top: -10px; margin-bottom: 20px;'>단가 인상 내역을 검색하세요. <b>(글자를 클릭하면 최신 데이터로 새로고침 됩니다!)</b></p>", unsafe_allow_html=True)
@@ -388,4 +390,4 @@ else:
 
 # 하단 안내
 st.markdown("<br><br>", unsafe_allow_html=True)
-st.caption("💡 표 제목을 클릭하면 즉시 정렬되며, 상단의 큰 제목(유니매입가격정보)을 누르면 구글 시트 내용이 새로고침 됩니다.")
+st.caption("🔄 **실시간 동기화 지원:** 엑셀 내용 수정 후 약 5초 뒤면 즉시 데이터가 반영됩니다. (수동 즉시 새로고침: 상단 큰 제목 클릭)")
