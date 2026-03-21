@@ -2,15 +2,13 @@ import streamlit as st
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
 import math
-import html
 import time
-import streamlit.components.v1 as components
 
 # 1. 페이지 기본 설정 (와이드 모드 유지)
 st.set_page_config(page_title="유니매입가격정보 - 인상공문 검색", page_icon="📈", layout="wide")
 
 # ==========================================
-# 🎨 앱 전반의 커스텀 CSS (디자인 완벽 복원)
+# 🎨 깔끔한 스트림릿 순정 디자인 + 폰트 30% 확대 CSS
 # ==========================================
 st.markdown("""
     <style>
@@ -26,42 +24,18 @@ st.markdown("""
         max-width: 95%;
     }
     
-    /* 요약 지표(Metric) 스타일링 */
-    div[data-testid="metric-container"] {
-        background-color: #f8f9fa;
-        border: 1px solid #e9ecef;
-        padding: 15px 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    /* 텍스트 크기 30% 확대 적용 */
+    .stMarkdown p, .stMarkdown li, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 { 
+        font-size: 1.15rem !important; 
     }
-    
-    /* 텍스트 크기 확대 적용 */
-    .stMarkdown p, .stMarkdown li { font-size: 1.15rem !important; }
     .stMultiSelect label, .stTextInput label {
         font-size: 1.15rem !important;
         font-weight: 600 !important;
         color: #333333;
     }
-    div[data-testid="metric-container"] label { font-size: 1.15rem !important; }
-    div[data-testid="metric-container"] div { font-size: 2.3rem !important; }
-
-    /* 타이틀 텍스트 버튼 (제목 클릭 새로고침용) 스타일 완벽 일치 */
-    button[kind="tertiary"] {
-        display: flex !important;
-        justify-content: flex-start !important;
-        padding: 0 !important;
-        background-color: transparent !important;
-    }
-    button[kind="tertiary"] p {
-        font-size: 2.5rem !important; /* H1 타이틀 크기 */
-        font-weight: 700 !important;
-        color: #31333F !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-    button[kind="tertiary"]:hover p {
-        color: #ff4b4b !important;
-    }
+    /* 요약 지표 글자 크기 조정 */
+    div[data-testid="stMetricValue"] { font-size: 2.3rem !important; }
+    div[data-testid="stMetricLabel"] { font-size: 1.15rem !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -71,7 +45,6 @@ st.markdown("""
 def check_password():
     TIMEOUT_SECONDS = 10800  # 3시간 유지
     
-    # URL 파라미터 확인 시 오류 방지 처리
     if st.query_params.get("auth") == "true":
         try:
             login_ts = float(st.query_params.get("ts", 0))
@@ -118,7 +91,7 @@ def load_data():
     conn = st.connection("gsheets", type=GSheetsConnection)
     df = conn.read(worksheet="시트1", ttl=5) 
     
-    # 에러 방지: 완전 빈 행 제거 및 이름 없는 유령 열 제거
+    # 에러 방지: 완전 빈 행 제거 및 이름 없는 열 제거
     df = df.dropna(how="all")
     df = df.loc[:, ~df.columns.str.contains('^Unnamed')] 
     df.columns = df.columns.astype(str).str.strip()
@@ -145,7 +118,7 @@ if missing_cols:
 data = data.fillna("")
 
 # ==========================================
-# UI 레이아웃 시작 (스크린샷 디자인 완벽 복원)
+# UI 레이아웃 시작 (사진과 완벽하게 동일한 순정 디자인)
 # ==========================================
 
 # 상단 헤더 영역
@@ -153,22 +126,26 @@ st.markdown("<br>", unsafe_allow_html=True)
 header_col1, header_col2 = st.columns([5, 1])
 
 with header_col1:
-    # 클릭 시 새로고침 되는 기능 유지하되 제목 디자인은 원본 스크린샷과 동일하게
-    if st.button("📈 유니매입가격정보 (인상공문 현황)", type="tertiary", help="클릭하면 데이터를 강제로 새로고침 합니다."):
-        st.cache_data.clear()
-        st.rerun()
-    st.markdown("<p style='font-size: 1.15rem; color: #333; margin-top: -10px; margin-bottom: 0px;'>단가 인상 내역을 <b>업체명, 물품명, 날짜</b>로 쉽고 빠르게 교차 검색해 보세요.</p>", unsafe_allow_html=True)
+    st.markdown("## 📈 유니매입가격정보 (인상공문 현황)")
+    st.markdown("단가 인상 내역을 **업체명, 물품명, 날짜**로 쉽고 빠르게 교차 검색해 보세요.")
 
 with header_col2:
     st.markdown("<div style='text-align: right; font-size: 0.9rem; color: #28a745; margin-bottom: 5px; font-weight: 600;'>🟢 로그인됨</div>", unsafe_allow_html=True)
-    if st.button("🔓 로그아웃", use_container_width=True):
-        st.session_state["authenticated"] = False
-        st.query_params.clear()
-        st.rerun()
+    
+    btn_col1, btn_col2 = st.columns(2)
+    with btn_col1:
+        if st.button("🔄 새로고침", use_container_width=True, help="최신 구글 시트 데이터 가져오기"):
+            st.cache_data.clear()
+            st.rerun()
+    with btn_col2:
+        if st.button("🔓 로그아웃", use_container_width=True):
+            st.session_state["authenticated"] = False
+            st.query_params.clear()
+            st.rerun()
 
 st.markdown("---")
 
-# 1. 상세 검색 영역 (박스 제거, 깔끔한 3단 배치)
+# 1. 상세 검색 영역 (깔끔한 3단 콤보)
 st.markdown("#### 🔍 상세 검색")
 search_col1, search_col2, search_col3 = st.columns(3)
 
@@ -205,7 +182,7 @@ if sort_cols:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# 3. 요약 지표 (Metrics)
+# 3. 요약 지표 (Metrics) - 순정 디자인
 col1, col2, col3 = st.columns(3)
 with col1:
     st.metric(label="총 검색된 건수", value=f"{len(filtered_df):,} 건")
@@ -224,167 +201,65 @@ with col3:
         st.metric(label="검색된 업체 수", value="0 개사")
 
 st.markdown("---")
-st.markdown("#### 📋 상세 내역")
+st.markdown("#### 📋 상세 내역 (표 제목을 클릭하면 정렬됩니다)")
 
 # ==========================================
-# 4. 데이터프레임 (JS 정렬 오류 완벽 해결을 위한 독립 HTML 컴포넌트)
+# 4. 데이터프레임 (스트림릿 순정 기능 사용 - 오류 없음, 클릭 정렬 지원)
 # ==========================================
 if filtered_df.empty:
     st.warning("👀 검색 조건에 맞는 데이터가 없습니다. 다른 조건으로 검색해 보세요.")
 else:
-    # 스트림릿의 보안 차단을 우회하기 위해 완벽한 형태의 HTML 문서 구조로 작성
-    iframe_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <style>
-            body {{
-                margin: 0; padding: 0; 
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                background-color: white;
-            }}
-            .custom-table {{ width: 100%; border-collapse: collapse; font-size: 1.15rem; }}
-            .custom-table th {{
-                background-color: #f8f9fa; color: #31333F; font-weight: 700; 
-                padding: 14px 16px; border-bottom: 2px solid #e6e6e6; text-align: left; 
-                cursor: pointer; transition: background-color 0.2s; user-select: none;
-            }}
-            .custom-table th:hover {{ background-color: #e2e6ea; }}
-            .custom-table td {{ padding: 14px 16px; border-bottom: 1px solid #f0f2f6; color: #31333F; }}
-            .custom-table tr:hover td {{ background-color: #f1f3f5; }}
-            .bold-col {{ font-weight: 900 !important; color: #000000 !important; }}
-            .sort-icon {{ color: #ff4b4b; margin-left: 5px; }}
-            .page-btn {{
-                padding: 8px 16px; font-size: 1.15rem; font-weight: 600; cursor: pointer;
-                border: 1px solid #ddd; border-radius: 5px; background-color: #fff; color: #333; transition: 0.2s;
-            }}
-            .page-btn:hover:not(:disabled) {{ background-color: #f8f9fa; border-color: #ff4b4b; color: #ff4b4b; }}
-            .page-btn:disabled {{ opacity: 0.4; cursor: not-allowed; }}
-        </style>
-    </head>
-    <body>
-        <table class='custom-table' id='myTable'>
-            <thead><tr>
-    """
-    
-    # 1. 헤더 생성
-    for i, col in enumerate(filtered_df.columns):
-        iframe_html += f"<th onclick='sortTable({i})' title='클릭하여 정렬'>{html.escape(str(col))} <span class='sort-icon' id='icon-{i}'></span></th>"
-    iframe_html += "</tr></thead><tbody id='tableBody'>"
-    
-    # 2. 본문 데이터 삽입 (초기 깜빡임 방지를 위해 100개 이후는 숨김 처리)
-    bold_cols = ["물품명", "인상폭"]
-    for idx, (_, row) in enumerate(filtered_df.iterrows()):
-        display_style = "" if idx < 100 else " style='display: none;'"
-        iframe_html += f"<tr{display_style}>"
-        for col in filtered_df.columns:
-            val = row[col]
-            safe_val = "" if pd.isna(val) or val == "" else html.escape(str(val))
-            if col in bold_cols:
-                iframe_html += f"<td class='bold-col'>{safe_val}</td>"
-            else:
-                iframe_html += f"<td>{safe_val}</td>"
-        iframe_html += "</tr>"
+    ROWS_PER_PAGE = 100
+    total_pages = math.ceil(len(filtered_df) / ROWS_PER_PAGE)
+
+    # 검색 조건 변경 시 1페이지로 자동 초기화
+    filter_hash = hash(str(selected_vendors) + str(search_item) + str(selected_dates))
+    if st.session_state.get('last_filter_hash') != filter_hash:
+        st.session_state.current_page = 1
+        st.session_state.last_filter_hash = filter_hash
+
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = 1
         
-    iframe_html += """
-            </tbody>
-        </table>
-        
-        <!-- 하단 페이지네이션 컨트롤 -->
-        <div id='paginationControls' style='display: none; text-align: center; margin-top: 30px; margin-bottom: 25px;'>
-            <button class='page-btn' onclick='changePage(-1)' id='prevBtn'>◀ 이전</button>
-            <span id='pageInfo' style='margin: 0 25px; font-weight: 700; font-size: 1.2rem; color: #31333F;'></span>
-            <button class='page-btn' onclick='changePage(1)' id='nextBtn'>다음 ▶</button>
-        </div>
-
-        <script>
-            const ROWS_PER_PAGE = 100;
-            let currentPage = 1;
-            let sortCol = -1;
-            let sortAsc = true;
-            let allRows = [];
-
-            window.onload = function() {
-                const tbody = document.getElementById("tableBody");
-                allRows = Array.from(tbody.getElementsByTagName("tr"));
-                updateTable();
-            };
-
-            function updateTable() {
-                const tbody = document.getElementById("tableBody");
-                const totalPages = Math.ceil(allRows.length / ROWS_PER_PAGE) || 1;
-                
-                if (currentPage < 1) currentPage = 1;
-                if (currentPage > totalPages) currentPage = totalPages;
-
-                tbody.innerHTML = "";
-                const startIdx = (currentPage - 1) * ROWS_PER_PAGE;
-                const endIdx = startIdx + ROWS_PER_PAGE;
-                
-                for(let i = startIdx; i < endIdx && i < allRows.length; i++) {
-                    allRows[i].style.display = ""; 
-                    tbody.appendChild(allRows[i]);
-                }
-
-                document.getElementById("pageInfo").innerText = currentPage + " / " + totalPages;
-                document.getElementById("prevBtn").disabled = (currentPage === 1);
-                document.getElementById("nextBtn").disabled = (currentPage === totalPages);
-                document.getElementById("paginationControls").style.display = (allRows.length > ROWS_PER_PAGE) ? "block" : "none";
-            }
-
-            function changePage(delta) {
-                currentPage += delta;
-                updateTable();
-                window.scrollTo(0, 0); 
-            }
-
-            function sortTable(n) {
-                if (sortCol === n) { sortAsc = !sortAsc; } 
-                else { sortCol = n; sortAsc = true; }
-                
-                document.querySelectorAll('.sort-icon').forEach(icon => icon.innerHTML = '');
-                const iconEl = document.getElementById('icon-' + n);
-                if (iconEl) { iconEl.innerHTML = sortAsc ? "<span style='color:#ff4b4b;'>▲</span>" : "<span style='color:#ff4b4b;'>▼</span>"; }
-                
-                allRows.sort((a, b) => {
-                    const tdA = a.getElementsByTagName("td")[n];
-                    const tdB = b.getElementsByTagName("td")[n];
-                    const valA = tdA ? tdA.innerText.trim() : "";
-                    const valB = tdB ? tdB.innerText.trim() : "";
-                    
-                    if (valA === "" && valB !== "") return 1;
-                    if (valB === "" && valA !== "") return -1;
-                    
-                    const cleanA = valA.replace(/,/g, '').replace(/원/g, '').replace(/%/g, '').replace(/ /g, '');
-                    const cleanB = valB.replace(/,/g, '').replace(/원/g, '').replace(/%/g, '').replace(/ /g, '');
-                    
-                    const numA = parseFloat(cleanA);
-                    const numB = parseFloat(cleanB);
-                    
-                    let cmpA = (!isNaN(numA) && cleanA === numA.toString()) ? numA : valA;
-                    let cmpB = (!isNaN(numB) && cleanB === numB.toString()) ? numB : valB;
-                    
-                    if (cmpA < cmpB) return sortAsc ? -1 : 1;
-                    if (cmpA > cmpB) return sortAsc ? 1 : -1;
-                    return 0;
-                });
-                
-                currentPage = 1;
-                updateTable();
-            }
-        </script>
-    </body>
-    </html>
-    """
-
-    # 컴포넌트의 높이를 동적으로 계산하여 스크롤바 방지
-    num_rows = min(len(filtered_df), 100)
-    iframe_height = 80 + (num_rows * 53) + (100 if len(filtered_df) > 100 else 20)
+    start_idx = (st.session_state.current_page - 1) * ROWS_PER_PAGE
+    end_idx = start_idx + ROWS_PER_PAGE
     
-    # 스트림릿 전용 컴포넌트로 안전하고 완벽하게 HTML/JS 렌더링
-    components.html(iframe_html, height=iframe_height, scrolling=False)
+    # 현재 페이지에 띄울 100개 데이터
+    display_df = filtered_df.iloc[start_idx:end_idx].copy()
+    
+    # --- 물품명, 인상폭 열을 굵은 글씨로 설정하는 안전한 로직 ---
+    styled_df = display_df.style
+    bold_cols = [c for c in ["물품명", "인상폭"] if c in display_df.columns]
+    
+    if bold_cols:
+        # 지정된 열만 폰트 굵게 처리 (에러 없는 Pandas 고유 기능)
+        styled_df = styled_df.map(lambda _: 'font-weight: 900;', subset=bold_cols)
+    
+    # 100개가 스크롤 없이 다 보이도록 높이 자동 계산 (1줄 약 35px + 헤더 40px)
+    table_height = (len(display_df) * 35) + 40
+    
+    # 스트림릿 순정 표출 (자동 정렬 기능 포함)
+    st.dataframe(
+        styled_df, 
+        use_container_width=True, 
+        hide_index=True, 
+        height=table_height
+    )
 
-# 하단 안내
-st.markdown("<br><br>", unsafe_allow_html=True)
-st.caption("💡 표 제목을 클릭하면 즉시 정렬되며, 상단의 큰 제목(유니매입가격정보)을 누르면 구글 시트 내용이 강제 새로고침 됩니다.")
+    # 페이지 이동(Pagination) 하단 버튼 UI
+    if total_pages > 1:
+        st.markdown("<br>", unsafe_allow_html=True)
+        page_cols = st.columns([4, 1, 1, 1, 4])
+        
+        with page_cols[1]:
+            if st.button("◀ 이전", disabled=st.session_state.current_page <= 1, use_container_width=True):
+                st.session_state.current_page -= 1
+                st.rerun()
+                
+        with page_cols[2]:
+            st.markdown(f"<div style='text-align: center; padding-top: 7px; font-weight: 600; font-size: 1.15rem; color: #333;'>{st.session_state.current_page} / {total_pages}</div>", unsafe_allow_html=True)
+            
+        with page_cols[3]:
+            if st.button("다음 ▶", disabled=st.session_state.current_page >= total_pages, use_container_width=True):
+                st.session_state.current_page += 1
+                st.rerun()
