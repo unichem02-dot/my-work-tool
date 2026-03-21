@@ -79,6 +79,25 @@ st.markdown("""
         border-color: #3b76e5 !important;
         color: white !important;
     }
+
+    /* 💡 링크 버튼(인상공문 등) 파란색 동일하게 커스텀 */
+    div[data-testid="stLinkButton"] > a {
+        background-color: #4e8cff !important;
+        border-color: #4e8cff !important;
+        color: white !important;
+        border-radius: 8px !important;
+        font-weight: bold !important;
+        padding: 0.25rem 0.75rem !important;
+        text-decoration: none !important;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    div[data-testid="stLinkButton"] > a:hover {
+        background-color: #3b76e5 !important;
+        border-color: #3b76e5 !important;
+        color: white !important;
+    }
     
     /* 💡 날짜정렬 버튼 (Secondary 일반 버튼) 올리브색 적용 */
     button[kind="secondary"] {
@@ -325,7 +344,7 @@ if "show_uploader" not in st.session_state: st.session_state.show_uploader = Fal
 if "sql_ready" not in st.session_state: st.session_state.sql_ready = False
 if "sql_content" not in st.session_state: st.session_state.sql_content = ""
 
-# URL 파라미터 처리 로직 (무한 로딩 방지 및 검색 조건 완벽 복원)
+# URL 파라미터 처리 로직
 should_rerun = False
 
 # 홈 로고 클릭 감지
@@ -451,11 +470,16 @@ try:
 except: 
     available_years = [get_kst_now().year]
 
-col_t, col_u, col_sql, col_r, col_l = st.columns([3.9, 1.3, 1.4, 1.4, 1.4])
+# 💡 [핵심 기술] 상단 컬럼 비율을 조정하여 '인상공문' 버튼 공간 확보
+col_t, col_link, col_u, col_sql, col_r, col_l = st.columns([2.9, 1.2, 1.3, 1.3, 1.3, 1.3])
 with col_t: 
     pwd_token = str(st.secrets.get("tom_password", ""))
     st.markdown(f"<h3 style='margin:0;'><a href='?home=1&token={pwd_token}' target='_self' style='text-decoration: none; color: #ffffff;'>📦 TOmBOy's INOUT</a></h3>", unsafe_allow_html=True)
-    
+
+with col_link:
+    # 💡 DB 업로드 버튼 좌측에 인상공문 외부 링크 버튼 추가 (새 탭으로 열기 기본 지원)
+    st.link_button("📄 인상공문", "https://my-work-tool-nwvgwcjdnvyqzd6n2mdkrn.streamlit.app/", use_container_width=True)
+
 with col_u: 
     if st.button("📤 DB 업로드" if not st.session_state.show_uploader else "❌ 업로드 닫기", use_container_width=True, type="primary"):
         st.session_state.show_uploader = not st.session_state.show_uploader
@@ -671,6 +695,7 @@ try:
                 e_outprice = c11.text_input("outprice", safe_str(t.get('outprice')), label_visibility="collapsed")
                 e_carprice = c12.text_input("carprice", safe_str(t.get('carprice')), label_visibility="collapsed")
                 
+                # 메모 입력칸 3개 동시 배치
                 st.markdown("<hr style='margin: 15px 0 10px 0; border: 0.5px dashed #555;'>", unsafe_allow_html=True)
                 m1, m2, m3 = st.columns(3)
                 m1.markdown('<div class="nh-box nh-in" style="font-size:13px;">📝 매입품목 메모</div>', unsafe_allow_html=True)
