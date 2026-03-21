@@ -41,7 +41,7 @@ st.markdown("""
         padding: 0px 10px !important;
     }
     
-    /* Primary 버튼 (검색, 새로고침 등) -> 파란색 */
+    /* Primary 버튼 (검색 등) -> 파란색 */
     button[kind="primary"] {
         background-color: #4e8cff !important;
         border-color: #4e8cff !important;
@@ -52,7 +52,7 @@ st.markdown("""
         border-color: #3b76e5 !important; 
     }
 
-    /* Secondary 버튼 (초기화, 로그아웃 등) -> 올리브색 */
+    /* Secondary 버튼 (전체보기, 로그아웃 등) -> 올리브색 */
     button[kind="secondary"] {
         background-color: #757c43 !important;
         border-color: #757c43 !important;
@@ -63,7 +63,7 @@ st.markdown("""
         border-color: #646a39 !important; 
     }
     
-    /* 💡 타이틀 버튼 (Tertiary) 스타일링 - 흰색 창 현상 제거 */
+    /* 💡 타이틀 버튼 (Tertiary) 스타일링 - 흰색 창 및 잔상 제거 */
     button[kind="tertiary"] {
         display: flex !important;
         justify-content: flex-start !important;
@@ -75,7 +75,7 @@ st.markdown("""
         outline: none !important;
     }
     button[kind="tertiary"] p {
-        font-size: 1.8rem !important; /* H3 타이틀 크기 */
+        font-size: 1.8rem !important;
         font-weight: 800 !important;
         color: #ffffff !important;
         margin: 0 !important;
@@ -84,9 +84,9 @@ st.markdown("""
     button[kind="tertiary"]:hover p {
         color: #4e8cff !important;
     }
-    button[kind="tertiary"]:focus {
+    button[kind="tertiary"]:focus, button[kind="tertiary"]:active {
         background-color: transparent !important;
-        color: #ffffff !important;
+        box-shadow: none !important;
     }
     
     /* 💡 EXCEL 다운로드 버튼 전용 올리브색 커스텀 */
@@ -95,12 +95,8 @@ st.markdown("""
         border-color: #757c43 !important;
         color: white !important;
     }
-    div[data-testid="stDownloadButton"] button[kind="primary"]:hover {
-        background-color: #646a39 !important;
-        border-color: #646a39 !important;
-    }
     
-    /* 검색 메뉴 굵게 및 색상 (검색창 내부는 가독성을 위해 밝게 유지) */
+    /* 검색 메뉴 굵게 및 색상 */
     div[data-testid="stTextInput"] input, div[data-baseweb="select"] > div {
         color: #1e293b !important;
         font-weight: bold !important;
@@ -114,7 +110,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 🔒 로그인 기능 (비밀번호 확인 + 3시간 세션 유지)
+# 🔒 로그인 기능
 # ==========================================
 def check_password():
     TIMEOUT_SECONDS = 10800
@@ -155,7 +151,7 @@ def check_password():
 if not check_password():
     st.stop()
 
-# 2. 구글 시트 데이터 불러오기 (실시간 5초 캐시 유지)
+# 2. 구글 시트 데이터 불러오기
 @st.cache_data(ttl=5)
 def load_data():
     conn = st.connection("gsheets", type=GSheetsConnection)
@@ -167,49 +163,48 @@ def load_data():
 
 try:
     data = load_data()
-except Exception as e:
-    st.error("구글 시트를 불러오는 데 실패했습니다.")
+except:
+    st.error("데이터를 불러오지 못했습니다.")
     st.stop()
 
 col_vendor, col_item, col_date = "업체명", "물품명", "인상날짜"
 data = data.fillna("")
 
 # ==========================================
-# 🛠️ 상태 관리 (검색/전체보기 전용 로직)
+# 🛠️ 상태 관리 (검색창 텍스트 유지 로직)
 # ==========================================
+# 실제 검색 실행용 필터값
 if 'active_vendor' not in st.session_state: st.session_state.active_vendor = ""
 if 'active_item' not in st.session_state: st.session_state.active_item = ""
 if 'active_year' not in st.session_state: st.session_state.active_year = "전체"
 
 def do_search():
-    """검색 버튼 클릭 시 필터링 적용 및 입력창 초기화"""
+    """검색 버튼 클릭 시: UI에 입력된 값을 실제 필터 조건으로 승인"""
     st.session_state.active_vendor = st.session_state.ui_vendor
     st.session_state.active_item = st.session_state.ui_item
     st.session_state.active_year = st.session_state.ui_year
-    # 입력창 UI 초기화 (전체보기 글자 제거를 위해 빈칸으로 설정)
-    st.session_state.ui_vendor = ""
-    st.session_state.ui_item = ""
-    st.session_state.ui_year = "전체"
 
 def do_reset():
-    """초기화 및 전체보기 기능"""
+    """모든 검색 필터와 UI를 빈칸/전체로 초기화"""
     st.session_state.active_vendor = ""
     st.session_state.active_item = ""
     st.session_state.active_year = "전체"
+    # UI 위젯용 세션 값도 동시에 초기화
     st.session_state.ui_vendor = ""
     st.session_state.ui_item = ""
     st.session_state.ui_year = "전체"
 
 def do_full_refresh():
-    """타이틀 클릭: 데이터 강제 갱신 + 초기화"""
+    """상단 타이틀 클릭 시: 데이터 강제 갱신 + 완전 초기화"""
     load_data.clear()
     do_reset()
 
 # ==========================================
-# UI 레이아웃 시작 (상단 상태바)
+# UI 레이아웃 시작 (상단 타이틀)
 # ==========================================
 col_t, col_l = st.columns([8.5, 1.5])
 with col_t: 
+    # 타이틀 클릭 시 초기화 및 갱신 실행
     st.button("📈 유니매입가격정보 (인상공문 현황)", type="tertiary", on_click=do_full_refresh)
 
 with col_l:
@@ -223,7 +218,6 @@ st.markdown("<hr>", unsafe_allow_html=True)
 # ==========================================
 # 드롭다운 고유 항목 리스트 추출
 # ==========================================
-# 1. 연도 (전체 유지)
 years_set = set()
 if col_date in data.columns:
     for d in data[col_date].dropna().unique():
@@ -235,11 +229,11 @@ if col_date in data.columns:
             elif len(y) == 4: years_set.add(y)
 year_list = ["전체"] + [f"{y}년" for y in sorted(list(years_set), reverse=True)]
 
-# 2. 업체명/물품명 (빈칸 기본, '전체' 글자 삭제)
+# 드롭다운에서 '전체' 글자 대신 빈칸("")을 첫 번째에 두어 깨끗하게 만듭니다.
 vendor_list = [""] + sorted([str(v).strip() for v in data[col_vendor].unique() if str(v).strip() != ""])
 item_list = [""] + sorted([str(v).strip() for v in data[col_item].unique() if str(v).strip() != ""])
 
-# 1. 상세 검색 영역 (Selectbox 드롭다운 + 텍스트 검색 동시 지원)
+# 1. 상세 검색 영역 (Selectbox: 드롭다운 리스트 + 텍스트 검색 동시 지원)
 search_col1, search_col2, search_col3, search_col4, search_col5 = st.columns([2.5, 2.5, 1.5, 1.2, 1.2])
 
 with search_col1:
@@ -260,11 +254,15 @@ with search_col5:
     st.button("📂 전체보기", use_container_width=True, type="secondary", on_click=do_reset)
 
 # 2. 필터링 로직 (AND 조건)
+# 실제 검색 버튼을 누르기 전까지는 이전 검색 결과(active_*)를 유지합니다.
 filtered_df = data.copy()
+
 if st.session_state.active_vendor != "":
     filtered_df = filtered_df[filtered_df[col_vendor].astype(str).str.contains(st.session_state.active_vendor, case=False, na=False)]
+
 if st.session_state.active_item != "":
     filtered_df = filtered_df[filtered_df[col_item].astype(str).str.contains(st.session_state.active_item, case=False, na=False)]
+
 if st.session_state.active_year != "전체":
     target_y = st.session_state.active_year.replace("년", "")
     target_y_short = target_y[2:]
@@ -296,7 +294,7 @@ with col_bar:
         </div>
     """, unsafe_allow_html=True)
 
-# 4. PRINT/EXCEL 기능
+# 4. PRINT/EXCEL 기능 (속도 최적화 버전)
 html_table = filtered_df.to_html(index=False, escape=True)
 html_table = html_table.replace('border="1" class="dataframe"', 'class="custom-table"')
 # 칸 너비 비율 강제 적용
@@ -316,7 +314,7 @@ with col_excel:
     except:
         st.download_button("💾 EXCEL", data=filtered_df.to_csv(index=False).encode('utf-8-sig'), file_name="export.csv", use_container_width=True, type="primary")
 
-# 5. 검색 조건 표시
+# 5. 검색 조건 표시 (노란색 글씨로 시인성 확보)
 conds = []
 if st.session_state.active_vendor != "": conds.append(f"업체({st.session_state.active_vendor})")
 if st.session_state.active_item != "": conds.append(f"물품({st.session_state.active_item})")
@@ -324,7 +322,7 @@ if st.session_state.active_year != "전체": conds.append(f"연도({st.session_s
 search_info = f"<span style='color:#ffeb3b;'>[검색조건: {' + '.join(conds)}]</span>" if conds else "(전체 데이터)"
 st.markdown(f"#### 📋 상세 내역 {search_info}", unsafe_allow_html=True)
 
-# 6. 독립 HTML 테이블 렌더링
+# 6. 독립 HTML 테이블 렌더링 (속도 극대화)
 if filtered_df.empty:
     st.warning("👀 검색 조건에 맞는 데이터가 없습니다.")
 else:
@@ -337,11 +335,12 @@ else:
         return "tr" if any(x in str(col) for x in ["가", "폭", "수량"]) else "tc"
 
     rows_html = []
+    # 데이터 출력 속도 최적화를 위해 itertuples 사용
     for idx, row in enumerate(filtered_df.itertuples(index=False)):
         d_s = "" if idx < 100 else " style='display:none;'"
         r_s = f"<tr{d_s}>"
         for i, col_name in enumerate(filtered_df.columns):
-            val = html.escape(str(row[i+1])) if row[i+1] != "" else ""
+            val = html.escape(str(row[i])) if row[i] != "" else ""
             cls = get_td_class(col_name) + (" bold-col" if col_name in ["물품명", "인상폭"] else "")
             r_s += f"<td class='{cls}'>{val}</td>"
         rows_html.append(r_s + "</tr>")
