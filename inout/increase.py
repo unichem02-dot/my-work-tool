@@ -41,7 +41,7 @@ st.markdown("""
         padding: 0px 10px !important;
     }
     
-    /* Primary 버튼 (새로고침, 검색 등) -> 파란색 */
+    /* Primary 버튼 (검색, 새로고침 등) -> 파란색 */
     button[kind="primary"] {
         background-color: #4e8cff !important;
         border-color: #4e8cff !important;
@@ -52,7 +52,7 @@ st.markdown("""
         border-color: #3b76e5 !important; 
     }
 
-    /* Secondary 버튼 (로그아웃, 초기화 등) -> 올리브색 */
+    /* Secondary 버튼 (초기화, 로그아웃 등) -> 올리브색 */
     button[kind="secondary"] {
         background-color: #757c43 !important;
         border-color: #757c43 !important;
@@ -170,40 +170,32 @@ if missing_cols:
 data = data.fillna("")
 
 # ==========================================
-# 상태 관리 (검색 조건 저장 및 입력창 비우기 로직)
+# 🛠️ 상태 관리 (검색/초기화 전용 로직)
 # ==========================================
-# 1) 실제로 화면 필터링에 반영될 저장된 검색 조건들
-if 'active_vendor' not in st.session_state: st.session_state.active_vendor = "전체"
-if 'active_item' not in st.session_state: st.session_state.active_item = "전체"
+# 1) 실제로 화면 필터링에 반영될 저장된 검색 조건들 (초기값: 비어있음)
+if 'active_vendor' not in st.session_state: st.session_state.active_vendor = ""
+if 'active_item' not in st.session_state: st.session_state.active_item = ""
 if 'active_year' not in st.session_state: st.session_state.active_year = "전체"
 
-# 2) 껍데기 UI (입력창) 초기 상태
-if 'search_vendor_key' not in st.session_state: st.session_state.search_vendor_key = "전체"
-if 'search_item_key' not in st.session_state: st.session_state.search_item_key = "전체"
-if 'search_year_key' not in st.session_state: st.session_state.search_year_key = "전체"
+# 2) UI 껍데기(입력창) 상태
+if 'ui_vendor' not in st.session_state: st.session_state.ui_vendor = ""
+if 'ui_item' not in st.session_state: st.session_state.ui_item = ""
+if 'ui_year' not in st.session_state: st.session_state.ui_year = "전체"
 
-def handle_search():
-    """검색 조건을 저장하고 껍데기 입력창은 텅 빈 상태(전체)로 되돌리는 함수"""
-    if st.session_state.search_vendor_key != "전체":
-        st.session_state.active_vendor = st.session_state.search_vendor_key
-    if st.session_state.search_item_key != "전체":
-        st.session_state.active_item = st.session_state.search_item_key
-    if st.session_state.search_year_key != "전체":
-        st.session_state.active_year = st.session_state.search_year_key
-    
-    # 조건은 저장했으니 입력창은 바로 비워줌 (초기화 효과)
-    st.session_state.search_vendor_key = "전체"
-    st.session_state.search_item_key = "전체"
-    st.session_state.search_year_key = "전체"
+def do_search():
+    """검색 버튼을 눌렀을 때만 UI값을 실제 필터값으로 복사 적용"""
+    st.session_state.active_vendor = st.session_state.ui_vendor.strip()
+    st.session_state.active_item = st.session_state.ui_item.strip()
+    st.session_state.active_year = st.session_state.ui_year
 
-def reset_filters():
+def do_reset():
     """모든 조건과 입력창을 싹 다 비우는 완전 초기화 함수"""
-    st.session_state.active_vendor = "전체"
-    st.session_state.active_item = "전체"
+    st.session_state.active_vendor = ""
+    st.session_state.active_item = ""
     st.session_state.active_year = "전체"
-    st.session_state.search_vendor_key = "전체"
-    st.session_state.search_item_key = "전체"
-    st.session_state.search_year_key = "전체"
+    st.session_state.ui_vendor = ""
+    st.session_state.ui_item = ""
+    st.session_state.ui_year = "전체"
 
 
 # ==========================================
@@ -216,7 +208,7 @@ with col_t:
 with col_r: 
     if st.button("🔄 새로고침", use_container_width=True, type="primary"):
         load_data.clear() # 확실한 새로고침을 위해 함수 캐시 강제 삭제
-        reset_filters()   # 입력값도 싹 다 초기화
+        do_reset()        # 입력값도 싹 다 초기화
         st.rerun()
 
 with col_l:
@@ -228,7 +220,7 @@ with col_l:
 st.markdown("<hr>", unsafe_allow_html=True)
 
 # ==========================================
-# 검색용 고유 항목 리스트 추출
+# 연도 자동 추출
 # ==========================================
 years_set = set()
 if col_date in data.columns:
@@ -243,40 +235,40 @@ if col_date in data.columns:
                 
 year_list = ["전체"] + [f"{y}년" for y in sorted(list(years_set), reverse=True)]
 
-vendor_raw = [str(v).strip() for v in data[col_vendor].unique() if str(v).strip() != ""]
-vendor_list = ["전체"] + sorted(vendor_raw)
-
-item_raw = [str(v).strip() for v in data[col_item].unique() if str(v).strip() != ""]
-item_list = ["전체"] + sorted(item_raw)
-
-
-# 1. 상세 검색 영역 (4단 배치: 업체명 / 물품명 / 연도 / 초기화버튼)
-search_col1, search_col2, search_col3, search_col4 = st.columns([3, 3, 3, 1])
+# 1. 상세 검색 영역 (5단 배치: 업체명 / 물품명 / 연도 / 검색 / 초기화)
+search_col1, search_col2, search_col3, search_col4, search_col5 = st.columns([2.5, 2.5, 1.5, 1.2, 1.2])
 
 with search_col1:
-    st.selectbox("🏢 업체명 검색", vendor_list, key="search_vendor_key", on_change=handle_search)
+    # 텍스트 전용 검색창 (빈칸 허용, 글씨 지울 필요 없음)
+    st.text_input("🏢 업체명 검색", placeholder="예: 부흥 (빈칸은 전체)", key="ui_vendor")
 
 with search_col2:
-    st.selectbox("📦 물품명 검색", item_list, key="search_item_key", on_change=handle_search)
+    st.text_input("📦 물품명 검색", placeholder="예: 황산 (빈칸은 전체)", key="ui_item")
 
 with search_col3:
-    st.selectbox("📅 인상 연도 선택", year_list, key="search_year_key", on_change=handle_search)
+    st.selectbox("📅 인상 연도", year_list, key="ui_year")
 
 with search_col4:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-    if st.button("🔄 초기화", use_container_width=True, type="secondary"):
-        reset_filters()
-        st.rerun()
+    # 검색 버튼을 누를 때만 동작함 (엔터키 검색 방지)
+    st.button("🔍 검색", use_container_width=True, type="primary", on_click=do_search)
 
-# 2. 필터링 로직 (저장된 active_ 값을 기준으로 필터링)
+with search_col5:
+    st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+    st.button("🔄 초기화", use_container_width=True, type="secondary", on_click=do_reset)
+
+# 2. 필터링 로직 (AND 조건)
 filtered_df = data.copy()
 
-if st.session_state.active_vendor != "전체":
+# 업체명 필터 적용 (입력값이 있을 때만)
+if st.session_state.active_vendor != "":
     filtered_df = filtered_df[filtered_df[col_vendor].astype(str).str.contains(st.session_state.active_vendor, case=False, na=False)]
 
-if st.session_state.active_item != "전체":
+# 물품명 필터 적용 (입력값이 있을 때만, 위 결과에 이어서 교집합(AND) 적용)
+if st.session_state.active_item != "":
     filtered_df = filtered_df[filtered_df[col_item].astype(str).str.contains(st.session_state.active_item, case=False, na=False)]
 
+# 연도 필터 적용
 if st.session_state.active_year != "전체":
     target_y = st.session_state.active_year.replace("년", "") # "2026"
     target_y_short = target_y[2:]           # "26"
@@ -448,7 +440,6 @@ with col_excel:
             csv_data = filtered_df.to_csv(index=False).encode('utf-8-sig')
             st.download_button("💾 EXCEL (기본)", data=csv_data, file_name=f"유니매입단가인상_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
         else:
-            # 검색 결과가 없을 때 버튼 에러 방지용 더미 버튼
             st.download_button("💾 EXCEL", data="", disabled=True, use_container_width=True, type="primary")
 
 
@@ -456,12 +447,12 @@ with col_excel:
 # 5. 데이터프레임 헤더 (타이틀 및 검색 조건 표시)
 # ==========================================
 cond_texts = []
-if st.session_state.active_vendor != "전체": cond_texts.append(f"업체: {st.session_state.active_vendor}")
-if st.session_state.active_item != "전체": cond_texts.append(f"물품: {st.session_state.active_item}")
-if st.session_state.active_year != "전체": cond_texts.append(f"연도: {st.session_state.active_year}")
+if st.session_state.active_vendor != "": cond_texts.append(f"업체({st.session_state.active_vendor})")
+if st.session_state.active_item != "": cond_texts.append(f"물품({st.session_state.active_item})")
+if st.session_state.active_year != "전체": cond_texts.append(f"연도({st.session_state.active_year})")
 
 if cond_texts:
-    search_info = f"<span style='font-size: 15px; color: #ffeb3b; margin-left: 10px;'>[검색조건: {', '.join(cond_texts)}]</span>"
+    search_info = f"<span style='font-size: 15px; color: #ffeb3b; margin-left: 10px;'>[검색조건: {' + '.join(cond_texts)}]</span>"
 else:
     search_info = f"<span style='font-size: 14px; color: #cbd5e1; font-weight: normal; margin-left: 10px;'>(전체 데이터)</span>"
 
