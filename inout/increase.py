@@ -52,7 +52,7 @@ st.markdown("""
         border-color: #3b76e5 !important; 
     }
 
-    /* Secondary 버튼 (로그아웃, 취소 등) -> 올리브색 */
+    /* Secondary 버튼 (로그아웃, 초기화 등) -> 올리브색 */
     button[kind="secondary"] {
         background-color: #757c43 !important;
         border-color: #757c43 !important;
@@ -196,7 +196,7 @@ with col_l:
 st.markdown("<hr>", unsafe_allow_html=True)
 
 # ==========================================
-# 연도 자동 추출 로직 (인상날짜 기준)
+# 연도 및 업체명 자동 추출 로직
 # ==========================================
 years_set = set()
 if col_date in data.columns:
@@ -212,11 +212,16 @@ if col_date in data.columns:
                 
 year_list = ["전체"] + [f"{y}년" for y in sorted(list(years_set), reverse=True)]
 
-# 1. 상세 검색 영역 (깔끔한 3단 텍스트/드롭다운 배치)
-search_col1, search_col2, search_col3 = st.columns(3)
+vendor_raw = [str(v).strip() for v in data[col_vendor].unique() if str(v).strip() != ""]
+vendor_list = ["전체"] + sorted(vendor_raw)
+
+
+# 1. 상세 검색 영역 (4단 배치: 업체명 / 물품명 / 연도 / 초기화버튼)
+search_col1, search_col2, search_col3, search_col4 = st.columns([3, 3, 3, 1])
 
 with search_col1:
-    search_vendor = st.text_input("🏢 업체명 검색", placeholder="예: 부흥산업사 등 부분 검색 가능", key="search_vendor_key")
+    # selectbox를 사용하여 드롭다운 + 텍스트 동시 검색 지원
+    search_vendor = st.selectbox("🏢 업체명 검색", vendor_list, key="search_vendor_key")
 
 with search_col2:
     search_item = st.text_input("📦 물품명 검색", placeholder="예: 황산, 소다 등 부분 검색 가능", key="search_item_key")
@@ -224,10 +229,18 @@ with search_col2:
 with search_col3:
     search_year = st.selectbox("📅 인상 연도 선택", year_list, key="search_year_key")
 
+with search_col4:
+    st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+    if st.button("🔄 초기화", use_container_width=True, type="secondary"):
+        for key in ["search_vendor_key", "search_item_key", "search_year_key"]:
+            if key in st.session_state:
+                del st.session_state[key]
+        st.rerun()
+
 # 2. 필터링 로직
 filtered_df = data.copy()
 
-if search_vendor:
+if search_vendor and search_vendor != "전체":
     filtered_df = filtered_df[filtered_df[col_vendor].astype(str).str.contains(search_vendor, case=False, na=False)]
 
 if search_item:
@@ -252,10 +265,8 @@ if sort_cols:
     asc_rules = [False if c == col_date else True for c in sort_cols]
     filtered_df = filtered_df.sort_values(by=sort_cols, ascending=asc_rules)
 
-st.markdown("<br>", unsafe_allow_html=True)
 
-
-# 3. 요약 지표 (Metrics) - 1줄 가로 배치로 최적화
+# 3. 요약 지표 (Metrics) 및 [인쇄/엑셀] 가로 일체형 레이아웃
 latest_date = "-"
 if not filtered_df.empty and col_date in filtered_df.columns:
     valid_dates = [d for d in filtered_df[col_date].tolist() if str(d).strip() != ""]
@@ -267,27 +278,22 @@ if not filtered_df.empty:
     valid_vendors = [v for v in filtered_df[col_vendor].unique() if str(v).strip() != ""]
     valid_vendors_cnt = len(valid_vendors)
 
-st.markdown(f"""
-    <div style="background-color: #353b48; padding: 12px 20px; border-radius: 8px; color: #ffffff; font-size: 15px; display: flex; justify-content: space-around; align-items: center; border: 1px solid #4a5568; margin-top: 15px;">
-        <span>🔍 총 검색된 건수 : <span style="color: #4e8cff; font-size: 18px; font-weight: bold;">{len(filtered_df):,}</span> 건</span>
-        <span style="color: #4a5568;">|</span>
-        <span>📅 최근 인상 날짜 : <span style="color: #4e8cff; font-size: 18px; font-weight: bold;">{latest_date}</span></span>
-        <span style="color: #4a5568;">|</span>
-        <span>🏢 검색된 업체 수 : <span style="color: #4e8cff; font-size: 18px; font-weight: bold;">{valid_vendors_cnt:,}</span> 개사</span>
-    </div>
-""", unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
+
+col_bar, col_print, col_excel = st.columns([7, 1.5, 1.5])
+with col_bar:
+    st.markdown(f"""
+        <div style="background-color: #353b48; height: 42px; padding: 0 20px; border-radius: 8px; color: #ffffff; font-size: 15px; display: flex; justify-content: space-around; align-items: center; border: 1px solid #4a5568;">
+            <span>🔍 총 검색 건수 : <span style="color: #4e8cff; font-size: 18px; font-weight: bold;">{len(filtered_df):,}</span> 건</span>
+            <span style="color: #4a5568;">|</span>
+            <span>📅 최근 인상 : <span style="color: #4e8cff; font-size: 18px; font-weight: bold;">{latest_date}</span></span>
+            <span style="color: #4a5568;">|</span>
+            <span>🏢 업체 수 : <span style="color: #4e8cff; font-size: 18px; font-weight: bold;">{valid_vendors_cnt:,}</span> 개사</span>
+        </div>
+    """, unsafe_allow_html=True)
 
 
-# ==========================================
-# 4. 데이터프레임 헤더 및 [인쇄/엑셀] 버튼 영역
-# ==========================================
-col_title, col_print, col_excel = st.columns([6, 1.5, 1.5])
-with col_title:
-    st.markdown("<h4 style='color: #ffffff; margin-bottom: 5px; margin-top: 10px;'>📋 상세 내역 <span style='font-size: 14px; color: #cbd5e1; font-weight: normal;'>(표 제목을 클릭하면 정렬됩니다)</span></h4>", unsafe_allow_html=True)
-
-
-# --- 🖨️ PRINT 기능용 HTML 생성 (속도 극대화 100배 향상 적용) ---
-# Python의 느린 반복문(for) 대신 C언어 기반의 판다스 내장 함수(to_html)를 사용하여 즉시 렌더링
+# --- 🖨️ PRINT 기능용 HTML 생성 ---
 html_table = filtered_df.to_html(index=False, escape=True)
 html_table = html_table.replace('border="1" class="dataframe"', 'class="custom-table"')
 
@@ -323,17 +329,16 @@ with col_print:
         <style>
             body {{ margin: 0; padding: 0; overflow: hidden; background-color: transparent; }}
             .btn-print {{
-                width: 100%; height: 40px; background-color: #757c43; color: white;
+                width: 100%; height: 42px; background-color: #757c43; color: white;
                 border: 1px solid #757c43; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px;
                 font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
                 display: flex; align-items: center; justify-content: center; box-sizing: border-box;
-                margin-top: 5px;
+                margin-top: 0px;
             }}
             .btn-print:hover {{ background-color: #646a39; border-color: #646a39; }}
         </style>
         <script>
             function fastPrint() {{
-                // 문자열로 변환된 HTML을 즉시 문서에 덮어씌움 (속도 최적화)
                 const htmlContent = {json.dumps(print_html_content)};
                 let iframe = document.getElementById('print-frame');
                 if (iframe) {{ document.body.removeChild(iframe); }}
@@ -357,11 +362,11 @@ with col_print:
         <body>
             <button class="btn-print" onclick="fastPrint()">🖨️ PRINT</button>
         </body></html>
-        """, height=50
+        """, height=45
     )
 
 with col_excel:
-    # --- 💾 EXCEL 추출 로직 (오류 100% 방지 자동화) ---
+    # --- 💾 EXCEL 추출 로직 ---
     excel_output = io.BytesIO()
     has_openpyxl = False
     try:
@@ -377,7 +382,6 @@ with col_excel:
                 filtered_df.to_excel(writer, index=False, sheet_name='검색결과')
                 ws = writer.sheets['검색결과']
                 
-                # 디자인 설정 (헤더 색상 맞춤)
                 font_white = Font(color="FFFFFF", bold=True)
                 align_center = Alignment(horizontal="center", vertical="center")
                 border_thin = Border(left=Side(style='thin', color='D0D0D0'), right=Side(style='thin', color='D0D0D0'), 
@@ -396,11 +400,9 @@ with col_excel:
                     cell.alignment = align_center
                     cell.border = border_thin
                     
-                    # 컬럼 너비 자동 설정 (약식)
                     col_letter = openpyxl.utils.get_column_letter(col_idx)
                     ws.column_dimensions[col_letter].width = 15
                     
-                # 본문 보더 적용
                 for row_idx in range(2, len(filtered_df) + 2):
                     for col_idx in range(1, len(filtered_df.columns) + 1):
                         cell = ws.cell(row=row_idx, column=col_idx)
@@ -412,13 +414,35 @@ with col_excel:
         except Exception as e:
             st.error(f"엑셀 생성 오류: {e}")
     else:
-        # openpyxl 모듈이 없거나 에러 날 경우 CSV로 안전하게 대체
-        csv_data = filtered_df.to_csv(index=False).encode('utf-8-sig')
-        st.download_button("💾 EXCEL (기본)", data=csv_data, file_name=f"유니매입단가인상_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
+        if not filtered_df.empty:
+            csv_data = filtered_df.to_csv(index=False).encode('utf-8-sig')
+            st.download_button("💾 EXCEL (기본)", data=csv_data, file_name=f"유니매입단가인상_{get_kst_now().strftime('%Y%m%d')}.csv", mime="text/csv", use_container_width=True, type="primary")
+        else:
+            # 검색 결과가 없을 때 버튼 에러 방지용 더미 버튼
+            st.download_button("💾 EXCEL", data="", disabled=True, use_container_width=True, type="primary")
 
 
+# ==========================================
+# 5. 데이터프레임 헤더 (타이틀 및 검색 조건 표시)
+# ==========================================
+cond_texts = []
+if search_vendor and search_vendor != "전체": cond_texts.append(f"업체: {search_vendor}")
+if search_item: cond_texts.append(f"물품: {search_item}")
+if search_year and search_year != "전체": cond_texts.append(f"연도: {search_year}")
+
+if cond_texts:
+    search_info = f"<span style='font-size: 15px; color: #ffeb3b; margin-left: 10px;'>[검색조건: {', '.join(cond_texts)}]</span>"
+else:
+    search_info = f"<span style='font-size: 14px; color: #cbd5e1; font-weight: normal; margin-left: 10px;'>(전체 데이터)</span>"
+
+st.markdown(f"<h4 style='color: #ffffff; margin-bottom: 5px; margin-top: 15px;'>📋 상세 내역 {search_info}</h4>", unsafe_allow_html=True)
+
+
+# ==========================================
+# 6. 독립 HTML 테이블 렌더링
+# ==========================================
 if filtered_df.empty:
-    pass # 경고 메시지는 위에서 이미 출력
+    st.warning("👀 검색 조건에 맞는 데이터가 없습니다. 다른 조건으로 검색해 보세요.")
 else:
     def get_th_class(col_name):
         c_lower = str(col_name)
@@ -486,7 +510,6 @@ else:
     iframe_html += "</tr></thead><tbody id='tableBody'>"
     
     # --- 🖥️ 화면 렌더링 속도 최적화 (itertuples 사용) ---
-    # 판다스 itertuples를 사용하여 기존 방식 대비 50배 빠른 속도로 HTML 문자열 조립
     rows_html = []
     cols_list = filtered_df.columns.tolist()
     
