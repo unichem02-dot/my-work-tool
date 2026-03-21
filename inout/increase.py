@@ -350,7 +350,7 @@ search_info = f"<span style='color:#ffeb3b;'>[검색조건: {' + '.join(conds)}]
 st.markdown(f"#### 📋 상세 내역 {search_info} <span style='font-size:12px; color:#cbd5e1; font-weight:normal; margin-left:10px;'>(제목 클릭 시 정렬)</span>", unsafe_allow_html=True)
 
 # ==========================================
-# 📋 메인 테이블 (50개 단위 페이지네이션 적용)
+# 📋 메인 테이블 (마우스 오버 효과 추가 버전)
 # ==========================================
 if filtered_df.empty:
     st.warning("👀 조건에 맞는 데이터가 없습니다.")
@@ -382,6 +382,14 @@ else:
     .tc {{ text-align: center; }} .tl {{ text-align: left; }} .tr {{ text-align: right; }}
     .bold-col {{ font-weight: 900; color: black !important; }}
     .custom-table tr:nth-child(even) td {{ background-color: #f8f9fa; }}
+    
+    /* 💡 마우스 오버 효과 (배경색 변경) */
+    .custom-table tr:hover td {{ 
+        background-color: #e2e6ea !important; 
+        cursor: pointer;
+        transition: background-color 0.1s ease;
+    }}
+    
     .sort-icon {{ font-size: 10px; color: #ffeb3b; margin-left: 5px; }}
     
     .pagination-container {{ 
@@ -415,7 +423,7 @@ else:
     <script>
     let sortOrder = 1; 
     let currentPage = 1; 
-    const rowsPerPage = 50; // 💡 50개 단위로 변경
+    const rowsPerPage = 50; 
 
     function renderTable() {{
         const tbody = document.getElementById("tableBody");
@@ -441,7 +449,6 @@ else:
         container.innerHTML = "";
         if (totalPages <= 1) return;
 
-        // 이전 버튼
         const prevBtn = document.createElement("button");
         prevBtn.className = "page-btn";
         prevBtn.innerText = "◀ 이전";
@@ -449,7 +456,6 @@ else:
         prevBtn.onclick = () => {{ currentPage--; renderTable(); }};
         container.appendChild(prevBtn);
 
-        // 숫자 버튼 복구 및 Math 함수 수정
         let startPage = Math.max(1, currentPage - 4);
         let endPage = Math.min(totalPages, startPage + 9);
         if (endPage - startPage < 9) startPage = Math.max(1, endPage - 9);
@@ -463,7 +469,6 @@ else:
             container.appendChild(pageNum);
         }}
 
-        // 다음 버튼
         const nextBtn = document.createElement("button");
         nextBtn.className = "page-btn";
         nextBtn.innerText = "다음 ▶";
@@ -497,7 +502,6 @@ else:
     </script></body></html>
     """
     
-    # 💡 동적 높이 계산 (50개 표시 기준)
     display_rows = min(len(filtered_df), 50)
     dynamic_height = (display_rows * 42) + 120
     
