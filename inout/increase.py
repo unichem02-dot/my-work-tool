@@ -63,7 +63,7 @@ st.markdown("""
         border-color: #646a39 !important; 
     }
     
-    /* 💡 타이틀 버튼 (Tertiary) 스타일링 - 흰색 창 및 잔상 제거 */
+    /* 타이틀 버튼 (Tertiary) 스타일링 */
     button[kind="tertiary"] {
         display: flex !important;
         justify-content: flex-start !important;
@@ -84,19 +84,8 @@ st.markdown("""
     button[kind="tertiary"]:hover p {
         color: #4e8cff !important;
     }
-    button[kind="tertiary"]:focus, button[kind="tertiary"]:active {
-        background-color: transparent !important;
-        box-shadow: none !important;
-    }
     
-    /* 💡 EXCEL 다운로드 버튼 전용 올리브색 커스텀 */
-    div[data-testid="stDownloadButton"] button[kind="primary"] {
-        background-color: #757c43 !important;
-        border-color: #757c43 !important;
-        color: white !important;
-    }
-    
-    /* 검색 메뉴 굵게 및 색상 */
+    /* 입력창 내부 디자인 */
     div[data-testid="stTextInput"] input, div[data-baseweb="select"] > div {
         color: #1e293b !important;
         font-weight: bold !important;
@@ -171,40 +160,47 @@ col_vendor, col_item, col_date = "업체명", "물품명", "인상날짜"
 data = data.fillna("")
 
 # ==========================================
-# 🛠️ 상태 관리 (검색창 텍스트 유지 로직)
+# 🛠️ 상태 관리 (2개 라인 검색 대응)
 # ==========================================
-# 실제 검색 실행용 필터값
-if 'active_vendor' not in st.session_state: st.session_state.active_vendor = ""
-if 'active_item' not in st.session_state: st.session_state.active_item = ""
-if 'active_year' not in st.session_state: st.session_state.active_year = "전체"
+# 실제 검색 실행용 필터값 (Active)
+if 'act_txt_vendor' not in st.session_state: st.session_state.act_txt_vendor = ""
+if 'act_txt_item' not in st.session_state: st.session_state.act_txt_item = ""
+if 'act_sel_vendor' not in st.session_state: st.session_state.act_sel_vendor = "전체"
+if 'act_sel_item' not in st.session_state: st.session_state.act_sel_item = "전체"
+if 'act_sel_year' not in st.session_state: st.session_state.act_sel_year = "전체"
 
 def do_search():
-    """검색 버튼 클릭 시: UI에 입력된 값을 실제 필터 조건으로 승인"""
-    st.session_state.active_vendor = st.session_state.ui_vendor
-    st.session_state.active_item = st.session_state.ui_item
-    st.session_state.active_year = st.session_state.ui_year
+    """검색 버튼 클릭 시: UI 입력값을 Active 필터로 복사"""
+    st.session_state.act_txt_vendor = st.session_state.ui_txt_vendor
+    st.session_state.act_txt_item = st.session_state.ui_txt_item
+    st.session_state.act_sel_vendor = st.session_state.ui_sel_vendor
+    st.session_state.act_sel_item = st.session_state.ui_sel_item
+    st.session_state.act_sel_year = st.session_state.ui_sel_year
 
 def do_reset():
-    """모든 검색 필터와 UI를 빈칸/전체로 초기화"""
-    st.session_state.active_vendor = ""
-    st.session_state.active_item = ""
-    st.session_state.active_year = "전체"
-    # UI 위젯용 세션 값도 동시에 초기화
-    st.session_state.ui_vendor = ""
-    st.session_state.ui_item = ""
-    st.session_state.ui_year = "전체"
+    """모든 필터 초기화"""
+    st.session_state.act_txt_vendor = ""
+    st.session_state.act_txt_item = ""
+    st.session_state.act_sel_vendor = "전체"
+    st.session_state.act_sel_item = "전체"
+    st.session_state.act_sel_year = "전체"
+    # UI 위젯 상태도 초기화
+    st.session_state.ui_txt_vendor = ""
+    st.session_state.ui_txt_item = ""
+    st.session_state.ui_sel_vendor = "전체"
+    st.session_state.ui_sel_item = "전체"
+    st.session_state.ui_sel_year = "전체"
 
 def do_full_refresh():
-    """상단 타이틀 클릭 시: 데이터 강제 갱신 + 완전 초기화"""
+    """타이틀 클릭: 데이터 강제 갱신 + 완전 초기화"""
     load_data.clear()
     do_reset()
 
 # ==========================================
-# UI 레이아웃 시작 (상단 타이틀)
+# UI 레이아웃 시작
 # ==========================================
 col_t, col_l = st.columns([8.5, 1.5])
 with col_t: 
-    # 타이틀 클릭 시 초기화 및 갱신 실행
     st.button("📈 유니매입가격정보 (인상공문 현황)", type="tertiary", on_click=do_full_refresh)
 
 with col_l:
@@ -215,9 +211,7 @@ with col_l:
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
-# ==========================================
-# 드롭다운 고유 항목 리스트 추출
-# ==========================================
+# 드롭다운 리스트 생성
 years_set = set()
 if col_date in data.columns:
     for d in data[col_date].dropna().unique():
@@ -229,42 +223,55 @@ if col_date in data.columns:
             elif len(y) == 4: years_set.add(y)
 year_list = ["전체"] + [f"{y}년" for y in sorted(list(years_set), reverse=True)]
 
-# 드롭다운에서 '전체' 글자 대신 빈칸("")을 첫 번째에 두어 깨끗하게 만듭니다.
-vendor_list = [""] + sorted([str(v).strip() for v in data[col_vendor].unique() if str(v).strip() != ""])
-item_list = [""] + sorted([str(v).strip() for v in data[col_item].unique() if str(v).strip() != ""])
+vendor_list = ["전체"] + sorted([str(v).strip() for v in data[col_vendor].unique() if str(v).strip() != ""])
+item_list = ["전체"] + sorted([str(v).strip() for v in data[col_item].unique() if str(v).strip() != ""])
 
-# 1. 상세 검색 영역 (Selectbox: 드롭다운 리스트 + 텍스트 검색 동시 지원)
-search_col1, search_col2, search_col3, search_col4, search_col5 = st.columns([2.5, 2.5, 1.5, 1.2, 1.2])
-
-with search_col1:
-    st.selectbox("🏢 업체명 검색", vendor_list, key="ui_vendor")
-
-with search_col2:
-    st.selectbox("📦 물품명 검색", item_list, key="ui_item")
-
-with search_col3:
-    st.selectbox("📅 인상 연도", year_list, key="ui_year")
-
-with search_col4:
+# ------------------------------------------
+# 검색 라인 1: 텍스트 검색
+# ------------------------------------------
+st.markdown("<h5 style='color: #4e8cff; margin-bottom: -10px;'>⌨️ 라인 1 : 텍스트 검색 (부분 일치 검색)</h5>", unsafe_allow_html=True)
+c1_1, c1_2, c1_3, c1_4 = st.columns([3.5, 3.5, 1.5, 1.5])
+with c1_1:
+    st.text_input("🏢 업체명 타이핑", placeholder="검색어 입력...", key="ui_txt_vendor")
+with c1_2:
+    st.text_input("📦 물품명 타이핑", placeholder="검색어 입력...", key="ui_txt_item")
+with c1_3:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-    st.button("🔍 검색", use_container_width=True, type="primary", on_click=do_search)
-
-with search_col5:
+    st.button("🔍 검색 실행", use_container_width=True, type="primary", on_click=do_search)
+with c1_4:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
     st.button("📂 전체보기", use_container_width=True, type="secondary", on_click=do_reset)
 
-# 2. 필터링 로직 (AND 조건)
-# 실제 검색 버튼을 누르기 전까지는 이전 검색 결과(active_*)를 유지합니다.
+# ------------------------------------------
+# 검색 라인 2: 드롭다운 검색
+# ------------------------------------------
+st.markdown("<h5 style='color: #4e8cff; margin-top: 10px; margin-bottom: -10px;'>🖱️ 라인 2 : 드롭다운 검색 (항목 선택)</h5>", unsafe_allow_html=True)
+c2_1, c2_2, c2_3 = st.columns(3)
+with c2_1:
+    st.selectbox("🏢 업체명 선택", vendor_list, key="ui_sel_vendor")
+with c2_2:
+    st.selectbox("📦 물품명 선택", item_list, key="ui_sel_item")
+with c2_3:
+    st.selectbox("📅 인상 연도 선택", year_list, key="ui_sel_year")
+
+# ==========================================
+# 2. 필터링 로직 (모든 조건 AND 결합)
+# ==========================================
 filtered_df = data.copy()
 
-if st.session_state.active_vendor != "":
-    filtered_df = filtered_df[filtered_df[col_vendor].astype(str).str.contains(st.session_state.active_vendor, case=False, na=False)]
+# 라인 1: 텍스트 필터
+if st.session_state.act_txt_vendor:
+    filtered_df = filtered_df[filtered_df[col_vendor].astype(str).str.contains(st.session_state.act_txt_vendor, case=False, na=False)]
+if st.session_state.act_txt_item:
+    filtered_df = filtered_df[filtered_df[col_item].astype(str).str.contains(st.session_state.act_txt_item, case=False, na=False)]
 
-if st.session_state.active_item != "":
-    filtered_df = filtered_df[filtered_df[col_item].astype(str).str.contains(st.session_state.active_item, case=False, na=False)]
-
-if st.session_state.active_year != "전체":
-    target_y = st.session_state.active_year.replace("년", "")
+# 라인 2: 드롭다운 필터
+if st.session_state.act_sel_vendor != "전체":
+    filtered_df = filtered_df[filtered_df[col_vendor].astype(str) == st.session_state.act_sel_vendor]
+if st.session_state.act_sel_item != "전체":
+    filtered_df = filtered_df[filtered_df[col_item].astype(str) == st.session_state.act_sel_item]
+if st.session_state.act_sel_year != "전체":
+    target_y = st.session_state.act_sel_year.replace("년", "")
     target_y_short = target_y[2:]
     filtered_df = filtered_df[filtered_df[col_date].apply(lambda d: str(d).strip().split('.')[0] in [target_y, target_y_short])]
 
@@ -274,7 +281,9 @@ if sort_cols:
     asc_rules = [False if c == col_date else True for c in sort_cols]
     filtered_df = filtered_df.sort_values(by=sort_cols, ascending=asc_rules)
 
-# 3. 요약 지표 바
+# ==========================================
+# 3. 요약 지표 바 및 하단 기능
+# ==========================================
 latest_date = "-"
 if not filtered_df.empty:
     valid_dates = [d for d in filtered_df[col_date].tolist() if str(d).strip() != ""]
@@ -294,37 +303,37 @@ with col_bar:
         </div>
     """, unsafe_allow_html=True)
 
-# 4. PRINT/EXCEL 기능 (속도 최적화 버전)
-html_table = filtered_df.to_html(index=False, escape=True)
-html_table = html_table.replace('border="1" class="dataframe"', 'class="custom-table"')
-# 칸 너비 비율 강제 적용
-html_table = html_table.replace('<th>물품명</th>', '<th style="width: 18%;">물품명</th>').replace('<th>메모</th>', '<th style="width: 34%;">메모</th>').replace('<th>기존가날짜</th>', '<th style="width: 8%;">기존가날짜</th>')
-
-print_html_content = f"<html><head><meta charset='utf-8'><style>body {{ font-family: 'Malgun Gothic'; }} .custom-table {{ width: 100%; border-collapse: collapse; }} .custom-table th, .custom-table td {{ border: 1px solid #aaa; padding: 6px; text-align: center; }} .custom-table th {{ background: #f1f5f9; }}</style></head><body><h2 style='text-align:center;'>유니매입가격정보 검색결과</h2>{html_table}</body></html>"
+# PRINT / EXCEL (너비 설정 포함)
+html_table_print = filtered_df.to_html(index=False, escape=True)
+html_table_print = html_table_print.replace('border="1" class="dataframe"', 'class="custom-table"')
+html_table_print = html_table_print.replace('<th>물품명</th>', '<th style="width: 18%;">물품명</th>').replace('<th>메모</th>', '<th style="width: 34%;">메모</th>').replace('<th>기존가날짜</th>', '<th style="width: 8%;">기존가날짜</th>')
+print_content = f"<html><head><style>body {{ font-family: 'Malgun Gothic'; }} .custom-table {{ width: 100%; border-collapse: collapse; }} .custom-table th, .custom-table td {{ border: 1px solid #aaa; padding: 6px; text-align: center; }} .custom-table th {{ background: #f1f5f9; }}</style></head><body><h2 style='text-align:center;'>검색결과</h2>{html_table_print}</body></html>"
 
 with col_print:
-    components.html(f"<html><body><style>.btn {{ width: 100%; height: 42px; background: #757c43; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }} .btn:hover {{ background: #646a39; }}</style><button class='btn' onclick='fastPrint()'>🖨️ PRINT</button><script>function fastPrint() {{ var html = {json.dumps(print_html_content)}; var win = window.open('', '_blank'); win.document.write(html); win.document.close(); setTimeout(function(){{ win.print(); }}, 200); }}</script></body></html>", height=45)
+    components.html(f"<html><body><style>.btn {{ width: 100%; height: 42px; background: #757c43; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }}</style><button class='btn' onclick='p()'>🖨️ PRINT</button><script>function p(){{var w=window.open('','_blank');w.document.write({json.dumps(print_content)});w.document.close();setTimeout(function(){{w.print();}},250);}}</script></body></html>", height=45)
 
 with col_excel:
-    excel_output = io.BytesIO()
+    excel_io = io.BytesIO()
     try:
-        with pd.ExcelWriter(excel_output, engine='openpyxl') as writer:
-            filtered_df.to_excel(writer, index=False, sheet_name='검색결과')
-        st.download_button("💾 EXCEL", data=excel_output.getvalue(), file_name=f"유니매입단가인상_{get_kst_now().strftime('%Y%m%d')}.xlsx", use_container_width=True, type="primary")
+        with pd.ExcelWriter(excel_io, engine='openpyxl') as wr:
+            filtered_df.to_excel(wr, index=False, sheet_name='Sheet1')
+        st.download_button("💾 EXCEL", data=excel_io.getvalue(), file_name=f"export_{get_kst_now().strftime('%Y%m%d')}.xlsx", use_container_width=True, type="primary")
     except:
-        st.download_button("💾 EXCEL", data=filtered_df.to_csv(index=False).encode('utf-8-sig'), file_name="export.csv", use_container_width=True, type="primary")
+        st.download_button("💾 CSV", data=filtered_df.to_csv(index=False).encode('utf-8-sig'), file_name="export.csv", use_container_width=True, type="primary")
 
-# 5. 검색 조건 표시 (노란색 글씨로 시인성 확보)
+# 검색 조건 텍스트 표시
 conds = []
-if st.session_state.active_vendor != "": conds.append(f"업체({st.session_state.active_vendor})")
-if st.session_state.active_item != "": conds.append(f"물품({st.session_state.active_item})")
-if st.session_state.active_year != "전체": conds.append(f"연도({st.session_state.active_year})")
+if st.session_state.act_txt_vendor: conds.append(f"업체명(텍스트:{st.session_state.act_txt_vendor})")
+if st.session_state.act_txt_item: conds.append(f"물품명(텍스트:{st.session_state.act_txt_item})")
+if st.session_state.act_sel_vendor != "전체": conds.append(f"업체명(선택:{st.session_state.act_sel_vendor})")
+if st.session_state.act_sel_item != "전체": conds.append(f"물품명(선택:{st.session_state.act_sel_item})")
+if st.session_state.act_sel_year != "전체": conds.append(f"연도({st.session_state.act_sel_year})")
 search_info = f"<span style='color:#ffeb3b;'>[검색조건: {' + '.join(conds)}]</span>" if conds else "(전체 데이터)"
 st.markdown(f"#### 📋 상세 내역 {search_info}", unsafe_allow_html=True)
 
-# 6. 독립 HTML 테이블 렌더링 (속도 극대화)
+# 독립 HTML 테이블 (itertuples 속도 최적화)
 if filtered_df.empty:
-    st.warning("👀 검색 조건에 맞는 데이터가 없습니다.")
+    st.warning("👀 조건에 맞는 데이터가 없습니다.")
 else:
     def get_th_class(col):
         if "기존" in str(col): return "th-in"
@@ -334,33 +343,30 @@ else:
         if any(x in str(col) for x in ["업체", "물품", "메모"]): return "tl"
         return "tr" if any(x in str(col) for x in ["가", "폭", "수량"]) else "tc"
 
-    rows_html = []
-    # 데이터 출력 속도 최적화를 위해 itertuples 사용
+    rows = []
     for idx, row in enumerate(filtered_df.itertuples(index=False)):
-        d_s = "" if idx < 100 else " style='display:none;'"
-        r_s = f"<tr{d_s}>"
+        ds = "" if idx < 100 else " style='display:none;'"
+        rs = f"<tr{ds}>"
         for i, col_name in enumerate(filtered_df.columns):
             val = html.escape(str(row[i])) if row[i] != "" else ""
             cls = get_td_class(col_name) + (" bold-col" if col_name in ["물품명", "인상폭"] else "")
-            r_s += f"<td class='{cls}'>{val}</td>"
-        rows_html.append(r_s + "</tr>")
+            rs += f"<td class='{cls}'>{val}</td>"
+        rows.append(rs + "</tr>")
 
-    table_body = "".join(rows_html)
-    iframe_html = f"""
+    t_html = f"""
     <!DOCTYPE html><html><head><meta charset='utf-8'><style>
     body {{ background: #2b323c; font-family: 'Malgun Gothic'; margin: 0; color: #1e293b; }}
     .custom-table {{ width: 100%; border-collapse: collapse; background: white; font-size: 15px; table-layout: fixed; }}
     .custom-table th, .custom-table td {{ border: 1px solid #d0d0d0; padding: 8px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
-    .custom-table th {{ color: white; font-weight: bold; cursor: pointer; user-select: none; }}
+    .custom-table th {{ color: white; font-weight: bold; }}
     .th-base {{ background: #353b48; }} .th-in {{ background: #3b5b88; }} .th-out {{ background: #b8860b; }} .th-etc {{ background: #757c43; }}
     .tc {{ text-align: center; }} .tl {{ text-align: left; }} .tr {{ text-align: right; }}
     .bold-col {{ font-weight: 900; color: black !important; }}
     .custom-table tr:nth-child(even) td {{ background-color: #f8f9fa; }}
-    </style></head><body>
-    <table class='custom-table'><thead><tr>
+    </style></head><body><table class='custom-table'><thead><tr>
     """
     for col in filtered_df.columns:
         w = "width:18%;" if "물품" in col else "width:34%;" if "메모" in col else "width:8%;" if "기존가날짜" in col else ""
-        iframe_html += f"<th class='{get_th_class(col)}' style='{w}'>{col}</th>"
-    iframe_html += f"</tr></thead><tbody>{table_body}</tbody></table></body></html>"
-    components.html(iframe_html, height=min(len(filtered_df)*40 + 60, 800), scrolling=True)
+        t_html += f"<th class='{get_th_class(col)}' style='{w}'>{col}</th>"
+    t_html += f"</tr></thead><tbody>{''.join(rows)}</tbody></table></body></html>"
+    components.html(t_html, height=min(len(filtered_df)*40+60, 800), scrolling=True)
