@@ -63,6 +63,26 @@ st.markdown("""
         border-color: #646a39 !important; 
     }
     
+    /* 💡 타이틀 버튼 (Tertiary) 스타일링 - 제목 클릭 시 전체보기용 */
+    button[kind="tertiary"] {
+        display: flex !important;
+        justify-content: flex-start !important;
+        padding: 0 !important;
+        background-color: transparent !important;
+        border: none !important;
+        margin-top: 5px !important;
+    }
+    button[kind="tertiary"] p {
+        font-size: 1.8rem !important; /* H3 타이틀 크기 */
+        font-weight: 800 !important;
+        color: #ffffff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    button[kind="tertiary"]:hover p {
+        color: #4e8cff !important; /* 마우스 오버 시 파란색으로 변함 */
+    }
+    
     /* 💡 EXCEL 다운로드 버튼 전용 올리브색 커스텀 */
     div[data-testid="stDownloadButton"] button[kind="primary"] {
         background-color: #757c43 !important;
@@ -170,7 +190,7 @@ if missing_cols:
 data = data.fillna("")
 
 # ==========================================
-# 🛠️ 상태 관리 (검색/초기화 전용 로직)
+# 🛠️ 상태 관리 (검색/전체보기 전용 로직)
 # ==========================================
 # 1) 실제로 화면 필터링에 반영될 저장된 검색 조건들 (초기값: 비어있음)
 if 'active_vendor' not in st.session_state: st.session_state.active_vendor = ""
@@ -189,7 +209,7 @@ def do_search():
     st.session_state.active_year = st.session_state.ui_year
 
 def do_reset():
-    """모든 조건과 입력창을 싹 다 비우는 완전 초기화 함수"""
+    """모든 조건과 입력창을 싹 다 비우는 완전 초기화(전체보기) 함수"""
     st.session_state.active_vendor = ""
     st.session_state.active_item = ""
     st.session_state.active_year = "전체"
@@ -203,7 +223,8 @@ def do_reset():
 # ==========================================
 col_t, col_r, col_l = st.columns([6.5, 1.5, 1.5])
 with col_t: 
-    st.markdown(f"<h3 style='margin-top:5px; margin-bottom:0;'>📈 유니매입가격정보 (인상공문 현황)</h3>", unsafe_allow_html=True)
+    # 클릭 가능한 타이틀 (클릭 시 전체보기 로직 실행)
+    st.button("📈 유니매입가격정보 (인상공문 현황)", type="tertiary", help="클릭하면 모든 검색 조건이 지워지고 전체보기 화면으로 돌아갑니다.", on_click=do_reset)
 
 with col_r: 
     if st.button("🔄 새로고침", use_container_width=True, type="primary"):
@@ -235,7 +256,7 @@ if col_date in data.columns:
                 
 year_list = ["전체"] + [f"{y}년" for y in sorted(list(years_set), reverse=True)]
 
-# 1. 상세 검색 영역 (5단 배치: 업체명 / 물품명 / 연도 / 검색 / 초기화)
+# 1. 상세 검색 영역 (5단 배치: 업체명 / 물품명 / 연도 / 검색 / 전체보기)
 search_col1, search_col2, search_col3, search_col4, search_col5 = st.columns([2.5, 2.5, 1.5, 1.2, 1.2])
 
 with search_col1:
@@ -255,7 +276,7 @@ with search_col4:
 
 with search_col5:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-    st.button("🔄 초기화", use_container_width=True, type="secondary", on_click=do_reset)
+    st.button("📂 전체보기", use_container_width=True, type="secondary", on_click=do_reset)
 
 # 2. 필터링 로직 (AND 조건)
 filtered_df = data.copy()
