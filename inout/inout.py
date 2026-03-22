@@ -478,7 +478,7 @@ with col_t:
 
 with col_link:
     # 💡 DB 업로드 버튼 좌측에 인상공문 외부 링크 버튼 추가 (새 탭으로 열기 기본 지원)
-    st.link_button("📄 인상공문", "https://my-work-tool-nwvgwcjdnvyqzd6n2mdkrn.streamlit.app/", use_container_width=True)
+    st.link_button("📄 인상공문", "https://my-work-tool-nwvgwcjdnvyqzd6n2mdkrn.streamlit.app/?pass=uni", use_container_width=True)
 
 with col_u: 
     if st.button("📤 DB 업로드" if not st.session_state.show_uploader else "❌ 업로드 닫기", use_container_width=True, type="primary"):
