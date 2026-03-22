@@ -7,3 +7,4 @@ streamlit
 pymysql
 pandas
 st-gsheets-connection
+openpyxl
