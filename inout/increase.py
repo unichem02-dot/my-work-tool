@@ -205,8 +205,8 @@ if 'act_t2_v' not in st.session_state: st.session_state.act_t2_v = "전체"
 if 'act_t2_i' not in st.session_state: st.session_state.act_t2_i = "전체"
 if 'act_t2_y' not in st.session_state: st.session_state.act_t2_y = "전체"
 
-# 💡 즐겨찾기 필터 모드 (기본값: True - 즐겨찾기만 표시)
-if 'show_favorites' not in st.session_state: st.session_state.show_favorites = True
+# 💡 즐겨찾기 필터 모드 (기본값: False - 처음 접속 시 전체 리스트 표시)
+if 'show_favorites' not in st.session_state: st.session_state.show_favorites = False
 
 def do_search_t1():
     st.session_state.act_mode = "text"
@@ -228,7 +228,7 @@ def do_search_t2():
 
 def do_reset():
     st.session_state.act_mode = "init"
-    st.session_state.show_favorites = True # 리셋 시 즐겨찾기 모드로 강제 복귀
+    st.session_state.show_favorites = False # 💡 리셋/새로고침 시 전체 리스트로 복귀
     st.session_state.act_t1_v = ""
     st.session_state.act_t1_i = ""
     st.session_state.act_t1_y = "전체"
@@ -254,7 +254,7 @@ with col_t:
     st.button("📈 유니매입가격정보 (인상공문 현황)", type="tertiary", on_click=do_full_refresh)
 
 with col_f:
-    # 💡 즐겨찾기 토글 버튼 (Primary 색상으로 변경하여 파란색 유지)
+    # 💡 즐겨찾기 토글 버튼
     if st.session_state.show_favorites:
         if st.button("📜 전체 리스트", use_container_width=True, type="primary"):
             st.session_state.show_favorites = False
@@ -292,29 +292,25 @@ year_list = ["전체"] + [f"{y}년" for y in sorted(list(years_set), reverse=Tru
 vendor_list = ["전체"] + sorted([str(v).strip() for v in data[col_vendor].unique() if str(v).strip() != ""])
 item_list = ["전체"] + sorted([str(v).strip() for v in data[col_item].unique() if str(v).strip() != ""])
 
+# 💡 전체보기 버튼을 제거하고 컬럼 수를 4개로 조정
 # 1라인 검색
-c1_1, c1_2, c1_3, c1_4, c1_5 = st.columns([2.5, 2.5, 1.5, 1.7, 1.8])
+c1_1, c1_2, c1_3, c1_4 = st.columns([3.0, 3.0, 2.0, 2.0])
 with c1_1: st.text_input("🏢 업체명 타이핑", placeholder="부분 일치 검색", key="ui_t1_v")
 with c1_2: st.text_input("📦 물품명 타이핑", placeholder="부분 일치 검색", key="ui_t1_i")
 with c1_3: st.selectbox("📅 인상연도", year_list, key="ui_t1_y")
 with c1_4:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
     st.button("🔍 텍스트 검색", use_container_width=True, type="primary", on_click=do_search_t1)
-with c1_5:
-    st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-    st.button("📂 전체보기", use_container_width=True, type="secondary", on_click=do_reset, key="res1")
 
+# 💡 전체보기 버튼을 제거하고 컬럼 수를 4개로 조정
 # 2라인 검색
-c2_1, c2_2, c2_3, c2_4, c2_5 = st.columns([2.5, 2.5, 1.5, 1.7, 1.8])
+c2_1, c2_2, c2_3, c2_4 = st.columns([3.0, 3.0, 2.0, 2.0])
 with c2_1: st.selectbox("🏢 업체명 선택", vendor_list, key="ui_t2_v")
 with c2_2: st.selectbox("📦 물품명 선택", item_list, key="ui_t2_i")
 with c2_3: st.selectbox("📅 연도 선택", year_list, key="ui_t2_y")
 with c2_4:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
     st.button("🔍 선택 검색", use_container_width=True, type="primary", on_click=do_search_t2)
-with c2_5:
-    st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-    st.button("📂 전체보기", use_container_width=True, type="secondary", on_click=do_reset, key="res2")
 
 # ==========================================
 # 필터링 로직
@@ -471,7 +467,7 @@ else:
     
     .custom-table tr:nth-child(even) td { background-color: #f8f9fa; }
     
-    /* 💡 즐겨찾기(⭐) 등록된 행 바탕색 강제 적용 (연한 녹색으로 변경) */
+    /* 💡 즐겨찾기(⭐) 등록된 행 바탕색 강제 적용 (연한 녹색) */
     .custom-table tr.favorite-row td { background-color: #e8f5e9 !important; }
     /* 💡 즐겨찾기 행 마우스 오버 시 좀 더 진한 녹색으로 강조 */
     .custom-table tr.favorite-row:hover td { background-color: #c8e6c9 !important; cursor: pointer; transition: background-color 0.1s ease; }
