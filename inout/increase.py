@@ -485,7 +485,9 @@ else:
             if col_name in ["업체명", "인상날짜", "인상폭", "인상가", "기존가"]:
                 cls += " nowrap-col"
                 
-            if col_name in ["물품명", "인상날짜"]:
+            if col_name == "물품명":
+                cls += " text-item-name"
+            elif col_name == "인상날짜":
                 cls += " bold-col"
             elif col_name == "업체명":
                 cls += " text-darkgreen"
@@ -513,10 +515,11 @@ else:
     
     /* 개별 열 색상 및 굵기 하이라이트 CSS */
     .bold-col { font-weight: 900; color: black !important; }
+    .text-item-name { font-weight: 900; color: black !important; font-size: 120% !important; } /* 💡 물품명: 검은색 굵게, 크기 20%업 */
     .nowrap-col { white-space: nowrap !important; } /* 💡 강제 줄바꿈 방지 */
     .text-darkgreen { font-weight: 900; color: #1b5e20 !important; } 
     .text-red-large { font-weight: 900; color: #e53935 !important; font-size: 130% !important; } 
-    .text-red-110 { font-weight: 900; color: red !important; font-size: 110% !important; } /* 인상가: 빨간색 굵게, 크기 10%업 */
+    .text-red-110 { font-weight: 900; color: red !important; font-size: 110% !important; } 
     .text-blue { font-weight: 900; color: #1e88e5 !important; } 
     
     .custom-table tr:nth-child(even) td { background-color: #f8f9fa; }
