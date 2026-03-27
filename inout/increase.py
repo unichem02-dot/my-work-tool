@@ -472,7 +472,7 @@ else:
                 val = html.escape(val_raw) if val_raw != "" else ""
             
             cls = get_td_class(col_name)
-            if col_name == "물품명":
+            if col_name in ["물품명", "인상날짜"]:
                 cls += " bold-col"
             elif col_name == "업체명":
                 cls += " text-darkgreen"
