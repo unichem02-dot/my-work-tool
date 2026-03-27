@@ -215,7 +215,7 @@ if 'act_t2_v' not in st.session_state: st.session_state.act_t2_v = "전체"
 if 'act_t2_i' not in st.session_state: st.session_state.act_t2_i = "전체"
 if 'act_t2_y' not in st.session_state: st.session_state.act_t2_y = "전체"
 
-# 💡 즐겨찾기 필터 모드 (기본값: False - 처음 접속 시 전체 리스트 표시)
+# 💡 즐겨찾기 필 모드 (기본값: False - 처음 접속 시 전체 리스트 표시)
 if 'show_favorites' not in st.session_state: st.session_state.show_favorites = False
 
 def do_search_t1():
@@ -388,10 +388,10 @@ with col_print:
         html_table_p = html_table_p.replace(f'<th>{fav_col}</th>', '<th style="width: 4%;">⭐</th>')
         html_table_p = html_table_p.replace('<td>v</td>', '<td style="text-align:center;">⭐</td>').replace('<td>V</td>', '<td style="text-align:center;">⭐</td>')
         
-    # 💡 인쇄 화면 폭 비율 재조정 (업체명 9%, 물품명 19%, 메모 20%)
+    # 💡 인쇄 화면 폭 비율 재조정 (업체명 9%, 물품명 20%, 메모 19%)
     html_table_p = html_table_p.replace('<th>업체명</th>', '<th style="width: 9%;">업체명</th>')
-    html_table_p = html_table_p.replace('<th>물품명</th>', '<th style="width: 19%;">물품명</th>')
-    html_table_p = html_table_p.replace('<th>메모</th>', '<th style="width: 20%;">메모</th>')
+    html_table_p = html_table_p.replace('<th>물품명</th>', '<th style="width: 20%;">물품명</th>')
+    html_table_p = html_table_p.replace('<th>메모</th>', '<th style="width: 19%;">메모</th>')
     html_table_p = html_table_p.replace('<th>인상날짜</th>', '<th style="white-space: nowrap;">인상날짜</th>')
     html_table_p = html_table_p.replace('<th>인상폭</th>', '<th style="white-space: nowrap;">인상폭</th>')
     html_table_p = html_table_p.replace('<th>인상가</th>', '<th style="white-space: nowrap;">인상가</th>')
@@ -541,11 +541,11 @@ else:
     
     # 헤더(제목) 생성 시 Favor 열 제목을 '⭐' 로 자동 변경
     for i, col in enumerate(filtered_df.columns):
-        # 💡 업체명은 9%로 폭을 줄이고, 물품명은 19%로 폭을 넓게 재배치
+        # 💡 업체명은 9%, 물품명은 20%로 넓히고, 메모를 19%로 줄여서 재조정
         if col == fav_col: w = "width:4%;"
         elif "업체" in col: w = "width:9%;"
-        elif "물품" in col: w = "width:19%;"
-        elif "메모" in col: w = "width:20%;"
+        elif "물품" in col: w = "width:20%;"
+        elif "메모" in col: w = "width:19%;"
         else: w = ""
         
         disp_col = "⭐" if col == fav_col else col
