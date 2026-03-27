@@ -479,7 +479,7 @@ else:
             elif col_name == "인상폭":
                 cls += " text-red-large"
             elif col_name == "인상가":
-                cls += " text-softred"
+                cls += " text-red-110"
             elif col_name == "기존가":
                 cls += " text-blue"
             
@@ -502,7 +502,7 @@ else:
     .bold-col { font-weight: 900; color: black !important; }
     .text-darkgreen { font-weight: 900; color: #1b5e20 !important; } 
     .text-red-large { font-weight: 900; color: #e53935 !important; font-size: 130% !important; } 
-    .text-softred { font-weight: 900; color: #ef5350 !important; } 
+    .text-red-110 { font-weight: 900; color: red !important; font-size: 110% !important; } /* 인상가: 빨간색 굵게, 크기 10%업 */
     .text-blue { font-weight: 900; color: #1e88e5 !important; } 
     
     .custom-table tr:nth-child(even) td { background-color: #f8f9fa; }
