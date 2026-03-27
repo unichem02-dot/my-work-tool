@@ -388,9 +388,17 @@ with col_print:
         html_table_p = html_table_p.replace(f'<th>{fav_col}</th>', '<th style="width: 4%;">⭐</th>')
         html_table_p = html_table_p.replace('<td>v</td>', '<td style="text-align:center;">⭐</td>').replace('<td>V</td>', '<td style="text-align:center;">⭐</td>')
         
-    html_table_p = html_table_p.replace('<th>물품명</th>', '<th style="width: 18%;">물품명</th>').replace('<th>메모</th>', '<th style="width: 34%;">메모</th>').replace('<th>기존가날짜</th>', '<th style="width: 8%;">기존가날짜</th>')
+    # 💡 메모칸을 줄이고 주요 열에 줄바꿈 방지(nowrap) 속성 부여
+    html_table_p = html_table_p.replace('<th>물품명</th>', '<th style="width: 16%;">물품명</th>')
+    html_table_p = html_table_p.replace('<th>메모</th>', '<th style="width: 20%;">메모</th>')
+    html_table_p = html_table_p.replace('<th>인상날짜</th>', '<th style="white-space: nowrap;">인상날짜</th>')
+    html_table_p = html_table_p.replace('<th>인상폭</th>', '<th style="white-space: nowrap;">인상폭</th>')
+    html_table_p = html_table_p.replace('<th>인상가</th>', '<th style="white-space: nowrap;">인상가</th>')
+    html_table_p = html_table_p.replace('<th>기존가날짜</th>', '<th style="white-space: nowrap;">기존가날짜</th>')
+    html_table_p = html_table_p.replace('<th>기존가</th>', '<th style="white-space: nowrap;">기존가</th>')
     
-    p_content = "<html><head><style>body { font-family: 'Malgun Gothic'; } .custom-table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #aaa; padding: 6px; text-align: center; } th { background: #f1f5f9; }</style></head><body><h2 style='text-align:center;'>인상공문 검색결과</h2>" + html_table_p + "</body></html>"
+    # 💡 인쇄 팝업 창을 띄울 때 가로(landscape) 설정 및 td 줄바꿈 방지 스타일 적용
+    p_content = "<html><head><style>@page { size: landscape; } body { font-family: 'Malgun Gothic'; } .custom-table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #aaa; padding: 6px; text-align: center; } th { background: #f1f5f9; } .custom-table td:nth-child(2), .custom-table td:nth-child(4), .custom-table td:nth-child(5), .custom-table td:nth-child(6), .custom-table td:nth-child(7), .custom-table td:nth-child(8) { white-space: nowrap !important; }</style></head><body><h2 style='text-align:center;'>인상공문 검색결과</h2>" + html_table_p + "</body></html>"
     
     components.html(
         "<html><body style='margin:0; padding:0;'>"
@@ -472,6 +480,11 @@ else:
                 val = html.escape(val_raw) if val_raw != "" else ""
             
             cls = get_td_class(col_name)
+            
+            # 💡 강제 줄바꿈 방지 클래스 추가
+            if col_name in ["업체명", "인상날짜", "인상폭", "인상가", "기존가날짜", "기존가"]:
+                cls += " nowrap-col"
+                
             if col_name in ["물품명", "인상날짜"]:
                 cls += " bold-col"
             elif col_name == "업체명":
@@ -500,6 +513,7 @@ else:
     
     /* 개별 열 색상 및 굵기 하이라이트 CSS */
     .bold-col { font-weight: 900; color: black !important; }
+    .nowrap-col { white-space: nowrap !important; } /* 💡 강제 줄바꿈 방지 */
     .text-darkgreen { font-weight: 900; color: #1b5e20 !important; } 
     .text-red-large { font-weight: 900; color: #e53935 !important; font-size: 130% !important; } 
     .text-red-110 { font-weight: 900; color: red !important; font-size: 110% !important; } /* 인상가: 빨간색 굵게, 크기 10%업 */
@@ -527,9 +541,16 @@ else:
     
     # 헤더(제목) 생성 시 Favor 열 제목을 '⭐' 로 자동 변경
     for i, col in enumerate(filtered_df.columns):
-        w = "width:4%;" if col == fav_col else "width:18%;" if "물품" in col else "width:34%;" if "메모" in col else "width:8%;" if "기존가날짜" in col else ""
+        # 💡 메모칸을 20%로 줄이고, 물품명을 16%로 조정
+        w = "width:4%;" if col == fav_col else "width:16%;" if "물품" in col else "width:20%;" if "메모" in col else ""
         disp_col = "⭐" if col == fav_col else col
-        t_html += f"<th class='{get_th_class(col)}' style='{w}' onclick='sortTable({i})'>{disp_col}<span class='sort-icon' id='icon-{i}'></span></th>"
+        
+        # 💡 헤더에도 nowrap 클래스 적용
+        th_cls = get_th_class(col)
+        if col in ["업체명", "인상날짜", "인상폭", "인상가", "기존가날짜", "기존가"]:
+            th_cls += " nowrap-col"
+            
+        t_html += f"<th class='{th_cls}' style='{w}' onclick='sortTable({i})'>{disp_col}<span class='sort-icon' id='icon-{i}'></span></th>"
     
     t_html += "</tr></thead><tbody id='tableBody'>" + "".join(rows_html) + "</tbody></table>"
     
