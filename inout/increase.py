@@ -254,13 +254,13 @@ with col_t:
     st.button("📈 유니매입가격정보 (인상공문 현황)", type="tertiary", on_click=do_full_refresh)
 
 with col_f:
-    # 💡 즐겨찾기 토글 버튼
+    # 💡 즐겨찾기 토글 버튼 (Primary 색상으로 변경하여 파란색 유지)
     if st.session_state.show_favorites:
-        if st.button("📜 전체 리스트", use_container_width=True, type="secondary"):
+        if st.button("📜 전체 리스트", use_container_width=True, type="primary"):
             st.session_state.show_favorites = False
             st.rerun()
     else:
-        if st.button("⭐ 즐겨찾기", use_container_width=True, type="secondary"):
+        if st.button("⭐ 즐겨찾기", use_container_width=True, type="primary"):
             st.session_state.show_favorites = True
             st.rerun()
 
@@ -471,10 +471,10 @@ else:
     
     .custom-table tr:nth-child(even) td { background-color: #f8f9fa; }
     
-    /* 💡 즐겨찾기(⭐) 등록된 행 바탕색 강제 적용 (연한 노란색) */
-    .custom-table tr.favorite-row td { background-color: #fffde7 !important; }
-    /* 💡 즐겨찾기 행 마우스 오버 시 좀 더 진하게 */
-    .custom-table tr.favorite-row:hover td { background-color: #fff9c4 !important; cursor: pointer; transition: background-color 0.1s ease; }
+    /* 💡 즐겨찾기(⭐) 등록된 행 바탕색 강제 적용 (연한 녹색으로 변경) */
+    .custom-table tr.favorite-row td { background-color: #e8f5e9 !important; }
+    /* 💡 즐겨찾기 행 마우스 오버 시 좀 더 진한 녹색으로 강조 */
+    .custom-table tr.favorite-row:hover td { background-color: #c8e6c9 !important; cursor: pointer; transition: background-color 0.1s ease; }
     
     /* 일반 행 마우스 오버 */
     .custom-table tr:not(.favorite-row):hover td { background-color: #e2e6ea !important; cursor: pointer; transition: background-color 0.1s ease; }
