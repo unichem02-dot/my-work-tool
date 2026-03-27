@@ -182,7 +182,7 @@ try:
     data = load_data()
     
     # 💡 구글 시트의 변경된 열 순서 강제 지정
-    desired_order = ['Favor', '업체명', '물품명', '인상날짜', '인상폭', '인상가', '기존가날짜', '기존가', '메모']
+    desired_order = ['Favor', '업체명', '물품명', '인상날짜', '인상폭', '인상가', '기존가', '메모']
     # 시트에 존재하는 열만 순서에 맞춰 가져오기 (오류 방지)
     final_cols = [c for c in desired_order if c in data.columns]
     # 지정되지 않은 추가 열이 있다면 뒤쪽에 붙임
@@ -394,11 +394,10 @@ with col_print:
     html_table_p = html_table_p.replace('<th>인상날짜</th>', '<th style="white-space: nowrap;">인상날짜</th>')
     html_table_p = html_table_p.replace('<th>인상폭</th>', '<th style="white-space: nowrap;">인상폭</th>')
     html_table_p = html_table_p.replace('<th>인상가</th>', '<th style="white-space: nowrap;">인상가</th>')
-    html_table_p = html_table_p.replace('<th>기존가날짜</th>', '<th style="white-space: nowrap;">기존가날짜</th>')
     html_table_p = html_table_p.replace('<th>기존가</th>', '<th style="white-space: nowrap;">기존가</th>')
     
     # 💡 인쇄 팝업 창을 띄울 때 가로(landscape) 설정 및 td 줄바꿈 방지 스타일 적용
-    p_content = "<html><head><style>@page { size: landscape; } body { font-family: 'Malgun Gothic'; } .custom-table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #aaa; padding: 6px; text-align: center; } th { background: #f1f5f9; } .custom-table td:nth-child(2), .custom-table td:nth-child(4), .custom-table td:nth-child(5), .custom-table td:nth-child(6), .custom-table td:nth-child(7), .custom-table td:nth-child(8) { white-space: nowrap !important; }</style></head><body><h2 style='text-align:center;'>인상공문 검색결과</h2>" + html_table_p + "</body></html>"
+    p_content = "<html><head><style>@page { size: landscape; } body { font-family: 'Malgun Gothic'; } .custom-table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #aaa; padding: 6px; text-align: center; } th { background: #f1f5f9; } .custom-table td:nth-child(2), .custom-table td:nth-child(4), .custom-table td:nth-child(5), .custom-table td:nth-child(6), .custom-table td:nth-child(7) { white-space: nowrap !important; }</style></head><body><h2 style='text-align:center;'>인상공문 검색결과</h2>" + html_table_p + "</body></html>"
     
     components.html(
         "<html><body style='margin:0; padding:0;'>"
@@ -482,7 +481,7 @@ else:
             cls = get_td_class(col_name)
             
             # 💡 강제 줄바꿈 방지 클래스 추가
-            if col_name in ["업체명", "인상날짜", "인상폭", "인상가", "기존가날짜", "기존가"]:
+            if col_name in ["업체명", "인상날짜", "인상폭", "인상가", "기존가"]:
                 cls += " nowrap-col"
                 
             if col_name in ["물품명", "인상날짜"]:
@@ -547,7 +546,7 @@ else:
         
         # 💡 헤더에도 nowrap 클래스 적용
         th_cls = get_th_class(col)
-        if col in ["업체명", "인상날짜", "인상폭", "인상가", "기존가날짜", "기존가"]:
+        if col in ["업체명", "인상날짜", "인상폭", "인상가", "기존가"]:
             th_cls += " nowrap-col"
             
         t_html += f"<th class='{th_cls}' style='{w}' onclick='sortTable({i})'>{disp_col}<span class='sort-icon' id='icon-{i}'></span></th>"
