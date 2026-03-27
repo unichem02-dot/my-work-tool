@@ -302,7 +302,6 @@ year_list = ["전체"] + [f"{y}년" for y in sorted(list(years_set), reverse=Tru
 vendor_list = ["전체"] + sorted([str(v).strip() for v in data[col_vendor].unique() if str(v).strip() != ""])
 item_list = ["전체"] + sorted([str(v).strip() for v in data[col_item].unique() if str(v).strip() != ""])
 
-# 💡 전체보기 버튼을 제거하고 컬럼 수를 4개로 조정
 # 1라인 검색
 c1_1, c1_2, c1_3, c1_4 = st.columns([3.0, 3.0, 2.0, 2.0])
 with c1_1: st.text_input("🏢 업체명 타이핑", placeholder="부분 일치 검색", key="ui_t1_v")
@@ -312,7 +311,6 @@ with c1_4:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
     st.button("🔍 텍스트 검색", use_container_width=True, type="primary", on_click=do_search_t1)
 
-# 💡 전체보기 버튼을 제거하고 컬럼 수를 4개로 조정
 # 2라인 검색
 c2_1, c2_2, c2_3, c2_4 = st.columns([3.0, 3.0, 2.0, 2.0])
 with c2_1: st.selectbox("🏢 업체명 선택", vendor_list, key="ui_t2_v")
@@ -376,11 +374,17 @@ with col_bar:
     """, unsafe_allow_html=True)
 
 with col_print:
-    html_table_p = filtered_df.to_html(index=False, escape=True)
+    # 💡 PRINT 데이터 전처리 (소수점 제거 및 '원' 추가)
+    print_df = filtered_df.copy()
+    for c in print_df.columns:
+        print_df[c] = print_df[c].astype(str).str.replace(r'\.0$', '', regex=True)
+        if c in ["인상폭", "인상가", "기존가"]:
+            print_df[c] = print_df[c].apply(lambda x: f"{x}원" if str(x).strip() != "" and str(x).strip().lower() != "nan" and "원" not in str(x) else ("" if str(x).strip().lower() == "nan" else x))
+    
+    html_table_p = print_df.to_html(index=False, escape=True)
     html_table_p = html_table_p.replace('border="1" class="dataframe"', 'class="custom-table"')
     
-    # 💡 PRINT 화면에서도 Favor 열을 별표(⭐)로 완벽하게 변환
-    if fav_col and fav_col in filtered_df.columns:
+    if fav_col and fav_col in print_df.columns:
         html_table_p = html_table_p.replace(f'<th>{fav_col}</th>', '<th style="width: 4%;">⭐</th>')
         html_table_p = html_table_p.replace('<td>v</td>', '<td style="text-align:center;">⭐</td>').replace('<td>V</td>', '<td style="text-align:center;">⭐</td>')
         
@@ -451,13 +455,22 @@ else:
         for i, col_name in enumerate(filtered_df.columns):
             val_raw = str(row[i]).strip()
             
-            # 💡 'Favor' 열을 정확히 감지하여 별표(⭐) 아이콘으로 변경
+            # 💡 pandas 자동 할당 소수점(.0) 및 nan 텍스트 방어
+            if val_raw.lower() == "nan": 
+                val_raw = ""
+            if val_raw.endswith(".0"): 
+                val_raw = val_raw[:-2]
+            
+            # 💡 가격 데이터에 '원' 추가 로직 적용
+            if col_name in ["인상폭", "인상가", "기존가"] and val_raw != "":
+                if not val_raw.endswith("원"):
+                    val_raw += "원"
+            
             if col_name == fav_col:
-                val = "⭐" if val_raw.lower() == "v" else ""
+                val = "⭐" if val_raw.lower() == "v원" or val_raw.lower() == "v" else ""
             else:
                 val = html.escape(val_raw) if val_raw != "" else ""
             
-            # 💡 업체명, 인상폭, 인상가, 기존가 등 개별 스타일 적용
             cls = get_td_class(col_name)
             if col_name == "물품명":
                 cls += " bold-col"
@@ -485,21 +498,17 @@ else:
     .th-in { background: #3b5b88 !important; } .th-out { background: #b8860b !important; } .th-etc { background: #757c43 !important; }
     .tc { text-align: center; } .tl { text-align: left; } .tr { text-align: right; }
     
-    /* 💡 개별 열 색상 및 굵기 하이라이트 CSS */
+    /* 개별 열 색상 및 굵기 하이라이트 CSS */
     .bold-col { font-weight: 900; color: black !important; }
-    .text-darkgreen { font-weight: 900; color: #1b5e20 !important; } /* 업체명: 진한 녹색 굵게 */
-    .text-red-large { font-weight: 900; color: #e53935 !important; font-size: 130% !important; } /* 인상폭: 빨간색 굵게, 크기 30%업 */
-    .text-softred { font-weight: 900; color: #ef5350 !important; } /* 인상가: 연한 빨간색 굵게 */
-    .text-blue { font-weight: 900; color: #1e88e5 !important; } /* 기존가: 파란색 굵게 */
+    .text-darkgreen { font-weight: 900; color: #1b5e20 !important; } 
+    .text-red-large { font-weight: 900; color: #e53935 !important; font-size: 130% !important; } 
+    .text-softred { font-weight: 900; color: #ef5350 !important; } 
+    .text-blue { font-weight: 900; color: #1e88e5 !important; } 
     
     .custom-table tr:nth-child(even) td { background-color: #f8f9fa; }
     
-    /* 즐겨찾기(⭐) 등록된 행 바탕색 강제 적용 (연한 녹색) */
     .custom-table tr.favorite-row td { background-color: #e8f5e9 !important; }
-    /* 즐겨찾기 행 마우스 오버 시 좀 더 진한 녹색으로 강조 */
     .custom-table tr.favorite-row:hover td { background-color: #c8e6c9 !important; cursor: pointer; transition: background-color 0.1s ease; }
-    
-    /* 일반 행 마우스 오버 */
     .custom-table tr:not(.favorite-row):hover td { background-color: #e2e6ea !important; cursor: pointer; transition: background-color 0.1s ease; }
     
     .sort-icon { font-size: 10px; color: #ffeb3b; margin-left: 5px; }
@@ -516,7 +525,7 @@ else:
     
     t_html = t_html_base
     
-    # 💡 헤더(제목) 생성 시 Favor 열 제목을 '⭐' 로 자동 변경
+    # 헤더(제목) 생성 시 Favor 열 제목을 '⭐' 로 자동 변경
     for i, col in enumerate(filtered_df.columns):
         w = "width:4%;" if col == fav_col else "width:18%;" if "물품" in col else "width:34%;" if "메모" in col else "width:8%;" if "기존가날짜" in col else ""
         disp_col = "⭐" if col == fav_col else col
@@ -573,7 +582,9 @@ else:
         document.getElementById('icon-' + n).innerText = sortOrder === 1 ? " ▲" : " ▼";
         rows.sort((a, b) => {
             let tA = a.cells[n].innerText.trim(); let tB = b.cells[n].innerText.trim();
-            let nA = parseFloat(tA.replace(/,/g, '')); let nB = parseFloat(tB.replace(/,/g, ''));
+            // 💡 숫자 정렬 시 자동으로 붙은 '원' 글자와 콤마 무시하고 계산
+            let nA = parseFloat(tA.replace(/,/g, '').replace(/원/g, '')); 
+            let nB = parseFloat(tB.replace(/,/g, '').replace(/원/g, ''));
             if (!isNaN(nA) && !isNaN(nB)) { return (nA - nB) * sortOrder; }
             return tA.localeCompare(tB, 'ko') * sortOrder;
         });
