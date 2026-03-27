@@ -180,6 +180,16 @@ def load_data():
 
 try:
     data = load_data()
+    
+    # 💡 구글 시트의 변경된 열 순서 강제 지정
+    desired_order = ['Favor', '업체명', '물품명', '인상날짜', '인상폭', '인상가', '기존가날짜', '기존가', '메모']
+    # 시트에 존재하는 열만 순서에 맞춰 가져오기 (오류 방지)
+    final_cols = [c for c in desired_order if c in data.columns]
+    # 지정되지 않은 추가 열이 있다면 뒤쪽에 붙임
+    final_cols += [c for c in data.columns if c not in desired_order]
+    
+    data = data[final_cols]
+    
 except:
     st.error("데이터를 불러오지 못했습니다.")
     st.stop()
