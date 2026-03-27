@@ -128,10 +128,9 @@ def check_password():
         st.session_state["authenticated"] = True
         st.query_params["auth"] = "true"
         st.query_params["ts"] = str(time.time())
-        # 보안 상 URL 창에서 ?pass=uni 글자를 제거
         if "pass" in st.query_params:
             del st.query_params["pass"]
-        st.rerun() # 로그인 창을 보여주지 않고 바로 대시보드로 넘어감
+        st.rerun() 
 
     # 💡 2. 기존 로그인된 상태 유지 관리
     elif st.query_params.get("auth") == "true":
@@ -244,7 +243,6 @@ with col_t:
     st.button("📈 유니매입가격정보 (인상공문 현황)", type="tertiary", on_click=do_full_refresh)
 
 with col_i:
-    # 💡 송장텍스트변환 바로가기 (새 창으로 열림)
     st.link_button("🧾 송장텍스트변환", "https://my-work-tool-vtpqjyh9zjypweqr8txz77.streamlit.app/", use_container_width=True)
 
 with col_g:
@@ -343,7 +341,14 @@ with col_bar:
 with col_print:
     html_table_p = filtered_df.to_html(index=False, escape=True)
     html_table_p = html_table_p.replace('border="1" class="dataframe"', 'class="custom-table"')
+    
+    # 💡 인쇄 창에서도 Faver 열을 별표(⭐)로 표시되도록 변환
+    if "Faver" in filtered_df.columns:
+        html_table_p = html_table_p.replace('<th>Faver</th>', '<th style="width: 4%;">⭐</th>')
+        html_table_p = html_table_p.replace('<td>v</td>', '<td style="text-align:center;">⭐</td>').replace('<td>V</td>', '<td style="text-align:center;">⭐</td>')
+        
     html_table_p = html_table_p.replace('<th>물품명</th>', '<th style="width: 18%;">물품명</th>').replace('<th>메모</th>', '<th style="width: 34%;">메모</th>').replace('<th>기존가날짜</th>', '<th style="width: 8%;">기존가날짜</th>')
+    
     p_content = f"<html><head><style>body {{ font-family: 'Malgun Gothic'; }} .custom-table {{ width: 100%; border-collapse: collapse; }} th, td {{ border: 1px solid #aaa; padding: 6px; text-align: center; }} th {{ background: #f1f5f9; }}</style></head><body><h2 style='text-align:center;'>인상공문 검색결과</h2>{html_table_p}</body></html>"
     components.html(f"""
         <html><body style='margin:0; padding:0;'>
@@ -378,7 +383,7 @@ search_info = f"<span style='color:#ffeb3b;'>[검색조건: {' + '.join(conds)}]
 st.markdown(f"#### 📋 상세 내역 {search_info} <span style='font-size:12px; color:#cbd5e1; font-weight:normal; margin-left:10px;'>(제목 클릭 시 정렬)</span>", unsafe_allow_html=True)
 
 # ==========================================
-# 📋 메인 테이블 (50개 단위 페이지네이션 적용)
+# 📋 메인 테이블 (Faver 즐겨찾기 별표 기능 및 50개 단위)
 # ==========================================
 if filtered_df.empty:
     st.warning("👀 조건에 맞는 데이터가 없습니다.")
@@ -387,7 +392,9 @@ else:
         if "기존" in str(col): return "th-in"
         if "인상" in str(col): return "th-out"
         return "th-etc" if "메모" in str(col) else "th-base"
+        
     def get_td_class(col):
+        if col == "Faver": return "tc" # 💡 Faver 열은 가운데 정렬
         if any(x in str(col) for x in ["업체", "물품", "메모"]): return "tl"
         return "tr" if any(x in str(col) for x in ["가", "폭", "수량"]) else "tc"
 
@@ -395,9 +402,20 @@ else:
     for idx, row in enumerate(filtered_df.itertuples(index=False)):
         rs = "<tr>"
         for i, col_name in enumerate(filtered_df.columns):
-            val = html.escape(str(row[i])) if row[i] != "" else ""
+            val_raw = str(row[i]).strip()
+            
+            # 💡 Faver 열에 'v' 또는 'V'가 있으면 노란색 별표(⭐)로 표시
+            if col_name == "Faver":
+                val = "⭐" if val_raw.lower() == "v" else ""
+            else:
+                val = html.escape(val_raw) if val_raw != "" else ""
+                
             cls = get_td_class(col_name) + (" bold-col" if col_name in ["물품명", "인상폭"] else "")
-            rs += f"<td class='{cls}'>{val}</td>"
+            
+            if col_name == "Faver" and val == "⭐":
+                rs += f"<td class='{cls}' style='color:#ffeb3b; font-size:18px;'>{val}</td>"
+            else:
+                rs += f"<td class='{cls}'>{val}</td>"
         rows_html.append(rs + "</tr>")
 
     t_html = f"""
@@ -423,8 +441,10 @@ else:
     <thead><tr>
     """
     for i, col in enumerate(filtered_df.columns):
-        w = "width:18%;" if "물품" in col else "width:34%;" if "메모" in col else "width:8%;" if "기존가날짜" in col else ""
-        t_html += f"<th class='{get_th_class(col)}' style='{w}' onclick='sortTable({i})'>{col}<span class='sort-icon' id='icon-{i}'></span></th>"
+        # 💡 Faver 열의 너비를 4%로 조정, 헤더 이름도 별표로 교체
+        w = "width:4%;" if col == "Faver" else "width:18%;" if "물품" in col else "width:34%;" if "메모" in col else "width:8%;" if "기존가날짜" in col else ""
+        disp_col = "⭐" if col == "Faver" else col
+        t_html += f"<th class='{get_th_class(col)}' style='{w}' onclick='sortTable({i})'>{disp_col}<span class='sort-icon' id='icon-{i}'></span></th>"
     
     t_html += f"""
         </tr></thead><tbody id='tableBody'>{''.join(rows_html)}</tbody></table>
