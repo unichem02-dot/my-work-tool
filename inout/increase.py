@@ -388,8 +388,9 @@ with col_print:
         html_table_p = html_table_p.replace(f'<th>{fav_col}</th>', '<th style="width: 4%;">⭐</th>')
         html_table_p = html_table_p.replace('<td>v</td>', '<td style="text-align:center;">⭐</td>').replace('<td>V</td>', '<td style="text-align:center;">⭐</td>')
         
-    # 💡 메모칸을 줄이고 주요 열에 줄바꿈 방지(nowrap) 속성 부여
-    html_table_p = html_table_p.replace('<th>물품명</th>', '<th style="width: 16%;">물품명</th>')
+    # 💡 인쇄 화면 폭 비율 재조정 (업체명 9%, 물품명 19%, 메모 20%)
+    html_table_p = html_table_p.replace('<th>업체명</th>', '<th style="width: 9%;">업체명</th>')
+    html_table_p = html_table_p.replace('<th>물품명</th>', '<th style="width: 19%;">물품명</th>')
     html_table_p = html_table_p.replace('<th>메모</th>', '<th style="width: 20%;">메모</th>')
     html_table_p = html_table_p.replace('<th>인상날짜</th>', '<th style="white-space: nowrap;">인상날짜</th>')
     html_table_p = html_table_p.replace('<th>인상폭</th>', '<th style="white-space: nowrap;">인상폭</th>')
@@ -540,8 +541,13 @@ else:
     
     # 헤더(제목) 생성 시 Favor 열 제목을 '⭐' 로 자동 변경
     for i, col in enumerate(filtered_df.columns):
-        # 💡 메모칸을 20%로 줄이고, 물품명을 16%로 조정
-        w = "width:4%;" if col == fav_col else "width:16%;" if "물품" in col else "width:20%;" if "메모" in col else ""
+        # 💡 업체명은 9%로 폭을 줄이고, 물품명은 19%로 폭을 넓게 재배치
+        if col == fav_col: w = "width:4%;"
+        elif "업체" in col: w = "width:9%;"
+        elif "물품" in col: w = "width:19%;"
+        elif "메모" in col: w = "width:20%;"
+        else: w = ""
+        
         disp_col = "⭐" if col == fav_col else col
         
         # 💡 헤더에도 nowrap 클래스 적용
