@@ -422,7 +422,7 @@ search_info = f"<span style='color:#ffeb3b;'>[검색조건: {' + '.join(conds)}]
 st.markdown(f"#### 📋 상세 내역 {search_info} <span style='font-size:12px; color:#cbd5e1; font-weight:normal; margin-left:10px;'>(제목 클릭 시 정렬)</span>", unsafe_allow_html=True)
 
 # ==========================================
-# 📋 메인 테이블 (별표 하이라이트 및 페이지네이션)
+# 📋 메인 테이블 (별표 하이라이트 및 텍스트 스타일 커스텀 적용)
 # ==========================================
 if filtered_df.empty:
     st.warning("👀 조건에 맞는 데이터가 없습니다.")
@@ -457,12 +457,16 @@ else:
             else:
                 val = html.escape(val_raw) if val_raw != "" else ""
             
-            # 💡 인상가, 인상폭, 기존가 등 개별 스타일 적용
+            # 💡 업체명, 인상폭, 인상가, 기존가 등 개별 스타일 적용
             cls = get_td_class(col_name)
-            if col_name in ["물품명", "인상가"]:
+            if col_name == "물품명":
                 cls += " bold-col"
+            elif col_name == "업체명":
+                cls += " text-darkgreen"
             elif col_name == "인상폭":
-                cls += " text-red"
+                cls += " text-red-large"
+            elif col_name == "인상가":
+                cls += " text-softred"
             elif col_name == "기존가":
                 cls += " text-blue"
             
@@ -481,10 +485,12 @@ else:
     .th-in { background: #3b5b88 !important; } .th-out { background: #b8860b !important; } .th-etc { background: #757c43 !important; }
     .tc { text-align: center; } .tl { text-align: left; } .tr { text-align: right; }
     
-    /* 💡 개별 열 색상 및 굵기 하이라이트 */
+    /* 💡 개별 열 색상 및 굵기 하이라이트 CSS */
     .bold-col { font-weight: 900; color: black !important; }
-    .text-red { font-weight: 900; color: #e53935 !important; } /* 빨간색 굵게 */
-    .text-blue { font-weight: 900; color: #1e88e5 !important; } /* 파란색 굵게 */
+    .text-darkgreen { font-weight: 900; color: #1b5e20 !important; } /* 업체명: 진한 녹색 굵게 */
+    .text-red-large { font-weight: 900; color: #e53935 !important; font-size: 130% !important; } /* 인상폭: 빨간색 굵게, 크기 30%업 */
+    .text-softred { font-weight: 900; color: #ef5350 !important; } /* 인상가: 연한 빨간색 굵게 */
+    .text-blue { font-weight: 900; color: #1e88e5 !important; } /* 기존가: 파란색 굵게 */
     
     .custom-table tr:nth-child(even) td { background-color: #f8f9fa; }
     
