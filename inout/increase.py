@@ -457,7 +457,14 @@ else:
             else:
                 val = html.escape(val_raw) if val_raw != "" else ""
             
-            cls = get_td_class(col_name) + (" bold-col" if col_name in ["물품명", "인상폭"] else "")
+            # 💡 인상가, 인상폭, 기존가 등 개별 스타일 적용
+            cls = get_td_class(col_name)
+            if col_name in ["물품명", "인상가"]:
+                cls += " bold-col"
+            elif col_name == "인상폭":
+                cls += " text-red"
+            elif col_name == "기존가":
+                cls += " text-blue"
             
             if col_name == fav_col and val == "⭐":
                 rs += f"<td class='{cls}' style='font-size:16px;'>{val}</td>"
@@ -473,13 +480,17 @@ else:
     .custom-table th { color: white; background: #353b48; font-weight: bold; cursor: pointer; user-select: none; position: relative; }
     .th-in { background: #3b5b88 !important; } .th-out { background: #b8860b !important; } .th-etc { background: #757c43 !important; }
     .tc { text-align: center; } .tl { text-align: left; } .tr { text-align: right; }
+    
+    /* 💡 개별 열 색상 및 굵기 하이라이트 */
     .bold-col { font-weight: 900; color: black !important; }
+    .text-red { font-weight: 900; color: #e53935 !important; } /* 빨간색 굵게 */
+    .text-blue { font-weight: 900; color: #1e88e5 !important; } /* 파란색 굵게 */
     
     .custom-table tr:nth-child(even) td { background-color: #f8f9fa; }
     
-    /* 💡 즐겨찾기(⭐) 등록된 행 바탕색 강제 적용 (연한 녹색) */
+    /* 즐겨찾기(⭐) 등록된 행 바탕색 강제 적용 (연한 녹색) */
     .custom-table tr.favorite-row td { background-color: #e8f5e9 !important; }
-    /* 💡 즐겨찾기 행 마우스 오버 시 좀 더 진한 녹색으로 강조 */
+    /* 즐겨찾기 행 마우스 오버 시 좀 더 진한 녹색으로 강조 */
     .custom-table tr.favorite-row:hover td { background-color: #c8e6c9 !important; cursor: pointer; transition: background-color 0.1s ease; }
     
     /* 일반 행 마우스 오버 */
