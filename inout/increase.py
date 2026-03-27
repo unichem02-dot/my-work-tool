@@ -51,7 +51,7 @@ st.markdown("""
         background-color: #3b76e5 !important; 
     }
 
-    /* 전체보기/로그아웃/구글시트 (Secondary) -> 올리브색 계열 */
+    /* 전체보기/로그아웃/구글시트/즐겨찾기 (Secondary) -> 올리브색 계열 */
     button[kind="secondary"], div.stLinkButton > a {
         background-color: #757c43 !important;
         border-color: #757c43 !important;
@@ -123,7 +123,7 @@ def check_password():
     if "authenticated" not in st.session_state:
         st.session_state["authenticated"] = False
 
-    # 💡 1. 링크 접속 (자동 로그인) 처리: 즉시 세션 부여 후 화면 강제 새로고침
+    # 💡 1. 링크 접속 (자동 로그인) 처리
     if st.query_params.get("pass") == "uni":
         st.session_state["authenticated"] = True
         st.query_params["auth"] = "true"
@@ -187,6 +187,13 @@ except:
 col_vendor, col_item, col_date = "업체명", "물품명", "인상날짜"
 data = data.fillna("")
 
+# 💡 'Favor' 또는 'Faver' 열 유동적 감지 (오타 방지)
+fav_col = None
+for c in data.columns:
+    if c.strip().lower() in ['favor', 'faver']:
+        fav_col = c
+        break
+
 # ==========================================
 # 🛠️ 상태 관리
 # ==========================================
@@ -197,6 +204,9 @@ if 'act_t1_y' not in st.session_state: st.session_state.act_t1_y = "전체"
 if 'act_t2_v' not in st.session_state: st.session_state.act_t2_v = "전체"
 if 'act_t2_i' not in st.session_state: st.session_state.act_t2_i = "전체"
 if 'act_t2_y' not in st.session_state: st.session_state.act_t2_y = "전체"
+
+# 💡 즐겨찾기 필터 모드 (기본값: True - 즐겨찾기만 표시)
+if 'show_favorites' not in st.session_state: st.session_state.show_favorites = True
 
 def do_search_t1():
     st.session_state.act_mode = "text"
@@ -218,6 +228,7 @@ def do_search_t2():
 
 def do_reset():
     st.session_state.act_mode = "init"
+    st.session_state.show_favorites = True # 리셋 시 즐겨찾기 모드로 강제 복귀
     st.session_state.act_t1_v = ""
     st.session_state.act_t1_i = ""
     st.session_state.act_t1_y = "전체"
@@ -236,11 +247,22 @@ def do_full_refresh():
     do_reset()
 
 # ==========================================
-# UI 구성 (상단 버튼 배치)
+# UI 구성 (상단 버튼 배치 - 5등분)
 # ==========================================
-col_t, col_i, col_g, col_l = st.columns([5.5, 1.5, 1.5, 1.5])
+col_t, col_f, col_i, col_g, col_l = st.columns([4.0, 1.5, 1.5, 1.5, 1.5])
 with col_t: 
     st.button("📈 유니매입가격정보 (인상공문 현황)", type="tertiary", on_click=do_full_refresh)
+
+with col_f:
+    # 💡 즐겨찾기 토글 버튼
+    if st.session_state.show_favorites:
+        if st.button("📜 전체 리스트", use_container_width=True, type="secondary"):
+            st.session_state.show_favorites = False
+            st.rerun()
+    else:
+        if st.button("⭐ 즐겨찾기", use_container_width=True, type="secondary"):
+            st.session_state.show_favorites = True
+            st.rerun()
 
 with col_i:
     st.link_button("🧾 송장텍스트변환", "https://my-work-tool-vtpqjyh9zjypweqr8txz77.streamlit.app/", use_container_width=True)
@@ -294,8 +316,16 @@ with c2_5:
     st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
     st.button("📂 전체보기", use_container_width=True, type="secondary", on_click=do_reset, key="res2")
 
-# 필터링
+# ==========================================
+# 필터링 로직
+# ==========================================
 filtered_df = data.copy()
+
+# 💡 1. 즐겨찾기 최우선 필터링
+if st.session_state.show_favorites and fav_col:
+    filtered_df = filtered_df[filtered_df[fav_col].astype(str).str.strip().str.lower() == 'v']
+
+# 💡 2. 검색 조건 필터링
 if st.session_state.act_mode == "text":
     if st.session_state.act_t1_v:
         filtered_df = filtered_df[filtered_df[col_vendor].astype(str).str.contains(st.session_state.act_t1_v, case=False, na=False)]
@@ -328,9 +358,10 @@ st.markdown("<br>", unsafe_allow_html=True)
 col_bar, col_print, col_excel = st.columns([7, 1.5, 1.5])
 
 with col_bar:
+    fav_mode_txt = "<span style='color:#ffeb3b; margin-left:10px;'>[⭐ 즐겨찾기 모드]</span>" if st.session_state.show_favorites else ""
     st.markdown(f"""
         <div style="background-color: #353b48; height: 42px; padding: 0 20px; border-radius: 8px; color: #ffffff; font-size: 15px; display: flex; justify-content: space-around; align-items: center; border: 1px solid #4a5568;">
-            <span>🔍 검색 건수 : <span style="color: #4e8cff; font-size: 18px; font-weight: bold;">{len(filtered_df):,}</span> 건</span>
+            <span>🔍 검색 건수 : <span style="color: #4e8cff; font-size: 18px; font-weight: bold;">{len(filtered_df):,}</span> 건 {fav_mode_txt}</span>
             <span style="color: #4a5568;">|</span>
             <span>📅 최근 인상 : <span style="color: #4e8cff; font-size: 18px; font-weight: bold;">{latest_date}</span></span>
             <span style="color: #4a5568;">|</span>
@@ -342,17 +373,15 @@ with col_print:
     html_table_p = filtered_df.to_html(index=False, escape=True)
     html_table_p = html_table_p.replace('border="1" class="dataframe"', 'class="custom-table"')
     
-    # 💡 PRINT 화면에서도 Faver의 V를 별표(⭐)로 변경 처리
-    if "Faver" in filtered_df.columns:
-        html_table_p = html_table_p.replace('<th>Faver</th>', '<th style="width: 4%;">⭐</th>')
+    # 💡 PRINT 화면에서도 Favor 열을 별표(⭐)로 완벽하게 변환
+    if fav_col and fav_col in filtered_df.columns:
+        html_table_p = html_table_p.replace(f'<th>{fav_col}</th>', '<th style="width: 4%;">⭐</th>')
         html_table_p = html_table_p.replace('<td>v</td>', '<td style="text-align:center;">⭐</td>').replace('<td>V</td>', '<td style="text-align:center;">⭐</td>')
         
     html_table_p = html_table_p.replace('<th>물품명</th>', '<th style="width: 18%;">물품명</th>').replace('<th>메모</th>', '<th style="width: 34%;">메모</th>').replace('<th>기존가날짜</th>', '<th style="width: 8%;">기존가날짜</th>')
     
-    # 💡 f-string 에러 방지를 위해 일반 문자열 + 연산자로 분리
     p_content = "<html><head><style>body { font-family: 'Malgun Gothic'; } .custom-table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #aaa; padding: 6px; text-align: center; } th { background: #f1f5f9; }</style></head><body><h2 style='text-align:center;'>인상공문 검색결과</h2>" + html_table_p + "</body></html>"
     
-    # 💡 components.html 에러 방지를 위해 f-string 제거
     components.html(
         "<html><body style='margin:0; padding:0;'>"
         "<style>"
@@ -387,7 +416,7 @@ search_info = f"<span style='color:#ffeb3b;'>[검색조건: {' + '.join(conds)}]
 st.markdown(f"#### 📋 상세 내역 {search_info} <span style='font-size:12px; color:#cbd5e1; font-weight:normal; margin-left:10px;'>(제목 클릭 시 정렬)</span>", unsafe_allow_html=True)
 
 # ==========================================
-# 📋 메인 테이블 (별표 하이라이트 및 페이지네이션 에러 해결)
+# 📋 메인 테이블 (별표 하이라이트 및 페이지네이션)
 # ==========================================
 if filtered_df.empty:
     st.warning("👀 조건에 맞는 데이터가 없습니다.")
@@ -398,15 +427,15 @@ else:
         return "th-etc" if "메모" in str(col) else "th-base"
         
     def get_td_class(col):
-        if col == "Faver": return "tc"
+        if col == fav_col: return "tc"
         if any(x in str(col) for x in ["업체", "물품", "메모"]): return "tl"
         return "tr" if any(x in str(col) for x in ["가", "폭", "수량"]) else "tc"
 
     rows_html = []
     for idx, row in enumerate(filtered_df.itertuples(index=False)):
         is_fav = False
-        if "Faver" in filtered_df.columns:
-            faver_idx = filtered_df.columns.get_loc("Faver")
+        if fav_col and fav_col in filtered_df.columns:
+            faver_idx = filtered_df.columns.get_loc(fav_col)
             if str(row[faver_idx]).strip().lower() == "v":
                 is_fav = True
         
@@ -415,20 +444,21 @@ else:
         
         for i, col_name in enumerate(filtered_df.columns):
             val_raw = str(row[i]).strip()
-            if col_name == "Faver":
+            
+            # 💡 'Favor' 열을 정확히 감지하여 별표(⭐) 아이콘으로 변경
+            if col_name == fav_col:
                 val = "⭐" if val_raw.lower() == "v" else ""
             else:
                 val = html.escape(val_raw) if val_raw != "" else ""
             
             cls = get_td_class(col_name) + (" bold-col" if col_name in ["물품명", "인상폭"] else "")
             
-            if col_name == "Faver" and val == "⭐":
+            if col_name == fav_col and val == "⭐":
                 rs += f"<td class='{cls}' style='font-size:16px;'>{val}</td>"
             else:
                 rs += f"<td class='{cls}'>{val}</td>"
         rows_html.append(rs + "</tr>")
 
-    # 💡 f-string 에러를 막기 위해 CSS/HTML 뼈대를 일반 문자열로 분리
     t_html_base = """
     <!DOCTYPE html><html><head><meta charset='utf-8'><style>
     body { background: #2b323c; font-family: 'Malgun Gothic'; margin: 0; padding: 0; color: #1e293b; overflow: hidden; }
@@ -440,8 +470,13 @@ else:
     .bold-col { font-weight: 900; color: black !important; }
     
     .custom-table tr:nth-child(even) td { background-color: #f8f9fa; }
+    
+    /* 💡 즐겨찾기(⭐) 등록된 행 바탕색 강제 적용 (연한 노란색) */
     .custom-table tr.favorite-row td { background-color: #fffde7 !important; }
+    /* 💡 즐겨찾기 행 마우스 오버 시 좀 더 진하게 */
     .custom-table tr.favorite-row:hover td { background-color: #fff9c4 !important; cursor: pointer; transition: background-color 0.1s ease; }
+    
+    /* 일반 행 마우스 오버 */
     .custom-table tr:not(.favorite-row):hover td { background-color: #e2e6ea !important; cursor: pointer; transition: background-color 0.1s ease; }
     
     .sort-icon { font-size: 10px; color: #ffeb3b; margin-left: 5px; }
@@ -458,13 +493,12 @@ else:
     
     t_html = t_html_base
     
-    # 헤더 생성 (f-string 사용은 이처럼 작은 단위에서만 안전하게 사용)
+    # 💡 헤더(제목) 생성 시 Favor 열 제목을 '⭐' 로 자동 변경
     for i, col in enumerate(filtered_df.columns):
-        w = "width:4%;" if col == "Faver" else "width:18%;" if "물품" in col else "width:34%;" if "메모" in col else "width:8%;" if "기존가날짜" in col else ""
-        disp_col = "⭐" if col == "Faver" else col
+        w = "width:4%;" if col == fav_col else "width:18%;" if "물품" in col else "width:34%;" if "메모" in col else "width:8%;" if "기존가날짜" in col else ""
+        disp_col = "⭐" if col == fav_col else col
         t_html += f"<th class='{get_th_class(col)}' style='{w}' onclick='sortTable({i})'>{disp_col}<span class='sort-icon' id='icon-{i}'></span></th>"
     
-    # 💡 데이터와 자바스크립트 결합 (f-string 제외하여 구문 오류 원천 차단)
     t_html += "</tr></thead><tbody id='tableBody'>" + "".join(rows_html) + "</tbody></table>"
     
     t_html += """
