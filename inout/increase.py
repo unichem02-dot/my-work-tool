@@ -206,7 +206,7 @@ for c in data.columns:
 
 # ==========================================
 # 💡 그래프용 가격 변동 히스토리 데이터 생성 
-# (기존가날짜가 없으므로 인상날짜를 기준으로 가상의 이전 시점 생성)
+# (기존가날짜가 없으므로 첫 기존가를 X축 '0'으로 강제 생성하여 선 연결)
 # ==========================================
 history_data = {}
 for _, r in data.iterrows():
@@ -217,52 +217,50 @@ for _, r in data.iterrows():
     p_old = str(r.get('기존가', '')).strip()
     p_inc = str(r.get('인상폭', '')).strip()
     
-    if p_new.lower() == 'nan': p_new = ""
-    if p_old.lower() == 'nan': p_old = ""
-    if p_inc.lower() == 'nan': p_inc = ""
-    
-    if v and i and d_str:
-        # 문자열에서 숫자만 깨끗하게 추출
-        p_new_clean = ''.join(filter(str.isdigit, p_new.split('.')[0]))
-        p_old_clean = ''.join(filter(str.isdigit, p_old.split('.')[0]))
-        inc_clean = ''.join(filter(str.isdigit, p_inc.split('.')[0]))
+    if not v or not i or not d_str:
+        continue
         
-        key = f"{v}:::{i}"
-        if key not in history_data:
-            history_data[key] = []
-            
-        # 1. 기존가 기록 (인상날짜 기준 '이전'으로 가상 배치하여 선을 연결)
-        if p_old_clean:
-            history_data[key].append({
-                'sort_key': f"{d_str}_0", # 정렬을 위해 0 부여
-                'date': f"{d_str}(이전)",
-                'price': int(p_old_clean),
-                'inc': None
-            })
-            
-        # 2. 인상가 및 인상폭 기록 (현재 인상날짜)
-        if p_new_clean or inc_clean:
-            history_data[key].append({
-                'sort_key': f"{d_str}_1", # 정렬을 위해 1 부여
-                'date': d_str,
-                'price': int(p_new_clean) if p_new_clean else None,
-                'inc': int(inc_clean) if inc_clean else None
-            })
+    # 문자열에서 숫자만 추출 (에러 방어 포함)
+    p_new_clean = ''.join(filter(str.isdigit, p_new.split('.')[0])) if str(p_new).lower() != 'nan' else ""
+    p_old_clean = ''.join(filter(str.isdigit, p_old.split('.')[0])) if str(p_old).lower() != 'nan' else ""
+    inc_clean = ''.join(filter(str.isdigit, p_inc.split('.')[0])) if str(p_inc).lower() != 'nan' else ""
+    
+    key = f"{v}:::{i}"
+    if key not in history_data:
+        history_data[key] = []
+        
+    # 모든 기록을 임시 저장
+    history_data[key].append({
+        'date': d_str,
+        'p_new': int(p_new_clean) if p_new_clean else None,
+        'p_old': int(p_old_clean) if p_old_clean else None,
+        'inc': int(inc_clean) if inc_clean else None
+    })
 
-# 날짜 오름차순 정렬 및 중복 제거
-for k in history_data:
-    history_data[k] = sorted(history_data[k], key=lambda x: x['sort_key'])
-    unique_list = []
-    seen_dates = set()
-    for item in history_data[k]:
-        if item['date'] not in seen_dates:
-            seen_dates.add(item['date'])
-            unique_list.append(item)
-    history_data[k] = unique_list
+# 💡 아이템별로 가장 오래된 기록의 '기존가'를 찾아 X축 '0'에 배치
+final_history = {}
+for k, records in history_data.items():
+    records = sorted(records, key=lambda x: x['date']) # 날짜 오름차순 정렬
+    final_list = []
+    
+    for idx, rec in enumerate(records):
+        # 1. 항목의 제일 첫 번째 기록인 경우에만 '0' 시작점 앵커(Anchor) 생성
+        if idx == 0 and rec['p_old'] is not None:
+            final_list.append({'date': '0', 'price': rec['p_old'], 'inc': None})
+        
+        # 2. 현재 날짜의 인상가/인상폭 기록 추가 (날짜 중복 방지)
+        if rec['p_new'] is not None or rec['inc'] is not None:
+            if not any(x['date'] == rec['date'] for x in final_list):
+                final_list.append({
+                    'date': rec['date'],
+                    'price': rec['p_new'],
+                    'inc': rec['inc']
+                })
+    final_history[k] = final_list
 
 
 # ==========================================
-# 🛠️ 상태 관리
+# 🛠️ 상태 관리 (콜백 최적화 적용)
 # ==========================================
 if 'act_mode' not in st.session_state: st.session_state.act_mode = "init"
 if 'act_t1_v' not in st.session_state: st.session_state.act_t1_v = ""
@@ -275,27 +273,24 @@ if 'act_t2_y' not in st.session_state: st.session_state.act_t2_y = "전체"
 # 💡 즐겨찾기 필터 모드 (기본값: False - 처음 접속 시 전체 리스트 표시)
 if 'show_favorites' not in st.session_state: st.session_state.show_favorites = False
 
+# 💡 검색 시 입력 텍스트를 강제로 비우지 않도록 수정하여 버튼 반응성을 확보
 def do_search_t1():
+    st.session_state.show_favorites = False # 검색 시 전체 데이터 대상으로 강제 전환
     st.session_state.act_mode = "text"
     st.session_state.act_t1_v = st.session_state.ui_t1_v
     st.session_state.act_t1_i = st.session_state.ui_t1_i
     st.session_state.act_t1_y = st.session_state.ui_t1_y
-    st.session_state.ui_t1_v = ""
-    st.session_state.ui_t1_i = ""
-    st.session_state.ui_t1_y = "전체"
 
 def do_search_t2():
+    st.session_state.show_favorites = False
     st.session_state.act_mode = "dropdown"
     st.session_state.act_t2_v = st.session_state.ui_t2_v
     st.session_state.act_t2_i = st.session_state.ui_t2_i
     st.session_state.act_t2_y = st.session_state.ui_t2_y
-    st.session_state.ui_t2_v = "전체"
-    st.session_state.ui_t2_i = "전체"
-    st.session_state.ui_t2_y = "전체"
 
 def do_reset():
     st.session_state.act_mode = "init"
-    st.session_state.show_favorites = False # 💡 리셋/새로고침 시 전체 리스트로 복귀
+    st.session_state.show_favorites = False
     st.session_state.act_t1_v = ""
     st.session_state.act_t1_i = ""
     st.session_state.act_t1_y = "전체"
@@ -313,6 +308,11 @@ def do_full_refresh():
     load_data.clear()
     do_reset()
 
+# 💡 즐겨찾기 토글 전용 콜백 함수 (무반응 현상 제거)
+def toggle_fav():
+    st.session_state.show_favorites = not st.session_state.show_favorites
+    st.session_state.act_mode = "init" # 탭 전환 시 혼란 방지를 위해 검색 필터 리셋
+
 # ==========================================
 # UI 구성 (상단 버튼 배치 - 5등분)
 # ==========================================
@@ -321,15 +321,11 @@ with col_t:
     st.button("📈 유니매입가격정보 (인상공문 현황)", type="tertiary", on_click=do_full_refresh)
 
 with col_f:
-    # 💡 즐겨찾기 토글 버튼
+    # 💡 즉시 반응하는 콜백(on_click) 적용
     if st.session_state.show_favorites:
-        if st.button("📜 전체 리스트", use_container_width=True, type="primary"):
-            st.session_state.show_favorites = False
-            st.rerun()
+        st.button("📜 전체 리스트", use_container_width=True, type="primary", on_click=toggle_fav)
     else:
-        if st.button("⭐ 즐겨찾기", use_container_width=True, type="primary"):
-            st.session_state.show_favorites = True
-            st.rerun()
+        st.button("⭐ 즐겨찾기", use_container_width=True, type="primary", on_click=toggle_fav)
 
 with col_i:
     st.link_button("🧾 송장텍스트변환", "https://my-work-tool-vtpqjyh9zjypweqr8txz77.streamlit.app/", use_container_width=True)
@@ -590,7 +586,7 @@ else:
     .bold-col { font-weight: 900; color: black !important; }
     .text-item-name { font-weight: 900; color: black !important; font-size: 120% !important; } 
     
-    /* 💡 물품명 파란색 점선 제거하고 마우스 포인트만 손가락 모양으로 유지 */
+    /* 💡 물품명 파란색 점선 완전 제거, 마우스 포인트 손가락 모양 유지 */
     .hover-graph { cursor: pointer; } 
     
     .nowrap-col { white-space: nowrap !important; } 
@@ -651,7 +647,7 @@ else:
     t_html += """
     <script>
     // 💡 Python에서 생성한 가격 히스토리 데이터 연결
-    const priceHistory = """ + json.dumps(history_data) + """;
+    const priceHistory = """ + json.dumps(final_history) + """;
     
     let hoverChart = null;
     const tooltip = document.getElementById('graphTooltip');
@@ -696,7 +692,7 @@ else:
         const ctx = document.getElementById('hoverChart').getContext('2d');
         if (hoverChart) hoverChart.destroy(); // 기존 그래프 파괴 후 재설정
 
-        // 💡 Chart.js 를 활용한 단가 그래프 그리기
+        // 💡 Chart.js 를 활용한 단가 그래프 그리기 (X축에 0과 날짜가 있으면 자동으로 선으로 연결됨)
         hoverChart = new Chart(ctx, {
             type: 'line',
             data: {
