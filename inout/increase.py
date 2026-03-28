@@ -205,7 +205,7 @@ for c in data.columns:
         break
 
 # ==========================================
-# 💡 그래프용 가격 변동 히스토리 데이터 생성 (전체 데이터 기준)
+# 💡 그래프용 가격 변동 히스토리 데이터 생성 (단가 및 인상폭 분리 수집)
 # ==========================================
 history_data = {}
 for _, r in data.iterrows():
@@ -214,21 +214,30 @@ for _, r in data.iterrows():
     d_str = str(r.get('인상날짜', '')).strip()
     p_new = str(r.get('인상가', '')).strip()
     p_old = str(r.get('기존가', '')).strip()
+    p_inc = str(r.get('인상폭', '')).strip()
     
     # 인상가 우선 적용, 없으면 기존가로 대체
     p_str = p_new if (p_new and p_new.lower() != 'nan') else p_old
     if p_str.lower() == 'nan': p_str = ""
+    if p_inc.lower() == 'nan': p_inc = ""
     
-    if v and i and d_str and p_str:
-        # 문자열에서 숫자만 추출 (예: '2,050원' -> '2050')
+    if v and i and d_str:
+        # 문자열에서 숫자만 추출
         p_clean = ''.join(filter(str.isdigit, p_str.split('.')[0]))
-        if p_clean:
+        inc_clean = ''.join(filter(str.isdigit, p_inc.split('.')[0]))
+        
+        # 단가(price)나 인상폭(inc) 둘 중 하나라도 있으면 기록
+        if p_clean or inc_clean:
             key = f"{v}:::{i}"
             if key not in history_data:
                 history_data[key] = []
             # 같은 날짜 중복 입력 방지
             if not any(x['date'] == d_str for x in history_data[key]):
-                history_data[key].append({'date': d_str, 'price': int(p_clean)})
+                history_data[key].append({
+                    'date': d_str, 
+                    'price': int(p_clean) if p_clean else None,
+                    'inc': int(inc_clean) if inc_clean else None
+                })
 
 # 날짜 오름차순으로 정렬
 for k in history_data:
@@ -563,7 +572,10 @@ else:
     /* 개별 열 색상 및 굵기 하이라이트 CSS */
     .bold-col { font-weight: 900; color: black !important; }
     .text-item-name { font-weight: 900; color: black !important; font-size: 120% !important; } 
-    .hover-graph { cursor: help; text-decoration: underline; text-decoration-style: dotted; text-decoration-color: #4e8cff; } /* 💡 마우스오버 힌트 선 */
+    
+    /* 💡 물품명 파란색 점선 제거하고 마우스 포인트만 손가락 모양으로 유지 */
+    .hover-graph { cursor: pointer; } 
+    
     .nowrap-col { white-space: nowrap !important; } 
     .text-darkgreen { font-weight: 900; color: #1b5e20 !important; } 
     .text-red-large { font-weight: 900; color: #e53935 !important; font-size: 130% !important; } 
@@ -645,10 +657,24 @@ else:
         tooltip.style.left = tx + 'px';
         tooltip.style.top = ty + 'px';
         tooltip.style.display = 'block';
-        tooltipTitle.innerText = itemName + ' [가격 변동 추이]';
 
         const labels = history.map(h => h.date);
-        const data = history.map(h => h.price);
+        
+        // 💡 단가 데이터가 하나라도 있는지 확인
+        const hasPrice = history.some(h => h.price !== null);
+        let plotData;
+        let labelName;
+        
+        // 단가가 있으면 단가 그래프, 없으면 인상폭 그래프로 스마트 전환
+        if (hasPrice) {
+            plotData = history.map(h => h.price);
+            labelName = '단가(원)';
+            tooltipTitle.innerText = itemName + ' [가격 변동 추이]';
+        } else {
+            plotData = history.map(h => h.inc);
+            labelName = '인상폭(원)';
+            tooltipTitle.innerText = itemName + ' [인상폭 변동 추이]';
+        }
 
         const ctx = document.getElementById('hoverChart').getContext('2d');
         if (hoverChart) hoverChart.destroy(); // 기존 그래프 파괴 후 재설정
@@ -659,8 +685,8 @@ else:
             data: {
                 labels: labels,
                 datasets: [{
-                    label: '단가(원)',
-                    data: data,
+                    label: labelName,
+                    data: plotData,
                     borderColor: '#e53935',
                     backgroundColor: 'rgba(229, 57, 53, 0.1)',
                     borderWidth: 2.5,
