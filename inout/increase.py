@@ -181,7 +181,7 @@ def load_data():
 try:
     data = load_data()
     
-    # 💡 구글 시트의 변경된 열 순서 강제 지정
+    # 💡 구글 시트의 변경된 열 순서 강제 지정 (기존가날짜 제외)
     desired_order = ['Favor', '업체명', '물품명', '인상날짜', '인상폭', '인상가', '기존가', '메모']
     # 시트에 존재하는 열만 순서에 맞춰 가져오기 (오류 방지)
     final_cols = [c for c in desired_order if c in data.columns]
@@ -205,7 +205,8 @@ for c in data.columns:
         break
 
 # ==========================================
-# 💡 그래프용 가격 변동 히스토리 데이터 생성 (단가 및 인상폭 분리 수집)
+# 💡 그래프용 가격 변동 히스토리 데이터 생성 
+# (기존가날짜가 없으므로 인상날짜를 기준으로 가상의 이전 시점 생성)
 # ==========================================
 history_data = {}
 for _, r in data.iterrows():
@@ -216,32 +217,48 @@ for _, r in data.iterrows():
     p_old = str(r.get('기존가', '')).strip()
     p_inc = str(r.get('인상폭', '')).strip()
     
-    # 인상가 우선 적용, 없으면 기존가로 대체
-    p_str = p_new if (p_new and p_new.lower() != 'nan') else p_old
-    if p_str.lower() == 'nan': p_str = ""
+    if p_new.lower() == 'nan': p_new = ""
+    if p_old.lower() == 'nan': p_old = ""
     if p_inc.lower() == 'nan': p_inc = ""
     
     if v and i and d_str:
-        # 문자열에서 숫자만 추출
-        p_clean = ''.join(filter(str.isdigit, p_str.split('.')[0]))
+        # 문자열에서 숫자만 깨끗하게 추출
+        p_new_clean = ''.join(filter(str.isdigit, p_new.split('.')[0]))
+        p_old_clean = ''.join(filter(str.isdigit, p_old.split('.')[0]))
         inc_clean = ''.join(filter(str.isdigit, p_inc.split('.')[0]))
         
-        # 단가(price)나 인상폭(inc) 둘 중 하나라도 있으면 기록
-        if p_clean or inc_clean:
-            key = f"{v}:::{i}"
-            if key not in history_data:
-                history_data[key] = []
-            # 같은 날짜 중복 입력 방지
-            if not any(x['date'] == d_str for x in history_data[key]):
-                history_data[key].append({
-                    'date': d_str, 
-                    'price': int(p_clean) if p_clean else None,
-                    'inc': int(inc_clean) if inc_clean else None
-                })
+        key = f"{v}:::{i}"
+        if key not in history_data:
+            history_data[key] = []
+            
+        # 1. 기존가 기록 (인상날짜 기준 '이전'으로 가상 배치하여 선을 연결)
+        if p_old_clean:
+            history_data[key].append({
+                'sort_key': f"{d_str}_0", # 정렬을 위해 0 부여
+                'date': f"{d_str}(이전)",
+                'price': int(p_old_clean),
+                'inc': None
+            })
+            
+        # 2. 인상가 및 인상폭 기록 (현재 인상날짜)
+        if p_new_clean or inc_clean:
+            history_data[key].append({
+                'sort_key': f"{d_str}_1", # 정렬을 위해 1 부여
+                'date': d_str,
+                'price': int(p_new_clean) if p_new_clean else None,
+                'inc': int(inc_clean) if inc_clean else None
+            })
 
-# 날짜 오름차순으로 정렬
+# 날짜 오름차순 정렬 및 중복 제거
 for k in history_data:
-    history_data[k] = sorted(history_data[k], key=lambda x: x['date'])
+    history_data[k] = sorted(history_data[k], key=lambda x: x['sort_key'])
+    unique_list = []
+    seen_dates = set()
+    for item in history_data[k]:
+        if item['date'] not in seen_dates:
+            seen_dates.add(item['date'])
+            unique_list.append(item)
+    history_data[k] = unique_list
 
 
 # ==========================================
