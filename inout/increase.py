@@ -205,6 +205,37 @@ for c in data.columns:
         break
 
 # ==========================================
+# 💡 그래프용 가격 변동 히스토리 데이터 생성 (전체 데이터 기준)
+# ==========================================
+history_data = {}
+for _, r in data.iterrows():
+    v = str(r.get('업체명', '')).strip()
+    i = str(r.get('물품명', '')).strip()
+    d_str = str(r.get('인상날짜', '')).strip()
+    p_new = str(r.get('인상가', '')).strip()
+    p_old = str(r.get('기존가', '')).strip()
+    
+    # 인상가 우선 적용, 없으면 기존가로 대체
+    p_str = p_new if (p_new and p_new.lower() != 'nan') else p_old
+    if p_str.lower() == 'nan': p_str = ""
+    
+    if v and i and d_str and p_str:
+        # 문자열에서 숫자만 추출 (예: '2,050원' -> '2050')
+        p_clean = ''.join(filter(str.isdigit, p_str.split('.')[0]))
+        if p_clean:
+            key = f"{v}:::{i}"
+            if key not in history_data:
+                history_data[key] = []
+            # 같은 날짜 중복 입력 방지
+            if not any(x['date'] == d_str for x in history_data[key]):
+                history_data[key].append({'date': d_str, 'price': int(p_clean)})
+
+# 날짜 오름차순으로 정렬
+for k in history_data:
+    history_data[k] = sorted(history_data[k], key=lambda x: x['date'])
+
+
+# ==========================================
 # 🛠️ 상태 관리
 # ==========================================
 if 'act_mode' not in st.session_state: st.session_state.act_mode = "init"
@@ -215,7 +246,7 @@ if 'act_t2_v' not in st.session_state: st.session_state.act_t2_v = "전체"
 if 'act_t2_i' not in st.session_state: st.session_state.act_t2_i = "전체"
 if 'act_t2_y' not in st.session_state: st.session_state.act_t2_y = "전체"
 
-# 💡 즐겨찾기 필 모드 (기본값: False - 처음 접속 시 전체 리스트 표시)
+# 💡 즐겨찾기 필터 모드 (기본값: False - 처음 접속 시 전체 리스트 표시)
 if 'show_favorites' not in st.session_state: st.session_state.show_favorites = False
 
 def do_search_t1():
@@ -434,7 +465,7 @@ search_info = f"<span style='color:#ffeb3b;'>[검색조건: {' + '.join(conds)}]
 st.markdown(f"#### 📋 상세 내역 {search_info} <span style='font-size:12px; color:#cbd5e1; font-weight:normal; margin-left:10px;'>(제목 클릭 시 정렬)</span>", unsafe_allow_html=True)
 
 # ==========================================
-# 📋 메인 테이블 (별표 하이라이트 및 텍스트 스타일 커스텀 적용)
+# 📋 메인 테이블 (마우스오버 그래프 및 커스텀 스타일)
 # ==========================================
 if filtered_df.empty:
     st.warning("👀 조건에 맞는 데이터가 없습니다.")
@@ -449,6 +480,8 @@ else:
         if any(x in str(col) for x in ["업체", "물품", "메모"]): return "tl"
         return "tr" if any(x in str(col) for x in ["가", "폭", "수량"]) else "tc"
 
+    vendor_idx = filtered_df.columns.get_loc('업체명') if '업체명' in filtered_df.columns else -1
+    
     rows_html = []
     for idx, row in enumerate(filtered_df.itertuples(index=False)):
         is_fav = False
@@ -459,6 +492,9 @@ else:
         
         tr_class = " class='favorite-row'" if is_fav else ""
         rs = f"<tr{tr_class}>"
+        
+        # 그래프 키 생성을 위해 업체명 텍스트 추출
+        v_raw = str(row[vendor_idx]).strip() if vendor_idx >= 0 else ""
         
         for i, col_name in enumerate(filtered_df.columns):
             val_raw = str(row[i]).strip()
@@ -486,26 +522,37 @@ else:
                 cls += " nowrap-col"
                 
             if col_name == "물품명":
-                cls += " text-item-name"
+                cls += " text-item-name hover-graph"
+                # 💡 마우스오버 이벤트 추가 (업체명 + 물품명 매칭으로 데이터 호출)
+                v_safe = v_raw.replace("'", "\\'").replace('"', '\\"')
+                i_safe = val_raw.replace("'", "\\'").replace('"', '\\"')
+                rs += f"<td class='{cls}' onmousemove=\"showGraph(event, '{v_safe}:::{i_safe}', '{html.escape(val_raw)}')\" onmouseout='hideGraph()'>{val}</td>"
             elif col_name == "인상날짜":
                 cls += " bold-col"
+                rs += f"<td class='{cls}'>{val}</td>"
             elif col_name == "업체명":
                 cls += " text-darkgreen"
+                rs += f"<td class='{cls}'>{val}</td>"
             elif col_name == "인상폭":
                 cls += " text-red-large"
+                rs += f"<td class='{cls}'>{val}</td>"
             elif col_name == "인상가":
                 cls += " text-red-110"
+                rs += f"<td class='{cls}'>{val}</td>"
             elif col_name == "기존가":
                 cls += " text-blue"
-            
-            if col_name == fav_col and val == "⭐":
+                rs += f"<td class='{cls}'>{val}</td>"
+            elif col_name == fav_col and val == "⭐":
                 rs += f"<td class='{cls}' style='font-size:16px;'>{val}</td>"
             else:
                 rs += f"<td class='{cls}'>{val}</td>"
         rows_html.append(rs + "</tr>")
 
     t_html_base = """
-    <!DOCTYPE html><html><head><meta charset='utf-8'><style>
+    <!DOCTYPE html><html><head><meta charset='utf-8'>
+    <!-- 💡 Chart.js 라이브러리 로드 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
     body { background: #2b323c; font-family: 'Malgun Gothic'; margin: 0; padding: 0; color: #1e293b; overflow: hidden; }
     .custom-table { width: 100%; border-collapse: collapse; background: white; font-size: 15px; table-layout: fixed; }
     .custom-table th, .custom-table td { border: 1px solid #d0d0d0; padding: 8px 10px; word-wrap: break-word; }
@@ -515,8 +562,9 @@ else:
     
     /* 개별 열 색상 및 굵기 하이라이트 CSS */
     .bold-col { font-weight: 900; color: black !important; }
-    .text-item-name { font-weight: 900; color: black !important; font-size: 120% !important; } /* 💡 물품명: 검은색 굵게, 크기 20%업 */
-    .nowrap-col { white-space: nowrap !important; } /* 💡 강제 줄바꿈 방지 */
+    .text-item-name { font-weight: 900; color: black !important; font-size: 120% !important; } 
+    .hover-graph { cursor: help; text-decoration: underline; text-decoration-style: dotted; text-decoration-color: #4e8cff; } /* 💡 마우스오버 힌트 선 */
+    .nowrap-col { white-space: nowrap !important; } 
     .text-darkgreen { font-weight: 900; color: #1b5e20 !important; } 
     .text-red-large { font-weight: 900; color: #e53935 !important; font-size: 130% !important; } 
     .text-red-110 { font-weight: 900; color: red !important; font-size: 110% !important; } 
@@ -535,6 +583,15 @@ else:
     .page-num { padding: 6px 12px; cursor: pointer; background: #525252; color: #ddd; border: none; border-radius: 4px; font-size: 14px; }
     .page-num.active { background: #ffeb3b; color: #000; font-weight: 800; }
     </style></head><body>
+    
+    <!-- 💡 마우스오버 툴팁(그래프) 박스 HTML -->
+    <div id="graphTooltip" style="display:none; position:absolute; z-index:9999; width:340px; height:240px; background:white; border:3px solid #1e88e5; border-radius:10px; padding:12px; box-shadow:0px 6px 16px rgba(0,0,0,0.3); pointer-events:none;">
+        <h4 id="tooltipTitle" style="margin:0 0 10px 0; font-size:15px; color:#1e293b; text-align:center; font-weight:900; word-break:keep-all;"></h4>
+        <div style="position:relative; width:100%; height:170px;">
+            <canvas id="hoverChart"></canvas>
+        </div>
+    </div>
+    
     <div id='nav-top' class='pagination-container'></div>
     <table class='custom-table' id='mainTable'>
     <thead><tr>
@@ -564,6 +621,81 @@ else:
     
     t_html += """
     <script>
+    // 💡 Python에서 생성한 가격 히스토리 데이터 연결
+    const priceHistory = """ + json.dumps(history_data) + """;
+    
+    let hoverChart = null;
+    const tooltip = document.getElementById('graphTooltip');
+    const tooltipTitle = document.getElementById('tooltipTitle');
+    
+    function showGraph(event, key, itemName) {
+        const history = priceHistory[key];
+        // 💡 가격 기록 데이터가 없을 경우 그래프 띄우지 않음
+        if (!history || history.length < 1) return;
+
+        // 화면 잘림 방지용 위치 계산 (X, Y 좌표)
+        let tx = event.clientX + 20;
+        let ty = event.clientY + 20;
+        const tWidth = 360; 
+        const tHeight = 260;
+        
+        if (tx + tWidth > window.innerWidth) tx = event.clientX - tWidth - 10;
+        if (ty + tHeight > window.innerHeight) ty = event.clientY - tHeight - 10;
+        
+        tooltip.style.left = tx + 'px';
+        tooltip.style.top = ty + 'px';
+        tooltip.style.display = 'block';
+        tooltipTitle.innerText = itemName + ' [가격 변동 추이]';
+
+        const labels = history.map(h => h.date);
+        const data = history.map(h => h.price);
+
+        const ctx = document.getElementById('hoverChart').getContext('2d');
+        if (hoverChart) hoverChart.destroy(); // 기존 그래프 파괴 후 재설정
+
+        // 💡 Chart.js 를 활용한 단가 그래프 그리기
+        hoverChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '단가(원)',
+                    data: data,
+                    borderColor: '#e53935',
+                    backgroundColor: 'rgba(229, 57, 53, 0.1)',
+                    borderWidth: 2.5,
+                    pointBackgroundColor: '#1e88e5',
+                    pointRadius: 5,
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 0 }, // 즉시 표시
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { font: { size: 11, weight: 'bold' } } },
+                    y: { 
+                        ticks: { 
+                            font: { size: 11, weight: 'bold' },
+                            callback: function(value) { return value.toLocaleString() + '원'; }
+                        } 
+                    }
+                }
+            }
+        });
+    }
+
+    function hideGraph() {
+        tooltip.style.display = 'none';
+        if (hoverChart) {
+            hoverChart.destroy();
+            hoverChart = null;
+        }
+    }
+
     let sortOrder = 1; let currentPage = 1; const rowsPerPage = 50; 
     function renderTable() {
         const tbody = document.getElementById("tableBody");
