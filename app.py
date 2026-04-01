@@ -5,11 +5,11 @@ from google.oauth2.service_account import Credentials
 import pandas as pd
 import time
 import io
-import math
 import re
 import json
 import urllib.parse
 import concurrent.futures
+from math import ceil
 from datetime import datetime, timedelta, timezone
 
 # --- [페이지 기본 설정] ---
@@ -68,7 +68,7 @@ def generate_print_html(df, title):
     for row in print_df.itertuples(index=False):
         parts.append("<tr>")
         for val in row:
-            val_str = str(val).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            val_str = str(val).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
             parts.append(f"<td>{val_str}</td>")
         parts.append("</tr>")
         
@@ -377,7 +377,7 @@ def render_study_mode(study_data, unique_cats, initial_cat):
     """
     components.html(html_code, height=1000)
 
-@st.cache_resource
+@st.cache_resource(ttl=3000)  # gspread 토큰 ~1시간 만료 → 50분마다 자동 갱신
 def init_connection():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
@@ -412,11 +412,16 @@ def get_english_data_v7():
     sheet_names = [ws.title for ws in all_sheets if ws.title != "링크" and "임시" not in ws.title]
     
     dfs = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(sheet_names))) as executor:
-        results = executor.map(lambda name: _fetch_sheet_concurrently(wb, name), sheet_names)
-        for res in results:
-            if not res.empty:
-                dfs.append(res)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(5, len(sheet_names))) as executor:
+        # lambda 대신 직접 함수 참조로 클로저 문제 방지
+        futures = {executor.submit(_fetch_sheet_concurrently, wb, name): name for name in sheet_names}
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                res = future.result()
+                if not res.empty:
+                    dfs.append(res)
+            except Exception:
+                pass
     
     if not dfs:
         return pd.DataFrame(columns=['분류', '단어-문장', '해석', '발음', '메모1', '메모2', 'sheet_idx', 'row_idx'])
@@ -427,7 +432,7 @@ def get_links_sheet():
 
 @st.cache_data(ttl=600)
 def get_links_data_v6():
-    sheet = get_links_sheet()
+    sheet = init_connection().open("English_Sentences").worksheet("링크")
     for _ in range(3):
         try:
             data = sheet.get_all_values()
@@ -461,7 +466,7 @@ if st.query_params.get("study") == "true":
         cat_param = st.query_params.get("cat", "ALL")
         initial_cat = "ALL" if cat_param in ["🔀 랜덤 10", "전체 분류", "ALL"] else cat_param
         
-        study_df = df[['분류', '단어-문장', '해석', '발음', '메모1', '메모2', 'sheet_idx']].rename(
+        study_df = df[['분류', '단어-문장', '해석', '발음', '메모1', '메모2']].rename(
             columns={'분류':'cat', '단어-문장': 'en', '해석': 'ko', '발음': 'pron', '메모1': 'memo1', '메모2': 'memo2'}
         )
         study_data = study_df.to_dict('records')
@@ -931,7 +936,7 @@ else:
                 body {{ margin: 0; padding: 0; background-color: transparent !important; overflow: hidden; }}
                 .date-wrapper {{ display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; font-family: sans-serif; width: 100%; height: 100%; padding-bottom: 5px; }}
                 .date-text {{ color: #A3B8B8; font-weight: bold; font-size: clamp(1.0rem, 1.8vw, 1.8rem); white-space: nowrap; margin-bottom: 2px; }}
-                .copy-btn {{ background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.1)); border: 1px solid rgba(255,255,255,0.2); color: #FFF; padding: 6px 14px; border-radius: 8px; cursor: font-size: 0.9rem; font-weight:bold; transition: 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }}
+                .copy-btn {{ background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.1)); border: 1px solid rgba(255,255,255,0.2); color: #FFF; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight:bold; transition: 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }}
                 .copy-btn:hover {{ background: rgba(255,255,255,0.2) !important; transform: translateY(-2px); border-color: #FFD700; color: #FFD700; }}
             </style>
             <div class="date-wrapper">
@@ -1084,16 +1089,17 @@ else:
             
             is_simple = st.session_state.is_simple
             search = st.session_state.active_search
-            d_df = df.copy()
             if search: 
-                d_df = d_df[d_df['단어-문장'].str.contains(search, case=False, na=False) | d_df['해석'].str.contains(search, case=False, na=False) | d_df['분류'].str.contains(search, case=False, na=False)]
+                d_df = df[df['단어-문장'].str.contains(search, case=False, na=False) | df['해석'].str.contains(search, case=False, na=False) | df['분류'].str.contains(search, case=False, na=False)]
             else:
                 if sel_cat == "🔀 랜덤 10":
                     if st.session_state.current_cat != "🔀 랜덤 10" or 'random_df' not in st.session_state:
                         st.session_state.random_df = df.sample(n=min(10, len(df)))
-                    d_df = st.session_state.random_df.copy()
+                    d_df = st.session_state.random_df
                 elif sel_cat != "전체 분류": 
-                    d_df = d_df[d_df['분류'] == sel_cat]
+                    d_df = df[df['분류'] == sel_cat]
+                else:
+                    d_df = df
                 st.session_state.current_cat = sel_cat
 
             if st.session_state.sort_order == 'asc': 
@@ -1134,7 +1140,7 @@ else:
                 
             st.markdown("</div>", unsafe_allow_html=True)
 
-            total = len(d_df); pages = math.ceil(total/30) if total > 0 else 1
+            total = len(d_df); pages = ceil(total/30) if total > 0 else 1
             curr_p = st.session_state.curr_p
             
             st.markdown(f"<div style='display:flex; justify-content:flex-end; padding-right:10px;'><span style='color:#A3B8B8; font-weight:bold; font-size:1.0rem;'>{('🔍 검색: ' + search + ' | ') if search else ''}총 {total}개 (Page {curr_p}/{pages})</span></div>", unsafe_allow_html=True)
@@ -1190,9 +1196,9 @@ else:
                     sel_link_cat2 = st.radio("소분류 필터", display_cat2, horizontal=True, label_visibility="collapsed", key="cat2_radio")
 
             search = st.session_state.active_search
-            filtered_df_links = df_links_raw.copy()
+            filtered_df_links = df_links_raw
             if search:
-                filtered_df_links = filtered_df_links[filtered_df_links['제목'].str.contains(search, case=False, na=False) | filtered_df_links['메모'].str.contains(search, case=False, na=False) | filtered_df_links['링크'].str.contains(search, case=False, na=False)]
+                filtered_df_links = df_links_raw[df_links_raw['제목'].str.contains(search, case=False, na=False) | df_links_raw['메모'].str.contains(search, case=False, na=False) | df_links_raw['링크'].str.contains(search, case=False, na=False)]
             else:
                 if sel_link_cat1 == "✨ 최근 5개":
                     filtered_df_links = filtered_df_links.tail(5) 
