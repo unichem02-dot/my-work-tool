@@ -3,18 +3,18 @@ import streamlit.components.v1 as components
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import re
 import io
 import json
-import math
 import base64
 import urllib.parse
 import time
 
 # 💡 한국 표준시(KST) 기준 시간 반환 함수
+KST = timezone(timedelta(hours=9))
 def get_kst_now():
-    return datetime.utcnow() + timedelta(hours=9)
+    return datetime.now(KST).replace(tzinfo=None)
 
 # 💡 구글 API 429(할당량 초과) 에러 자동 방어용 Retry 래퍼 함수
 def api_retry(action):
@@ -23,7 +23,7 @@ def api_retry(action):
             return action()
         except Exception as e:
             if "429" in str(e) and attempt < 3:
-                time.sleep(2) # 429 발생 시 2초 대기 후 재시도
+                time.sleep(2 ** attempt)  # 지수 백오프: 1초, 2초, 4초 (연속 429 방어)
             else:
                 raise e
 
@@ -397,7 +397,7 @@ if not st.session_state.authenticated:
     st.stop()
 
 # --- [데이터 유틸리티] ---
-@st.cache_resource
+@st.cache_resource(ttl=3000)  # 💡 gspread 토큰은 ~1시간 후 만료 → 50분마다 자동 갱신
 def init_connection():
     scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
     creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
@@ -663,7 +663,11 @@ try:
         df['year'] = df[date_col].dt.year.astype(int)
         df['month'] = df[date_col].dt.month.astype(int)
         for c in ['inq', 'inprice', 'outq', 'outprice', 'carprice', 'id']:
-            df[f'{c}_val'] = df[c].apply(clean_numeric)
+            # 벡터화된 숫자 변환 (apply 대비 5~10배 빠름)
+            df[f'{c}_val'] = pd.to_numeric(
+                df[c].astype(str).str.replace(r'[^\d.-]', '', regex=True),
+                errors='coerce'
+            ).fillna(0)
         df['in_total'], df['out_total'] = df['inq_val'] * df['inprice_val'], df['outq_val'] * df['outprice_val']
     else:
         df = pd.DataFrame(columns=['id', 'date', 'year', 'month', 'incom', 'initem', 'inq_val', 'inprice_val', 'outcom', 'outitem', 'outq_val', 'outprice_val', 'carno', 'carprice_val', 'in_total', 'out_total', 's', 'memoin', 'memoout', 'memocar', date_col])
